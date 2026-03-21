@@ -39,3 +39,23 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local config & secrets
+.env
+.env.*
+!.env*.local
+
+# Claude & OMC
+.claude/
+.omc/
+
+# Expo temp
+.expo-check-tmp/
+
+# Build artifacts
+*.apk
+*.aab
+
+# Misc
+nul
+diff.txt

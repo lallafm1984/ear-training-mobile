@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ear-training-mobile",
-    "slug": "ear-training-mobile",
+    "name": "MelodyGen",
+    "slug": "melodygen",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,22 +9,41 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f8fafc"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.melodygen.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "오디오 재생에 필요합니다.",
+        "NSPhotoLibraryAddUsageDescription": "악보 이미지를 사진 앱에 저장합니다.",
+        "NSPhotoLibraryUsageDescription": "악보 이미지를 사진 앱에 저장합니다."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6366f1",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "package": "com.melodygen.app",
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_AUDIO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
     },
+    "scheme": "melodygen",
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser"
+    ]
   }
 }
