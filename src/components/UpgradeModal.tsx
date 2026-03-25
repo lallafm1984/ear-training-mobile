@@ -50,8 +50,8 @@ const REASON_INFO: Record<UpgradeReason, {
   },
   edit_notes: {
     title: '음표 편집',
-    description: '생성된 악보의 음표 수정은 Pro 이상에서 사용 가능합니다.',
-    requiredTier: 'pro',
+    description: '생성된 악보의 음표 수정은 Premium 플랜에서만 사용할 수 있습니다.',
+    requiredTier: 'premium',
     benefits: ['음표 음정·길이 수정', '개별 음표 삭제', '세밀한 악보 편집'],
   },
   download_audio: {
@@ -117,7 +117,7 @@ export default function UpgradeModal({ visible, reason, onClose, onGoToPaywall }
           <View style={[styles.tierBadge, { backgroundColor: `${tierColor}22` }]}>
             <Crown size={11} color={tierColor} />
             <Text style={[styles.tierBadgeText, { color: tierColor }]}>
-              {PLAN_NAME[info.requiredTier]} 이상
+              {info.requiredTier === 'premium' ? 'Premium 전용' : `${PLAN_NAME[info.requiredTier]} 이상`}
             </Text>
           </View>
           <Text style={styles.description}>{info.description}</Text>

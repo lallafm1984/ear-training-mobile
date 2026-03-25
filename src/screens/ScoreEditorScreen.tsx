@@ -19,8 +19,9 @@ import AbcjsRenderer from '../components/AbcjsRenderer';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
   Save, X, ChevronDown, Music2, RefreshCw, FileAudio, Lock, UserCircle,
-  Eye, EyeOff,
+  Eye, EyeOff, FileCode, Copy,
 } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
 import { useAdCounter } from '../hooks/useAdCounter';
@@ -224,6 +225,8 @@ export default function ScoreEditorScreen() {
   const [examMode, setExamMode] = useState(false);
   const [examWaitSeconds, setExamWaitSeconds] = useState(DEFAULT_PRACTICE_WAIT_SECONDS);
   const [isPlaying, setIsPlaying] = useState(false);
+  /** 테스트용: ABC 표기 팝업 */
+  const [showAbcNotationModal, setShowAbcNotationModal] = useState(false);
   const [showNoteCursor, setShowNoteCursor] = useState(true);
   const [showMeasureHighlight, setShowMeasureHighlight] = useState(true);
   const [hideNotes, setHideNotes] = useState(false);
@@ -277,7 +280,7 @@ export default function ScoreEditorScreen() {
   const curNotes = state.useGrandStaff && activeStaff === 'bass' ? (state.bassNotes || []) : state.notes;
 
   const handleSelectNote = (id: string, staff: 'treble' | 'bass') => {
-    // 무료 유저는 음표 편집 불가
+    // Premium만 음표 편집 가능
     if (!limits.canEditNotes) {
       openUpgrade('edit_notes');
       return;
@@ -557,6 +560,23 @@ export default function ScoreEditorScreen() {
   const abcString = generateAbc(state);
   const noteCount = state.notes.length + (state.bassNotes?.length ?? 0);
 
+  const copyAbcToClipboard = useCallback(async () => {
+    try {
+      await Clipboard.setStringAsync(abcString);
+      Alert.alert('복사 완료', 'ABC 표기가 클립보드에 복사되었습니다.');
+    } catch {
+      Alert.alert('오류', '복사에 실패했습니다.');
+    }
+  }, [abcString]);
+
+  const openAbcNotationModal = useCallback(() => {
+    if (noteCount === 0) {
+      Alert.alert('알림', '표시할 악보가 없습니다.');
+      return;
+    }
+    setShowAbcNotationModal(true);
+  }, [noteCount]);
+
   const selectedNoteObj = selectedNote ? (selectedNote.staff === 'bass' ? state.bassNotes : state.notes)?.find(n => n.id === selectedNote.id) : null;
 
   const baseDur = (duration.endsWith('.') ? duration.slice(0, -1) : duration) as NoteDuration;
@@ -656,7 +676,7 @@ export default function ScoreEditorScreen() {
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: selectedNote ? 320 : 140 }}
+        contentContainerStyle={{ paddingBottom: selectedNote ? 360 : 200 }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={(e) => {
@@ -715,6 +735,17 @@ export default function ScoreEditorScreen() {
         {/* ── 재생 버튼 (단독 위치) ── */}
         {!selectedNote && (
           <View style={styles.bottomPlayContainer}>
+            <TouchableOpacity
+              onPress={openAbcNotationModal}
+              disabled={noteCount === 0}
+              style={[
+                styles.abcTestBtn,
+                noteCount === 0 && styles.abcTestBtnDisabled,
+              ]}
+              accessibilityLabel="ABC 표기 보기 (테스트)"
+            >
+              <FileCode size={18} color={noteCount === 0 ? '#cbd5e1' : '#475569'} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => rendererRef.current?.togglePlay()}
               style={[
@@ -818,7 +849,7 @@ export default function ScoreEditorScreen() {
               </View>
             )}
 
-            {/* 1행: 편집 버튼 (프리미엄 이상만 표시) */}
+            {/* 1행: 편집 버튼 (Premium만 표시) */}
             <View style={styles.paletteRow1}>
               <View style={{ marginLeft: 'auto', flexDirection: 'row', gap: 4 }}>
                 {limits.canEditNotes && (
@@ -1507,11 +1538,6 @@ export default function ScoreEditorScreen() {
               );
             })}
           </View>
-          {limits.maxMeasures <= 4 && (
-            <Text style={{ fontSize: 10, color: '#f59e0b', marginTop: 4 }}>
-              Pro 플랜에서 8마디 이상 생성 가능합니다.
-            </Text>
-          )}
         </View>
         {/* 큰보표 */}
         <View style={[styles.bsGroup, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
@@ -1590,6 +1616,47 @@ export default function ScoreEditorScreen() {
           ))
         )}
       </BottomSheet>
+
+      {/* ── ABC Notation (테스트용) ── */}
+      <Modal
+        visible={showAbcNotationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAbcNotationModal(false)}
+        statusBarTranslucent
+      >
+        <View style={styles.abcModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => setShowAbcNotationModal(false)}
+          />
+          <View style={styles.abcModalCard}>
+            <View style={styles.abcModalHeader}>
+              <Text style={styles.abcModalTitle}>ABC Notation</Text>
+              <TouchableOpacity
+                onPress={() => setShowAbcNotationModal(false)}
+                style={styles.abcModalCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={18} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.abcModalHint}>생성된 악보의 ABC 표기법입니다. (테스트용)</Text>
+            <ScrollView
+              style={styles.abcModalScroll}
+              contentContainerStyle={styles.abcModalScrollContent}
+              nestedScrollEnabled
+            >
+              <Text selectable style={styles.abcModalText}>{abcString}</Text>
+            </ScrollView>
+            <TouchableOpacity style={styles.abcModalCopyBtn} onPress={copyAbcToClipboard} activeOpacity={0.85}>
+              <Copy size={16} color="#ffffff" />
+              <Text style={styles.abcModalCopyBtnText}>텍스트 전체 복사</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── AI 생성 로딩 팝업 ── */}
       <Modal
@@ -2072,6 +2139,96 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600' as const,
     color: '#6366f1',
+  },
+
+  // ── ABC 표기 팝업 (테스트) ──
+  abcModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 20,
+  },
+  abcModalCard: {
+    width: '100%' as const,
+    maxWidth: 520,
+    maxHeight: '85%' as const,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  abcModalHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: 6,
+  },
+  abcModalTitle: {
+    fontSize: 17,
+    fontWeight: 'bold' as const,
+    color: '#1e293b',
+  },
+  abcModalCloseBtn: {
+    padding: 4,
+  },
+  abcModalHint: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginBottom: 10,
+  },
+  abcModalScroll: {
+    maxHeight: 360,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+  },
+  abcModalScrollContent: {
+    padding: 12,
+    paddingBottom: 16,
+  },
+  abcModalText: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#334155',
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+  },
+  abcModalCopyBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    marginTop: 14,
+    backgroundColor: '#6366f1',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  abcModalCopyBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold' as const,
+  },
+  abcTestBtn: {
+    position: 'absolute' as const,
+    left: 16,
+    top: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    zIndex: 2,
+  },
+  abcTestBtnDisabled: {
+    opacity: 0.45,
   },
 
   // ── AI 생성 로딩 모달 ──

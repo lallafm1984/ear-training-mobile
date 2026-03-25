@@ -100,7 +100,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
       'advanced_1', 'advanced_2', 'advanced_3',
     ],
     maxMeasures:           9999,
-    canEditNotes:          true,
+    canEditNotes:          false,
     canDownloadAudio:      true,
     canDownloadImage:      true,
     monthlyDownloadLimit:  50,

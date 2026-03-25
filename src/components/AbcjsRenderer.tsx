@@ -303,7 +303,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
 
         case 'HEIGHT': {
           // 악보 전체 높이 + 아주 작은 여유 (하단 잘림 방지)
-          const h = Math.max((msg.height as number) + 4, 100);
+          const h = Math.max((msg.height as number) + 40, 100);
           setWebViewHeight(h);
           break;
         }
@@ -438,6 +438,19 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   }
   #play-btn.playing { background:#ef4444; box-shadow:0 3px 6px rgba(239,68,68,0.3); }
   #play-btn:active { opacity:0.85; }
+
+  /* ── 재생 커서 ── */
+  .abcjs-playback-cursor {
+    stroke: #3b82f6;
+    stroke-width: 3;
+    stroke-linecap: round;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .abcjs-measure-hl {
+    fill: rgba(99,102,241,0.07);
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -465,6 +478,11 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   var cancelFlag         = false;
   var playTimeout        = null;
   var fixedHeight        = 0;
+  var currentVisualObj   = null;
+  var timingCallbacks    = null;
+  var cursorSvgLine      = null;
+  var measureHlRect      = null;
+  var highlightedEls     = [];
 
   function postMsg(obj) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(obj)); } catch(e) {}
@@ -544,7 +562,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     }
     var bodyStr    = countLines.join(' ');
 
-    ABCJS.renderAbc('score-container', abc, {
+    var renderResult = ABCJS.renderAbc('score-container', abc, {
       add_classes: true,
       responsive: 'resize',
       scale: 1.2,
@@ -563,6 +581,9 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         if (idx >= 0) postMsg({ type:'NOTE_CLICK', index:idx, voice:voice });
       }
     });
+    currentVisualObj = renderResult && renderResult[0];
+    cursorSvgLine = null;
+    measureHlRect = null;
 
     // 렌더링 완료 후 여러 타이밍에 높이 측정 (abcjs SVG 렌더링이 비동기이므로)
     setTimeout(function() { applyHighlight(selectedNote); reportHeight(); }, 100);
@@ -580,6 +601,175 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     var all = Array.from(ct.querySelectorAll('.' + vc + '.abcjs-note, .' + vc + '.abcjs-rest'));
     var t   = all[sel.index];
     if (t) t.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) { c.style.fill='#ef4444'; });
+  }
+
+  /* ── 재생 커서/하이라이트 ── */
+  function ensureCursorLine() {
+    if (cursorSvgLine) return cursorSvgLine;
+    var svg = document.querySelector('#score-container svg');
+    if (!svg) return null;
+    cursorSvgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    cursorSvgLine.setAttribute('class', 'abcjs-playback-cursor');
+    cursorSvgLine.style.display = 'none';
+    svg.appendChild(cursorSvgLine);
+    return cursorSvgLine;
+  }
+  function ensureMeasureRect() {
+    if (measureHlRect) return measureHlRect;
+    var svg = document.querySelector('#score-container svg');
+    if (!svg) return null;
+    measureHlRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    measureHlRect.setAttribute('class', 'abcjs-measure-hl');
+    measureHlRect.style.display = 'none';
+    svg.insertBefore(measureHlRect, svg.firstChild);
+    return measureHlRect;
+  }
+
+  function clearPlaybackCursor() {
+    if (cursorSvgLine) cursorSvgLine.style.display = 'none';
+    if (measureHlRect) measureHlRect.style.display = 'none';
+    highlightedEls.forEach(function(el) {
+      if (el) el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
+        c.style.fill = '';
+      });
+    });
+    highlightedEls = [];
+  }
+
+  function onPlaybackEvent(event) {
+    clearPlaybackCursor();
+    if (!event) return;
+
+    // 커서 라인 (수직선)
+    if (currentParams.showNoteCursor) {
+      var line = ensureCursorLine();
+      if (line && event.left !== undefined) {
+        line.setAttribute('x1', event.left);
+        line.setAttribute('x2', event.left);
+        line.setAttribute('y1', event.top);
+        line.setAttribute('y2', event.top + event.height);
+        line.style.display = '';
+      }
+
+      // 현재 음표 요소 색상 변경
+      if (event.elements) {
+        event.elements.forEach(function(elArr) {
+          if (!elArr) return;
+          elArr.forEach(function(el) {
+            if (!el) return;
+            el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
+              c.style.fill = '#3b82f6';
+            });
+            highlightedEls.push(el);
+          });
+        });
+      }
+    }
+
+    // 마디 배경 하이라이트 — 바선(.abcjs-bar) 기반
+    if (currentParams.showMeasureHighlight && event.left !== undefined) {
+      var ct2 = document.getElementById('score-container');
+      var svg2 = ct2 ? ct2.querySelector('svg') : null;
+      if (svg2) {
+        var noteX = event.left;
+        var noteTop = event.top;
+        var noteH = event.height;
+
+        var bars = svg2.querySelectorAll('.abcjs-bar');
+        var barPositions = [];
+        bars.forEach(function(b) {
+          var r = b.getBBox();
+          barPositions.push({ x: r.x, top: r.y, bottom: r.y + r.height });
+        });
+
+        // 같은 줄(y 범위 겹침) 바선만 추출
+        var sameLine = barPositions.filter(function(bp) {
+          return bp.top < noteTop + noteH && bp.bottom > noteTop;
+        });
+
+        // 현재 음표를 기준으로 좌·우 경계 바선 결정
+        var leftBar = null, rightBar = null;
+        for (var si = 0; si < sameLine.length; si++) {
+          if (sameLine[si].x <= noteX) {
+            if (!leftBar || sameLine[si].x > leftBar.x) leftBar = sameLine[si];
+          }
+          if (sameLine[si].x > noteX) {
+            if (!rightBar || sameLine[si].x < rightBar.x) rightBar = sameLine[si];
+          }
+        }
+
+        var mLeft = leftBar ? leftBar.x : 0;
+        var mRight = rightBar ? rightBar.x : (leftBar ? leftBar.x + 200 : noteX + 100);
+        var mTop2 = sameLine.length > 0 ? sameLine[0].top : noteTop;
+        var mBottom = sameLine.length > 0 ? sameLine[0].bottom : noteTop + noteH;
+        for (var sj = 1; sj < sameLine.length; sj++) {
+          mTop2 = Math.min(mTop2, sameLine[sj].top);
+          mBottom = Math.max(mBottom, sameLine[sj].bottom);
+        }
+
+        // 큰보표: 같은 시스템(줄)의 다른 보표 바선까지 세로 범위 확장
+        // 시스템 내부 간격 < staffH < 시스템 간 간격이므로 staffH를 threshold로 사용
+        // staffH는 초기값 고정 — 루프 내 재계산 시 threshold가 커져 다른 줄을 침범함
+        var xEps = 2;
+        var refX = leftBar ? leftBar.x : (rightBar ? rightBar.x : -1);
+        if (refX >= 0) {
+          var staffH = mBottom - mTop2;
+          var maxGap = staffH;
+          for (var bj = 0; bj < barPositions.length; bj++) {
+            var bp = barPositions[bj];
+            if (Math.abs(bp.x - refX) > xEps) continue;
+            var gapBelow = bp.top - mBottom;
+            var gapAbove = mTop2 - bp.bottom;
+            if ((gapBelow >= -5 && gapBelow <= maxGap) ||
+                (gapAbove >= -5 && gapAbove <= maxGap)) {
+              mTop2 = Math.min(mTop2, bp.top);
+              mBottom = Math.max(mBottom, bp.bottom);
+            }
+          }
+        }
+
+        var rect = ensureMeasureRect();
+        if (rect) {
+          rect.setAttribute('x', mLeft);
+          rect.setAttribute('y', mTop2);
+          rect.setAttribute('width', mRight - mLeft);
+          rect.setAttribute('height', mBottom - mTop2);
+          rect.setAttribute('rx', '4');
+          rect.style.display = '';
+        }
+      }
+    }
+  }
+
+  function startTimingCallbacks(delayMs) {
+    stopTimingCallbacks();
+    if (!currentVisualObj) return;
+    if (!currentParams.showNoteCursor && !currentParams.showMeasureHighlight) return;
+    try {
+      timingCallbacks = new ABCJS.TimingCallbacks(currentVisualObj, {
+        eventCallback: onPlaybackEvent,
+        beatSubdivisions: 4,
+      });
+    } catch(e) { return; }
+    if (delayMs > 0) {
+      playTimeout2 = setTimeout(function() {
+        if (isPlayingState && timingCallbacks) {
+          try { timingCallbacks.start(); } catch(e) {}
+        }
+      }, delayMs);
+    } else {
+      try { timingCallbacks.start(); } catch(e) {}
+    }
+  }
+  var playTimeout2 = null;
+
+  function stopTimingCallbacks() {
+    if (playTimeout2) { clearTimeout(playTimeout2); playTimeout2 = null; }
+    if (timingCallbacks) {
+      try { timingCallbacks.stop(); } catch(e) {}
+      timingCallbacks = null;
+    }
+    clearPlaybackCursor();
   }
 
   /* ── ABC 파싱 유틸 ── */
@@ -614,6 +804,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     cancelFlag = true;
     if (synthInstance) { try { synthInstance.stop(); } catch(e) {} synthInstance = null; }
     if (playTimeout)   { clearTimeout(playTimeout); playTimeout = null; }
+    stopTimingCallbacks();
     isPlayingState = false; setPlayBtnUI(false);
     postMsg({ type:'PLAY_STATE', isPlaying:false });
     reportHeight();
@@ -641,10 +832,17 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
             createMetronomeClick(audioCtx, audioCtx.currentTime + mStart + i * beat, i===0, p.metronomeFreq||1000);
         }
         synth.start();
+
+        var prependDelay = 0;
+        if (p.prependBasePitch) prependDelay += 16 * sBeat;
+        if (p.prependMetronome) prependDelay += top * beat;
+        startTimingCallbacks(prependDelay * 1000);
+
         var dur = (res && res.duration) ? res.duration : 30;
         playTimeout = setTimeout(function() {
           if (isPlayingState) {
             isPlayingState = false; synthInstance = null;
+            stopTimingCallbacks();
             setPlayBtnUI(false); postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
           }
         }, (dur + 2) * 1000);
@@ -788,6 +986,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         return playMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
       })
       .then(function() {
+        stopTimingCallbacks();
         isPlayingState = false; setPlayBtnUI(false);
         postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
       });
@@ -938,6 +1137,34 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     var ct = document.getElementById('score-container'); if (!ct) return;
     ct.querySelectorAll('.abcjs-note,.abcjs-rest').forEach(function(el) {
       el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
+        c.style.visibility = hide ? 'hidden' : 'visible';
+      });
+    });
+    // 잇단음표(트리플릿) 숫자·괄호도 같이 숨기기
+    ct.querySelectorAll('.abcjs-triplet').forEach(function(el) {
+      el.querySelectorAll('path,text,line').forEach(function(c) {
+        c.style.visibility = hide ? 'hidden' : 'visible';
+      });
+    });
+    // 꼬리·빔·가림줄 — 단, 박자표(.abcjs-staff-extra) 안은 보존
+    ct.querySelectorAll('.abcjs-stem,.abcjs-beam-elem,.abcjs-ledger').forEach(function(el) {
+      if (el.closest && el.closest('.abcjs-staff-extra')) return;
+      // 선두(staff-extra) 영역의 bbox와 겹치면 박자표 꼬리로 판단해 보존
+      var extras = ct.querySelectorAll('.abcjs-staff-extra');
+      var skip = false;
+      try {
+        var elBox = el.getBBox ? el.getBBox() : null;
+        if (elBox) {
+          var eCx = elBox.x + elBox.width / 2, eCy = elBox.y + elBox.height / 2;
+          for (var xi = 0; xi < extras.length; xi++) {
+            var exBox = extras[xi].getBBox();
+            if (eCx >= exBox.x && eCx <= exBox.x + exBox.width &&
+                eCy >= exBox.y && eCy <= exBox.y + exBox.height) { skip = true; break; }
+          }
+        }
+      } catch(e) {}
+      if (skip) return;
+      el.querySelectorAll('path,line,rect').forEach(function(c) {
         c.style.visibility = hide ? 'hidden' : 'visible';
       });
     });

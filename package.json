@@ -5,8 +5,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "ios": "expo start --ios"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -16,6 +15,7 @@
     "@supabase/supabase-js": "^2.99.3",
     "expo": "^54.0.0",
     "expo-auth-session": "~7.0.10",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.21",
     "expo-media-library": "~18.2.1",
@@ -25,13 +25,11 @@
     "expo-web-browser": "~15.0.10",
     "lucide-react-native": "^0.577.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
     "react-native": "^0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "^15.15.4",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-web": "^0.21.2",
     "react-native-webview": "^13.16.1",
     "sql.js": "^1.14.1"
   },

@@ -1,6 +1,13 @@
 import {
   ScoreNote, NoteDuration, PitchName, Accidental,
   getSixteenthsPerBar,
+  durationToSixteenths,
+  getTupletActualSixteenths,
+  noteToMidiWithKey,
+  getKeySigAlteration,
+  getKeySignatureAccidentalCount,
+  getScaleDegrees,
+  SIXTEENTHS_TO_DUR,
 } from './scoreUtils';
 
 // ────────────────────────────────────────────────────────────────
@@ -56,22 +63,10 @@ export interface GeneratedScore {
 
 const PITCH_ORDER: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-const SCALE_DEGREES: Record<string, PitchName[]> = {
-  'C':   ['C','D','E','F','G','A','B'],
-  'G':   ['G','A','B','C','D','E','F'],
-  'D':   ['D','E','F','G','A','B','C'],
-  'A':   ['A','B','C','D','E','F','G'],
-  'F':   ['F','G','A','B','C','D','E'],
-  'Bb':  ['B','C','D','E','F','G','A'],
-  'Eb':  ['E','F','G','A','B','C','D'],
-  'Am':  ['A','B','C','D','E','F','G'],
-  'Em':  ['E','F','G','A','B','C','D'],
-  'Bm':  ['B','C','D','E','F','G','A'],
-  'F#m': ['F','G','A','B','C','D','E'],
-  'Dm':  ['D','E','F','G','A','B','C'],
-  'Gm':  ['G','A','B','C','D','E','F'],
-  'Cm':  ['C','D','E','F','G','A','B'],
-};
+/** 오른손(V1) 음역대 하한선 — C3 (MIDI 48). 이보다 낮으면 옥타브 올림 */
+const V1_MIN_MIDI = 48;
+/** 양손 최소 간격 (반음). 베이스 MIDI < 트레블 MIDI - 이 값 이어야 교차 아님 */
+const MIN_VOICE_GAP = 2;
 
 const CHORD_TONES: Record<number, number[]> = {
   0: [0, 2, 4], 1: [1, 3, 5], 2: [2, 4, 6],
@@ -112,13 +107,72 @@ const DURATION_POOL: Record<Difficulty, number[]> = {
   advanced_3:     [4, 3, 2, 1],
 };
 
-const SIXTEENTHS_TO_DUR: Record<number, NoteDuration> = {
-  16: '1', 12: '2.', 8: '2', 6: '4.', 4: '4', 3: '8.', 2: '8', 1: '16',
-};
-
 const CHROMATIC_RESOLUTION: Record<string, PitchName> = {
   'C': 'D', 'D': 'E', 'E': 'F', 'F': 'G', 'G': 'A', 'A': 'B', 'B': 'C',
 };
+
+/**
+ * 한 마디 트레블: offset(16분) → MIDI (지속 구간 포함).
+ * 트레블 2분음표가 유지되는 동안 베이스 8분음표가 교차하는 것도 감지하기 위해
+ * 음표의 지속 구간 전체를 맵에 기록한다.
+ */
+function buildTrebleMidiMap(
+  barSlice: ScoreNote[], keySignature: string, barLength: number,
+): Map<number, number> {
+  const map = new Map<number, number>();
+  let off = 0;
+  let i = 0;
+  while (i < barSlice.length) {
+    const n = barSlice[i];
+    if (n.tuplet) {
+      const p = parseInt(n.tuplet, 10);
+      const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+      for (let k = 0; k < p && i + k < barSlice.length; k++) {
+        const tn = barSlice[i + k];
+        if (tn.pitch !== 'rest') {
+          const midi = noteToMidiWithKey(tn, keySignature);
+          const nStart = off + Math.floor(k * span / p);
+          const nEnd = off + Math.floor((k + 1) * span / p);
+          for (let pos = nStart; pos < nEnd && pos < barLength; pos++) {
+            map.set(pos, midi);
+          }
+        }
+      }
+      off += span;
+      i += p;
+    } else {
+      const dur = durationToSixteenths(n.duration);
+      if (n.pitch !== 'rest') {
+        const midi = noteToMidiWithKey(n, keySignature);
+        for (let pos = off; pos < off + dur && pos < barLength; pos++) {
+          map.set(pos, midi);
+        }
+      }
+      off += dur;
+      i += 1;
+    }
+  }
+  return map;
+}
+
+/**
+ * 조성·난이도에 맞게 임시표 종류 선택.
+ * 샤프/플랫이 많은 조에서는 조표로 이미 반영된 음에 대해 #만 덧붙이면 ABC에 표시가 안 되므로,
+ * 제자리(n)·반대 방향(b/♭ 등)을 섞어 임시표가 보이도록 한다.
+ */
+function pickChromaticAccidental(keySignature: string, pitch: PitchName, difficulty: Difficulty): Accidental {
+  const keyAlt = getKeySigAlteration(keySignature, pitch);
+  const lvl = difficultyLevel(difficulty);
+  const r = Math.random();
+  if (keyAlt === '#') {
+    return r < 0.55 ? 'n' : 'b';
+  }
+  if (keyAlt === 'b') {
+    return r < 0.55 ? 'n' : '#';
+  }
+  if (lvl >= 5) return r < 0.5 ? '#' : 'b';
+  return '#';
+}
 
 // ────────────────────────────────────────────────────────────────
 // 난이도별 파라미터 테이블 (문서 기반)
@@ -135,7 +189,8 @@ interface LevelParams {
   syncopationProb: number;      // 당김음 확률
   tripletBudget: [number, number]; // 셋잇단 [min, max]
   tripletProb: number;          // 셋잇단 삽입 확률
-  tieProb: number;              // 붙임줄 확률
+  /** 붙임줄(같은 음·타이): 직전 음과 높이가 같을 때만 적용 */
+  tieProb: number;
   restProb: number;             // 쉼표 확률
   dottedProb: number;           // 점음표 확률
   // 2성부
@@ -186,7 +241,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 중급 1: 독립성 태동 — 예고 입시 + α ──
   intermediate_1: {
     maxInterval: 8, stepwiseProb: 0.65, maxLeap: 8,
-    chromaticBudget: [0, 1], chromaticProb: 0.05,
+    chromaticBudget: [0, 1], chromaticProb: 0.072,
     syncopationProb: 0.15, tripletBudget: [0, 1], tripletProb: 0.15,
     tieProb: 0.15, restProb: 0.12, dottedProb: 0.20,
     contraryMotionRatio: 0.55, bassIndependence: 0.45,
@@ -197,7 +252,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 중급 2: 16분음표·복잡한 분할 (BPM 80~108) — 음대 입시 수준 ──
   intermediate_2: {
     maxInterval: 6, stepwiseProb: 0.60, maxLeap: 8,
-    chromaticBudget: [1, 2], chromaticProb: 0.09,
+    chromaticBudget: [1, 2], chromaticProb: 0.10,
     syncopationProb: 0.20, tripletBudget: [0, 2], tripletProb: 0.20,
     tieProb: 0.20, restProb: 0.15, dottedProb: 0.25,
     contraryMotionRatio: 0.60, bassIndependence: 0.6,
@@ -208,7 +263,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 중급 3: 음대 입시 강화 ──
   intermediate_3: {
     maxInterval: 8, stepwiseProb: 0.55, maxLeap: 8,
-    chromaticBudget: [1, 3], chromaticProb: 0.12,
+    chromaticBudget: [1, 3], chromaticProb: 0.13,
     syncopationProb: 0.25, tripletBudget: [1, 2], tripletProb: 0.25,
     tieProb: 0.25, restProb: 0.18, dottedProb: 0.30,
     contraryMotionRatio: 0.60, bassIndependence: 0.7,
@@ -219,7 +274,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 고급 1: 고급 리듬 (BPM 88~120) — 음대 작곡과 수준 ──
   advanced_1: {
     maxInterval: 8, stepwiseProb: 0.50, maxLeap: 9,
-    chromaticBudget: [3, 5], chromaticProb: 0.18,
+    chromaticBudget: [3, 5], chromaticProb: 0.19,
     syncopationProb: 0.35, tripletBudget: [1, 3], tripletProb: 0.30,
     tieProb: 0.30, restProb: 0.20, dottedProb: 0.35,
     contraryMotionRatio: 0.65, bassIndependence: 0.8,
@@ -230,7 +285,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 고급 2: 완전 독립성 — 서울대·한예종 전단계 ──
   advanced_2: {
     maxInterval: 10, stepwiseProb: 0.45, maxLeap: 10,
-    chromaticBudget: [3, 5], chromaticProb: 0.22,
+    chromaticBudget: [3, 5], chromaticProb: 0.23,
     syncopationProb: 0.38, tripletBudget: [1, 3], tripletProb: 0.30,
     tieProb: 0.30, restProb: 0.22, dottedProb: 0.35,
     contraryMotionRatio: 0.70, bassIndependence: 0.9,
@@ -241,7 +296,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── 고급 3: 실전 변칙 극복 (BPM 96~144) — 서울대·한예종 수준 ──
   advanced_3: {
     maxInterval: 10, stepwiseProb: 0.40, maxLeap: 12,
-    chromaticBudget: [5, 8], chromaticProb: 0.28,
+    chromaticBudget: [5, 8], chromaticProb: 0.29,
     syncopationProb: 0.40, tripletBudget: [2, 4], tripletProb: 0.35,
     tieProb: 0.30, restProb: 0.25, dottedProb: 0.35,
     contraryMotionRatio: 0.70, bassIndependence: 1.0,
@@ -263,6 +318,18 @@ function uid(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
+/** 직전 으뜸 성부 음(쉼표 제외) — 붙임줄(같은 음) 여부 판별용 */
+function lastNonRestMelody(notes: ScoreNote[]): ScoreNote | null {
+  for (let k = notes.length - 1; k >= 0; k--) {
+    if (notes[k].pitch !== 'rest') return notes[k];
+  }
+  return null;
+}
+
+function samePitchHeight(a: ScoreNote, pitch: PitchName, octave: number, accidental: Accidental): boolean {
+  return a.pitch === pitch && a.octave === octave && a.accidental === accidental;
+}
+
 function makeNote(
   pitch: PitchName, octave: number, dur: NoteDuration,
   accidental: Accidental = '', tie = false,
@@ -271,7 +338,20 @@ function makeNote(
 }
 
 function makeRest(dur: NoteDuration): ScoreNote {
-  return makeNote('rest' as PitchName, 4, dur);
+  return makeNote('rest', 4, dur);
+}
+
+/** V1 하한선 가드레일: MIDI가 V1_MIN_MIDI 미만이면 옥타브 올림 */
+function clampTrebleFloor(
+  pitch: PitchName, octave: number, accidental: Accidental, keySignature: string,
+): number {
+  if (pitch === 'rest') return octave;
+  const test: ScoreNote = { id: '', pitch, octave, accidental, duration: '4' };
+  const midi = noteToMidiWithKey(test, keySignature);
+  if (midi >= 0 && midi < V1_MIN_MIDI) {
+    return octave + Math.ceil((V1_MIN_MIDI - midi) / 12);
+  }
+  return octave;
 }
 
 function noteNumToNote(
@@ -286,17 +366,129 @@ function noteNumToNote(
   return { pitch, octave: baseOctave + octOff + wrap };
 }
 
-function fillRhythm(total: number, pool: number[], lastDur?: number): number[] {
+// ── 사보 관례: 마디 내 필수 박 경계 (지침서 §1) ──────────────
+/**
+ * 리듬 생성 시 넘어서는 안 되는 필수 박 경계를 16분음표 단위로 반환.
+ * - 4/4: 마디 중앙(3박 = 8) — 2박 끝에서 3박으로 이어지는 음표는 붙임줄 필수
+ * - 3/4: 각 박 경계(4, 8) — 2박+3박을 2분음표로 묶지 않음
+ * - 복합 박자(6/8 등): 점4분 단위 경계
+ * - 기타 홑박자: 한 박 단위 경계
+ */
+function getBarMandatoryBoundaries(timeSignature: string, barLength: number): number[] {
+  const [topStr, bottomStr] = timeSignature.split('/');
+  const top = parseInt(topStr, 10);
+  const bottom = parseInt(bottomStr, 10);
+
+  if (bottom === 8 && top % 3 === 0 && top >= 6) {
+    const pts: number[] = [];
+    for (let i = 6; i < barLength; i += 6) pts.push(i);
+    return pts;
+  }
+
+  if (top === 4 && bottom === 4) {
+    return [8];
+  }
+
+  if (top === 3 && bottom === 4) {
+    return [8];
+  }
+
+  if (top === 2) {
+    return [];
+  }
+
+  const beatSize = 16 / bottom;
+  const pts: number[] = [];
+  for (let i = beatSize; i < barLength; i += beatSize) pts.push(i);
+  return pts;
+}
+
+/**
+ * 박자 경계를 존중하는 리듬 생성 (사보 관례 지침서 적용)
+ *
+ * - 점음표는 박 경계를 가리지 않을 때만 사용 (§1.2)
+ * - 4/4에서 마디 중앙(3박) 경계를 넘는 음표 금지 (§1.1)
+ * - 3/4에서 2박+3박을 하나의 2분음표로 묶지 않음 (§1.1)
+ * - 당김음은 정박 시작점이 보이도록 패턴 삽입 (§3.1)
+ *   → splitAtBeatBoundaries가 경계에서 붙임줄로 분할
+ */
+function fillRhythm(
+  total: number,
+  pool: number[],
+  opts?: {
+    timeSignature?: string;
+    lastDur?: number;
+    syncopationProb?: number;
+  },
+): number[] {
   const sorted = [...pool].sort((a, b) => b - a);
   const result: number[] = [];
   let rem = total;
+  let pos = 0;
+  const lastDur = opts?.lastDur;
+  const syncopationProb = opts?.syncopationProb ?? 0;
+  const timeSignature = opts?.timeSignature;
+
+  const boundaries = timeSignature
+    ? getBarMandatoryBoundaries(timeSignature, total)
+    : [];
+  const beatSize = (() => {
+    if (!timeSignature) return 4;
+    const [, bs] = timeSignature.split('/');
+    return 16 / (parseInt(bs, 10) || 4);
+  })();
+
+  const allBeatBounds: number[] = [];
+  if (timeSignature) {
+    for (let i = beatSize; i < total; i += beatSize) allBeatBounds.push(i);
+  }
+
+  let syncopationUsed = false;
+
   while (rem > 0) {
+    // ── 당김음 패턴 삽입 (지침서 §3.1) ──
+    if (
+      !syncopationUsed &&
+      syncopationProb > 0 &&
+      rem >= beatSize * 2 &&
+      pos % beatSize === 0 &&
+      pos > 0 &&
+      Math.random() < syncopationProb
+    ) {
+      const halfBeat = Math.max(1, Math.floor(beatSize / 2));
+      const syncCell = [halfBeat, beatSize, halfBeat];
+      const syncTotal = syncCell.reduce((a, b) => a + b, 0);
+      if (syncTotal <= rem && syncCell.every(d => SIXTEENTHS_TO_DUR[d])) {
+        result.push(...syncCell);
+        rem -= syncTotal;
+        pos += syncTotal;
+        syncopationUsed = true;
+        continue;
+      }
+    }
+
     let avail = sorted.filter(d => d <= rem);
 
-    // 점 4분음표(6) 연속 방지
     const prevDur = result.length > 0 ? result[result.length - 1] : lastDur;
     if (prevDur === 6) {
       avail = avail.filter(d => d !== 6);
+    }
+
+    // ── 박 경계를 넘는 음가 필터링 (지침서 §1.1, §1.2) ──
+    if (boundaries.length > 0) {
+      const onBeat = pos % beatSize === 0;
+      avail = avail.filter(d => {
+        const noteEnd = pos + d;
+        for (const b of boundaries) {
+          if (pos < b && noteEnd > b) return false;
+        }
+        if (!onBeat) {
+          for (const b of allBeatBounds) {
+            if (pos < b && noteEnd > b) return false;
+          }
+        }
+        return true;
+      });
     }
 
     if (avail.length === 0) {
@@ -308,11 +500,36 @@ function fillRhythm(total: number, pool: number[], lastDur?: number): number[] {
         fallback = fallback.filter(d => d !== 6);
       }
 
-      if (fallback.length) { result.push(fallback[0]); rem -= fallback[0]; }
-      else { result.push(rem); break; }
+      if (boundaries.length > 0) {
+        const onBeat = pos % beatSize === 0;
+        fallback = fallback.filter(d => {
+          const noteEnd = pos + d;
+          for (const b of boundaries) {
+            if (pos < b && noteEnd > b) return false;
+          }
+          if (!onBeat) {
+            for (const b of allBeatBounds) {
+              if (pos < b && noteEnd > b) return false;
+            }
+          }
+          return true;
+        });
+      }
+
+      if (fallback.length) {
+        result.push(fallback[0]);
+        pos += fallback[0];
+        rem -= fallback[0];
+      } else {
+        result.push(1);
+        pos += 1;
+        rem -= 1;
+      }
     } else {
       const d = rand(avail);
-      result.push(d); rem -= d;
+      result.push(d);
+      pos += d;
+      rem -= d;
     }
   }
   return result;
@@ -326,27 +543,32 @@ function generateProgression(measures: number): number[] {
       if (result.length < measures) result.push(c);
     }
   }
-  if (measures >= 2) { result[measures - 2] = 4; result[measures - 1] = 0; }
+  if (measures >= 2) {
+    result[measures - 2] = 4;
+    result[measures - 1] = 0;
+  } else if (measures === 1) {
+    result[0] = 0;
+  }
   return result;
 }
 
 // ── 셋잇단음표 삽입 ──
 function tryInsertTriplet(
   notes: ScoreNote[],
-  pitchFn: () => { pitch: PitchName; octave: number },
+  pitchFn: (idx: number) => { pitch: PitchName; octave: number },
   maxRemaining: number,
   prob: number,
-): boolean {
-  if (maxRemaining < 4 || Math.random() > prob) return false;
+): { inserted: boolean; lastNn?: number } {
+  if (maxRemaining < 4 || Math.random() > prob) return { inserted: false };
   for (let k = 0; k < 3; k++) {
-    const { pitch, octave } = pitchFn();
+    const { pitch, octave } = pitchFn(k);
     notes.push({
       id: uid(), pitch, octave, accidental: '' as Accidental,
       duration: '8', tie: false,
       ...(k === 0 ? { tuplet: '3' as const, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 } : {}),
     });
   }
-  return true;
+  return { inserted: true };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -358,28 +580,41 @@ function generateCadenceMeasure(
   bassBase: number,
   sixteenthsPerBar: number,
   useGrandStaff: boolean,
+  keySignature: string,
 ): { treble: ScoreNote[]; bass: ScoreNote[] } {
   const tonicPitch = scale[0];
-  const bassNote   = noteNumToNote(0, scale, bassBase);
-  const bassOctave = Math.max(2, Math.min(4, bassNote.octave));
+  const bassDeg    = noteNumToNote(0, scale, bassBase);
+  let bassOctave = Math.max(2, Math.min(3, bassDeg.octave));
 
   const canUsePatternB = sixteenthsPerBar >= 16 && !!SIXTEENTHS_TO_DUR[12] && !!SIXTEENTHS_TO_DUR[4];
   const usePatternB    = canUsePatternB && Math.random() < 0.5;
 
-  const noteSixteenths = usePatternB ? 12 : 8;
+  const noteSixteenths = usePatternB ? 12 : Math.min(8, sixteenthsPerBar);
   const restSixteenths = sixteenthsPerBar - noteSixteenths;
 
   const noteDur = SIXTEENTHS_TO_DUR[noteSixteenths] || '2';
-  const restDur = SIXTEENTHS_TO_DUR[restSixteenths] || '2';
 
-  const treble: ScoreNote[] = [
-    makeNote(tonicPitch, trebleBase, noteDur),
-    makeRest(restDur),
-  ];
-  const bass: ScoreNote[] = useGrandStaff ? [
-    makeNote(bassNote.pitch, bassOctave, noteDur),
-    makeRest(restDur),
-  ] : [];
+  const trebleMelody = makeNote(tonicPitch, trebleBase, noteDur);
+  let bassMelody = makeNote(bassDeg.pitch, bassOctave, noteDur);
+
+  while (
+    useGrandStaff &&
+    noteToMidiWithKey(bassMelody, keySignature) >= noteToMidiWithKey(trebleMelody, keySignature) - MIN_VOICE_GAP &&
+    bassOctave > 2
+  ) {
+    bassOctave--;
+    bassMelody = makeNote(bassDeg.pitch, bassOctave, noteDur);
+  }
+
+  const treble: ScoreNote[] = [trebleMelody];
+  if (restSixteenths > 0) {
+    treble.push(makeRest(SIXTEENTHS_TO_DUR[restSixteenths] || '4'));
+  }
+
+  const bass: ScoreNote[] = useGrandStaff ? [bassMelody] : [];
+  if (useGrandStaff && restSixteenths > 0) {
+    bass.push(makeRest(SIXTEENTHS_TO_DUR[restSixteenths] || '4'));
+  }
 
   return { treble, bass };
 }
@@ -430,14 +665,14 @@ function applyInternalRests(
     let bpos = 0;
     for (const bn of bass) {
       const bdur = sizMap[bn.duration] ?? 4;
-      if (bn.pitch === ('rest' as PitchName)) {
+      if (bn.pitch === 'rest') {
         bassRestAt.add(`${Math.floor(bpos / sixteenthsPerBar)}_${bpos % sixteenthsPerBar}`);
       }
       bpos += bdur;
     }
   }
 
-  const isRest = (idx: number) => treble[idx]?.pitch === ('rest' as PitchName);
+  const isRest = (idx: number) => treble[idx]?.pitch === 'rest';
 
   let candidates: NotePos[] = [];
 
@@ -511,6 +746,9 @@ function applyInternalRests(
   }
 
   for (const c of chosen) {
+    if (c.noteIdx > 0 && treble[c.noteIdx - 1]?.tie) {
+      treble[c.noteIdx - 1] = { ...treble[c.noteIdx - 1], tie: false };
+    }
     treble[c.noteIdx] = makeRest(treble[c.noteIdx].duration);
   }
 }
@@ -521,16 +759,38 @@ function applyInternalRests(
 
 export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const { keySignature, timeSignature, difficulty, measures, useGrandStaff } = opts;
-  const scale             = SCALE_DEGREES[keySignature] || SCALE_DEGREES['C'];
+  if (measures < 1) throw new Error('measures must be >= 1');
+  if (!timeSignature || !timeSignature.includes('/')) throw new Error(`Invalid timeSignature: ${timeSignature}`);
+
+  const scale             = getScaleDegrees(keySignature);
   const sixteenthsPerBar  = getSixteenthsPerBar(timeSignature);
   const pool              = DURATION_POOL[difficulty];
   const progression       = generateProgression(measures);
   const lvl               = difficultyLevel(difficulty);
   const params            = LEVEL_PARAMS[difficulty];
 
-  // 임시표/셋잇단 예산
+  // 임시표/셋잇단 예산 — 조표 밀도 + 마디 수: 짧은 곡은 보정을 약하게, 긴 곡은 같은 조에서 임시표가 마디에 고르게 쓰이도록 상향
+  const keyAccCount = getKeySignatureAccidentalCount(keySignature);
+  /** 1마디 근처 ~0.65, 8마디 ~1.2, 16마디 이상 상한 ~1.75 */
+  const measureDensity = Math.max(
+    0.62,
+    Math.min(1.75, 0.48 + measures * 0.092),
+  );
+  const keyDensityBase = keyAccCount * 0.6 + (keyAccCount >= 5 ? 1 : 0);
+  const accidentalBudgetExtra = Math.min(
+    8,
+    Math.floor(keyDensityBase * measureDensity),
+  );
   let accidentalBudget = params.chromaticBudget[0] +
     Math.floor(Math.random() * (params.chromaticBudget[1] - params.chromaticBudget[0] + 1));
+  accidentalBudget += accidentalBudgetExtra;
+  const chromaticProbEffective = Math.min(
+    0.48,
+    params.chromaticProb
+      + keyAccCount * 0.017 * measureDensity
+      + (lvl >= 4 ? 0.035 * Math.min(1.25, 0.75 + measures * 0.04) : 0),
+  );
+
   let tripletBudget = params.tripletBudget[0] +
     Math.floor(Math.random() * (params.tripletBudget[1] - params.tripletBudget[0] + 1));
 
@@ -540,15 +800,18 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const TREBLE_BASE = 4;
   const BASS_BASE   = 3;
 
-  let nn              = rand([0, 2, 4]); // 시작: 으뜸3화음 구성음
+  let nn              = rand([0, 2, 4]);
   let prevDir         = 0;
   let prevInterval    = 0;
   let pendingResolution: PitchName | null = null;
 
   let lastTrebleDur: number | undefined;
   for (let bar = 0; bar < measures - 1; bar++) {
+    const trebleBarStart = trebleNotes.length;
     const tones  = CHORD_TONES[progression[bar]];
-    const rhythm = fillRhythm(sixteenthsPerBar, pool, lastTrebleDur);
+    const rhythm = fillRhythm(sixteenthsPerBar, pool, {
+      timeSignature, lastDur: lastTrebleDur, syncopationProb: params.syncopationProb,
+    });
     if (rhythm.length > 0) {
       lastTrebleDur = rhythm[rhythm.length - 1];
     }
@@ -563,8 +826,9 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         const rp = pendingResolution; pendingResolution = null;
         const degIdx = scale.indexOf(rp);
         if (degIdx >= 0) nn = Math.round(nn / 7) * 7 + degIdx;
-        const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
-        trebleNotes.push(makeNote(pitch, octave, durLabel));
+        const rn = noteNumToNote(nn, scale, TREBLE_BASE);
+        const rnOct = clampTrebleFloor(rn.pitch, rn.octave, '' as Accidental, keySignature);
+        trebleNotes.push(makeNote(rn.pitch, rnOct, durLabel));
         barPos += dur; prevInterval = 0; continue;
       }
 
@@ -580,10 +844,8 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
             interval = prevDir > 0 ? -1 : 1;
           }
         } else if (Math.random() < params.stepwiseProb) {
-          // 순차진행
           interval = rand([1, -1]);
         } else {
-          // 도약
           const maxLeap = params.maxLeap;
           const leapOptions: number[] = [];
           for (let l = 2; l <= Math.min(maxLeap, params.maxInterval); l++) {
@@ -623,55 +885,79 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
       // ── 셋잇단음표 삽입 ──
       if (tripletBudget > 0 && dur === 4 && lvl >= 4) {
-        const inserted = tryInsertTriplet(trebleNotes, () => {
-          const newNn = Math.max(-2, Math.min(9, nn + rand([1,-1,2,-2])));
-          return noteNumToNote(newNn, scale, TREBLE_BASE);
+        const tripResult = tryInsertTriplet(trebleNotes, (k) => {
+          nn = Math.max(-2, Math.min(9, nn + rand([1,-1,2,-2])));
+          const raw = noteNumToNote(nn, scale, TREBLE_BASE);
+          return { pitch: raw.pitch, octave: clampTrebleFloor(raw.pitch, raw.octave, '' as Accidental, keySignature) };
         }, dur, params.tripletProb);
-        if (inserted) { tripletBudget--; barPos += dur; continue; }
+        if (tripResult.inserted) { tripletBudget--; barPos += dur; continue; }
       }
 
-      const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
+      let { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
+      octave = clampTrebleFloor(pitch, octave, '' as Accidental, keySignature);
 
-      // ── 임시표(반음계) 삽입 ──
-      if (accidentalBudget > 0 && i < rhythm.length - 1 && Math.random() < params.chromaticProb) {
+      // ── 임시표(반음계) 삽입 — 조표·난이도에 맞게 #/b/n 분배 (조표만으로는 표기 안 되는 중복 방지) ──
+      if (accidentalBudget > 0 && i < rhythm.length - 1 && Math.random() < chromaticProbEffective) {
         if (scale.includes(pitch)) {
-          const acc: Accidental = lvl >= 5 ? (Math.random() < 0.5 ? '#' : 'b') : '#';
-          trebleNotes.push(makeNote(pitch, octave, durLabel, acc));
-          if (acc === '#') {
-            pendingResolution = CHROMATIC_RESOLUTION[pitch];
-          } else {
-            pendingResolution = pitch; // b인 경우 같은 음으로 해결
+          const acc = pickChromaticAccidental(keySignature, pitch, difficulty);
+          const accMidi = noteToMidiWithKey(makeNote(pitch, octave, durLabel, acc), keySignature);
+          if (accMidi >= V1_MIN_MIDI) {
+            trebleNotes.push(makeNote(pitch, octave, durLabel, acc));
+            if (acc === '#' || acc === 'n') {
+              pendingResolution = CHROMATIC_RESOLUTION[pitch];
+            } else {
+              pendingResolution = pitch;
+            }
+            accidentalBudget--;
+            barPos += dur; continue;
           }
-          accidentalBudget--;
-          barPos += dur; continue;
         }
       }
 
-      // ── 붙임줄(Tie) 삽입 ──
-      if (Math.random() < params.tieProb && i > 0 && i < rhythm.length - 1 && barPos > 0) {
-        trebleNotes.push(makeNote(pitch, octave, durLabel, '', true));
-        barPos += dur; continue;
+      // ── 붙임줄(타이): 직전 음과 높이가 같을 때 prevMel에 tie 부여 (ABC `-`는 앞→뒤 연결)
+      const prevMel = lastNonRestMelody(trebleNotes);
+      if (
+        prevMel &&
+        samePitchHeight(prevMel, pitch, octave, '' as Accidental) &&
+        Math.random() < params.tieProb &&
+        i > 0 &&
+        i < rhythm.length - 1 &&
+        barPos > 0
+      ) {
+        prevMel.tie = true;
+        trebleNotes.push(makeNote(pitch, octave, durLabel));
+        barPos += dur;
+        continue;
       }
 
       trebleNotes.push(makeNote(pitch, octave, durLabel));
       barPos += dur;
     }
 
-    // ── 베이스 생성 ──
+    // ── 베이스 생성 (트레블과 동시에 같은 건반 음이 나오지 않게) ──
     if (useGrandStaff) {
+      const barTrebleSlice = trebleNotes.slice(trebleBarStart);
+      const trebleAttackMap = buildTrebleMidiMap(barTrebleSlice, keySignature, sixteenthsPerBar);
       if (lvl >= 7) {
-        generateArpeggioBass(bassNotes, sixteenthsPerBar, progression[bar], scale);
+        generateArpeggioBass(
+          bassNotes, sixteenthsPerBar, progression[bar], scale, keySignature, trebleAttackMap,
+        );
       } else if (lvl >= 4 && params.bassIndependence > 0.3) {
-        generateIndependentBass(bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, params);
+        generateIndependentBass(
+          bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, params,
+          keySignature, trebleAttackMap, timeSignature,
+        );
       } else {
-        generateBasicBass(bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale);
+        generateBasicBass(
+          bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, keySignature, trebleAttackMap, timeSignature,
+        );
       }
     }
   }
 
   // ── 종지 마디 ──
   const cadence = generateCadenceMeasure(
-    scale, TREBLE_BASE, BASS_BASE, sixteenthsPerBar, useGrandStaff,
+    scale, TREBLE_BASE, BASS_BASE, sixteenthsPerBar, useGrandStaff, keySignature,
   );
   trebleNotes.push(...cadence.treble);
   bassNotes.push(...cadence.bass);
@@ -682,27 +968,77 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   return { trebleNotes, bassNotes };
 }
 
+/**
+ * 베이스-트레블 교차 방지.
+ * 베이스 음표의 지속 구간 내 어느 시점이든 트레블 MIDI - MIN_VOICE_GAP 이상이면
+ * 옥타브 하강 → 대체 화음톤 순으로 해결한다.
+ */
+function resolveBassClash(
+  note: ScoreNote, bnn: number, oct: number, durLabel: NoteDuration,
+  bassOff: number, bassDurSixteenths: number,
+  scale: PitchName[], bassBase: number,
+  keySignature: string, trebleMap: Map<number, number>,
+): ScoreNote {
+  let minTreble = Infinity;
+  for (let pos = bassOff; pos < bassOff + bassDurSixteenths; pos++) {
+    const t = trebleMap.get(pos);
+    if (t !== undefined && t >= 0 && t < minTreble) minTreble = t;
+  }
+  if (minTreble === Infinity) return note;
+
+  const bassMidi = noteToMidiWithKey(note, keySignature);
+  if (bassMidi < minTreble - MIN_VOICE_GAP) return note;
+
+  let newOct = oct;
+  let resolved = note;
+  while (newOct > 1) {
+    newOct--;
+    resolved = makeNote(note.pitch as PitchName, newOct, durLabel);
+    if (noteToMidiWithKey(resolved, keySignature) < minTreble - MIN_VOICE_GAP) {
+      return resolved;
+    }
+  }
+
+  let b2 = (bnn + 2) % 7;
+  if (b2 > 4) b2 -= 7;
+  const alt = noteNumToNote(b2, scale, bassBase);
+  let altOct = Math.max(2, Math.min(3, alt.octave));
+  resolved = makeNote(alt.pitch, altOct, durLabel);
+  if (noteToMidiWithKey(resolved, keySignature) >= minTreble - MIN_VOICE_GAP && altOct > 1) {
+    resolved = makeNote(alt.pitch, altOct - 1, durLabel);
+  }
+  return resolved;
+}
+
 // ── 초급 베이스: 화음톤 기반 ─────────────────────────────────
 function generateBasicBass(
   bassNotes: ScoreNote[], trebleRhythm: number[], sixteenthsPerBar: number,
   chordRoot: number, scale: PitchName[],
+  keySignature: string,
+  trebleAttackMap: Map<number, number>,
+  timeSignature?: string,
 ) {
   const BASS_BASE   = 3;
   const bTones      = CHORD_TONES[chordRoot];
   const trebleShort = trebleRhythm.some(d => d <= 2);
   const bassPool    = trebleShort ? [16, 8] : [8, 4];
-  const bassRhythm  = fillRhythm(sixteenthsPerBar, bassPool);
+  const bassRhythm  = fillRhythm(sixteenthsPerBar, bassPool, { timeSignature });
 
   let bnn = chordRoot;
   if (bnn > 4) bnn -= 7;
 
+  let bassOff = 0;
   for (let j = 0; j < bassRhythm.length; j++) {
     const dur      = bassRhythm[j];
     const durLabel = SIXTEENTHS_TO_DUR[dur] || '4';
     if (j > 0) { bnn = rand(bTones); if (bnn > 4) bnn -= 7; }
     bnn = Math.max(-5, Math.min(4, bnn));
     const { pitch, octave } = noteNumToNote(bnn, scale, BASS_BASE);
-    bassNotes.push(makeNote(pitch, Math.max(2, Math.min(4, octave)), durLabel));
+    let oct = Math.max(2, Math.min(4, octave));
+    let note = makeNote(pitch, oct, durLabel);
+    note = resolveBassClash(note, bnn, oct, durLabel, bassOff, dur, scale, BASS_BASE, keySignature, trebleAttackMap);
+    bassNotes.push(note);
+    bassOff += dur;
   }
 }
 
@@ -710,33 +1046,33 @@ function generateBasicBass(
 function generateIndependentBass(
   bassNotes: ScoreNote[], trebleRhythm: number[], sixteenthsPerBar: number,
   chordRoot: number, scale: PitchName[], params: LevelParams,
+  keySignature: string,
+  trebleAttackMap: Map<number, number>,
+  timeSignature?: string,
 ) {
   const BASS_BASE   = 3;
   const bTones      = CHORD_TONES[chordRoot];
 
-  // 독립도에 따라 리듬 풀 결정
   let bassPool: number[];
   if (params.bassIndependence >= 0.6) {
-    // 높은 독립도: 별도 리듬
     bassPool = [8, 6, 4, 2];
   } else {
-    // 트레블과 유사하되 약간 다름
     const trebleShort = trebleRhythm.some(d => d <= 2);
     bassPool = trebleShort ? [8, 4] : [8, 6, 4];
   }
 
-  const bassRhythm = fillRhythm(sixteenthsPerBar, bassPool);
+  const bassRhythm = fillRhythm(sixteenthsPerBar, bassPool, { timeSignature });
 
   let bnn = chordRoot;
   if (bnn > 4) bnn -= 7;
 
+  let bassOff = 0;
   for (let j = 0; j < bassRhythm.length; j++) {
     const dur      = bassRhythm[j];
     const durLabel = SIXTEENTHS_TO_DUR[dur] || '4';
     if (j > 0) {
-      // 순차진행 + 화음톤 혼합
       if (Math.random() < 0.4) {
-        bnn += rand([1, -1]); // 순차
+        bnn += rand([1, -1]);
       } else {
         bnn = rand(bTones);
       }
@@ -744,7 +1080,11 @@ function generateIndependentBass(
     }
     bnn = Math.max(-5, Math.min(4, bnn));
     const { pitch, octave } = noteNumToNote(bnn, scale, BASS_BASE);
-    bassNotes.push(makeNote(pitch, Math.max(2, Math.min(4, octave)), durLabel));
+    let oct = Math.max(2, Math.min(4, octave));
+    let note = makeNote(pitch, oct, durLabel);
+    note = resolveBassClash(note, bnn, oct, durLabel, bassOff, dur, scale, BASS_BASE, keySignature, trebleAttackMap);
+    bassNotes.push(note);
+    bassOff += dur;
   }
 }
 
@@ -754,21 +1094,26 @@ function generateArpeggioBass(
   sixteenthsPerBar: number,
   chordRoot: number,
   scale: PitchName[],
+  keySignature: string,
+  trebleAttackMap: Map<number, number>,
 ) {
   const BASS_BASE = 3;
-  const bTones    = CHORD_TONES[chordRoot];
-
-  const pattern = [bTones[0], bTones[2], bTones[1], bTones[2]];
+  const pattern = [CHORD_TONES[chordRoot][0], CHORD_TONES[chordRoot][2], CHORD_TONES[chordRoot][1], CHORD_TONES[chordRoot][2]];
 
   const totalEighths = Math.floor(sixteenthsPerBar / 2);
   const leftover     = sixteenthsPerBar % 2;
 
+  let bassOff = 0;
   for (let j = 0; j < totalEighths; j++) {
     let bnn = pattern[j % pattern.length];
     if (bnn > 4) bnn -= 7;
     bnn = Math.max(-5, Math.min(4, bnn));
     const { pitch, octave } = noteNumToNote(bnn, scale, BASS_BASE);
-    bassNotes.push(makeNote(pitch, Math.max(2, Math.min(4, octave)), '8'));
+    let oct = Math.max(2, Math.min(4, octave));
+    let note = makeNote(pitch, oct, '8');
+    note = resolveBassClash(note, bnn, oct, '8', bassOff, 2, scale, BASS_BASE, keySignature, trebleAttackMap);
+    bassNotes.push(note);
+    bassOff += 2;
   }
 
   if (leftover > 0) {
@@ -776,6 +1121,9 @@ function generateArpeggioBass(
     if (bnn > 4) bnn -= 7;
     bnn = Math.max(-5, Math.min(4, bnn));
     const { pitch, octave } = noteNumToNote(bnn, scale, BASS_BASE);
-    bassNotes.push(makeNote(pitch, Math.max(2, Math.min(4, octave)), '16'));
+    let oct = Math.max(2, Math.min(4, octave));
+    let note = makeNote(pitch, oct, '16');
+    note = resolveBassClash(note, bnn, oct, '16', bassOff, 1, scale, BASS_BASE, keySignature, trebleAttackMap);
+    bassNotes.push(note);
   }
 }

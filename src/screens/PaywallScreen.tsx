@@ -47,7 +47,6 @@ const PLAN_CARDS: PlanCard[] = [
       { label: '시험 모드 (마디별 재생)', icon: <Check size={13} color="#6366f1" /> },
       { label: '초·중·고급 전 난이도', icon: <Check size={13} color="#6366f1" /> },
       { label: '마디 수 무제한 (8마디+)', icon: <Check size={13} color="#6366f1" /> },
-      { label: '음표 편집 기능', icon: <Check size={13} color="#6366f1" /> },
       { label: '월 50회 음원 다운로드', icon: <Download size={13} color="#6366f1" /> },
       { label: '광고 완전 제거', icon: <Check size={13} color="#6366f1" /> },
     ],
@@ -59,6 +58,7 @@ const PLAN_CARDS: PlanCard[] = [
     badge: '교사·학원 추천',
     features: [
       { label: 'Pro 모든 기능 포함', icon: <Check size={13} color="#f59e0b" /> },
+      { label: '음표 편집·악보 수정', icon: <Check size={13} color="#f59e0b" /> },
       { label: '음원 무제한 다운로드', icon: <Download size={13} color="#f59e0b" /> },
       { label: '오프라인 수업 자료 활용', icon: <Check size={13} color="#f59e0b" /> },
       { label: '대량 문제 생성·저장', icon: <Check size={13} color="#f59e0b" /> },
@@ -83,7 +83,7 @@ const COMPARE_ROWS: CompareRow[] = [
   { label: '시험 모드', free: '✕', pro: '✓', premium: '✓' },
   { label: '난이도', free: '초급', pro: '전체', premium: '전체' },
   { label: '마디 수', free: '최대 4', pro: '무제한', premium: '무제한' },
-  { label: '음표 편집', free: '✕', pro: '✓', premium: '✓' },
+  { label: '음표 편집', free: '✕', pro: '✕', premium: '✓' },
   { label: '다운로드', free: '불가', pro: '월 50회', premium: '무제한' },
   { label: '광고', free: '3회당 1회', pro: '없음', premium: '없음' },
 ];
