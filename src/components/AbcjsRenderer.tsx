@@ -7,6 +7,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings } from '../types/playback';
+import { generateAbcScaleNotes } from '../lib/scoreUtils';
 
 export interface AbcjsRendererHandle {
   requestExportImage: () => void;
@@ -43,23 +44,6 @@ interface AbcjsRendererProps {
   showNoteCursor?: boolean;
   showMeasureHighlight?: boolean;
 }
-
-const SCALE_NOTES: Record<string, string[]> = {
-  'C':   ['C','D','E','F','G','A','B','c'],
-  'G':   ['G','A','B','c','d','e','f','g'],
-  'D':   ['D','E','F','G','A','B','c','d'],
-  'A':   ['A,','B,','C','D','E','F','G','A'],
-  'F':   ['F','G','A','B','c','d','e','f'],
-  'Bb':  ['B,','C','D','E','F','G','A','B'],
-  'Eb':  ['E','F','G','A','B','c','d','e'],
-  'Am':  ['A,','B,','C','D','E','F','G','A'],
-  'Em':  ['E','F','G','A','B','c','d','e'],
-  'Bm':  ['B,','C','D','E','F','G','A','B'],
-  'F#m': ['F,','G,','A,','B,','C','D','E','F'],
-  'Dm':  ['D','E','F','G','A','B','c','d'],
-  'Gm':  ['G,','A,','B,','C','D','E','F','G'],
-  'Cm':  ['C','D','E','F','G','A','B','c'],
-};
 
 const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(function AbcjsRenderer({
   abcString,
@@ -158,7 +142,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
 
     let scalePrepend = '';
     if (prependBasePitch) {
-      const ascending  = SCALE_NOTES[keySignature] || SCALE_NOTES['C'];
+      const ascending  = generateAbcScaleNotes(keySignature);
       const descending = [...ascending].slice(0, -1).reverse();
       const allNotes   = [...ascending, ...descending, 'z'];
       let barPos = 0;
@@ -302,8 +286,8 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
           break;
 
         case 'HEIGHT': {
-          // 악보 전체 높이 + 아주 작은 여유 (하단 잘림 방지)
-          const h = Math.max((msg.height as number) + 40, 100);
+          // 악보 전체 높이 + 하단 여유 (잘림 방지)
+          const h = Math.max((msg.height as number) + 20, 100);
           setWebViewHeight(h);
           break;
         }
@@ -418,11 +402,39 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
 
   #score-container svg {
     display:block;
+    overflow: visible !important;
     touch-action: pan-y !important;
   }
 
   .abcjs-note, .abcjs-rest, .abcjs-staff-extra {
     cursor: pointer;
+  }
+
+  /* ── 이음줄(슬러·서로 다른 음)만 숨김 — 붙임줄(타이·같은 음)은 .abcjs-tie 로 표시 유지
+       abcjs 6.x: tie=.abcjs-tie / slur(legato)=.abcjs-legato ── */
+  .abcjs-legato {
+    display: none;
+  }
+
+  /* ── 재생 중 시각 피드백 ── */
+  .abcjs-cursor {
+    stroke: #ef4444;
+    stroke-width: 2.5;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .abcjs-playback-note path,
+  .abcjs-playback-note ellipse,
+  .abcjs-playback-note polygon,
+  .abcjs-playback-note polyline,
+  .abcjs-playback-note rect,
+  .abcjs-playback-note use {
+    fill: #6366f1 !important;
+  }
+  .abcjs-measure-highlight {
+    fill: #6366f1;
+    opacity: 0.14;
+    pointer-events: none;
   }
 
   #synth-target { display:none; }
@@ -438,19 +450,6 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   }
   #play-btn.playing { background:#ef4444; box-shadow:0 3px 6px rgba(239,68,68,0.3); }
   #play-btn:active { opacity:0.85; }
-
-  /* ── 재생 커서 ── */
-  .abcjs-playback-cursor {
-    stroke: #3b82f6;
-    stroke-width: 3;
-    stroke-linecap: round;
-    opacity: 0.85;
-    pointer-events: none;
-  }
-  .abcjs-measure-hl {
-    fill: rgba(99,102,241,0.07);
-    pointer-events: none;
-  }
 </style>
 </head>
 <body>
@@ -478,11 +477,9 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   var cancelFlag         = false;
   var playTimeout        = null;
   var fixedHeight        = 0;
-  var currentVisualObj   = null;
-  var timingCallbacks    = null;
-  var cursorSvgLine      = null;
-  var measureHlRect      = null;
-  var highlightedEls     = [];
+  var displayVisualObj   = null;
+  var timingCb           = null;
+  var cursorLine         = null;
 
   function postMsg(obj) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(obj)); } catch(e) {}
@@ -562,12 +559,18 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     }
     var bodyStr    = countLines.join(' ');
 
+    // 총 마디 수 계산 → 짝수 마디씩 배치 (2 또는 4)
+    var totalBars = (bodyStr.match(/\|/g) || []).length;
+    var doubleBars = (bodyStr.match(/\|\|/g) || []).length;
+    totalBars = Math.max(1, totalBars - doubleBars);
+    var perLine = (totalBars % 4 === 0) ? 4 : 2;
+
     var renderResult = ABCJS.renderAbc('score-container', abc, {
       add_classes: true,
       responsive: 'resize',
       scale: 1.2,
       staffwidth: 800,
-      wrap: { minSpacing: 1.8, maxSpacing: 1.8, preferredMeasuresPerLine: 4 },
+      wrap: { minSpacing: 1.8, maxSpacing: 2.5, preferredMeasuresPerLine: perLine },
       format: { stretchlast: currentParams.stretchLast },
       clickListener: function(abcElem, tuneNumber, classes, analysis) {
         if (!analysis) return;
@@ -581,9 +584,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         if (idx >= 0) postMsg({ type:'NOTE_CLICK', index:idx, voice:voice });
       }
     });
-    currentVisualObj = renderResult && renderResult[0];
-    cursorSvgLine = null;
-    measureHlRect = null;
+    displayVisualObj = renderResult && renderResult[0];
 
     // 렌더링 완료 후 여러 타이밍에 높이 측정 (abcjs SVG 렌더링이 비동기이므로)
     setTimeout(function() { applyHighlight(selectedNote); reportHeight(); }, 100);
@@ -593,183 +594,77 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
 
   function applyHighlight(sel) {
     var ct = document.getElementById('score-container'); if (!ct) return;
-    ct.querySelectorAll('.abcjs-note,.abcjs-rest').forEach(function(el) {
-      el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) { c.style.fill='#000'; });
+    var svg = ct.querySelector('svg');
+
+    // 기존 하이라이트 rect 제거
+    ct.querySelectorAll('.abcjs-note-highlight').forEach(function(el) {
+      el.parentNode && el.parentNode.removeChild(el);
     });
-    if (!sel || sel.index < 0) return;
+    // 음표 색상 초기화
+    ct.querySelectorAll('.abcjs-note,.abcjs-rest').forEach(function(el) {
+      el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) { c.style.fill=''; });
+    });
+
+    if (!sel || sel.index < 0 || !svg) return;
     var vc  = sel.voice === 'bass' ? 'abcjs-v1' : 'abcjs-v0';
     var all = Array.from(ct.querySelectorAll('.' + vc + '.abcjs-note, .' + vc + '.abcjs-rest'));
     var t   = all[sel.index];
-    if (t) t.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) { c.style.fill='#ef4444'; });
-  }
+    if (!t) return;
 
-  /* ── 재생 커서/하이라이트 ── */
-  function ensureCursorLine() {
-    if (cursorSvgLine) return cursorSvgLine;
-    var svg = document.querySelector('#score-container svg');
-    if (!svg) return null;
-    cursorSvgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    cursorSvgLine.setAttribute('class', 'abcjs-playback-cursor');
-    cursorSvgLine.style.display = 'none';
-    svg.appendChild(cursorSvgLine);
-    return cursorSvgLine;
-  }
-  function ensureMeasureRect() {
-    if (measureHlRect) return measureHlRect;
-    var svg = document.querySelector('#score-container svg');
-    if (!svg) return null;
-    measureHlRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    measureHlRect.setAttribute('class', 'abcjs-measure-hl');
-    measureHlRect.style.display = 'none';
-    svg.insertBefore(measureHlRect, svg.firstChild);
-    return measureHlRect;
-  }
-
-  function clearPlaybackCursor() {
-    if (cursorSvgLine) cursorSvgLine.style.display = 'none';
-    if (measureHlRect) measureHlRect.style.display = 'none';
-    highlightedEls.forEach(function(el) {
-      if (el) el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
-        c.style.fill = '';
-      });
-    });
-    highlightedEls = [];
-  }
-
-  function onPlaybackEvent(event) {
-    clearPlaybackCursor();
-    if (!event) return;
-
-    // 커서 라인 (수직선)
-    if (currentParams.showNoteCursor) {
-      var line = ensureCursorLine();
-      if (line && event.left !== undefined) {
-        line.setAttribute('x1', event.left);
-        line.setAttribute('x2', event.left);
-        line.setAttribute('y1', event.top);
-        line.setAttribute('y2', event.top + event.height);
-        line.style.display = '';
-      }
-
-      // 현재 음표 요소 색상 변경
-      if (event.elements) {
-        event.elements.forEach(function(elArr) {
-          if (!elArr) return;
-          elArr.forEach(function(el) {
-            if (!el) return;
-            el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
-              c.style.fill = '#3b82f6';
-            });
-            highlightedEls.push(el);
-          });
-        });
-      }
-    }
-
-    // 마디 배경 하이라이트 — 바선(.abcjs-bar) 기반
-    if (currentParams.showMeasureHighlight && event.left !== undefined) {
-      var ct2 = document.getElementById('score-container');
-      var svg2 = ct2 ? ct2.querySelector('svg') : null;
-      if (svg2) {
-        var noteX = event.left;
-        var noteTop = event.top;
-        var noteH = event.height;
-
-        var bars = svg2.querySelectorAll('.abcjs-bar');
-        var barPositions = [];
-        bars.forEach(function(b) {
-          var r = b.getBBox();
-          barPositions.push({ x: r.x, top: r.y, bottom: r.y + r.height });
-        });
-
-        // 같은 줄(y 범위 겹침) 바선만 추출
-        var sameLine = barPositions.filter(function(bp) {
-          return bp.top < noteTop + noteH && bp.bottom > noteTop;
-        });
-
-        // 현재 음표를 기준으로 좌·우 경계 바선 결정
-        var leftBar = null, rightBar = null;
-        for (var si = 0; si < sameLine.length; si++) {
-          if (sameLine[si].x <= noteX) {
-            if (!leftBar || sameLine[si].x > leftBar.x) leftBar = sameLine[si];
-          }
-          if (sameLine[si].x > noteX) {
-            if (!rightBar || sameLine[si].x < rightBar.x) rightBar = sameLine[si];
-          }
-        }
-
-        var mLeft = leftBar ? leftBar.x : 0;
-        var mRight = rightBar ? rightBar.x : (leftBar ? leftBar.x + 200 : noteX + 100);
-        var mTop2 = sameLine.length > 0 ? sameLine[0].top : noteTop;
-        var mBottom = sameLine.length > 0 ? sameLine[0].bottom : noteTop + noteH;
-        for (var sj = 1; sj < sameLine.length; sj++) {
-          mTop2 = Math.min(mTop2, sameLine[sj].top);
-          mBottom = Math.max(mBottom, sameLine[sj].bottom);
-        }
-
-        // 큰보표: 같은 시스템(줄)의 다른 보표 바선까지 세로 범위 확장
-        // 시스템 내부 간격 < staffH < 시스템 간 간격이므로 staffH를 threshold로 사용
-        // staffH는 초기값 고정 — 루프 내 재계산 시 threshold가 커져 다른 줄을 침범함
-        var xEps = 2;
-        var refX = leftBar ? leftBar.x : (rightBar ? rightBar.x : -1);
-        if (refX >= 0) {
-          var staffH = mBottom - mTop2;
-          var maxGap = staffH;
-          for (var bj = 0; bj < barPositions.length; bj++) {
-            var bp = barPositions[bj];
-            if (Math.abs(bp.x - refX) > xEps) continue;
-            var gapBelow = bp.top - mBottom;
-            var gapAbove = mTop2 - bp.bottom;
-            if ((gapBelow >= -5 && gapBelow <= maxGap) ||
-                (gapAbove >= -5 && gapAbove <= maxGap)) {
-              mTop2 = Math.min(mTop2, bp.top);
-              mBottom = Math.max(mBottom, bp.bottom);
-            }
-          }
-        }
-
-        var rect = ensureMeasureRect();
-        if (rect) {
-          rect.setAttribute('x', mLeft);
-          rect.setAttribute('y', mTop2);
-          rect.setAttribute('width', mRight - mLeft);
-          rect.setAttribute('height', mBottom - mTop2);
-          rect.setAttribute('rx', '4');
-          rect.style.display = '';
-        }
-      }
-    }
-  }
-
-  function startTimingCallbacks(delayMs) {
-    stopTimingCallbacks();
-    if (!currentVisualObj) return;
-    if (!currentParams.showNoteCursor && !currentParams.showMeasureHighlight) return;
     try {
-      timingCallbacks = new ABCJS.TimingCallbacks(currentVisualObj, {
-        eventCallback: onPlaybackEvent,
-        beatSubdivisions: 4,
-      });
-    } catch(e) { return; }
-    if (delayMs > 0) {
-      playTimeout2 = setTimeout(function() {
-        if (isPlayingState && timingCallbacks) {
-          try { timingCallbacks.start(); } catch(e) {}
-        }
-      }, delayMs);
-    } else {
-      try { timingCallbacks.start(); } catch(e) {}
-    }
-  }
-  var playTimeout2 = null;
+      // screen 좌표 → SVG 좌표 변환 함수
+      var svgBCR = svg.getBoundingClientRect();
+      var vb = svg.viewBox && svg.viewBox.baseVal;
+      var vbX = (vb && vb.width) ? vb.x : 0;
+      var vbY = (vb && vb.width) ? vb.y : 0;
+      var vbW = (vb && vb.width) ? vb.width : (parseFloat(svg.getAttribute('width')) || svgBCR.width);
+      var vbH = (vb && vb.height) ? vb.height : (parseFloat(svg.getAttribute('height')) || svgBCR.height);
+      function toSvgX(sx) { return vbX + (sx - svgBCR.left) * vbW / svgBCR.width; }
+      function toSvgY(sy) { return vbY + (sy - svgBCR.top) * vbH / svgBCR.height; }
+      function toSvgW(sw) { return sw * vbW / svgBCR.width; }
+      function toSvgH(sh) { return sh * vbH / svgBCR.height; }
 
-  function stopTimingCallbacks() {
-    if (playTimeout2) { clearTimeout(playTimeout2); playTimeout2 = null; }
-    if (timingCallbacks) {
-      try { timingCallbacks.stop(); } catch(e) {}
-      timingCallbacks = null;
-    }
-    clearPlaybackCursor();
+      // 음표의 화면 좌표 → SVG 좌표
+      var noteScr = t.getBoundingClientRect();
+      var nX = toSvgX(noteScr.left);
+      var nY = toSvgY(noteScr.top);
+      var nW = toSvgW(noteScr.width);
+      var nH = toSvgH(noteScr.height);
+      var nCY = nY + nH / 2;
+
+      // 바라인으로 보표 세로 범위 결정 (모든 줄에서 동일한 높이)
+      var barEls = svg.querySelectorAll('.abcjs-bar');
+      var sTop = nY, sBot = nY + nH;
+      for (var bi = 0; bi < barEls.length; bi++) {
+        try {
+          var bScr = barEls[bi].getBoundingClientRect();
+          var bY = toSvgY(bScr.top);
+          var bBot = toSvgY(bScr.bottom);
+          if (bY <= nCY && bBot >= nCY) {
+            sTop = bY;
+            sBot = bBot;
+            break;
+          }
+        } catch(e3) {}
+      }
+
+      var padX = 10, padY = 5;
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x',      String(nX - padX));
+      rect.setAttribute('y',      String(sTop - padY));
+      rect.setAttribute('width',  String(nW + padX * 2));
+      rect.setAttribute('height', String(sBot - sTop + padY * 2));
+      rect.setAttribute('rx', '4');
+      rect.setAttribute('ry', '4');
+      rect.setAttribute('fill', '#fef2f2');
+      rect.setAttribute('stroke', '#ef4444');
+      rect.setAttribute('stroke-width', '1.2');
+      rect.setAttribute('opacity', '0.85');
+      rect.setAttribute('class', 'abcjs-note-highlight');
+      rect.setAttribute('pointer-events', 'none');
+      // SVG 루트에 삽입 (transform 무관하게 절대 좌표로 배치)
+      svg.insertBefore(rect, svg.firstChild);
+    } catch(e) {}
   }
 
   /* ── ABC 파싱 유틸 ── */
@@ -799,12 +694,142 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
                     '\\nV:V2 clef=bass\\n'   + bass.join(' | ')   + ' |]';
   }
 
+  /* ── 재생 중 시각 피드백 (커서 / 마디 하이라이트) ── */
+  function clearPlaybackHighlights() {
+    var ct = document.getElementById('score-container');
+    if (!ct) return;
+    // 음표 하이라이트 제거
+    ct.querySelectorAll('.abcjs-playback-note').forEach(function(el) {
+      el.classList.remove('abcjs-playback-note');
+    });
+    // 커서 라인 제거
+    if (cursorLine && cursorLine.parentNode) {
+      cursorLine.parentNode.removeChild(cursorLine);
+    }
+    cursorLine = null;
+    // 마디 하이라이트 제거
+    ct.querySelectorAll('.abcjs-measure-highlight').forEach(function(el) {
+      el.parentNode.removeChild(el);
+    });
+  }
+
+  function onPlaybackEvent(ev) {
+    var p = currentParams;
+    clearPlaybackHighlights();
+
+    // 곡 종료 시 ev === null
+    if (!ev) return;
+
+    var ct = document.getElementById('score-container');
+    if (!ct) return;
+    var svg = ct.querySelector('svg');
+    if (!svg) return;
+
+    // 음표 커서: 음표 왼쪽에 수직 선 (마디 하이라이트와 동일 높이)
+    if (p.showNoteCursor && ev.elements) {
+      if (typeof ev.left !== 'undefined' && typeof ev.top !== 'undefined') {
+        var MARGIN = 3;
+        var staffH = ev.height || 50;
+
+        cursorLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        cursorLine.setAttribute('x1', String(ev.left - MARGIN));
+        cursorLine.setAttribute('y1', String(ev.top));
+        cursorLine.setAttribute('x2', String(ev.left - MARGIN));
+        cursorLine.setAttribute('y2', String(ev.top + staffH));
+        cursorLine.setAttribute('class', 'abcjs-cursor');
+        svg.appendChild(cursorLine);
+      }
+    }
+
+    // 마디 하이라이트: 바라인 위치를 기준으로 전체 마디 영역 강조
+    if (p.showMeasureHighlight && typeof ev.left !== 'undefined') {
+      var noteX = ev.left;
+      var noteTop = ev.top;
+      var noteH = ev.height || 50;
+
+      // SVG 내 모든 바라인(abcjs-bar) 요소의 x 좌표 수집
+      var barEls = svg.querySelectorAll('.abcjs-bar');
+      var barPositions = []; // { x, top, bottom }
+      for (var bi = 0; bi < barEls.length; bi++) {
+        var bBox = barEls[bi].getBBox ? barEls[bi].getBBox() : null;
+        if (bBox) {
+          barPositions.push({ x: bBox.x, top: bBox.y, bottom: bBox.y + bBox.height });
+        }
+      }
+
+      // 현재 음표와 같은 줄에 있는 바라인 필터
+      var sameLine = barPositions.filter(function(bp) {
+        return bp.top < noteTop + noteH && bp.bottom > noteTop;
+      });
+      sameLine.sort(function(a, b) { return a.x - b.x; });
+
+      // 현재 음표 좌측/우측의 바라인 찾기
+      var leftBar = null, rightBar = null;
+      for (var si = 0; si < sameLine.length; si++) {
+        if (sameLine[si].x <= noteX) leftBar = sameLine[si];
+        if (sameLine[si].x > noteX && !rightBar) rightBar = sameLine[si];
+      }
+
+      var mLeft = leftBar ? leftBar.x : 0;
+      var mRight = rightBar ? rightBar.x : (leftBar ? leftBar.x + 200 : noteX + 100);
+
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', String(mLeft));
+      rect.setAttribute('y', String(noteTop));
+      rect.setAttribute('width', String(mRight - mLeft));
+      rect.setAttribute('height', String(noteH));
+      rect.setAttribute('class', 'abcjs-measure-highlight');
+      rect.setAttribute('rx', '3');
+      svg.insertBefore(rect, svg.firstChild);
+    }
+  }
+
+  function stopTimingCallbacks() {
+    if (timingCb) {
+      try { timingCb.stop(); } catch(e) {}
+      timingCb = null;
+    }
+    clearPlaybackHighlights();
+  }
+
+  function startTimingCallbacks() {
+    stopTimingCallbacks();
+    var p = currentParams;
+    if (!displayVisualObj) return;
+    if (!p.showNoteCursor && !p.showMeasureHighlight) return;
+
+    try {
+      timingCb = new ABCJS.TimingCallbacks(displayVisualObj, {
+        eventCallback: onPlaybackEvent
+      });
+    } catch(e) { return; }
+
+    // 스케일/메트로놈 프리펜드 시간만큼 지연 후 시작
+    var ts  = (p.timeSignature || '4/4').split('/');
+    var top = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
+    var beat  = (60 / (p.tempo || 120)) * (4 / btm);
+    var sBeat = (60 / (p.scaleTempo || 120)) * (4 / btm);
+    var delayMs = 0;
+    if (p.prependBasePitch) delayMs += 16 * sBeat * 1000;
+    if (p.prependMetronome) delayMs += top * beat * 1000;
+
+    if (delayMs > 0) {
+      setTimeout(function() {
+        if (isPlayingState && timingCb) {
+          try { timingCb.start(); } catch(e) {}
+        }
+      }, delayMs);
+    } else {
+      try { timingCb.start(); } catch(e) {}
+    }
+  }
+
   /* ── 일반 재생 ── */
   function stopAudio() {
     cancelFlag = true;
+    stopTimingCallbacks();
     if (synthInstance) { try { synthInstance.stop(); } catch(e) {} synthInstance = null; }
     if (playTimeout)   { clearTimeout(playTimeout); playTimeout = null; }
-    stopTimingCallbacks();
     isPlayingState = false; setPlayBtnUI(false);
     postMsg({ type:'PLAY_STATE', isPlaying:false });
     reportHeight();
@@ -832,17 +857,12 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
             createMetronomeClick(audioCtx, audioCtx.currentTime + mStart + i * beat, i===0, p.metronomeFreq||1000);
         }
         synth.start();
-
-        var prependDelay = 0;
-        if (p.prependBasePitch) prependDelay += 16 * sBeat;
-        if (p.prependMetronome) prependDelay += top * beat;
-        startTimingCallbacks(prependDelay * 1000);
-
+        startTimingCallbacks();
         var dur = (res && res.duration) ? res.duration : 30;
         playTimeout = setTimeout(function() {
           if (isPlayingState) {
-            isPlayingState = false; synthInstance = null;
             stopTimingCallbacks();
+            isPlayingState = false; synthInstance = null;
             setPlayBtnUI(false); postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
           }
         }, (dur + 2) * 1000);
@@ -986,7 +1006,6 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         return playMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
       })
       .then(function() {
-        stopTimingCallbacks();
         isPlayingState = false; setPlayBtnUI(false);
         postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
       });
@@ -1135,38 +1154,42 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   /* ── 악보 음표 숨기기 (hideNotes) ── */
   function applyHideNotes(hide) {
     var ct = document.getElementById('score-container'); if (!ct) return;
+    var v = hide ? 'hidden' : 'visible';
     ct.querySelectorAll('.abcjs-note,.abcjs-rest').forEach(function(el) {
       el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
-        c.style.visibility = hide ? 'hidden' : 'visible';
+        c.style.visibility = v;
       });
     });
-    // 잇단음표(트리플릿) 숫자·괄호도 같이 숨기기
+    /* 슬러(.abcjs-legato)·타이(.abcjs-tie) — 음표와 별도 SVG 그룹(.abcjs-slur) */
+    ct.querySelectorAll('.abcjs-slur').forEach(function(el) {
+      el.style.visibility = v;
+    });
+    /* 잇단(트리플릿) 숫자·괄호 등 — 음표와 별도 그룹 (.abcjs-triplet) */
     ct.querySelectorAll('.abcjs-triplet').forEach(function(el) {
-      el.querySelectorAll('path,text,line').forEach(function(c) {
-        c.style.visibility = hide ? 'hidden' : 'visible';
-      });
+      el.style.visibility = v;
     });
-    // 꼬리·빔·가림줄 — 단, 박자표(.abcjs-staff-extra) 안은 보존
-    ct.querySelectorAll('.abcjs-stem,.abcjs-beam-elem,.abcjs-ledger').forEach(function(el) {
-      if (el.closest && el.closest('.abcjs-staff-extra')) return;
-      // 선두(staff-extra) 영역의 bbox와 겹치면 박자표 꼬리로 판단해 보존
-      var extras = ct.querySelectorAll('.abcjs-staff-extra');
-      var skip = false;
+    /* 꼬리·빔·가림줄 — 음표 그룹 밖에 별도 요소로 그려짐.
+       박자표 등 선두(.abcjs-staff-extra) 꼬리는 유지. abcjs는 꼬리를 pathToBack 으로 그릴 때
+       부모 <g> 밖(SVG 직하위)에 두는 경우가 있어, staff-extra 영역과의 bbox 겹침으로도 판별함. */
+    var staffExtraGroups = ct.querySelectorAll('.abcjs-staff-extra');
+    function stemBelongsToStaffExtra(el) {
+      if (el.closest && el.closest('.abcjs-staff-extra')) return true;
       try {
-        var elBox = el.getBBox ? el.getBBox() : null;
-        if (elBox) {
-          var eCx = elBox.x + elBox.width / 2, eCy = elBox.y + elBox.height / 2;
-          for (var xi = 0; xi < extras.length; xi++) {
-            var exBox = extras[xi].getBBox();
-            if (eCx >= exBox.x && eCx <= exBox.x + exBox.width &&
-                eCy >= exBox.y && eCy <= exBox.y + exBox.height) { skip = true; break; }
-          }
+        if (!el.getBBox) return false;
+        var b = el.getBBox();
+        var cx = b.x + b.width / 2;
+        var cy = b.y + b.height / 2;
+        for (var gi = 0; gi < staffExtraGroups.length; gi++) {
+          var sb = staffExtraGroups[gi].getBBox();
+          if (cx >= sb.x - 2 && cx <= sb.x + sb.width + 2 &&
+              cy >= sb.y - 4 && cy <= sb.y + sb.height + 4) return true;
         }
-      } catch(e) {}
-      if (skip) return;
-      el.querySelectorAll('path,line,rect').forEach(function(c) {
-        c.style.visibility = hide ? 'hidden' : 'visible';
-      });
+      } catch (e) {}
+      return false;
+    }
+    ct.querySelectorAll('.abcjs-stem,.abcjs-beam-elem,.abcjs-ledger').forEach(function(el) {
+      if (hide && stemBelongsToStaffExtra(el)) return;
+      el.style.visibility = v;
     });
   }
 

@@ -676,7 +676,7 @@ export default function ScoreEditorScreen() {
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: selectedNote ? 360 : 200 }}
+        contentContainerStyle={{ paddingBottom: selectedNote ? 320 : 140 }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={(e) => {
