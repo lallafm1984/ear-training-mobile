@@ -814,6 +814,21 @@ function splitAtBeatBoundaries(
         }
       }
 
+      // 정박 시작 점음표 분할 (§1.2 확장): 단순박자에서 한 박을 초과하는 점음표는
+      // 박 경계에서 분할 — 4/4의 ♩.(6)→♩+♪, 3/4의 ♩.(6)→♩+♪ 등
+      // ♩♩(half=8): 8%beatSize=0 이므로 조건 불충족 → 분할 안 됨
+      if (locStart % _beatSize === 0) {
+        const segLen = locEnd - locStart;
+        if (segLen > _beatSize && segLen % _beatSize !== 0) {
+          const onBeatDottedSplits = allBeatBounds.filter(
+            (b) => b < barLen && b > locStart && b < locEnd,
+          );
+          for (const b of onBeatDottedSplits) {
+            splitGlobals.add(barGStart + b);
+          }
+        }
+      }
+
       if (chunkEnd < noteEnd) {
         splitGlobals.add(chunkEnd);
       }
@@ -1019,6 +1034,111 @@ function mergeTiedNotesInLastMeasure(
 }
 
 // ────────────────────────────────────────────────────────────────
+// Intra-measure tied note merge
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * 마디 내 붙임줄(타이)로 연결된 동일 음을 하나의 음표로 합산.
+ *
+ * - 합산 후 음가가 표준 음가(SIXTEENTHS_TO_DUR)에 존재해야 함
+ * - 합산 음표가 필수 박 경계(mandatory boundary)를 넘으면 병합 중단
+ * - 음표 시작이 박 위(on-beat)이면 일반 박 경계를 넘어도 허용 (점음표 복원)
+ * - 음표 시작이 박 사이(off-beat)이면 다음 박 경계를 넘으면 병합 중단 (엇박 보존)
+ *
+ * 예) 4/4에서 g4- g2 → g6 (점4분), g1- g1 → g2 (8분, 박 내 동일 위치)
+ */
+function mergeAdjacentTiedNotes(
+  notes: ScoreNote[],
+  timeSignature: string,
+  pickupSixteenths = 0,
+): ScoreNote[] {
+  const B = getSixteenthsPerBar(timeSignature);
+  const total = sumScoreNotesSixteenths(notes);
+  const barLengths = computeBarLengthsFromTotal(total, B, pickupSixteenths);
+
+  const beatSize = isCompoundMeter(timeSignature)
+    ? 6
+    : 16 / (parseInt(timeSignature.split('/')[1] ?? '4', 10) || 4);
+  const mandatoryBounds = getMandatoryBoundaries(timeSignature);
+  const allBeatBoundsInBar: number[] = [];
+  for (let b = beatSize; b < B; b += beatSize) allBeatBoundsInBar.push(b);
+
+  const result: ScoreNote[] = [];
+  let globalPos = 0;
+  let tupletRemaining = 0;
+  let tupletSpanSixteenths = 0;
+  let i = 0;
+
+  while (i < notes.length) {
+    const note = notes[i];
+
+    if (note.tuplet && tupletRemaining === 0) {
+      tupletRemaining = parseInt(note.tuplet, 10);
+      tupletSpanSixteenths = getTupletActualSixteenths(note.tuplet, note.tupletSpan || note.duration);
+    }
+    if (tupletRemaining > 0) {
+      result.push(note);
+      tupletRemaining--;
+      if (tupletRemaining === 0) globalPos += tupletSpanSixteenths;
+      i++;
+      continue;
+    }
+
+    const dur = durationToSixteenths(note.duration);
+
+    // 붙임줄이 있고 쉼표가 아닐 때만 합산 시도
+    if (note.tie && note.pitch !== 'rest' && i + 1 < notes.length) {
+      const { bi, local: localPos } = getBarIndexAndLocal(globalPos, barLengths);
+      const barLen = barLengths[bi] ?? B;
+      const offBeat = localPos % beatSize !== 0;
+
+      let accDur = dur;
+      let lastTie: boolean = note.tie;
+      let j = i + 1;
+
+      while (j < notes.length && lastTie) {
+        const next = notes[j];
+        if (
+          next.tuplet ||
+          next.pitch !== note.pitch ||
+          next.octave !== note.octave ||
+          next.accidental !== note.accidental
+        ) break;
+
+        const nextDur = durationToSixteenths(next.duration);
+        const totalDur = accDur + nextDur;
+        const candidateDur = SIXTEENTHS_TO_DUR[totalDur];
+        // 점음표로 합산되면 박자 위치가 불명확해져 귀 훈련에 불리 → 병합 중단
+        if (!candidateDur || candidateDur.endsWith('.')) break;
+
+        const mergeEnd = localPos + totalDur;
+        if (mergeEnd > barLen) break;
+        if (mandatoryBounds.some(mb => localPos < mb && mergeEnd > mb)) break;
+        // 엇박 시작: 다음 박 경계를 넘으면 싱코페이션 → 병합 중단
+        if (offBeat && allBeatBoundsInBar.some(bb => localPos < bb && mergeEnd > bb)) break;
+
+        accDur = totalDur;
+        lastTie = next.tie ?? false;
+        j++;
+      }
+
+      if (j > i + 1) {
+        result.push({ ...note, duration: SIXTEENTHS_TO_DUR[accDur], tie: lastTie });
+        globalPos += accDur;
+        i = j;
+        continue;
+      }
+    }
+
+    result.push(note);
+    globalPos += dur;
+    i++;
+  }
+
+  return result;
+}
+
+// ────────────────────────────────────────────────────────────────
 // Rest decomposition
 // ────────────────────────────────────────────────────────────────
 
@@ -1096,6 +1216,7 @@ function generateRestAbc(
  *
  * 파이프라인:
  * 1. 박 가시성 규칙 적용 (splitAtBeatBoundaries)
+ * 1.5. 엇박 아닌 붙임줄 합산 (mergeAdjacentTiedNotes)
  * 2. 임시표 자동 적용 (resolveAbcAccidental — 마디 내 상태 추적)
  * 3. beam 그룹 결정 (공백 배치)
  * 4. 온마디 쉼표 처리 (Z)
@@ -1114,8 +1235,11 @@ function generateNotesAbc(
   // 1단계: 박 가시성 규칙 — 필수 경계에서 음표 분할
   const splitNotes = splitAtBeatBoundaries(spelledNotes, timeSignature, pickupSixteenths);
 
+  // 1.5단계: 엇박 아닌 붙임줄 합산 — 점음표 복원, 박 내 동일 음 병합 (엇박 타이 보존)
+  const mergedAdjacentNotes = mergeAdjacentTiedNotes(splitNotes, timeSignature, pickupSixteenths);
+
   // 2단계: 마지막 마디 붙임줄 음표 합산 (박 분할 조각 → 원본 음가 복원)
-  const mergedNotes = mergeTiedNotesInLastMeasure(splitNotes, timeSignature, pickupSixteenths);
+  const mergedNotes = mergeTiedNotesInLastMeasure(mergedAdjacentNotes, timeSignature, pickupSixteenths);
 
   // 3단계: 끊어진 붙임줄 정리 — tie 뒤에 쉼표·다른 음이 오면 tie 제거
   const processedNotes = mergedNotes.map((note, idx) => {

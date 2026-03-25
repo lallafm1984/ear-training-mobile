@@ -98,15 +98,15 @@ const DIFF_LABELS: Record<Difficulty, string> = {
   advanced_1: '고급 1', advanced_2: '고급 2', advanced_3: '고급 3',
 };
 const DIFF_DESC: Record<Difficulty, string> = {
-  beginner_1: '온·2분·4분음표, 순차 2~3도 (완전 기초)',
-  beginner_2: '8분음표 도입, 점2분, 5도 도약',
-  beginner_3: '점4분·3/4박자, 못갖춘마디, 8분 쉼표',
-  intermediate_1: '복합박자(6/8), 점4분, 기초 당김음 (예고 입시)',
-  intermediate_2: '독립 베이스 시작, 임시표 도입, 당김음 강화',
-  intermediate_3: '16분·점8분, 셋잇단, 붙임줄 시작 (음대 입시)',
-  advanced_1: '역점음, alla breve, 기만종지, cadential 6/4',
-  advanced_2: '불규칙박자(5/4,7/8), 8분 셋잇단 (작곡과)',
-  advanced_3: '5연음, 다중리듬, 변칙 극복 (서울대·한예종)',
+  beginner_1: '온·2분·4분음표, 순차 선율 (청음 입문)',
+  beginner_2: '8분음표, 쉼표, 5도 도약 (기초 청음)',
+  beginner_3: '점음표, 3/4박자, 기초 당김음 (예고 입시 기준)',
+  intermediate_1: '당김음·붙임줄 강화, 셋잇단 입문 (예고 입시+)',
+  intermediate_2: '셋잇단, 임시표, 독립 베이스 (음대 입시 기준)',
+  intermediate_3: '16분·점8분, 임시표 강화, 베이스 독립',
+  advanced_1: '고급 리듬, 기만종지, cadential 6/4 (작곡과)',
+  advanced_2: '8분 셋잇단, 반음계 선율, 복잡한 리듬 (서울대 전단계)',
+  advanced_3: '5연음, 다중리듬, 극한 변칙 (서울대·한예종)',
 };
 const DIFF_CATEGORY_LABELS: Record<DifficultyCategory, string> = {
   beginner: '초급', intermediate: '중급', advanced: '고급',

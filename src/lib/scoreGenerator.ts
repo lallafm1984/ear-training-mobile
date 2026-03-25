@@ -152,8 +152,18 @@ function pickChromaticAccidental(keySignature: string, pitch: PitchName, difficu
   if (keyAlt === 'b') {
     return r < 0.55 ? 'n' : '#';
   }
-  if (lvl >= 5) return r < 0.5 ? '#' : 'b';
-  return '#';
+  // 피아노 반음 경계 — E#=F, B#=C, Cb=B, Fb=E는 독립 건반이 없어 혼란을 유발
+  // 자연 반음 위치(E-F, B-C): 위 방향은 #금지, 아래 방향은 b금지
+  const canSharp = pitch !== 'E' && pitch !== 'B';
+  const canFlat  = pitch !== 'C' && pitch !== 'F';
+  if (lvl >= 5) {
+    if (canSharp && canFlat) return r < 0.5 ? '#' : 'b';
+    if (canSharp) return '#';
+    if (canFlat)  return 'b';
+    return 'n';
+  }
+  // lvl < 5: 샤프 우선, E/B는 플랫으로 대체
+  return canSharp ? '#' : 'b';
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -224,7 +234,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   intermediate_1: {
     maxInterval: 8, stepwiseProb: 0.65, maxLeap: 8,
     chromaticBudget: [0, 1], chromaticProb: 0.072,
-    syncopationProb: 0.15, tripletBudget: [0, 1], tripletProb: 0.15,
+    syncopationProb: 0.15, tripletBudget: [0, 1], tripletProb: 0.10,
     tieProb: 0.15, restProb: 0.12, dottedProb: 0.20,
     contraryMotionRatio: 0.55, bassIndependence: 0.45,
     voiceCrossingMax: 0, consonanceRatio: 0.85,
@@ -757,6 +767,16 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const lvl               = difficultyLevel(difficulty);
   const params            = LEVEL_PARAMS[difficulty];
 
+  /** 셋잇단음표 정박 체크용 박 단위 (16분음표 기준) */
+  const beatSize = (() => {
+    const [topStr, botStr] = timeSignature.split('/');
+    const top = parseInt(topStr, 10);
+    const bot = parseInt(botStr, 10);
+    // 복합 박자(6/8, 9/8, 12/8): 점4분(6 sixteenths)이 한 박
+    if (bot === 8 && top % 3 === 0 && top >= 6) return 6;
+    return 16 / (bot || 4);
+  })();
+
   // 임시표/셋잇단 예산 — 조표 밀도 + 마디 수: 짧은 곡은 보정을 약하게, 긴 곡은 같은 조에서 임시표가 마디에 고르게 쓰이도록 상향
   const keyAccCount = getKeySignatureAccidentalCount(keySignature);
   /** 1마디 근처 ~0.65, 8마디 ~1.2, 16마디 이상 상한 ~1.75 */
@@ -873,7 +893,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       }
 
       // ── 셋잇단음표 삽입 ──
-      if (tripletBudget > 0 && dur === 4 && lvl >= 4) {
+      if (tripletBudget > 0 && dur === 4 && lvl >= 4 && barPos % beatSize === 0) {
         const tripResult = tryInsertTriplet(trebleNotes, (k) => {
           nn = Math.max(-2, Math.min(9, nn + rand([1,-1,2,-2])));
           return noteNumToNote(nn, scale, TREBLE_BASE);
