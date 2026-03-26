@@ -1,7 +1,8 @@
 import React, { useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import {
-  View, StyleSheet, Alert, Platform, PanResponder,
+  View, StyleSheet, Platform, PanResponder,
 } from 'react-native';
+import { useAlert } from '../context/AlertContext';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -76,6 +77,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
   showMeasureHighlight = true,
   barsPerStaff,
 }: AbcjsRendererProps, ref: React.ForwardedRef<AbcjsRendererHandle>) {
+  const { showAlert } = useAlert();
   const webViewRef = useRef<WebView>(null);
   const [webViewReady, setWebViewReady] = useState(false);
   const [webViewHeight, setWebViewHeight] = useState(100);
@@ -263,13 +265,13 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
           UTI: isImage ? 'public.png' : 'public.audio',
         });
       } else if (savedToLib) {
-        Alert.alert('저장 완료', `사진 앱에 저장되었습니다.\n파일명: ${filename}`);
+        showAlert({ title: '저장 완료', message: `사진 앱에 저장되었습니다.\n파일명: ${filename}`, type: 'success' });
       } else {
-        Alert.alert('저장 실패', '파일을 저장할 수 없습니다.');
+        showAlert({ title: '저장 실패', message: '파일을 저장할 수 없습니다.', type: 'error' });
       }
     } catch {
       if (savedToLib) {
-        Alert.alert('저장 완료', `사진 앱에 저장되었습니다.\n파일명: ${filename}`);
+        showAlert({ title: '저장 완료', message: `사진 앱에 저장되었습니다.\n파일명: ${filename}`, type: 'success' });
       }
     }
   }, [scoreTitle]);
@@ -298,24 +300,24 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
         case 'EXPORT_IMAGE_DATA':
           setIsExportingImage(false);
           saveToDevice(msg.base64, 'png', 'image/png').catch(() => {
-            Alert.alert('오류', '이미지 저장에 실패했습니다.');
+            showAlert({ title: '오류', message: '이미지 저장에 실패했습니다.', type: 'error' });
           });
           break;
         case 'EXPORT_IMAGE_ERROR':
           setIsExportingImage(false);
-          Alert.alert('오류', '악보 이미지를 생성할 수 없습니다.');
+          showAlert({ title: '오류', message: '악보 이미지를 생성할 수 없습니다.', type: 'error' });
           break;
         case 'EXPORT_AUDIO_DATA':
           setIsExportingAudio(false);
           saveToDevice(msg.base64, 'wav', 'audio/wav').then(() => {
             onAudioSaveSuccess?.();
           }).catch(() => {
-            Alert.alert('오류', '음원 저장에 실패했습니다.');
+            showAlert({ title: '오류', message: '음원 저장에 실패했습니다.', type: 'error' });
           });
           break;
         case 'EXPORT_AUDIO_ERROR':
           setIsExportingAudio(false);
-          Alert.alert('오류', msg.message || '음원 생성에 실패했습니다.');
+          showAlert({ title: '오류', message: msg.message || '음원 생성에 실패했습니다.', type: 'error' });
           break;
       }
     } catch {}

@@ -22,10 +22,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#6366f1",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
       "permissions": [

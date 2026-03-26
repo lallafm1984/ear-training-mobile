@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
+import { useAlert } from '../context/AlertContext';
 import * as MediaLibrary from 'expo-media-library';
 import { useSubscription } from '../context/SubscriptionContext';
 import type { UpgradeReason } from '../components/UpgradeModal';
@@ -9,6 +10,7 @@ import type { UpgradeReason } from '../components/UpgradeModal';
  * onUpgradeNeeded: 구독 제한 도달 시 호출할 콜백 (UpgradeModal 트리거용)
  */
 export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => void) {
+  const { showAlert } = useAlert();
   const { tier, limits, remainingDownloads, consumeDownload } = useSubscription();
 
   /** 다운로드 시도 (오디오) */
@@ -18,11 +20,11 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       if (onUpgradeNeeded) {
         onUpgradeNeeded('download_audio');
       } else {
-        Alert.alert(
-          '다운로드 불가',
-          'Pro 또는 Premium 플랜에서 음원을 다운로드할 수 있습니다.',
-          [{ text: '확인', style: 'cancel' }],
-        );
+        showAlert({
+          title: '음원 다운로드 불가',
+          message: '청음 음원(MP3) 다운로드는 Premium 플랜 전용 기능입니다.',
+          type: 'warning',
+        });
       }
       return false;
     }
@@ -33,11 +35,11 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         if (onUpgradeNeeded) {
           onUpgradeNeeded('download_limit');
         } else {
-          Alert.alert(
-            '다운로드 한도 초과',
-            `이번 달 다운로드 ${limits.monthlyDownloadLimit}회를 모두 사용했습니다.\n\n무제한 다운로드는 Premium 플랜에서 이용 가능합니다.`,
-            [{ text: '확인', style: 'cancel' }],
-          );
+          showAlert({
+            title: '다운로드 한도 초과',
+            message: `이번 달 다운로드 ${limits.monthlyDownloadLimit}회를 모두 사용했습니다.\n\n무제한 다운로드는 Premium 플랜에서 이용 가능합니다.`,
+            type: 'warning',
+          });
         }
         return false;
       }
@@ -55,14 +57,15 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
           }
         }
 
-        Alert.alert(
-          '권한 설정 필요',
-          '파일을 기기에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
-          [
+        showAlert({
+          title: '권한 설정 필요',
+          message: '파일을 기기에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+          type: 'info',
+          buttons: [
             { text: '나중에', style: 'cancel' },
             { text: '설정으로 이동', onPress: () => Linking.openSettings() },
           ],
-        );
+        });
         return false;
       }
     } catch (error) {
@@ -85,11 +88,11 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       if (onUpgradeNeeded) {
         onUpgradeNeeded('download_image');
       } else {
-        Alert.alert(
-          '이미지 저장 불가',
-          'Pro 또는 Premium 플랜에서 악보 이미지를 저장할 수 있습니다.',
-          [{ text: '확인' }],
-        );
+        showAlert({
+          title: '이미지 저장 불가',
+          message: '악보 이미지(PNG) 저장은 Premium 플랜 전용 기능입니다.',
+          type: 'warning',
+        });
       }
       return false;
     }
@@ -103,14 +106,15 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
           if (newStatus === 'granted') return true;
         }
 
-        Alert.alert(
-          '권한 설정 필요',
-          '이미지를 갤러리에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
-          [
+        showAlert({
+          title: '권한 설정 필요',
+          message: '이미지를 갤러리에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+          type: 'info',
+          buttons: [
             { text: '나중에', style: 'cancel' },
             { text: '설정으로 이동', onPress: () => Linking.openSettings() },
           ],
-        );
+        });
         return false;
       }
     } catch (error) {

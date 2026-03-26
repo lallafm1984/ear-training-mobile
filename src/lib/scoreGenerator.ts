@@ -8,6 +8,7 @@ import {
   getKeySignatureAccidentalCount,
   getScaleDegrees,
   SIXTEENTHS_TO_DUR,
+  splitAtBeatBoundaries,
 } from './scoreUtils';
 
 // ────────────────────────────────────────────────────────────────
@@ -999,7 +1000,29 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   // ── 후처리: 내부 쉼표 ──
   applyInternalRests(trebleNotes, bassNotes, difficulty, measures, sixteenthsPerBar, useGrandStaff);
 
-  return { trebleNotes, bassNotes };
+  // ── 후처리: 박자 경계 분할 (중급 2단계 이상에서만) ──
+  const finalTreble = lvl >= 5
+    ? splitAtBeatBoundaries(trebleNotes, timeSignature)
+    : trebleNotes;
+  const finalBass = useGrandStaff
+    ? (lvl >= 5 ? splitAtBeatBoundaries(bassNotes, timeSignature) : bassNotes)
+    : bassNotes;
+
+  // ── 후처리: 연속 붙임줄 2회 제한 — 연속된 2개의 tie 중 마지막 제거 ──
+  for (let i = 0; i < finalTreble.length - 1; i++) {
+    if (finalTreble[i].tie && finalTreble[i + 1].tie) {
+      finalTreble[i + 1] = { ...finalTreble[i + 1], tie: false };
+    }
+  }
+  if (useGrandStaff) {
+    for (let i = 0; i < finalBass.length - 1; i++) {
+      if (finalBass[i].tie && finalBass[i + 1].tie) {
+        finalBass[i + 1] = { ...finalBass[i + 1], tie: false };
+      }
+    }
+  }
+
+  return { trebleNotes: finalTreble, bassNotes: finalBass };
 }
 
 /** 베이스-트레블 충돌 해결: 같은 건반 음이면 옥타브 하강 → 대체 화음톤 */

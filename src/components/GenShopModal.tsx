@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, StyleSheet,
-  Pressable, Alert, ScrollView, ActivityIndicator, Dimensions,
+  Pressable, ScrollView, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Zap, X, Check, Info } from 'lucide-react-native';
+import { useAlert } from '../context/AlertContext';
 import { useSubscription } from '../context/SubscriptionContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -66,7 +67,8 @@ interface Props {
 }
 
 export default function GenShopModal({ visible, onClose }: Props) {
-  const { genBalance, addGen, tier } = useSubscription();
+  const { genBalance, genPaidBalance, addPaidGen, tier } = useSubscription();
+  const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
   const isPremium = tier === 'premium';
@@ -74,29 +76,27 @@ export default function GenShopModal({ visible, onClose }: Props) {
 
   const handlePurchase = (pkg: GenPackage) => {
     const total = pkg.gen + pkg.bonus;
-    Alert.alert(
-      `⚡ ${total.toLocaleString()} Gen 구매`,
-      `${pkg.price}\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 적용)`,
-      [
+    showAlert({
+      title: `⚡ ${total.toLocaleString()} Gen 구매`,
+      message: `${pkg.price}\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 적용)`,
+      type: 'info',
+      buttons: [
         { text: '취소', style: 'cancel' },
-        {
-          text: '구매하기',
-          onPress: async () => {
-            setPurchasing(pkg.id);
-            try {
-              await addGen(total);
-              Alert.alert(
-                '충전 완료 ⚡',
-                `${total.toLocaleString()} Gen이 충전되었습니다!\n현재 잔액: ${(genBalance + total).toLocaleString()} Gen`,
-                [{ text: '확인' }],
-              );
-            } finally {
-              setPurchasing(null);
-            }
-          },
-        },
+        { text: '구매하기', onPress: async () => {
+          setPurchasing(pkg.id);
+          try {
+            await addPaidGen(total);
+            showAlert({
+              title: '충전 완료',
+              message: `${total.toLocaleString()} Gen이 충전되었습니다!\n유료 Gen 잔액: ${(genPaidBalance + total).toLocaleString()} Gen`,
+              type: 'success',
+            });
+          } finally {
+            setPurchasing(null);
+          }
+        }},
       ],
-    );
+    });
   };
 
   return (
@@ -126,17 +126,32 @@ export default function GenShopModal({ visible, onClose }: Props) {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* 현재 잔액 카드 */}
             <View style={styles.balanceCard}>
-              <View style={styles.balanceLeft}>
-                <Text style={styles.balanceLabel}>현재 Gen 잔액</Text>
-                <Text style={styles.balanceNote}>
-                  {isPremium
-                    ? '무제한 (Premium)'
-                    : `매일 오전 6시 +${dailyRecharge} Gen 자동 충전`}
-                </Text>
-              </View>
-              <Text style={styles.balanceValue}>
-                {isPremium ? '∞' : `⚡ ${genBalance.toLocaleString()}`}
-              </Text>
+              {isPremium ? (
+                <>
+                  <View style={styles.balanceLeft}>
+                    <Text style={styles.balanceLabel}>현재 Gen 잔액</Text>
+                    <Text style={styles.balanceNote}>무제한 (Premium)</Text>
+                  </View>
+                  <Text style={styles.balanceValue}>∞</Text>
+                </>
+              ) : (
+                <View style={{ flex: 1, gap: 10 }}>
+                  <View style={styles.balanceRow}>
+                    <View style={styles.balanceLeft}>
+                      <Text style={styles.balanceLabel}>자동 충전</Text>
+                      <Text style={styles.balanceNote}>매일 오전 6시 +{dailyRecharge} Gen</Text>
+                    </View>
+                    <Text style={styles.balanceValue}>⚡ {genBalance.toLocaleString()}</Text>
+                  </View>
+                  <View style={[styles.balanceRow, { paddingTop: 10, borderTopWidth: 1, borderTopColor: '#c7d2fe' }]}>
+                    <View style={styles.balanceLeft}>
+                      <Text style={[styles.balanceLabel, { color: '#7c3aed' }]}>유료 Gen</Text>
+                      <Text style={styles.balanceNote}>구매로 획득한 Gen</Text>
+                    </View>
+                    <Text style={[styles.balanceValue, { color: '#7c3aed' }]}>💎 {genPaidBalance.toLocaleString()}</Text>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Premium 안내 */}
@@ -175,7 +190,7 @@ export default function GenShopModal({ visible, onClose }: Props) {
                   )}
 
                   <View style={styles.pkgLeft}>
-                    <Text style={styles.pkgIcon}>⚡</Text>
+                    <Text style={styles.pkgIcon}>💎</Text>
                     <View>
                       <Text style={styles.pkgGenAmount}>{pkg.gen.toLocaleString()} Gen</Text>
                       {pkg.bonus > 0 && (
@@ -208,9 +223,9 @@ export default function GenShopModal({ visible, onClose }: Props) {
               <Text style={styles.infoDesc}>Gen은 AI 악보 자동생성에 사용되는 재화입니다.</Text>
               {[
                 { label: '초급 1단계', cost: '8 Gen', note: '(큰보표 12 Gen)' },
-                { label: '초급 3단계', cost: '15 Gen', note: '(큰보표 23 Gen)' },
-                { label: '중급 1단계', cost: '20 Gen', note: '(큰보표 30 Gen)' },
-                { label: '고급 3단계', cost: '55 Gen', note: '(큰보표 83 Gen)' },
+                { label: '초급 3단계', cost: '12 Gen', note: '(큰보표 18 Gen)' },
+                { label: '중급 1단계', cost: '14 Gen', note: '(큰보표 21 Gen)' },
+                { label: '고급 3단계', cost: '24 Gen', note: '(큰보표 36 Gen)' },
                 { label: '8마디 이상', cost: '+5~15 Gen', note: '추가' },
               ].map((r, i) => (
                 <View key={i} style={styles.infoRow}>
@@ -274,6 +289,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef2ff',
     borderRadius: 16, padding: 16, marginBottom: 16,
   },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLeft: { flex: 1 },
   balanceLabel: { fontSize: 12, fontWeight: '600', color: '#6366f1', marginBottom: 4 },
   balanceNote: { fontSize: 11, color: '#818cf8' },

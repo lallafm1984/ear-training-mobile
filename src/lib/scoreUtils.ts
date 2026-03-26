@@ -734,7 +734,7 @@ function sumScoreNotesSixteenths(notes: ScoreNote[]): number {
  * 잇단음표 그룹 내부는 분할하지 않음.
  * pickupSixteenths>0 이면 마디 길이 배열로 경계를 잡는다(못갖춘마디).
  */
-function splitAtBeatBoundaries(
+export function splitAtBeatBoundaries(
   notes: ScoreNote[],
   timeSignature: string,
   pickupSixteenths = 0,

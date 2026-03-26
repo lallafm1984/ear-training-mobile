@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
+import { AlertProvider } from './src/context/AlertContext';
 import ScoreEditorScreen from './src/screens/ScoreEditorScreen';
 import LoginScreen from './src/screens/LoginScreen';
 
@@ -11,13 +12,15 @@ import LoginScreen from './src/screens/LoginScreen';
 // ─────────────────────────────────────────────────────────────
 
 function AppNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, profileLoading } = useAuth();
 
-  // 초기 세션 복원 중 — 스플래시 유지
-  if (loading) {
+  // 초기 세션 복원 중 또는 프로필 로딩 중
+  if (loading || (session && profileLoading)) {
+    const message = loading ? '앱을 시작하는 중...' : '계정 정보를 불러오는 중...';
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
         <ActivityIndicator size="large" color="#6366f1" />
+        <Text style={{ marginTop: 16, fontSize: 14, color: '#6b7280' }}>{message}</Text>
       </View>
     );
   }
@@ -42,10 +45,12 @@ function AppNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" backgroundColor="#f8fafc" />
-      <AuthProvider>
-        <AppNavigator />
-      </AuthProvider>
+      <StatusBar style="light" backgroundColor="#6366f1" />
+      <AlertProvider>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </AlertProvider>
     </SafeAreaProvider>
   );
 }

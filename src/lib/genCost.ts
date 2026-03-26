@@ -23,14 +23,14 @@ import type { Difficulty } from './scoreGenerator';
  */
 const GEN_COST_TABLE: Record<Difficulty, { single: number; grand: number }> = {
   beginner_1:     { single: 8,  grand: 12 },
-  beginner_2:     { single: 12, grand: 18 },
-  beginner_3:     { single: 15, grand: 23 },
-  intermediate_1: { single: 20, grand: 30 },
-  intermediate_2: { single: 24, grand: 36 },
-  intermediate_3: { single: 28, grand: 42 },
-  advanced_1:     { single: 35, grand: 53 },
-  advanced_2:     { single: 45, grand: 68 },
-  advanced_3:     { single: 55, grand: 83 },
+  beginner_2:     { single: 10, grand: 15 },
+  beginner_3:     { single: 12, grand: 18 },
+  intermediate_1: { single: 14, grand: 21 },
+  intermediate_2: { single: 16, grand: 24 },
+  intermediate_3: { single: 18, grand: 27 },
+  advanced_1:     { single: 20, grand: 30 },
+  advanced_2:     { single: 22, grand: 33 },
+  advanced_3:     { single: 24, grand: 36 },
 };
 
 /**

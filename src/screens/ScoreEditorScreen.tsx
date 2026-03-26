@@ -3,9 +3,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Modal, Alert, Switch, KeyboardAvoidingView, Platform, Pressable, Dimensions,
+  TextInput, Modal, Switch, KeyboardAvoidingView, Platform, Pressable, Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import { useAlert } from '../context/AlertContext';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -19,10 +20,11 @@ import AbcjsRenderer from '../components/AbcjsRenderer';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
   Save, X, ChevronDown, Music2, RefreshCw, FileAudio, Lock, UserCircle,
-  Eye, EyeOff, FileCode, Copy,
+  Eye, EyeOff, FileCode, Copy, Crown,
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { PLAN_NAME, PLAN_COLOR } from '../types/subscription';
 import { useAuth } from '../context/AuthContext';
 import { useAdCounter } from '../hooks/useAdCounter';
 import { useDownloadQuota } from '../hooks/useDownloadQuota';
@@ -175,9 +177,10 @@ function BottomSheet({ open, onClose, title, children }: {
 
 export default function ScoreEditorScreen() {
   const insets = useSafeAreaInsets();
+  const { showAlert } = useAlert();
 
   // ── 구독 관련 훅 ──
-  const { tier, limits, remainingDownloads, genBalance, consumeGen } = useSubscription();
+  const { tier, limits, remainingDownloads, genBalance, genPaidBalance, consumeGen } = useSubscription();
   const { profile } = useAuth();
   const { shouldShowAd, recordGeneration, dismissAd } = useAdCounter(limits.adEveryNGenerations);
 
@@ -206,7 +209,7 @@ export default function ScoreEditorScreen() {
   );
 
   const [state, setState] = useState<ScoreState>({
-    title: '새 악보', keySignature: 'C', timeSignature: '4/4', tempo: 120, notes: [],
+    title: '새 악보', keySignature: 'C', timeSignature: '4/4', tempo: 80, notes: [],
   });
   const [duration, setDuration] = useState<NoteDuration>('4');
   const [accidental, setAccidental] = useState<Accidental>('');
@@ -220,7 +223,7 @@ export default function ScoreEditorScreen() {
   // 재생 옵션
   const [prependBasePitch, setPrependBasePitch] = useState(false);
   const [prependMetronome, setPrependMetronome] = useState(false);
-  const [scaleTempo, setScaleTempo] = useState(120);
+  const [scaleTempo, setScaleTempo] = useState(80);
   const [metronomeFreq, setMetronomeFreq] = useState(1000);
   const [examMode, setExamMode] = useState(false);
   const [examWaitSeconds, setExamWaitSeconds] = useState(DEFAULT_PRACTICE_WAIT_SECONDS);
@@ -443,9 +446,15 @@ export default function ScoreEditorScreen() {
 
   const handleClear = () => {
     const isBass = state.useGrandStaff && activeStaff === 'bass';
-    Alert.alert('전체 삭제', `${isBass ? '낮은' : '높은'}음자리의 모든 음표를 지우시겠습니까?`, [
-      { text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive', onPress: () => setState(p => isBass ? { ...p, bassNotes: [] } : { ...p, notes: [] }) }
-    ]);
+    showAlert({
+      title: '전체 삭제',
+      message: `${isBass ? '낮은' : '높은'}음자리의 모든 음표를 지우시겠습니까?`,
+      type: 'warning',
+      buttons: [
+        { text: '취소', style: 'cancel' },
+        { text: '삭제', style: 'destructive', onPress: () => setState(p => isBass ? { ...p, bassNotes: [] } : { ...p, notes: [] }) },
+      ],
+    });
   };
 
   // Gen 비용 계산
@@ -460,27 +469,26 @@ export default function ScoreEditorScreen() {
     // Gen 포인트 체크 (Premium은 무제한)
     if (limits.usesGenPoints) {
       const cost = getGenCost(genDifficulty, state.useGrandStaff ?? false);
-      if (genBalance < cost) {
+      if (genBalance + genPaidBalance < cost) {
         setMobileSheet(null);
-        Alert.alert(
-          'Gen 부족',
-          `이 악보를 생성하려면 ${cost} Gen이 필요합니다.\n현재 잔액: ${genBalance} Gen\n\n매일 오전 6시에 Gen이 충전됩니다.`,
-          [{ text: '확인' }],
-        );
+        showAlert({
+          title: 'Gen 부족',
+          message: `이 악보를 생성하려면 ${cost} Gen이 필요합니다.\n자동 충전: ${genBalance} Gen\n결제 Gen: ${genPaidBalance} Gen\n\n매일 오전 6시에 자동 충전됩니다.`,
+          type: 'warning',
+        });
         return;
       }
     }
 
-    // 바텀시트 닫고 로딩 팝업 표시
-    setMobileSheet(null);
+    // 바텀시트 열린 상태에서 로딩 표시
     setIsGenerating(true);
 
-    // AI API 연결 연출 (난이도별 랜덤 딜레이)
+    // AI API 연결 연출 (난이도별 랜덤 딜레이, 0.5초 단축)
     const category = getDifficultyCategory(genDifficulty);
     const [minMs, maxMs] = {
-      beginner: [1000, 1500],
-      intermediate: [1500, 2000],
-      advanced: [2000, 2500],
+      beginner: [800, 1300],
+      intermediate: [1300, 1800],
+      advanced: [1800, 2300],
     }[category];
     const delay = minMs + Math.random() * (maxMs - minMs);
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -501,6 +509,10 @@ export default function ScoreEditorScreen() {
     setHideNotes(genHideNotes);
     setIsGenerating(false);
 
+    // 생성 완료 후 0.5초 딜레이 후 바텀시트 닫기
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setMobileSheet(null);
+
     // 무료 유저: 광고 카운터 체크
     if (limits.showAds) {
       const shouldAd = await recordGeneration();
@@ -514,12 +526,12 @@ export default function ScoreEditorScreen() {
     const scores = await getSavedScores();
     const limit = limits.maxSavedScores;
     if (limit !== null && scores.length >= limit) {
-      // 무료(3개) 또는 프로(20개) 한도 초과 시 업그레이드 모달 표시
+      // 저장 한도 초과 시 업그레이드 모달 표시 (Free: 5개, Pro: 50개, Premium: 무제한)
       openUpgrade('save_scores');
       return;
     }
     scores.unshift({ id: Date.now().toString(), title: state.title || '제목 없음', state: { ...state }, savedAt: new Date().toISOString() });
-    await persistScores(scores); setSavedScores(scores); Alert.alert('성공', '악보가 저장되었습니다.');
+    await persistScores(scores); setSavedScores(scores); showAlert({ title: '성공', message: '악보가 저장되었습니다.', type: 'success' });
     setMobileSheet(null);
   }, [state, limits, openUpgrade]);
 
@@ -528,15 +540,18 @@ export default function ScoreEditorScreen() {
   }, []);
 
   const handleDeleteSaved = useCallback(async (id: string) => {
-    Alert.alert('삭제', '저장된 악보를 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
+    showAlert({
+      title: '삭제',
+      message: '저장된 악보를 삭제하시겠습니까?',
+      type: 'warning',
+      buttons: [
+        { text: '취소', style: 'cancel' },
+        { text: '삭제', style: 'destructive', onPress: async () => {
           const scores = (await getSavedScores()).filter(s => s.id !== id);
           await persistScores(scores); setSavedScores(scores);
-        }
-      }
-    ]);
+        }},
+      ],
+    });
   }, []);
 
   const handleOctaveChange = (newOctave: number) => {
@@ -565,15 +580,15 @@ export default function ScoreEditorScreen() {
   const copyAbcToClipboard = useCallback(async () => {
     try {
       await Clipboard.setStringAsync(abcString);
-      Alert.alert('복사 완료', 'ABC 표기가 클립보드에 복사되었습니다.');
+      showAlert({ title: '복사 완료', message: 'ABC 표기가 클립보드에 복사되었습니다.', type: 'success' });
     } catch {
-      Alert.alert('오류', '복사에 실패했습니다.');
+      showAlert({ title: '오류', message: '복사에 실패했습니다.', type: 'error' });
     }
   }, [abcString]);
 
   const openAbcNotationModal = useCallback(() => {
     if (noteCount === 0) {
-      Alert.alert('알림', '표시할 악보가 없습니다.');
+      showAlert({ title: '알림', message: '표시할 악보가 없습니다.', type: 'info' });
       return;
     }
     setShowAbcNotationModal(true);
@@ -598,18 +613,32 @@ export default function ScoreEditorScreen() {
   return (
     <SafeAreaView
       style={styles.root}
-      edges={['top', 'bottom']}
+      edges={['bottom']}
     >
+      {/* 상단 시스템 상태바 색상 영역 */}
+      <View style={{ height: insets.top, backgroundColor: '#6366f1' }} />
       {/* ═══════════════════════════════════════════════
           모바일: 상단 앱바 (타이틀 + 계정)
           ═══════════════════════════════════════════════ */}
       <View style={styles.topBar}>
+        {/* 좌측: 타이틀 */}
         <View style={styles.topBarLeft}>
           <Music2 size={18} color="#6366f1" />
           <Text style={styles.topBarTitle}>MelodyGen</Text>
         </View>
+        {/* 중앙: 등급 배지 (절대 위치로 진짜 중앙) */}
+        <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' as const, pointerEvents: 'box-none' as const }}>
+          <TouchableOpacity
+            style={[styles.tierBadge, { backgroundColor: `${PLAN_COLOR[tier]}18`, borderColor: `${PLAN_COLOR[tier]}44` }]}
+            onPress={() => setShowPaywall(true)}
+            activeOpacity={0.7}
+          >
+            <Crown size={11} color={PLAN_COLOR[tier]} />
+            <Text style={[styles.tierBadgeText, { color: PLAN_COLOR[tier] }]}>{PLAN_NAME[tier]}</Text>
+          </TouchableOpacity>
+        </View>
+        {/* 우측: Gen 잔액 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* Gen 잔액 표시 */}
           {limits.usesGenPoints && (
             <TouchableOpacity
               style={styles.genBadge}
@@ -618,6 +647,12 @@ export default function ScoreEditorScreen() {
             >
               <Text style={styles.genBadgeIcon}>⚡</Text>
               <Text style={styles.genBadgeText}>{genBalance.toLocaleString()}</Text>
+              {genPaidBalance > 0 && (
+                <>
+                  <Text style={[styles.genBadgeText, { color: '#94a3b8', marginHorizontal: 1 }]}>·</Text>
+                  <Text style={[styles.genBadgeText, { color: '#7c3aed' }]}>💎{genPaidBalance.toLocaleString()}</Text>
+                </>
+              )}
             </TouchableOpacity>
           )}
           {!limits.usesGenPoints && tier === 'premium' && (
@@ -630,12 +665,6 @@ export default function ScoreEditorScreen() {
               <Text style={[styles.genBadgeText, { color: '#92400e' }]}>∞</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.topBarAccountBtn} onPress={() => setShowProfile(true)}>
-            <UserCircle size={18} color="#64748b" />
-            <Text style={styles.topBarAccountText} numberOfLines={1}>
-              {profile?.display_name?.split(' ')[0] ?? '계정'}
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -793,13 +822,13 @@ export default function ScoreEditorScreen() {
               <Sparkles size={20} color="#1e293b" />
               <Text style={[styles.navBtnText, { color: '#1e293b', fontWeight: 'bold' }]}>AI 자동생성</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.navBtn} onPress={handleSave}>
-              <Save size={18} color={limits.canSaveScores ? '#10b981' : '#94a3b8'} />
-              <Text style={[styles.navBtnText, { color: limits.canSaveScores ? '#10b981' : '#94a3b8' }]}>저장</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.navBtn} onPress={() => setMobileSheet('saved')}>
               <Archive size={18} color="#64748b" />
               <Text style={[styles.navBtnText, { color: '#64748b' }]}>악보 관리</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navBtn} onPress={() => setShowProfile(true)}>
+              <UserCircle size={18} color="#64748b" />
+              <Text style={[styles.navBtnText, { color: '#64748b' }]}>계정</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -960,7 +989,7 @@ export default function ScoreEditorScreen() {
           <Text style={styles.bsLabel}>빠르기 (BPM)</Text>
           <View style={styles.settingsBpmRow}>
             <TouchableOpacity
-              onPress={() => setState(p => ({ ...p, tempo: Math.max(40, (p.tempo || 120) - 5) }))}
+              onPress={() => setState(p => ({ ...p, tempo: Math.max(40, (p.tempo || 80) - 5) }))}
               style={styles.bpmStepBtn}
             >
               <Text style={styles.bpmStepBtnText}>－</Text>
@@ -968,11 +997,16 @@ export default function ScoreEditorScreen() {
             <TextInput
               style={styles.bpmInput}
               keyboardType="number-pad"
-              value={String(state.tempo || '')}
-              onChangeText={t => { const n = parseInt(t); if (!isNaN(n)) setState(p => ({ ...p, tempo: n })); }}
+              value={state.tempo === 0 ? '' : String(state.tempo)}
+              onChangeText={t => {
+                if (t === '') { setState(p => ({ ...p, tempo: 0 })); return; }
+                const n = parseInt(t);
+                if (!isNaN(n)) setState(p => ({ ...p, tempo: n }));
+              }}
+              onEndEditing={() => setState(p => ({ ...p, tempo: Math.max(40, p.tempo || 80) }))}
             />
             <TouchableOpacity
-              onPress={() => setState(p => ({ ...p, tempo: Math.min(240, (p.tempo || 120) + 5) }))}
+              onPress={() => setState(p => ({ ...p, tempo: Math.min(240, (p.tempo || 80) + 5) }))}
               style={styles.bpmStepBtn}
             >
               <Text style={styles.bpmStepBtnText}>＋</Text>
@@ -1579,7 +1613,7 @@ export default function ScoreEditorScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.bsPrimaryBtn, (limits.usesGenPoints && genBalance < currentGenCost) && { opacity: 0.5 }]}
+          style={[styles.bsPrimaryBtn, (limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost) && { opacity: 0.5 }]}
           onPress={handleGenerate}
         >
           <RefreshCw size={15} color="#fff" />
@@ -1587,9 +1621,9 @@ export default function ScoreEditorScreen() {
             생성하기{limits.usesGenPoints ? ` ( -${currentGenCost}⚡)` : ''}
           </Text>
         </TouchableOpacity>
-        {limits.usesGenPoints && genBalance < currentGenCost && (
+        {limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost && (
           <Text style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginTop: 8, fontWeight: 'bold' }}>
-            ⚠️ 잔액이 부족합니다 (현재: {genBalance} ⚡)
+            ⚠️ 잔액이 부족합니다 (⚡{genBalance} + 💎{genPaidBalance})
           </Text>
         )}
         <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 12 }}>현재 조성·박자·큰보표 설정이 적용됩니다. 기존 음표는 교체됩니다.</Text>
@@ -2119,6 +2153,19 @@ const styles = StyleSheet.create({
   },
 
   // ── Gen 배지 (상단 바) ──
+  tierBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 3,
+    borderWidth: 1,
+  },
+  tierBadgeText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
   genBadge: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,

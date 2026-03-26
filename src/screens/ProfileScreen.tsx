@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, ActivityIndicator, Modal, Pressable,
+  ActivityIndicator, Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  User, Mail, Crown, LogOut, Trash2, Lock, ChevronRight,
-  Check, X, Edit3, Shield, Zap,
+  User, Mail, Crown, LogOut, Trash2, ChevronRight,
+  Check, X, Shield, Zap,
 } from 'lucide-react-native';
+import { useAlert } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { PLAN_NAME, PLAN_COLOR } from '../types/subscription';
@@ -78,88 +79,6 @@ function EditNameModal({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// 서브 모달: 비밀번호 변경
-// ─────────────────────────────────────────────────────────────
-
-function ChangePasswordModal({
-  visible, onClose,
-}: {
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const { updatePassword } = useAuth();
-  const [newPw, setNewPw] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const isValid = newPw.length >= 6 && newPw === confirm;
-
-  const handle = async () => {
-    if (!isValid || saving) return;
-    setSaving(true);
-    const err = await updatePassword(newPw);
-    setSaving(false);
-    if (err) {
-      Alert.alert('오류', err.message);
-    } else {
-      Alert.alert('완료', '비밀번호가 변경되었습니다.');
-      setNewPw(''); setConfirm('');
-      onClose();
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalCard}>
-          <Text style={styles.modalTitle}>비밀번호 변경</Text>
-
-          <Text style={styles.modalFieldLabel}>새 비밀번호</Text>
-          <TextInput
-            style={styles.modalInput}
-            value={newPw}
-            onChangeText={setNewPw}
-            placeholder="6자 이상"
-            placeholderTextColor="#cbd5e1"
-            secureTextEntry
-            autoFocus
-          />
-
-          <Text style={styles.modalFieldLabel}>비밀번호 확인</Text>
-          <TextInput
-            style={[styles.modalInput, confirm && newPw !== confirm && { borderColor: '#ef4444' }]}
-            value={confirm}
-            onChangeText={setConfirm}
-            placeholder="비밀번호를 다시 입력하세요"
-            placeholderTextColor="#cbd5e1"
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handle}
-          />
-          {confirm && newPw !== confirm && (
-            <Text style={styles.errorText}>비밀번호가 일치하지 않습니다.</Text>
-          )}
-
-          <View style={[styles.modalBtnRow, { marginTop: 16 }]}>
-            <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalSaveBtn, (!isValid || saving) && { opacity: 0.5 }]}
-              onPress={handle}
-              disabled={!isValid || saving}
-            >
-              {saving
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.modalSaveText}>변경</Text>}
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 // 메인 ProfileScreen
@@ -167,10 +86,11 @@ function ChangePasswordModal({
 
 export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenProps) {
   const { user, profile, signOut, updateProfile, deleteAccount, profileLoading } = useAuth();
-  const { tier, subscriptionState, isExpired, genBalance } = useSubscription();
+  const { tier, subscriptionState, isExpired, genBalance, genPaidBalance } = useSubscription();
+
+  const { showAlert } = useAlert();
 
   const [showEditName, setShowEditName] = useState(false);
-  const [showChangePw, setShowChangePw] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [showGenShop, setShowGenShop] = useState(false);
 
@@ -189,39 +109,37 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
   // ── 로그아웃 ─────────────────────────────────────────────
   const handleSignOut = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: async () => {
+    showAlert({
+      title: '로그아웃',
+      message: '정말 로그아웃 하시겠습니까?',
+      type: 'warning',
+      buttons: [
+        { text: '취소', style: 'cancel' },
+        { text: '로그아웃', style: 'destructive', onPress: async () => {
           setSigningOut(true);
           await signOut();
           setSigningOut(false);
           onClose();
-        },
-      },
-    ]);
+        }},
+      ],
+    });
   };
 
   // ── 회원 탈퇴 ────────────────────────────────────────────
   const handleDeleteAccount = () => {
-    Alert.alert(
-      '회원 탈퇴',
-      '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n정말 탈퇴하시겠습니까?',
-      [
+    showAlert({
+      title: '회원 탈퇴',
+      message: '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n정말 탈퇴하시겠습니까?',
+      type: 'warning',
+      buttons: [
         { text: '취소', style: 'cancel' },
-        {
-          text: '탈퇴하기',
-          style: 'destructive',
-          onPress: async () => {
-            const err = await deleteAccount();
-            if (err) Alert.alert('오류', err);
-            else onClose();
-          },
-        },
+        { text: '탈퇴하기', style: 'destructive', onPress: async () => {
+          const err = await deleteAccount();
+          if (err) showAlert({ title: '오류', message: err, type: 'error' });
+          else onClose();
+        }},
       ],
-    );
+    });
   };
 
   // ─── 섹션 아이템 헬퍼 ─────────────────────────────────────
@@ -254,7 +172,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>계정 설정</Text>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <X size={18} color="#64748b" />
         </TouchableOpacity>
@@ -262,47 +179,36 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── 프로필 카드 ── */}
+        {/* ── 프로필 히어로 카드 ── */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.avatarEditBtn}
-              onPress={() => setShowEditName(true)}
-            >
-              <Edit3 size={12} color="#6366f1" />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.profileCardAccent} />
           {profileLoading ? (
-            <ActivityIndicator color="#6366f1" style={{ marginTop: 8 }} />
+            <ActivityIndicator color="#6366f1" style={{ padding: 24 }} />
           ) : (
-            <>
-              <Text style={styles.profileName}>{displayName}</Text>
-              <Text style={styles.profileEmail}>{email}</Text>
-            </>
-          )}
-
-          {/* 플랜 배지 */}
-          <TouchableOpacity
-            style={[styles.planBadge, { backgroundColor: `${tierColor}18`, borderColor: `${tierColor}44` }]}
-            onPress={tier === 'free' ? onGoToPaywall : undefined}
-          >
-            <Crown size={13} color={tierColor} />
-            <Text style={[styles.planBadgeText, { color: tierColor }]}>
-              {PLAN_NAME[tier]} 플랜
-              {isExpired ? ' (만료)' : ''}
-            </Text>
-            {tier === 'free' && (
-              <Text style={[styles.planUpgradeText, { color: tierColor }]}>업그레이드 →</Text>
-            )}
-          </TouchableOpacity>
-
-          {expiresLabel && (
-            <Text style={styles.expiresText}>만료일: {expiresLabel}</Text>
+            <View style={styles.profileCardBody}>
+              <View style={styles.profileInitialBadge}>
+                <Text style={styles.profileInitialText}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.profileTextBlock}>
+                <Text style={styles.profileName}>{displayName}</Text>
+                <Text style={styles.profileEmail}>{email}</Text>
+                <TouchableOpacity
+                  style={[styles.planBadge, { backgroundColor: `${tierColor}18`, borderColor: `${tierColor}40` }]}
+                  onPress={tier === 'free' ? onGoToPaywall : undefined}
+                  activeOpacity={tier === 'free' ? 0.7 : 1}
+                >
+                  <Crown size={11} color={tierColor} />
+                  <Text style={[styles.planBadgeText, { color: tierColor }]}>
+                    {PLAN_NAME[tier]}{isExpired ? ' (만료)' : ''}
+                  </Text>
+                </TouchableOpacity>
+                {expiresLabel && (
+                  <Text style={styles.expiresText}>만료일: {expiresLabel}</Text>
+                )}
+              </View>
+            </View>
           )}
         </View>
 
@@ -321,11 +227,11 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
                 icon={<Shield size={16} color="#64748b" />}
                 label="구독 취소"
                 value="스토어에서 관리"
-                onPress={() => Alert.alert(
-                  '구독 취소',
-                  'Google Play 또는 App Store에서 구독을 취소할 수 있습니다.',
-                  [{ text: '확인' }],
-                )}
+                onPress={() => showAlert({
+                  title: '구독 취소',
+                  message: 'Google Play 또는 App Store에서 구독을 취소할 수 있습니다.',
+                  type: 'info',
+                })}
               />
             )}
           </View>
@@ -335,34 +241,48 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gen 잔액</Text>
           <View style={styles.sectionCard}>
+            {/* 자동 충전 행 */}
             <View style={styles.genRow}>
               <View style={styles.genLeft}>
                 <Zap size={16} color="#6366f1" />
-                <View style={{ marginLeft: 10 }}>
-                  <Text style={styles.genLabel}>현재 잔액</Text>
+                <View>
+                  <Text style={styles.genLabel}>자동 충전 Gen</Text>
                   <Text style={styles.genDesc}>
                     {tier === 'premium'
                       ? '무제한 (Premium)'
                       : tier === 'pro'
-                      ? '매일 오전 6시 +200 Gen 충전'
-                      : '매일 오전 6시 +100 Gen 충전'}
+                      ? '매일 오전 6시 +200 Gen'
+                      : '매일 오전 6시 +100 Gen'}
                   </Text>
                 </View>
               </View>
-              <View style={styles.genRight}>
-                <Text style={styles.genBalance}>
-                  {tier === 'premium' ? '∞' : genBalance.toLocaleString()}
-                </Text>
-                {tier !== 'premium' && (
+              <Text style={styles.genBalance}>
+                {tier === 'premium' ? '∞' : `⚡ ${genBalance.toLocaleString()}`}
+              </Text>
+            </View>
+            {/* 결제 Gen 행 */}
+            {tier !== 'premium' && (
+              <View style={[styles.genRow, { borderTopWidth: 1, borderTopColor: '#f1f5f9' }]}>
+                <View style={styles.genLeft}>
+                  <Zap size={16} color="#7c3aed" />
+                  <View>
+                    <Text style={[styles.genLabel, { color: '#7c3aed' }]}>결제 Gen</Text>
+                    <Text style={styles.genDesc}>구매로 획득한 Gen</Text>
+                  </View>
+                </View>
+                <View style={styles.genRight}>
+                  <Text style={[styles.genBalance, { color: '#7c3aed' }]}>
+                    💎 {genPaidBalance.toLocaleString()}
+                  </Text>
                   <TouchableOpacity
                     style={styles.genChargeBtn}
                     onPress={() => setShowGenShop(true)}
                   >
                     <Text style={styles.genChargeBtnText}>+ 충전</Text>
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
-            </View>
+            )}
           </View>
         </View>
 
@@ -380,11 +300,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
               icon={<Mail size={16} color="#64748b" />}
               label="이메일"
               value={email}
-            />
-            <MenuItem
-              icon={<Lock size={16} color="#64748b" />}
-              label="비밀번호 변경"
-              onPress={() => setShowChangePw(true)}
             />
           </View>
         </View>
@@ -418,10 +333,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         onSave={name => updateProfile({ display_name: name }).then(() => { })}
         onClose={() => setShowEditName(false)}
       />
-      <ChangePasswordModal
-        visible={showChangePw}
-        onClose={() => setShowChangePw(false)}
-      />
       <GenShopModal
         visible={showGenShop}
         onClose={() => setShowGenShop(false)}
@@ -435,97 +346,100 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 // ─────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f8fafc' },
+  root: { flex: 1, backgroundColor: '#f1f5f9' },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  headerTitle: { fontSize: 17, fontWeight: 'bold', color: '#1e293b' },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#f1f5f9',
+  },
+  closeBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#e2e8f0',
     justifyContent: 'center', alignItems: 'center',
   },
 
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 16, paddingBottom: 48, paddingTop: 4 },
 
-  // 프로필 카드
+  // 프로필 히어로 카드
   profileCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 24,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  avatarWrap: { position: 'relative', marginBottom: 12 },
-  avatar: {
-    width: 72, height: 72, borderRadius: 36,
+  profileCardAccent: {
+    height: 6,
+    backgroundColor: '#6366f1',
+  },
+  profileCardBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    gap: 16,
+  },
+  profileInitialBadge: {
+    width: 52, height: 52, borderRadius: 16,
     backgroundColor: '#eef2ff',
     justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
-  avatarText: { fontSize: 28, fontWeight: 'bold', color: '#6366f1' },
-  avatarEditBtn: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#ffffff',
-    borderWidth: 1, borderColor: '#e2e8f0',
-    justifyContent: 'center', alignItems: 'center',
+  profileInitialText: {
+    fontSize: 22, fontWeight: '800', color: '#6366f1',
   },
-  profileName: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 },
-  profileEmail: { fontSize: 13, color: '#94a3b8', marginBottom: 12 },
+  profileTextBlock: { flex: 1, gap: 4 },
+  profileName: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  profileEmail: { fontSize: 12, color: '#94a3b8', marginBottom: 6 },
 
   planBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1, marginBottom: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 10, borderWidth: 1,
   },
-  planBadgeText: { fontSize: 13, fontWeight: 'bold' },
-  planUpgradeText: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
-  expiresText: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
+  planBadgeText: { fontSize: 12, fontWeight: '700' },
+  planUpgradeText: { fontSize: 11, fontWeight: '600', opacity: 0.8 },
+  expiresText: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
 
   // 섹션
-  section: { marginBottom: 16 },
+  section: { marginBottom: 20 },
   sectionTitle: {
-    fontSize: 11, fontWeight: 'bold', color: '#94a3b8',
-    textTransform: 'uppercase', letterSpacing: 0.8,
+    fontSize: 11, fontWeight: '700', color: '#94a3b8',
+    textTransform: 'uppercase', letterSpacing: 1,
     marginBottom: 8, marginLeft: 4,
   },
   sectionCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   // Gen 잔액
   genRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 14,
+    padding: 16,
   },
-  genLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  genLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   genLabel: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
   genDesc: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-  genRight: { alignItems: 'flex-end', gap: 6 },
-  genBalance: { fontSize: 22, fontWeight: '800', color: '#6366f1' },
+  genRight: { alignItems: 'flex-end', gap: 8 },
+  genBalance: { fontSize: 26, fontWeight: '800', color: '#6366f1' },
   genChargeBtn: {
     backgroundColor: '#6366f1', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 5,
+    paddingHorizontal: 14, paddingVertical: 6,
   },
   genChargeBtnText: { fontSize: 12, fontWeight: '700', color: '#ffffff' },
 
@@ -534,20 +448,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    gap: 12,
+    paddingVertical: 15,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e2e8f0',
+    gap: 14,
   },
   menuIconWrap: {
-    width: 32, height: 32, borderRadius: 8,
+    width: 34, height: 34, borderRadius: 10,
     backgroundColor: '#f8fafc',
     justifyContent: 'center', alignItems: 'center',
   },
   menuLabel: { flex: 1, fontSize: 14, color: '#1e293b', fontWeight: '500' },
-  menuValue: { fontSize: 12, color: '#94a3b8', maxWidth: 120 },
+  menuValue: { fontSize: 12, color: '#94a3b8', maxWidth: 130 },
 
-  versionText: { fontSize: 11, color: '#cbd5e1', textAlign: 'center', marginTop: 8 },
+  versionText: { fontSize: 11, color: '#cbd5e1', textAlign: 'center', marginTop: 16 },
 
   // 공통 모달
   modalOverlay: {

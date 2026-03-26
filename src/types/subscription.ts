@@ -10,8 +10,8 @@ export type PlanTier = 'free' | 'pro' | 'premium';
 /** 플랜별 가격 (표시용) */
 export const PLAN_PRICE: Record<PlanTier, string> = {
   free:    '무료',
-  pro:     '9,900원 / 월',
-  premium: '32,500원 / 월',
+  pro:     '5,500원 / 월',
+  premium: '16,500원 / 월',
 };
 
 /** 플랜별 한국어 이름 */
@@ -83,13 +83,13 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     maxMeasures:           4,
     canEditNotes:          false,
     canDownloadAudio:      false,
-    canDownloadImage:      false,
+    canDownloadImage:      true,
     monthlyDownloadLimit:  0,
     showAds:               true,
-    adEveryNGenerations:   3,
-    usesGenPoints:         false,
-    canSaveScores:         false,
-    maxSavedScores:        0,
+    adEveryNGenerations:   5,
+    usesGenPoints:         true,
+    canSaveScores:         true,
+    maxSavedScores:        5,
   },
   pro: {
     canUseGrandStaff:      true,
@@ -101,14 +101,14 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     ],
     maxMeasures:           9999,
     canEditNotes:          false,
-    canDownloadAudio:      true,
+    canDownloadAudio:      false,
     canDownloadImage:      true,
-    monthlyDownloadLimit:  50,
+    monthlyDownloadLimit:  null,
     showAds:               false,
     adEveryNGenerations:   0,
     usesGenPoints:         true,
     canSaveScores:         true,
-    maxSavedScores:        50,
+    maxSavedScores:        10,
   },
   premium: {
     canUseGrandStaff:      true,
@@ -127,6 +127,6 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     adEveryNGenerations:   0,
     usesGenPoints:         false,
     canSaveScores:         true,
-    maxSavedScores:        null,
+    maxSavedScores:        30,
   },
 };

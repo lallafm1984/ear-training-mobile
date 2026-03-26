@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types/subscription';
 import { useAuth } from './AuthContext';
 
+
 // ─────────────────────────────────────────────────────────────
 // 헬퍼
 // ─────────────────────────────────────────────────────────────
@@ -32,9 +33,10 @@ export interface SubscriptionContextValue {
   consumeDownload:    () => Promise<boolean>;
   subscriptionState:  SubscriptionState;
   loading:            boolean;
-  genBalance:         number;
+  genBalance:         number;       // 자동 충전 gen
+  genPaidBalance:     number;       // 결제 gen
   consumeGen:         (amount: number) => Promise<void>;
-  addGen:             (amount: number) => Promise<void>;
+  addPaidGen:         (amount: number) => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -128,27 +130,39 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [subState, persistToSupabase]);
 
   // ── Gen 잔액 ─────────────────────────────────────────────
-  const [genBalance, setGenBalance] = useState<number>(profile?.gen_balance ?? 100);
+  const [genBalance,     setGenBalance]     = useState<number>(profile?.gen_balance      ?? 100);
+  const [genPaidBalance, setGenPaidBalance] = useState<number>((profile as any)?.gen_paid_balance ?? 0);
 
   useEffect(() => {
     setGenBalance(profile?.gen_balance ?? 100);
+    setGenPaidBalance((profile as any)?.gen_paid_balance ?? 0);
   }, [profile]);
 
+  // 자동 충전 먼저 차감, 부족하면 결제 gen에서 차감
   const consumeGen = useCallback(async (amount: number) => {
-    const next = Math.max(0, genBalance - amount);
-    setGenBalance(next);
-    if (user) {
-      await supabase.from('profiles').update({ gen_balance: next }).eq('id', user.id);
-    }
-  }, [genBalance, user]);
+    let autoDeduct = Math.min(amount, genBalance);
+    let paidDeduct = amount - autoDeduct;
 
-  const addGen = useCallback(async (amount: number) => {
-    const next = genBalance + amount;
-    setGenBalance(next);
+    const nextAuto = genBalance - autoDeduct;
+    const nextPaid = Math.max(0, genPaidBalance - paidDeduct);
+
+    setGenBalance(nextAuto);
+    setGenPaidBalance(nextPaid);
     if (user) {
-      await supabase.from('profiles').update({ gen_balance: next }).eq('id', user.id);
+      await supabase.from('profiles')
+        .update({ gen_balance: nextAuto, gen_paid_balance: nextPaid })
+        .eq('id', user.id);
     }
-  }, [genBalance, user]);
+  }, [genBalance, genPaidBalance, user]);
+
+  // 결제 gen 추가
+  const addPaidGen = useCallback(async (amount: number) => {
+    const next = genPaidBalance + amount;
+    setGenPaidBalance(next);
+    if (user) {
+      await supabase.from('profiles').update({ gen_paid_balance: next }).eq('id', user.id);
+    }
+  }, [genPaidBalance, user]);
 
   // ── 파생값 ──────────────────────────────────────────────
   const isExpired = !!(subState.expiresAt && new Date(subState.expiresAt) < new Date());
@@ -164,7 +178,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const value: SubscriptionContextValue = {
     tier: effectiveTier, limits, isExpired, remainingDownloads,
     upgradePlan, consumeDownload, subscriptionState: subState, loading,
-    genBalance, consumeGen, addGen,
+    genBalance, genPaidBalance, consumeGen, addPaidGen,
   };
 
   return (
