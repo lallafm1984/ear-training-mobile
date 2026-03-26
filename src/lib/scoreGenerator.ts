@@ -26,6 +26,8 @@ export type Difficulty =
   | 'intermediate_1' | 'intermediate_2' | 'intermediate_3'
   | 'advanced_1' | 'advanced_2' | 'advanced_3';
 
+export type BassDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4' | 'bass_5' | 'bass_6' | 'bass_7' | 'bass_8' | 'bass_9';
+
 /** 상위 카테고리 */
 export type DifficultyCategory = 'beginner' | 'intermediate' | 'advanced';
 
@@ -49,6 +51,7 @@ export interface GeneratorOptions {
   keySignature: string;
   timeSignature: string;
   difficulty: Difficulty;
+  bassDifficulty?: BassDifficulty;
   measures: number;
   useGrandStaff: boolean;
 }
@@ -106,6 +109,55 @@ const DURATION_POOL: Record<Difficulty, number[]> = {
 
 const CHROMATIC_RESOLUTION: Record<string, PitchName> = {
   'C': 'D', 'D': 'E', 'E': 'F', 'F': 'G', 'G': 'A', 'A': 'B', 'B': 'C',
+};
+
+// ────────────────────────────────────────────────────────────────
+// Bass difficulty labels & params
+// ────────────────────────────────────────────────────────────────
+
+export const BASS_DIFF_LABELS: Record<BassDifficulty, string> = {
+  bass_1: '1단계', bass_2: '2단계', bass_3: '3단계',
+  bass_4: '4단계', bass_5: '5단계', bass_6: '6단계',
+  bass_7: '7단계', bass_8: '8단계', bass_9: '9단계',
+};
+
+export const BASS_DIFF_DESC: Record<BassDifficulty, string> = {
+  bass_1: '지속음 — 한 음만 유지',
+  bass_2: '근음 정박 — I, IV, V도 근음',
+  bass_3: '순차 진행 — 계단식 움직임',
+  bass_4: '기본 반주 — 4분음표 리듬',
+  bass_5: '도약 진행 — 4, 5도 도약',
+  bass_6: '8분음표 분할 — 리듬 세분화',
+  bass_7: '전위 화음 — 3음, 5음 베이스',
+  bass_8: '싱코페이션 — 엇박 진행',
+  bass_9: '대위적 독립 — 독립 선율',
+};
+
+interface BassLevelParams {
+  mode:
+    | 'pedal'          // 1단: 지속음
+    | 'root_beat'      // 2단: 근음 정박
+    | 'directed_step'  // 3단: 방향 고정 순차
+    | 'alternating'    // 4단: 쿵-짝 (근음↔5음)
+    | 'leap'           // 5단: 도약 진행
+    | 'arpeggio'       // 6단: 분산화음 (근-3-5-3)
+    | 'inversion'      // 7단: 전위 화음 (내려가는 베이스 라인)
+    | 'syncopated'     // 8단: 싱코페이션 (강박 쉼표)
+    | 'contrary';      // 9단: 반진행 (트레블 반대 방향)
+  durationPool: number[];
+  minDur: number;
+}
+
+const BASS_LEVEL_PARAMS: Record<BassDifficulty, BassLevelParams> = {
+  bass_1: { mode: 'pedal',         durationPool: [16, 8], minDur: 8 },
+  bass_2: { mode: 'root_beat',     durationPool: [4],     minDur: 4 },
+  bass_3: { mode: 'directed_step', durationPool: [4],     minDur: 4 },
+  bass_4: { mode: 'alternating',   durationPool: [4],     minDur: 4 },
+  bass_5: { mode: 'leap',          durationPool: [4],     minDur: 4 },
+  bass_6: { mode: 'arpeggio',      durationPool: [2],     minDur: 2 },
+  bass_7: { mode: 'inversion',     durationPool: [4, 2],  minDur: 2 },
+  bass_8: { mode: 'syncopated',    durationPool: [4, 2],  minDur: 2 },
+  bass_9: { mode: 'contrary',      durationPool: [4, 2],  minDur: 2 },
 };
 
 /** 낮은음자리표 §4: 두 성부 최소 간격 — 단 10도(= 15반음) */
@@ -790,6 +842,8 @@ function applyInternalRests(
 
 export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const { keySignature, timeSignature, difficulty, measures, useGrandStaff } = opts;
+  const bassDifficulty = opts.bassDifficulty;
+  let prevBassNn = 0;
   if (measures < 1) throw new Error('measures must be >= 1');
   if (!timeSignature || !timeSignature.includes('/')) throw new Error(`Invalid timeSignature: ${timeSignature}`);
   const scale             = getScaleDegrees(keySignature);
@@ -977,7 +1031,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     if (useGrandStaff) {
       const barTrebleSlice = trebleNotes.slice(trebleBarStart);
       const trebleAttackMap = buildTrebleAttackMidiMap(barTrebleSlice, keySignature);
-      if (lvl >= 4 && params.bassIndependence > 0.3) {
+      if (bassDifficulty) {
+        prevBassNn = generateBassForBar(
+          bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale,
+          keySignature, trebleAttackMap, timeSignature, bassDifficulty, prevBassNn,
+        );
+      } else if (lvl >= 4 && params.bassIndependence > 0.3) {
         generateIndependentBass(
           bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, params,
           keySignature, trebleAttackMap, timeSignature, pool,
@@ -1059,6 +1118,201 @@ function resolveBassClash(
   }
 
   return note;
+}
+
+// ── 베이스 난이도별 생성 (bass_1~bass_9) ─────────────────────
+function generateBassForBar(
+  bassNotes: ScoreNote[],
+  trebleRhythm: number[],
+  sixteenthsPerBar: number,
+  chordRoot: number,
+  scale: PitchName[],
+  keySignature: string,
+  trebleAttackMap: Map<number, number>,
+  timeSignature: string,
+  bassDifficulty: BassDifficulty,
+  prevBassNn: number,
+): number {
+  const BASS_BASE = 3;
+  const bp = BASS_LEVEL_PARAMS[bassDifficulty];
+  const bTones = CHORD_TONES[chordRoot];
+
+  // 근음·3음·5음 bnn 정규화 (베이스 음역 -5 ~ 4)
+  const rootBnn  = chordRoot > 4 ? chordRoot - 7 : chordRoot;
+  const thirdBnn = bTones[1] > 4 ? bTones[1] - 7 : bTones[1];
+  const fifthBnn = bTones[2] > 4 ? bTones[2] - 7 : bTones[2];
+
+  /** 가장 가까운 화음 구성음으로 snap */
+  const snapToChordTone = (nn: number): number => {
+    let best = nn, bestDist = Infinity;
+    for (const t of bTones) {
+      for (const base of [
+        Math.floor(nn / 7) * 7 + t,
+        Math.floor(nn / 7) * 7 + t - 7,
+        Math.floor(nn / 7) * 7 + t + 7,
+      ]) {
+        const d = Math.abs(base - nn);
+        if (d < bestDist) { bestDist = d; best = base; }
+      }
+    }
+    return Math.max(-5, Math.min(4, best));
+  };
+
+  /** 음 하나 출력 — 충돌 해결 후 bassNotes에 추가, 실제 bnn 반환 */
+  const emitNote = (nn: number, dur: number, off: number): number => {
+    const n = Math.max(-5, Math.min(4, nn));
+    const durLabel = SIXTEENTHS_TO_DUR[dur] || '4';
+    const { pitch, octave } = noteNumToNote(n, scale, BASS_BASE);
+    const oct = Math.max(2, Math.min(4, octave));
+    let note = makeNote(pitch, oct, durLabel);
+    note = resolveBassClash(note, n, oct, durLabel, off, scale, BASS_BASE, keySignature, trebleAttackMap);
+    bassNotes.push(note);
+    return n;
+  };
+
+  const bassRhythm = fillRhythm(sixteenthsPerBar, bp.durationPool, {
+    timeSignature, minDur: bp.minDur,
+  });
+
+  let bnn = rootBnn;
+  let bassOff = 0;
+
+  switch (bp.mode) {
+
+    // ── 1단: 지속음 — 마디 전체 근음 유지 ──────────────────────
+    case 'pedal': {
+      const durLabel = SIXTEENTHS_TO_DUR[sixteenthsPerBar] || '1';
+      const { pitch, octave } = noteNumToNote(rootBnn, scale, BASS_BASE);
+      const oct = Math.max(2, Math.min(3, octave));
+      let note = makeNote(pitch, oct, durLabel);
+      note = resolveBassClash(note, rootBnn, oct, durLabel, 0, scale, BASS_BASE, keySignature, trebleAttackMap);
+      bassNotes.push(note);
+      return rootBnn;
+    }
+
+    // ── 2단: 근음 정박 — 각 박마다 코드 근음 ───────────────────
+    case 'root_beat': {
+      for (let j = 0; j < bassRhythm.length; j++) {
+        bnn = emitNote(rootBnn, bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 3단: 방향 고정 순차 진행 (도-시-라-솔) ──────────────────
+    case 'directed_step': {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      bnn = rootBnn;
+      for (let j = 0; j < bassRhythm.length; j++) {
+        if (j > 0) {
+          bnn += dir;
+          if (bnn > 4)  bnn = 3;
+          if (bnn < -5) bnn = -4;
+        }
+        bnn = emitNote(bnn, bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 4단: 쿵-짝 (근음 ↔ 5음 교대, 5음은 루트 위) ────────────
+    case 'alternating': {
+      // 5음이 근음보다 아래에 있으면 한 옥타브 위로 올려서 '짝' 위치에 배치
+      const hiFifth = fifthBnn <= rootBnn ? fifthBnn + 7 : fifthBnn;
+      const pattern = [rootBnn, Math.min(4, hiFifth)];
+      for (let j = 0; j < bassRhythm.length; j++) {
+        bnn = emitNote(pattern[j % 2], bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 5단: 도약 진행 (4·5도 도약, C→낮은 솔 패턴) ────────────
+    case 'leap': {
+      // 낮은 5음 = 근음보다 아래에 위치한 5음 (한 옥타브 아래)
+      const lowFifth = fifthBnn >= rootBnn ? fifthBnn - 7 : fifthBnn;
+      // 근음 ↔ 낮은5음 ↔ 3음 ↔ 근음 패턴
+      const leapPattern = [rootBnn, Math.max(-5, lowFifth), thirdBnn, rootBnn];
+      for (let j = 0; j < bassRhythm.length; j++) {
+        bnn = emitNote(leapPattern[j % leapPattern.length], bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 6단: 분산화음 arpeggio (근-3-5-3 반복) ─────────────────
+    case 'arpeggio': {
+      // 3음·5음은 근음 위로 올림
+      const hi3 = thirdBnn <= rootBnn ? thirdBnn + 7 : thirdBnn;
+      const hi5 = fifthBnn <= rootBnn ? fifthBnn + 7 : fifthBnn;
+      const arp = [rootBnn, Math.min(4, hi3), Math.min(4, hi5), Math.min(4, hi3)];
+      for (let j = 0; j < bassRhythm.length; j++) {
+        bnn = emitNote(arp[j % arp.length], bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 7단: 전위 화음 — 3음 또는 5음이 베이스 ─────────────────
+    case 'inversion': {
+      // 하행 베이스 라인: 5음(높)→3음→근음  또는  3음→근음→5음(낮)
+      const descLine = Math.random() < 0.5
+        ? [Math.min(4, fifthBnn < rootBnn ? fifthBnn + 7 : fifthBnn), thirdBnn, rootBnn]
+        : [thirdBnn, rootBnn, Math.max(-5, fifthBnn > rootBnn ? fifthBnn - 7 : fifthBnn)];
+      for (let j = 0; j < bassRhythm.length; j++) {
+        bnn = emitNote(descLine[j % descLine.length], bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    // ── 8단: 싱코페이션 — 강박 쉼표, 엇박에 음 ─────────────────
+    case 'syncopated': {
+      const [, bs] = timeSignature.split('/');
+      const beatSize = 16 / (parseInt(bs, 10) || 4);
+      let pos = 0;
+      bnn = rootBnn;
+      for (let j = 0; j < bassRhythm.length; j++) {
+        const dur = bassRhythm[j];
+        // 강박(박 경계)이고 마지막 음이 아니면 쉼표
+        if (pos % beatSize === 0 && j < bassRhythm.length - 1) {
+          bassNotes.push(makeRest(SIXTEENTHS_TO_DUR[dur] || '4'));
+        } else {
+          bnn = emitNote(j % 2 === 0 ? rootBnn : snapToChordTone(rootBnn + rand([3, -3, 4, -4])), dur, pos);
+        }
+        pos += dur;
+      }
+      bassOff = pos;
+      return bnn;
+    }
+
+    // ── 9단: 반진행 — 트레블과 반대 방향 순차 ──────────────────
+    case 'contrary': {
+      // 트레블 방향 감지
+      const trebleMidis = [...trebleAttackMap.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, m]) => m);
+      const trebleDir = trebleMidis.length >= 2
+        ? (trebleMidis[trebleMidis.length - 1] > trebleMidis[0] ? 1 : -1)
+        : 0;
+      const bassDir = trebleDir === 0 ? (Math.random() < 0.5 ? 1 : -1) : -trebleDir;
+      // 화음 구성음 앵커에서 시작
+      bnn = snapToChordTone(prevBassNn !== 0 ? prevBassNn : rootBnn);
+      for (let j = 0; j < bassRhythm.length; j++) {
+        if (j > 0) {
+          bnn += bassDir;
+          if (bnn > 4)  bnn = 2;
+          if (bnn < -5) bnn = -3;
+        }
+        bnn = emitNote(bnn, bassRhythm[j], bassOff);
+        bassOff += bassRhythm[j];
+      }
+      return bnn;
+    }
+
+    default:
+      return rootBnn;
+  }
 }
 
 // ── 초급 베이스: 화음톤 기반 ─────────────────────────────────

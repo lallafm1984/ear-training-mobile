@@ -14,8 +14,8 @@ import {
   generateAbc, getMeasureCount, getTupletNoteDuration, durationToSixteenths,
   getSixteenthsPerBar, sixteenthsToDuration, getValidTupletTypesForDuration,
 } from '../lib/scoreUtils';
-import { generateScore, Difficulty, DifficultyCategory, getDifficultyCategory } from '../lib/scoreGenerator';
-import { getGenCost } from '../lib/genCost';
+import { generateScore, Difficulty, DifficultyCategory, getDifficultyCategory, BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC } from '../lib/scoreGenerator';
+import { getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS } from '../lib/genCost';
 import AbcjsRenderer from '../components/AbcjsRenderer';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
@@ -122,6 +122,9 @@ const ALL_DIFFICULTIES: Difficulty[] = [
   'beginner_1', 'beginner_2', 'beginner_3',
   'intermediate_1', 'intermediate_2', 'intermediate_3',
   'advanced_1', 'advanced_2', 'advanced_3',
+];
+const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
+  'bass_1', 'bass_2', 'bass_3', 'bass_4', 'bass_5', 'bass_6', 'bass_7', 'bass_8', 'bass_9',
 ];
 
 // ── 조성 데이터 ──
@@ -247,7 +250,9 @@ export default function ScoreEditorScreen() {
 
   // 자동생성
   const [genDifficulty, setGenDifficulty] = useState<Difficulty>('beginner_1');
+  const [genBassDifficulty, setGenBassDifficulty] = useState<BassDifficulty>('bass_1');
   const [genMeasures, setGenMeasures] = useState(4);
+  const [genTab, setGenTab] = useState<'melody' | 'grand'>('melody');
   const [savedScores, setSavedScores] = useState<SavedScore[]>([]);
 
   // 악보 설정 - 조성 탭 (장조/단조)
@@ -458,7 +463,8 @@ export default function ScoreEditorScreen() {
   };
 
   // Gen 비용 계산
-  const currentGenCost = getGenCost(genDifficulty, state.useGrandStaff ?? false);
+  const bassExtraCost = (state.useGrandStaff ?? false) ? BASS_EXTRA_COSTS[genBassDifficulty] : 0;
+  const currentGenCost = getGenCost(genDifficulty, genMeasures) + bassExtraCost;
 
   const handleGenerate = useCallback(async () => {
     // 재생 중인 경우 먼저 중단
@@ -468,7 +474,7 @@ export default function ScoreEditorScreen() {
 
     // Gen 포인트 체크 (Premium은 무제한)
     if (limits.usesGenPoints) {
-      const cost = getGenCost(genDifficulty, state.useGrandStaff ?? false);
+      const cost = currentGenCost;
       if (genBalance + genPaidBalance < cost) {
         setMobileSheet(null);
         showAlert({
@@ -495,13 +501,14 @@ export default function ScoreEditorScreen() {
 
     // Gen 차감
     if (limits.usesGenPoints) {
-      const cost = getGenCost(genDifficulty, state.useGrandStaff ?? false);
-      await consumeGen(cost);
+      await consumeGen(currentGenCost);
     }
 
     const result = generateScore({
       keySignature: state.keySignature, timeSignature: state.timeSignature,
-      difficulty: genDifficulty, measures: genMeasures, useGrandStaff: state.useGrandStaff ?? false,
+      difficulty: genDifficulty,
+      bassDifficulty: (state.useGrandStaff ?? false) ? genBassDifficulty : undefined,
+      measures: genMeasures, useGrandStaff: state.useGrandStaff ?? false,
     });
     const tieDifficulties = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
     const barsPerStaff = ['beginner_1', 'beginner_2'].includes(genDifficulty) ? 4 : undefined;
@@ -520,7 +527,7 @@ export default function ScoreEditorScreen() {
         setShowAdModal(true);
       }
     }
-  }, [state.keySignature, state.timeSignature, state.useGrandStaff, genDifficulty, genMeasures, genHideNotes, limits.showAds, limits.usesGenPoints, recordGeneration, isPlaying, genBalance, consumeGen]);
+  }, [state.keySignature, state.timeSignature, state.useGrandStaff, genDifficulty, genBassDifficulty, genMeasures, genHideNotes, limits.showAds, limits.usesGenPoints, recordGeneration, isPlaying, genBalance, consumeGen]);
 
   const handleSave = useCallback(async () => {
     const scores = await getSavedScores();
@@ -1498,136 +1505,294 @@ export default function ScoreEditorScreen() {
 
       </BottomSheet>
 
-      <BottomSheet open={mobileSheet === 'generate'} onClose={() => setMobileSheet(null)} title="AI 자동생성">
-        <View style={styles.bsGroup}>
-          <Text style={styles.bsLabel}>난이도</Text>
-          {/* 카테고리별 (초급/중급/고급) 그룹 표시 */}
-          {(['beginner', 'intermediate', 'advanced'] as DifficultyCategory[]).map(cat => {
-            const catColors = DIFF_CATEGORY_COLORS[cat];
-            const subLevels = ALL_DIFFICULTIES.filter(d => getDifficultyCategory(d) === cat);
-            return (
-              <View key={cat} style={{ marginBottom: 4 }}>
-                <Text style={{ fontSize: 11, fontWeight: 'bold', color: catColors.text, marginBottom: 2 }}>
-                  {DIFF_CATEGORY_LABELS[cat]}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {subLevels.map(d => {
-                    const allowed = limits.allowedDifficulties.includes(d);
-                    const isActive = genDifficulty === d;
-                    const subNum = d.split('_')[1]; // '1', '2', '3'
-                    return (
-                      <TouchableOpacity
-                        key={d}
-                        onPress={() => {
-                          if (!allowed) { setMobileSheet(null); openUpgrade('difficulty'); return; }
-                          setGenDifficulty(d);
-                        }}
-                        style={[styles.bsDurBtn, {
-                          flex: 1,
-                          backgroundColor: isActive ? catColors.activeBg : catColors.bg,
-                          borderWidth: isActive ? 0 : 1,
-                          borderColor: isActive ? 'transparent' : catColors.text + '33',
-                          opacity: allowed ? 1 : 0.5,
-                          paddingVertical: 8,
-                        }]}
-                      >
-                        {!allowed && <Lock size={10} color="#94a3b8" style={{ marginBottom: 2 }} />}
-                        <Text style={{ fontSize: 13, fontWeight: 'bold', color: isActive ? '#fff' : catColors.text }}>
-                          {subNum}단계
-                        </Text>
-                        {limits.usesGenPoints && (
-                          <Text style={{ fontSize: 10, color: isActive ? 'rgba(255,255,255,0.85)' : catColors.text + 'aa', marginTop: 2 }}>
-                            ⚡{getGenCost(d, state.useGrandStaff ?? false)}
+      {/* ── AI 자동생성 Modal (탭 구조, 고정 생성버튼) ── */}
+      {(() => {
+        const insufficient = limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost;
+        return (
+          <Modal
+            visible={mobileSheet === 'generate'}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setMobileSheet(null)}
+            statusBarTranslucent
+          >
+            <View style={styles.sheetOverlay}>
+              <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setMobileSheet(null)} />
+              <View style={styles.genSheetContent}>
+                <View style={styles.sheetHandle} />
+
+                {/* 헤더 */}
+                <View style={styles.sheetHeader}>
+                  <Text style={styles.sheetTitle}>AI 자동생성</Text>
+                  <TouchableOpacity onPress={() => setMobileSheet(null)} style={styles.sheetCloseBtn}>
+                    <X size={16} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* 탭 바 */}
+                <View style={styles.genTabBar}>
+                  <TouchableOpacity
+                    style={[styles.genTabItem, genTab === 'melody' && styles.genTabItemActive]}
+                    onPress={() => setGenTab('melody')}
+                  >
+                    <Music2 size={12} color={genTab === 'melody' ? '#6366f1' : '#94a3b8'} />
+                    <Text style={[styles.genTabText, genTab === 'melody' && styles.genTabTextActive]}>선율</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.genTabItem, genTab === 'grand' && styles.genTabItemActive]}
+                    onPress={() => setGenTab('grand')}
+                  >
+                    <Music2 size={12} color={genTab === 'grand' ? '#7c3aed' : '#94a3b8'} />
+                    <Text style={[styles.genTabText, genTab === 'grand' && styles.genTabTextActivePurple]}>큰보표</Text>
+                    {(state.useGrandStaff ?? false) && <View style={styles.genTabActiveDot} />}
+                  </TouchableOpacity>
+                </View>
+
+                {/* 탭 콘텐츠 (스크롤) */}
+                <ScrollView
+                  contentContainerStyle={styles.genSheetInner}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {genTab === 'melody' ? (
+                    <>
+                      {/* 선율 난이도 */}
+                      <Text style={styles.genSectionLabel}>선율 난이도</Text>
+                      {(['beginner', 'intermediate', 'advanced'] as DifficultyCategory[]).map(cat => {
+                        const catColors = DIFF_CATEGORY_COLORS[cat];
+                        const subLevels = ALL_DIFFICULTIES.filter(d => getDifficultyCategory(d) === cat);
+                        return (
+                          <View key={cat} style={{ marginBottom: 7 }}>
+                            <View style={[styles.genCatChip, { backgroundColor: catColors.bg }]}>
+                              <Text style={[styles.genCatChipText, { color: catColors.text }]}>
+                                {DIFF_CATEGORY_LABELS[cat]}
+                              </Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 6 }}>
+                              {subLevels.map(d => {
+                                const allowed = limits.allowedDifficulties.includes(d);
+                                const isActive = genDifficulty === d;
+                                const subNum = d.split('_')[1];
+                                return (
+                                  <TouchableOpacity
+                                    key={d}
+                                    onPress={() => {
+                                      if (!allowed) { setMobileSheet(null); openUpgrade('difficulty'); return; }
+                                      setGenDifficulty(d);
+                                    }}
+                                    style={[
+                                      styles.genDiffBtn,
+                                      {
+                                        backgroundColor: isActive ? catColors.activeBg : catColors.bg,
+                                        borderColor: isActive ? catColors.activeBg : catColors.text + '28',
+                                        opacity: allowed ? 1 : 0.45,
+                                        shadowColor: isActive ? catColors.activeBg : 'transparent',
+                                        shadowOpacity: isActive ? 0.35 : 0,
+                                        shadowRadius: 5,
+                                        shadowOffset: { width: 0, height: 2 },
+                                        elevation: isActive ? 3 : 0,
+                                      },
+                                    ]}
+                                  >
+                                    {!allowed && (
+                                      <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : catColors.text + '99'} style={{ marginBottom: 1 }} />
+                                    )}
+                                    <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : catColors.text }]}>
+                                      {subNum}단계
+                                    </Text>
+                                    <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : catColors.text + 'cc' }]} numberOfLines={2}>
+                                      {DIFF_DESC[d]}
+                                    </Text>
+                                    {limits.usesGenPoints && (
+                                      <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.9)' : catColors.text }]}>
+                                        ⚡{getGenCost(d)}
+                                      </Text>
+                                    )}
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        );
+                      })}
+                      {/* 마디 수 */}
+                      <Text style={styles.genSectionLabel}>마디 수</Text>
+                      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
+                        {[4, 8, 12, 16].map(n => {
+                          const allowed = n <= limits.maxMeasures;
+                          const isActive = genMeasures === n;
+                          const extra = getMeasureExtraCost(n);
+                          return (
+                            <TouchableOpacity
+                              key={n}
+                              onPress={() => {
+                                if (!allowed) { setMobileSheet(null); openUpgrade('measures'); return; }
+                                setGenMeasures(n);
+                              }}
+                              style={[
+                                styles.genMeasureBtn,
+                                {
+                                  backgroundColor: isActive ? '#6366f1' : '#f1f5f9',
+                                  borderColor: isActive ? '#6366f1' : '#e2e8f0',
+                                  opacity: allowed ? 1 : 0.45,
+                                  shadowColor: isActive ? '#6366f1' : 'transparent',
+                                  shadowOpacity: isActive ? 0.3 : 0,
+                                  shadowRadius: 5,
+                                  shadowOffset: { width: 0, height: 2 },
+                                  elevation: isActive ? 3 : 0,
+                                },
+                              ]}
+                            >
+                              {!allowed && <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8'} style={{ marginBottom: 1 }} />}
+                              <Text style={[styles.genMeasureBtnNum, { color: isActive ? '#fff' : '#334155' }]}>{n}</Text>
+                              <Text style={[styles.genMeasureBtnSub, { color: isActive ? 'rgba(255,255,255,0.75)' : '#94a3b8' }]}>마디</Text>
+                              {limits.usesGenPoints && (
+                                <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.85)' : '#6366f1aa', marginTop: 1 }]}>
+                                  {extra > 0 ? `+⚡${extra}` : '기본'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* 음표 숨기기 */}
+                      <View style={[styles.genOptionRow, genHideNotes && { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
+                        <View style={[styles.genCardIconWrap, { backgroundColor: genHideNotes ? '#fef3c7' : '#f1f5f9' }]}>
+                          {genHideNotes
+                            ? <EyeOff size={13} color="#d97706" />
+                            : <Eye size={13} color="#64748b" />
+                          }
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.genCardTitle, genHideNotes && { color: '#92400e' }]}>음표 숨기기</Text>
+                          <Text style={[styles.genCardSubtitle, { marginLeft: 0 }, genHideNotes && { color: '#d97706' }]}>
+                            생성된 악보의 음표를 가립니다.
                           </Text>
+                        </View>
+                        <Switch
+                          value={genHideNotes}
+                          onValueChange={setGenHideNotes}
+                          trackColor={{ true: '#f59e0b', false: '#e2e8f0' }}
+                          thumbColor="#ffffff"
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      {/* 큰보표 토글 */}
+                      <View style={[styles.genOptionRow, (state.useGrandStaff ?? false) && { backgroundColor: '#faf5ff', borderColor: '#ddd6fe' }]}>
+                        <View style={[styles.genCardIconWrap, { backgroundColor: (state.useGrandStaff ?? false) ? '#ede9fe' : '#f1f5f9' }]}>
+                          <Music2 size={13} color={(state.useGrandStaff ?? false) ? '#7c3aed' : '#64748b'} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.genCardTitle, (state.useGrandStaff ?? false) && { color: '#5b21b6' }]}>큰보표 (Grand Staff)</Text>
+                          <Text style={[styles.genCardSubtitle, { marginLeft: 0 }]}>높은음자리 + 낮은음자리</Text>
+                        </View>
+                        {limits.canUseGrandStaff ? (
+                          <Switch
+                            value={state.useGrandStaff ?? false}
+                            onValueChange={v => setState(p => ({ ...p, useGrandStaff: v, bassNotes: p.bassNotes || [] }))}
+                            trackColor={{ true: '#7c3aed', false: '#e2e8f0' }}
+                            thumbColor="#ffffff"
+                          />
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => { setMobileSheet(null); openUpgrade('grand_staff'); }}
+                            style={styles.genProBadge}
+                          >
+                            <Lock size={11} color="#7c3aed" />
+                            <Text style={styles.genProBadgeText}>PRO</Text>
+                          </TouchableOpacity>
                         )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                      </View>
+
+                      {/* 베이스 난이도 — 항상 표시, 큰보표 OFF면 비활성 */}
+                      <View style={{ marginTop: 14, opacity: (state.useGrandStaff ?? false) ? 1 : 0.4 }}>
+                        <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>베이스 난이도</Text>
+                        {[
+                          ALL_BASS_DIFFICULTIES.slice(0, 3),
+                          ALL_BASS_DIFFICULTIES.slice(3, 6),
+                          ALL_BASS_DIFFICULTIES.slice(6, 9),
+                        ].map((row, rowIdx) => (
+                          <View key={rowIdx} style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+                            {row.map(bd => {
+                              const isActive = genBassDifficulty === bd && (state.useGrandStaff ?? false);
+                              const levelNum = bd.split('_')[1];
+                              return (
+                                <TouchableOpacity
+                                  key={bd}
+                                  onPress={() => { if (state.useGrandStaff ?? false) setGenBassDifficulty(bd); }}
+                                  disabled={!(state.useGrandStaff ?? false)}
+                                  style={[
+                                    styles.genBassBtn,
+                                    {
+                                      backgroundColor: isActive ? '#7c3aed' : '#ede9fe',
+                                      borderColor: isActive ? '#7c3aed' : '#c4b5fd',
+                                      shadowColor: isActive ? '#7c3aed' : 'transparent',
+                                      shadowOpacity: isActive ? 0.35 : 0,
+                                      shadowRadius: 4,
+                                      shadowOffset: { width: 0, height: 2 },
+                                      elevation: isActive ? 3 : 0,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#5b21b6' }]}>
+                                    {levelNum}단계
+                                  </Text>
+                                  <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#7c3aedcc' }]} numberOfLines={2}>
+                                    {BASS_DIFF_DESC[bd]}
+                                  </Text>
+                                  {limits.usesGenPoints && (
+                                    <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.9)' : '#7c3aed' }]}>
+                                      +⚡{BASS_EXTRA_COSTS[bd]}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
+
+                {/* 고정 하단 - 생성 버튼 */}
+                <View style={[styles.genSheetFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                  <TouchableOpacity
+                    style={[styles.genPrimaryBtn, insufficient && styles.genPrimaryBtnDisabled]}
+                    onPress={handleGenerate}
+                    activeOpacity={0.85}
+                  >
+                    <Sparkles size={16} color={insufficient ? '#94a3b8' : '#fff'} />
+                    <Text style={[styles.genPrimaryBtnText, insufficient && { color: '#94a3b8' }]}>
+                      생성하기
+                    </Text>
+                    {limits.usesGenPoints && (
+                      <View style={[styles.genPrimaryBadge, insufficient && { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
+                        <Text style={[styles.genPrimaryBadgeText, insufficient && { color: '#ef4444' }]}>
+                          ⚡ {currentGenCost}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {insufficient && (
+                    <View style={[styles.genWarningRow, { marginTop: 8 }]}>
+                      <Text style={styles.genWarningText}>
+                        잔액 부족 · 보유 ⚡{genBalance} + 💎{genPaidBalance}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.genFooter}>
+                    현재 조성 · 박자 · 큰보표 설정이 적용됩니다. 기존 음표는 교체됩니다.
+                  </Text>
                 </View>
               </View>
-            );
-          })}
-          <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{DIFF_DESC[genDifficulty]}</Text>
-
-        </View>
-        <View style={styles.bsGroup}>
-          <Text style={styles.bsLabel}>마디 수</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {[4, 8, 12, 16].map(n => {
-              const allowed = n <= limits.maxMeasures;
-              return (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => {
-                    if (!allowed) { setMobileSheet(null); openUpgrade('measures'); return; }
-                    setGenMeasures(n);
-                  }}
-                  style={[styles.bsDurBtn, {
-                    backgroundColor: genMeasures === n ? '#6366f1' : '#f8fafc',
-                    borderWidth: genMeasures === n ? 0 : 1,
-                    opacity: allowed ? 1 : 0.5,
-                    paddingVertical: 6,
-                  }]}
-                >
-                  {!allowed && <Lock size={10} color="#94a3b8" />}
-                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: genMeasures === n ? '#fff' : '#1e293b' }}>{n}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-        {/* 큰보표 */}
-        <View style={[styles.bsGroup, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <View>
-            <Text style={styles.bsLabel}>큰보표 (Grand Staff)</Text>
-            <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>높은음자리 + 낮은음자리</Text>
-          </View>
-          {limits.canUseGrandStaff ? (
-            <Switch
-              value={state.useGrandStaff ?? false}
-              onValueChange={v => setState(p => ({ ...p, useGrandStaff: v, bassNotes: p.bassNotes || [] }))}
-              trackColor={{ true: '#6366f1' }}
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => { setMobileSheet(null); openUpgrade('grand_staff'); }}
-              style={styles.lockedFeatureBtn}
-            >
-              <Lock size={12} color="#94a3b8" />
-              <Text style={styles.lockedFeatureText}>PRO</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* 음표 숨기기 */}
-        <View style={[styles.bsGroup, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <View>
-            <Text style={styles.bsLabel}>음표 숨기기</Text>
-            <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>생성된 악보의 음표를 가립니다.</Text>
-          </View>
-          <Switch
-            value={genHideNotes}
-            onValueChange={setGenHideNotes}
-            trackColor={{ true: '#6366f1' }}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.bsPrimaryBtn, (limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost) && { opacity: 0.5 }]}
-          onPress={handleGenerate}
-        >
-          <RefreshCw size={15} color="#fff" />
-          <Text style={styles.bsPrimaryBtnText}>
-            생성하기{limits.usesGenPoints ? ` ( -${currentGenCost}⚡)` : ''}
-          </Text>
-        </TouchableOpacity>
-        {limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost && (
-          <Text style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginTop: 8, fontWeight: 'bold' }}>
-            ⚠️ 잔액이 부족합니다 (⚡{genBalance} + 💎{genPaidBalance})
-          </Text>
-        )}
-        <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 12 }}>현재 조성·박자·큰보표 설정이 적용됩니다. 기존 음표는 교체됩니다.</Text>
-      </BottomSheet>
+            </View>
+          </Modal>
+        );
+      })()}
 
       <BottomSheet open={mobileSheet === 'saved'} onClose={() => setMobileSheet(null)} title="악보 관리">
         <TouchableOpacity style={[styles.bsPrimaryBtn, { backgroundColor: '#10b981', marginBottom: 16 }]} onPress={handleSave}>
@@ -1927,6 +2092,364 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#94a3b8',
+  },
+
+  // ── AI 자동생성 바텀시트 전용 스타일 ──
+  genCard: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e8edf2',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  genCardPurple: {
+    backgroundColor: '#faf5ff',
+    borderColor: '#ddd6fe',
+  },
+  genCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  genCardIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.2,
+  },
+  genCardSubtitle: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 1,
+    marginLeft: 34,
+  },
+  genCatChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 20,
+    marginBottom: 6,
+    marginTop: 2,
+  },
+  genCatChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  genDiffBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  genDiffBtnNum: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  genDiffBtnSub: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  genDiffBtnLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 16,
+  },
+  genDiffBtnDesc: {
+    fontSize: 9,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  genDiffBtnCost: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  genCostBadge: {
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  genCostBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  genDescBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e8edf2',
+  },
+  genDescText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  genMeasureBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  genMeasureBtnNum: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  genMeasureBtnSub: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  genProBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ede9fe',
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  genProBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#7c3aed',
+    letterSpacing: 0.5,
+  },
+  genBassSeparator: {
+    marginTop: 12,
+  },
+  genBassDivider: {
+    height: 1,
+    backgroundColor: '#ddd6fe',
+    marginBottom: 10,
+  },
+  genBassTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
+    marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+  genBassBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  genBassBtnNum: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  genBassBtnSub: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  genPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#6366f1',
+    borderRadius: 16,
+    paddingVertical: 15,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  genPrimaryBtnDisabled: {
+    backgroundColor: '#f1f5f9',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  genPrimaryBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+  },
+  genPrimaryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  genPrimaryBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  genWarningRow: {
+    marginTop: 8,
+    backgroundColor: '#fef2f2',
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    alignItems: 'center',
+  },
+  genWarningText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ef4444',
+  },
+  genFooter: {
+    fontSize: 10,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 15,
+  },
+
+  // ── 자동생성 탭 모달 전용 스타일 ──
+  genSheetContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  genSheetInner: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  genTabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    padding: 3,
+  },
+  genTabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  genTabItemActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  genTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  genTabTextActive: {
+    color: '#6366f1',
+  },
+  genTabTextActivePurple: {
+    color: '#7c3aed',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  genTabActiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#7c3aed',
+  },
+  genSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  genOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e8edf2',
+    padding: 12,
+    marginBottom: 8,
+  },
+  genSheetFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  genGrandOffHint: {
+    marginTop: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e8edf2',
+    padding: 16,
+    alignItems: 'center',
+  },
+  genGrandOffHintText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  genGrandCostBadge: {
+    backgroundColor: '#ede9fe',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginRight: 8,
+  },
+  genGrandCostBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
   },
 
   // ── 악보 설정 전용 스타일 ──
