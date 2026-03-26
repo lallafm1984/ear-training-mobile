@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { AlertProvider } from './src/context/AlertContext';
@@ -13,6 +14,17 @@ import LoginScreen from './src/screens/LoginScreen';
 
 function AppNavigator() {
   const { session, loading, profileLoading } = useAuth();
+  const prevGateRef = useRef<string>('');
+
+  useEffect(() => {
+    const gate = loading ? 'loading' : (session && profileLoading) ? 'profileLoading' : !session ? 'login' : 'editor';
+    if (prevGateRef.current !== gate) {
+      prevGateRef.current = gate;
+      // #region agent log
+      fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'App.tsx:AppNavigator',message:'nav gate',data:{gate,loading,profileLoading:!!(session&&profileLoading),hasSession:!!session},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+    }
+  }, [loading, session, profileLoading]);
 
   // 초기 세션 복원 중 또는 프로필 로딩 중
   if (loading || (session && profileLoading)) {
