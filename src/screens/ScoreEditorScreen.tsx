@@ -98,15 +98,15 @@ const DIFF_LABELS: Record<Difficulty, string> = {
   advanced_1: '고급 1', advanced_2: '고급 2', advanced_3: '고급 3',
 };
 const DIFF_DESC: Record<Difficulty, string> = {
-  beginner_1: '온·2분·4분음표, 순차 선율 (청음 입문)',
-  beginner_2: '8분음표, 쉼표, 5도 도약 (기초 청음)',
-  beginner_3: '점음표, 3/4박자, 기초 당김음 (예고 입시 기준)',
-  intermediate_1: '당김음·붙임줄 강화, 셋잇단 입문 (예고 입시+)',
-  intermediate_2: '셋잇단, 임시표, 독립 베이스 (음대 입시 기준)',
-  intermediate_3: '16분·점8분, 임시표 강화, 베이스 독립',
-  advanced_1: '고급 리듬, 기만종지, cadential 6/4 (작곡과)',
-  advanced_2: '8분 셋잇단, 반음계 선율, 복잡한 리듬 (서울대 전단계)',
-  advanced_3: '5연음, 다중리듬, 극한 변칙 (서울대·한예종)',
+  beginner_1: '온음표 · 2분음표',
+  beginner_2: '4분음표 · 점2분음표 · 쉼표',
+  beginner_3: '8분음표 · 8분쉼표',
+  intermediate_1: '점4분음표',
+  intermediate_2: '붙임줄 · 당김음',
+  intermediate_3: '16분음표 · 16분쉼표',
+  advanced_1: '점8분음표',
+  advanced_2: '임시표 (♯ · ♭ · ♮)',
+  advanced_3: '셋잇단음표',
 };
 const DIFF_CATEGORY_LABELS: Record<DifficultyCategory, string> = {
   beginner: '초급', intermediate: '중급', advanced: '고급',
@@ -495,7 +495,9 @@ export default function ScoreEditorScreen() {
       keySignature: state.keySignature, timeSignature: state.timeSignature,
       difficulty: genDifficulty, measures: genMeasures, useGrandStaff: state.useGrandStaff ?? false,
     });
-    setState(p => ({ ...p, notes: result.trebleNotes, bassNotes: result.bassNotes }));
+    const tieDifficulties = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
+    const barsPerStaff = ['beginner_1', 'beginner_2'].includes(genDifficulty) ? 4 : undefined;
+    setState(p => ({ ...p, notes: result.trebleNotes, bassNotes: result.bassNotes, disableTies: tieDifficulties.includes(genDifficulty), barsPerStaff }));
     setHideNotes(genHideNotes);
     setIsGenerating(false);
 
@@ -713,6 +715,7 @@ export default function ScoreEditorScreen() {
                 koreanExamSettings={koreanExamSettings}
                 echoSettings={echoSettings}
                 customPlaySettings={customPlaySettings}
+                barsPerStaff={state.barsPerStaff}
                 stretchLast={getMeasureCount(state) > 0 && getMeasureCount(state) % 4 === 0}
                 onNoteClick={handleAbcNoteClick}
                 onScrollDelta={handleWebViewScrollDelta}

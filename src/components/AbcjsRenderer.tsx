@@ -43,6 +43,8 @@ interface AbcjsRendererProps {
   onAudioSaveSuccess?: () => void;
   showNoteCursor?: boolean;
   showMeasureHighlight?: boolean;
+  /** 한 줄에 표시할 마디 수. 미지정 시 총 마디 수 기반 자동 결정 */
+  barsPerStaff?: number;
 }
 
 const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(function AbcjsRenderer({
@@ -72,6 +74,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
   onAudioSaveSuccess,
   showNoteCursor = true,
   showMeasureHighlight = true,
+  barsPerStaff,
 }: AbcjsRendererProps, ref: React.ForwardedRef<AbcjsRendererHandle>) {
   const webViewRef = useRef<WebView>(null);
   const [webViewReady, setWebViewReady] = useState(false);
@@ -218,12 +221,13 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
       koreanExamSettings: koreanExamSettings || null,
       echoSettings: echoSettings || null,
       customPlaySettings: customPlaySettings || null,
+      barsPerStaff: barsPerStaff || null,
     }));
   }, [abcString, combinedAbc, selectedNote, webViewReady,
       examMode, examWaitSeconds, prependMetronome, prependBasePitch,
       metronomeFreq, timeSignature, tempo, scaleTempo, keySignature, stretchLast,
       playbackMode, hideNotes, showNoteCursor, showMeasureHighlight,
-      apExamSettings, koreanExamSettings, echoSettings, customPlaySettings]);
+      apExamSettings, koreanExamSettings, echoSettings, customPlaySettings, barsPerStaff]);
 
   // ── RN 파일 저장: 기기에 직접 저장 + 공유 시트 제공 ──
   const saveToDevice = useCallback(async (base64: string, ext: string, mime: string) => {
@@ -563,7 +567,12 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     var totalBars = (bodyStr.match(/\|/g) || []).length;
     var doubleBars = (bodyStr.match(/\|\|/g) || []).length;
     totalBars = Math.max(1, totalBars - doubleBars);
-    var perLine = (totalBars % 4 === 0) ? 4 : 2;
+    // 마디당 평균 음표 수로 줄당 마디 수 자동 결정
+    // ABC 음표 문자: A-G(저음), a-g(고음), z(쉼표)
+    var totalNotes = (bodyStr.match(/[A-Ga-gz]/g) || []).length;
+    var avgNotesPerBar = totalBars > 0 ? totalNotes / totalBars : 4;
+    var autoPerLine = avgNotesPerBar <= 10 ? 4 : 2;
+    var perLine = currentParams.barsPerStaff || autoPerLine;
 
     var renderResult = ABCJS.renderAbc('score-container', abc, {
       add_classes: true,
@@ -1219,6 +1228,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
           koreanExamSettings: msg.koreanExamSettings || null,
           echoSettings:     msg.echoSettings    || null,
           customPlaySettings: msg.customPlaySettings || null,
+          barsPerStaff:     msg.barsPerStaff    || null,
         };
         renderScore(msg.abc, msg.selectedNote);
         if (msg.hideNotes) setTimeout(function(){ applyHideNotes(true); }, 200);

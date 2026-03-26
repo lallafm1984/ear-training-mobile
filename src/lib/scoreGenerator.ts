@@ -70,37 +70,36 @@ const CHORD_TONES: Record<number, number[]> = {
 };
 
 /**
- * 9단계별 리듬 풀 (16분음표 단위)
- * 문서 기반:
- *   L1: 온(16), 2분(8), 4분(4) — 4/4 고정, BPM 60~72
- *   L2: + 8분(2), 점2분(12) — BPM 66~80
- *   L3: + 점4분(6), 8분 쉼표 — BPM 72~92 (예고 입시)
- *   L4(중급1): L3와 동일 + 당김음 확률 증가
- *   L5(중급2): + 16분(1), 점8분(3), 4분 셋잇단 — BPM 80~108 (음대 입시)
- *   L6(중급3): L5 확장 + 역점음, alla breve
- *   L7(고급1): + 32분 패시지, 8분 셋잇단, 불규칙박자 — BPM 88~120
- *   L8(고급2): L7 확장 + 헤미올라, 겹점음표
- *   L9(고급3): 모든 음가 + 5연음, 다중리듬 — BPM 96~144
+ * 9단계별 리듬 풀 (16분음표 단위) — 누적 도입
+ *   L1: 온(16)·2분(8)·4분(4)
+ *   L2: + 점2분(12) / 쉼표 도입
+ *   L3: + 8분(2) / 8분쉼표
+ *   L4: + 점4분(6)
+ *   L5: 붙임줄 당김음 (음가 풀 동일, tieProb·syncopationProb 활성)
+ *   L6: + 16분(1) / 16분쉼표
+ *   L7: + 점8분(3)
+ *   L8: 임시표 도입 (음가 풀 동일)
+ *   L9: 셋잇단 도입
  */
 const DURATION_POOL: Record<Difficulty, number[]> = {
-  // 초급 1: 온·2분·4분 — 기본 박 단위만
-  beginner_1:     [16, 8, 4],
-  // 초급 2: + 8분(쌍묶음), 점2분 — 세분화 시작
-  beginner_2:     [16, 12, 8, 4, 2],
-  // 초급 3: + 점4분(6/8 핵심), 복합박자 도입 (예고 입시)
-  beginner_3:     [12, 8, 6, 4, 2],
-  // 중급 1: 초급3 기반 + 당김음 확률 증가
+  // L1: 온·2분
+  beginner_1:     [16, 8],
+  // L2: 4분·점2분 (쉼표 포함)
+  beginner_2:     [12, 8, 4],
+  // L3: + 8분 (온음표 제외)
+  beginner_3:     [12, 8, 4, 2],
+  // L4: 점4분 중심
   intermediate_1: [8, 6, 4, 2],
-  // 중급 2: + 16분(1), 점8분(3), 셋잇단 (음대 입시)
-  intermediate_2: [8, 6, 4, 3, 2, 1],
-  // 중급 3: L5 확장 — 역점음, alla breve 포함
-  intermediate_3: [8, 6, 4, 3, 2, 1],
-  // 고급 1: + 불규칙박자, 8분 셋잇단, 32분 패시지
-  advanced_1:     [4, 3, 2, 1],
-  // 고급 2: + 헤미올라, 겹점음표
-  advanced_2:     [4, 3, 2, 1],
-  // 고급 3: 모든 음가 (서울대·한예종 수준)
-  advanced_3:     [4, 3, 2, 1],
+  // L5: 붙임줄 당김음 (풀 동일)
+  intermediate_2: [8, 6, 4, 2],
+  // L6: + 16분
+  intermediate_3: [12, 8, 6, 4, 2, 1],
+  // L7: + 점8분
+  advanced_1:     [12, 8, 6, 4, 3, 2, 1],
+  // L8: 임시표 (풀 동일)
+  advanced_2:     [12, 8, 6, 4, 3, 2, 1],
+  // L9: 셋잇단
+  advanced_3:     [12, 8, 6, 4, 3, 2, 1],
 };
 
 
@@ -197,9 +196,9 @@ interface LevelParams {
 }
 
 const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
-  // ── 초급 1: 완전 기초 (BPM 60~72) ──
+  // ── L1: 온·2분·4분 ──
   beginner_1: {
-    maxInterval: 3, stepwiseProb: 0.90, maxLeap: 3,
+    maxInterval: 3, stepwiseProb: 0.95, maxLeap: 3,
     chromaticBudget: [0, 0], chromaticProb: 0,
     syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
     tieProb: 0, restProb: 0, dottedProb: 0,
@@ -208,93 +207,93 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
-  // ── 초급 2: 8분음표 도입 (BPM 66~80) ──
+  // ── L2: 점2분·쉼표 ──
   beginner_2: {
-    maxInterval: 5, stepwiseProb: 0.80, maxLeap: 5,
+    maxInterval: 4, stepwiseProb: 0.88, maxLeap: 4,
     chromaticBudget: [0, 0], chromaticProb: 0,
     syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.05, restProb: 0.05, dottedProb: 0,
+    tieProb: 0, restProb: 0.20, dottedProb: 0.35,
     contraryMotionRatio: 0.30, bassIndependence: 0,
     voiceCrossingMax: 0, consonanceRatio: 1.0,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
-  // ── 초급 3: 복합박자·기초 당김음 (BPM 72~92) — 예고 입시 수준 ──
+  // ── L3: 8분·8분쉼표 ──
   beginner_3: {
-    maxInterval: 8, stepwiseProb: 0.70, maxLeap: 8,
+    maxInterval: 5, stepwiseProb: 0.82, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0.10, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.10, restProb: 0.10, dottedProb: 0.15,
-    contraryMotionRatio: 0.50, bassIndependence: 0.3,
-    voiceCrossingMax: 0, consonanceRatio: 0.90,
-    cadenceType: ['perfect', 'half', 'plagal'],
-    maxTraps: 1,
+    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0, restProb: 0.20, dottedProb: 0.25,
+    contraryMotionRatio: 0.40, bassIndependence: 0.2,
+    voiceCrossingMax: 0, consonanceRatio: 0.95,
+    cadenceType: ['perfect'],
+    maxTraps: 0,
   },
-  // ── 중급 1: 독립성 태동 — 예고 입시 + α ──
+  // ── L4: 점4분 ──
   intermediate_1: {
-    maxInterval: 8, stepwiseProb: 0.65, maxLeap: 8,
-    chromaticBudget: [0, 1], chromaticProb: 0.072,
-    syncopationProb: 0.15, tripletBudget: [0, 1], tripletProb: 0.10,
-    tieProb: 0.15, restProb: 0.12, dottedProb: 0.20,
-    contraryMotionRatio: 0.55, bassIndependence: 0.45,
-    voiceCrossingMax: 0, consonanceRatio: 0.85,
+    maxInterval: 6, stepwiseProb: 0.75, maxLeap: 6,
+    chromaticBudget: [0, 0], chromaticProb: 0,
+    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0, restProb: 0.15, dottedProb: 0.80,
+    contraryMotionRatio: 0.50, bassIndependence: 0.3,
+    voiceCrossingMax: 0, consonanceRatio: 0.92,
+    cadenceType: ['perfect', 'half'],
+    maxTraps: 0,
+  },
+  // ── L5: 붙임줄 당김음 ──
+  intermediate_2: {
+    maxInterval: 6, stepwiseProb: 0.70, maxLeap: 7,
+    chromaticBudget: [0, 0], chromaticProb: 0,
+    syncopationProb: 0.25, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0.30, restProb: 0.15, dottedProb: 0.15,
+    contraryMotionRatio: 0.50, bassIndependence: 0.45,
+    voiceCrossingMax: 0, consonanceRatio: 0.88,
     cadenceType: ['perfect', 'half', 'plagal'],
     maxTraps: 1,
   },
-  // ── 중급 2: 16분음표·복잡한 분할 (BPM 80~108) — 음대 입시 수준 ──
-  intermediate_2: {
-    maxInterval: 6, stepwiseProb: 0.60, maxLeap: 8,
-    chromaticBudget: [1, 2], chromaticProb: 0.10,
-    syncopationProb: 0.20, tripletBudget: [0, 2], tripletProb: 0.20,
-    tieProb: 0.20, restProb: 0.15, dottedProb: 0.25,
-    contraryMotionRatio: 0.60, bassIndependence: 0.6,
-    voiceCrossingMax: 1, consonanceRatio: 0.80,
+  // ── L6: 16분·16분쉼표 ──
+  intermediate_3: {
+    maxInterval: 7, stepwiseProb: 0.65, maxLeap: 8,
+    chromaticBudget: [0, 0], chromaticProb: 0,
+    syncopationProb: 0.20, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0.20, restProb: 0.20, dottedProb: 0.15,
+    contraryMotionRatio: 0.55, bassIndependence: 0.55,
+    voiceCrossingMax: 1, consonanceRatio: 0.85,
+    cadenceType: ['perfect', 'half', 'plagal'],
+    maxTraps: 1,
+  },
+  // ── L7: 점8분 ──
+  advanced_1: {
+    maxInterval: 7, stepwiseProb: 0.60, maxLeap: 8,
+    chromaticBudget: [0, 0], chromaticProb: 0,
+    syncopationProb: 0.25, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0.25, restProb: 0.20, dottedProb: 0.45,
+    contraryMotionRatio: 0.60, bassIndependence: 0.65,
+    voiceCrossingMax: 1, consonanceRatio: 0.82,
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
-  // ── 중급 3: 음대 입시 강화 ──
-  intermediate_3: {
-    maxInterval: 8, stepwiseProb: 0.55, maxLeap: 8,
-    chromaticBudget: [1, 3], chromaticProb: 0.13,
-    syncopationProb: 0.25, tripletBudget: [1, 2], tripletProb: 0.25,
-    tieProb: 0.25, restProb: 0.18, dottedProb: 0.30,
-    contraryMotionRatio: 0.60, bassIndependence: 0.7,
-    voiceCrossingMax: 1, consonanceRatio: 0.78,
-    cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64'],
+  // ── L8: 임시표 ──
+  advanced_2: {
+    maxInterval: 8, stepwiseProb: 0.55, maxLeap: 9,
+    chromaticBudget: [2, 4], chromaticProb: 0.15,
+    syncopationProb: 0.25, tripletBudget: [0, 0], tripletProb: 0,
+    tieProb: 0.25, restProb: 0.20, dottedProb: 0.35,
+    contraryMotionRatio: 0.65, bassIndependence: 0.75,
+    voiceCrossingMax: 2, consonanceRatio: 0.80,
+    cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
-  // ── 고급 1: 고급 리듬 (BPM 88~120) — 음대 작곡과 수준 ──
-  advanced_1: {
-    maxInterval: 8, stepwiseProb: 0.50, maxLeap: 9,
-    chromaticBudget: [3, 5], chromaticProb: 0.19,
-    syncopationProb: 0.35, tripletBudget: [1, 3], tripletProb: 0.30,
-    tieProb: 0.30, restProb: 0.20, dottedProb: 0.35,
-    contraryMotionRatio: 0.65, bassIndependence: 0.8,
-    voiceCrossingMax: 2, consonanceRatio: 0.75,
-    cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64', 'phrygian'],
-    maxTraps: 3,
-  },
-  // ── 고급 2: 완전 독립성 — 서울대·한예종 전단계 ──
-  advanced_2: {
-    maxInterval: 10, stepwiseProb: 0.45, maxLeap: 10,
-    chromaticBudget: [3, 5], chromaticProb: 0.23,
-    syncopationProb: 0.38, tripletBudget: [1, 3], tripletProb: 0.30,
-    tieProb: 0.30, restProb: 0.22, dottedProb: 0.35,
-    contraryMotionRatio: 0.70, bassIndependence: 0.9,
-    voiceCrossingMax: 3, consonanceRatio: 0.72,
-    cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64', 'phrygian'],
-    maxTraps: 3,
-  },
-  // ── 고급 3: 실전 변칙 극복 (BPM 96~144) — 서울대·한예종 수준 ──
+  // ── L9: 셋잇단 ──
   advanced_3: {
-    maxInterval: 10, stepwiseProb: 0.40, maxLeap: 12,
-    chromaticBudget: [5, 8], chromaticProb: 0.29,
-    syncopationProb: 0.40, tripletBudget: [2, 4], tripletProb: 0.35,
-    tieProb: 0.30, restProb: 0.25, dottedProb: 0.35,
-    contraryMotionRatio: 0.70, bassIndependence: 1.0,
-    voiceCrossingMax: 4, consonanceRatio: 0.70,
-    cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64', 'phrygian'],
-    maxTraps: 4,
+    maxInterval: 9, stepwiseProb: 0.50, maxLeap: 10,
+    chromaticBudget: [2, 4], chromaticProb: 0.15,
+    syncopationProb: 0.30, tripletBudget: [1, 3], tripletProb: 0.35,
+    tieProb: 0.25, restProb: 0.20, dottedProb: 0.35,
+    contraryMotionRatio: 0.65, bassIndependence: 0.85,
+    voiceCrossingMax: 2, consonanceRatio: 0.78,
+    cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64'],
+    maxTraps: 3,
   },
 };
 
@@ -397,6 +396,8 @@ function getBarMandatoryBoundaries(timeSignature: string, barLength: number): nu
  * - 당김음은 정박 시작점이 보이도록 패턴 삽입 (§3.1)
  *   → splitAtBeatBoundaries가 경계에서 붙임줄로 분할
  */
+const DOTTED_SIXTEENTHS = new Set([3, 6, 12, 24]);
+
 function fillRhythm(
   total: number,
   pool: number[],
@@ -406,10 +407,16 @@ function fillRhythm(
     syncopationProb?: number;
     /** 베이스용: 최소 음가(16분음표 단위). 이 값 미만 음가는 생성 금지 */
     minDur?: number;
+    /** 점음표 사용 확률 (0 = 사용 안 함, 1 = 항상 허용) */
+    dottedProb?: number;
+    /** 붙임줄 허용 — 중급 2단계+에서 2분음표가 박 경계를 넘어 4분+4분 타이로 표시되게 허용 */
+    allowTies?: boolean;
   },
 ): number[] {
   const sorted = [...pool].sort((a, b) => b - a);
   const minDur = opts?.minDur ?? 0;
+  const dottedProb = opts?.dottedProb ?? 1;
+  const allowTies = opts?.allowTies ?? false;
   const result: number[] = [];
   let rem = total;
   let pos = 0;
@@ -473,9 +480,17 @@ function fillRhythm(
       const onBeat = pos % beatSize === 0;
       avail = avail.filter(d => {
         const noteEnd = pos + d;
+        // 마디 전체를 채우는 음표(pos=0, noteEnd=total)는 경계 면제 (3/4 점2분 등)
+        if (pos === 0 && noteEnd === total) return true;
         // 필수 경계 체크 (모든 음가 공통)
+        // — 단, 마디 첫 박(pos=0) 출발 점음표는 경계 면제 (4/4 점2분 → half-quarter 붙임줄로 표시)
         for (const b of boundaries) {
-          if (pos < b && noteEnd > b) return false;
+          if (pos < b && noteEnd > b) {
+            if (pos === 0 && DOTTED_SIXTEENTHS.has(d)) continue;
+            // allowTies: 2분음표(8)가 정박 위치에서 박 경계를 넘는 것 허용 → splitAtBeatBoundaries가 4분+4분 타이로 분할
+            if (allowTies && d === 8 && onBeat) continue;
+            return false;
+          }
         }
         // 박 사이 시작 필터 (§1 당김음/§1.2 점음표): 박 위에서 시작하면 허용,
         // 박 사이에서 시작하여 다음 박 경계를 넘으면 금지
@@ -486,6 +501,14 @@ function fillRhythm(
         }
         return true;
       });
+    }
+
+    // ── 점음표 확률 필터링 (dottedProb) ──
+    if (dottedProb < 1) {
+      const nonDotted = avail.filter(d => !DOTTED_SIXTEENTHS.has(d));
+      if (nonDotted.length > 0 && Math.random() >= dottedProb) {
+        avail = nonDotted;
+      }
     }
 
     if (avail.length === 0) {
@@ -502,8 +525,13 @@ function fillRhythm(
         const onBeat = pos % beatSize === 0;
         fallback = fallback.filter(d => {
           const noteEnd = pos + d;
+          if (pos === 0 && noteEnd === total) return true;
           for (const b of boundaries) {
-            if (pos < b && noteEnd > b) return false;
+            if (pos < b && noteEnd > b) {
+              if (pos === 0 && DOTTED_SIXTEENTHS.has(d)) continue;
+              if (allowTies && d === 8 && onBeat) continue;
+              return false;
+            }
           }
           if (!onBeat) {
             for (const b of allBeatBounds) {
@@ -632,9 +660,12 @@ function applyInternalRests(
   const lvl = difficultyLevel(difficulty);
   const params = LEVEL_PARAMS[difficulty];
 
-  // 쉼표 예산: 레벨에 따라 증가
-  const maxBudget = lvl <= 2 ? 0 : lvl <= 4 ? 2 : lvl <= 6 ? 3 : 4;
-  const budget = Math.random() < (1 - params.restProb) ? 0 : Math.min(maxBudget, Math.floor(Math.random() * (maxBudget + 1)));
+  // 쉼표 예산: L1=0, L2+=2분쉼표, L3+=8분쉼표, L6+=16분쉼표
+  const maxBudget = lvl === 1 ? 0 : lvl <= 4 ? 2 : lvl <= 6 ? 3 : 4;
+  // restProb > 0이면 반드시 1~maxBudget개 쉼표 삽입
+  const budget = maxBudget === 0 || params.restProb === 0
+    ? 0
+    : Math.floor(Math.random() * maxBudget) + 1;
   if (budget === 0) return;
 
   type NotePos = { noteIdx: number; bar: number; offset: number; dur: number };
@@ -675,8 +706,8 @@ function applyInternalRests(
 
   let candidates: NotePos[] = [];
 
-  if (lvl <= 3) {
-    // 초급: 4분음표만, 약박 위치
+  if (lvl <= 2) {
+    // L2: 4분음표만, 약박 위치
     candidates = timeline.filter((p, idx) =>
       p.dur === 4 &&
       (p.offset === 4 || p.offset === 12) &&
@@ -818,7 +849,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     const trebleBarStart = trebleNotes.length;
     const tones  = CHORD_TONES[progression[bar]];
     const rhythm = fillRhythm(sixteenthsPerBar, pool, {
-      timeSignature, lastDur: lastTrebleDur, syncopationProb: params.syncopationProb,
+      timeSignature, lastDur: lastTrebleDur,
+      syncopationProb: params.syncopationProb,
+      dottedProb: params.dottedProb,
+      allowTies: lvl >= 5,
     });
     if (rhythm.length > 0) {
       lastTrebleDur = rhythm[rhythm.length - 1];
@@ -867,8 +901,8 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         nn += interval;
 
         // 음역 제한: 레벨별
-        const rangeMin = lvl <= 2 ? -2 : lvl <= 4 ? -3 : lvl <= 6 ? -4 : -5;
-        const rangeMax = lvl <= 2 ? 7 : lvl <= 4 ? 9 : lvl <= 6 ? 11 : 14;
+        const rangeMin = -2;
+        const rangeMax = lvl <= 2 ? 7 : 10;
         nn = Math.max(rangeMin, Math.min(rangeMax, nn));
 
         // 화음톤 스냅
@@ -942,18 +976,14 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     if (useGrandStaff) {
       const barTrebleSlice = trebleNotes.slice(trebleBarStart);
       const trebleAttackMap = buildTrebleAttackMidiMap(barTrebleSlice, keySignature);
-      if (lvl >= 7) {
-        generateArpeggioBass(
-          bassNotes, sixteenthsPerBar, progression[bar], scale, keySignature, trebleAttackMap,
-        );
-      } else if (lvl >= 4 && params.bassIndependence > 0.3) {
+      if (lvl >= 4 && params.bassIndependence > 0.3) {
         generateIndependentBass(
           bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, params,
-          keySignature, trebleAttackMap, timeSignature,
+          keySignature, trebleAttackMap, timeSignature, pool,
         );
       } else {
         generateBasicBass(
-          bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, keySignature, trebleAttackMap, timeSignature,
+          bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, keySignature, trebleAttackMap, timeSignature, pool,
         );
       }
     }
@@ -1015,11 +1045,12 @@ function generateBasicBass(
   keySignature: string,
   trebleAttackMap: Map<number, number>,
   timeSignature?: string,
+  pool?: number[],
 ) {
   const BASS_BASE   = 3;
   const bTones      = CHORD_TONES[chordRoot];
-  const trebleShort = trebleRhythm.some(d => d <= 2);
-  const bassPool    = trebleShort ? [16, 8] : [8, 4];
+  // 난이도 풀 우선, 없으면 트레블 기반 폴백
+  const bassPool = pool ?? (trebleRhythm.some(d => d <= 2) ? [16, 8] : [8, 4]);
   const bassRhythm  = fillRhythm(sixteenthsPerBar, bassPool, { timeSignature, minDur: 2 });
 
   let bnn = chordRoot;
@@ -1047,17 +1078,18 @@ function generateIndependentBass(
   keySignature: string,
   trebleAttackMap: Map<number, number>,
   timeSignature?: string,
+  pool?: number[],
 ) {
   const BASS_BASE   = 3;
   const bTones      = CHORD_TONES[chordRoot];
 
-  // 독립도에 따라 리듬 풀 결정
+  // 난이도 풀 우선, 없으면 독립도 기반 폴백
   let bassPool: number[];
-  if (params.bassIndependence >= 0.6) {
-    // 높은 독립도: 별도 리듬
+  if (pool) {
+    bassPool = pool;
+  } else if (params.bassIndependence >= 0.6) {
     bassPool = [8, 6, 4, 2];
   } else {
-    // 트레블과 유사하되 약간 다름
     const trebleShort = trebleRhythm.some(d => d <= 2);
     bassPool = trebleShort ? [8, 4] : [8, 6, 4];
   }

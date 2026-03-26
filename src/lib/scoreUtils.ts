@@ -33,6 +33,10 @@ export interface ScoreState {
   useGrandStaff?: boolean;
   /** 못갖춘마디(anacrusis) 박수, 16분음표 단위. 0 또는 미정의 = 없음 */
   pickupSixteenths?: number;
+  /** 붙임줄 비활성화 — 중급 2단계 미만 난이도에서 박 경계 분할·타이 생성 금지 */
+  disableTies?: boolean;
+  /** 한 줄(보표 행)에 표시할 마디 수. 기본값 4 */
+  barsPerStaff?: number;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -796,11 +800,14 @@ function splitAtBeatBoundaries(
       const locEnd = chunkEnd - barGStart;
 
       // 필수 경계 (모든 음표 공통)
-      const mandInBar = mandatoryAll.filter(
-        (b) => b < barLen && b > locStart && b < locEnd,
-      );
-      for (const b of mandInBar) {
-        splitGlobals.add(barGStart + b);
+      // 마디 전체를 채우는 음표(locStart=0, locEnd=barLen)는 면제 (3/4 점2분 등)
+      if (!(locStart === 0 && locEnd === barLen)) {
+        const mandInBar = mandatoryAll.filter(
+          (b) => b < barLen && b > locStart && b < locEnd,
+        );
+        for (const b of mandInBar) {
+          splitGlobals.add(barGStart + b);
+        }
       }
 
       // 박 사이 시작: 모든 박 경계에서 분할 (§1 당김음 규칙 + §1.2 점음표)
@@ -1226,6 +1233,7 @@ function generateNotesAbc(
   timeSignature: string,
   keySignature: string = 'C',
   pickupSixteenths = 0,
+  disableTies = false,
 ): string {
   if (notes.length === 0) return '|]';
 
@@ -1233,7 +1241,10 @@ function generateNotesAbc(
   const spelledNotes = applyEnharmonicSpelling(notes, keySignature);
 
   // 1단계: 박 가시성 규칙 — 필수 경계에서 음표 분할
-  const splitNotes = splitAtBeatBoundaries(spelledNotes, timeSignature, pickupSixteenths);
+  // disableTies(중급 2단계 미만)이면 분할 없이 그대로 사용
+  const splitNotes = disableTies
+    ? spelledNotes
+    : splitAtBeatBoundaries(spelledNotes, timeSignature, pickupSixteenths);
 
   // 1.5단계: 엇박 아닌 붙임줄 합산 — 점음표 복원, 박 내 동일 음 병합 (엇박 타이 보존)
   const mergedAdjacentNotes = mergeAdjacentTiedNotes(splitNotes, timeSignature, pickupSixteenths);
@@ -1494,11 +1505,13 @@ export function generateAbc(state: ScoreState): string {
     state.timeSignature,
     state.keySignature,
     pickupSixteenths,
+    state.disableTies ?? false,
   );
   const measureCount = countMeasures(trebleBody);
 
-  const directives: string[] = ['%%barsperstaff 4'];
-  const shouldStretch = measureCount > 0 && measureCount % 4 === 0;
+  const barsPerStaff = state.barsPerStaff ?? 4;
+  const directives: string[] = [`%%barsperstaff ${barsPerStaff}`];
+  const shouldStretch = measureCount > 0 && measureCount % barsPerStaff === 0;
   directives.push(`%%stretchlast ${shouldStretch ? 'true' : 'false'}`);
   if (useGrandStaff) directives.push('%%staves {V1 V2}');
 
@@ -1521,6 +1534,7 @@ export function generateAbc(state: ScoreState): string {
     state.timeSignature,
     state.keySignature,
     pickupSixteenths,
+    state.disableTies ?? false,
   );
 
   // 큰보표: 두 보표의 마디 수를 일치시켜 정렬 보장
