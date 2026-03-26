@@ -1286,26 +1286,98 @@ function generateBassForBar(
       return bnn;
     }
 
-    // ── 9단: 반진행 — 트레블과 반대 방향 순차 ──────────────────
+    // ── 9단: 반진행 — 마디 단위 반진행 + 강박 이동 보장 + 병행 완전음정 방지 ─
     case 'contrary': {
-      // 트레블 방향 감지
-      const trebleMidis = [...trebleAttackMap.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([, m]) => m);
-      const trebleDir = trebleMidis.length >= 2
-        ? (trebleMidis[trebleMidis.length - 1] > trebleMidis[0] ? 1 : -1)
-        : 0;
-      const bassDir = trebleDir === 0 ? (Math.random() < 0.5 ? 1 : -1) : -trebleDir;
-      // 화음 구성음 앵커에서 시작
+      const [, bs] = timeSignature.split('/');
+      const beatSize = 16 / (parseInt(bs, 10) || 4);
+
+      // 트레블 공격 목록 (시간순 정렬)
+      const trebleAttacks = [...trebleAttackMap.entries()].sort(([a], [b]) => a - b);
+
+      // pos에서 가장 최근 트레블 MIDI 값
+      const getTrebleMidiAt = (pos: number): number | undefined => {
+        let result: number | undefined;
+        for (const [off, midi] of trebleAttacks) {
+          if (off <= pos) result = midi;
+          else break;
+        }
+        return result;
+      };
+
+      // bnn → MIDI 변환
+      const bnnToMidi = (n: number): number => {
+        const clamped = Math.max(-5, Math.min(4, n));
+        const { pitch, octave } = noteNumToNote(clamped, scale, BASS_BASE);
+        const oct = Math.max(2, Math.min(4, octave));
+        return noteToMidiWithKey(makeNote(pitch, oct, '4'), keySignature);
+      };
+
+      // 방향 인식 화음 구성음 snap — 현재 위치 제외, 방향 강력 선호
+      const snapDir = (nn: number, preferDir: number): number => {
+        let best: number | undefined;
+        let bestScore = Infinity;
+        for (const t of bTones) {
+          for (const base of [
+            Math.floor(nn / 7) * 7 + t,
+            Math.floor(nn / 7) * 7 + t - 7,
+            Math.floor(nn / 7) * 7 + t + 7,
+          ]) {
+            if (base === nn || base < -5 || base > 4) continue; // 현재 위치 제외
+            const d = Math.abs(base - nn);
+            const wrongDir = preferDir !== 0 && Math.sign(base - nn) !== preferDir;
+            const score = d + (wrongDir ? 10 : 0); // 방향 페널티 강화
+            if (score < bestScore) { bestScore = score; best = base; }
+          }
+        }
+        return Math.max(-5, Math.min(4, best ?? nn));
+      };
+
+      // 병행 완전음정(5도/8도) 검사
+      const hasParallelPerfect = (
+        pBMidi: number, pTMidi: number | undefined,
+        cBMidi: number, cTMidi: number | undefined,
+      ): boolean => {
+        if (pTMidi === undefined || cTMidi === undefined) return false;
+        const pInt = ((pTMidi - pBMidi) % 12 + 12) % 12;
+        const cInt = ((cTMidi - cBMidi) % 12 + 12) % 12;
+        if ((pInt !== 0 && pInt !== 7) || (cInt !== 0 && cInt !== 7)) return false;
+        return Math.sign(cBMidi - pBMidi) !== 0 &&
+          Math.sign(cBMidi - pBMidi) === Math.sign(cTMidi - pTMidi);
+      };
+
+      // 마디 전체 트레블 방향으로 반진행 방향 결정 (진동 방지)
+      const globalTDir = trebleAttacks.length >= 2
+        ? (trebleAttacks[trebleAttacks.length - 1][1] > trebleAttacks[0][1] ? 1 : -1) : 0;
+      const bassDir = globalTDir === 0 ? (Math.random() < 0.5 ? 1 : -1) : -globalTDir;
+
       bnn = snapToChordTone(prevBassNn !== 0 ? prevBassNn : rootBnn);
+
+      let pos = 0;
+      let prevBMidi = bnnToMidi(bnn);
+      let prevTMidi = getTrebleMidiAt(0);
+
       for (let j = 0; j < bassRhythm.length; j++) {
         if (j > 0) {
-          bnn += bassDir;
-          if (bnn > 4)  bnn = 2;
-          if (bnn < -5) bnn = -3;
+          if (pos % beatSize === 0) {
+            // 강박: 현재 위치 제외 + 방향 강력 선호 chord tone snap → 반드시 이동 보장
+            bnn = snapDir(bnn, bassDir);
+          } else {
+            // 약박: 순차 경과음 (passing tone)
+            bnn = Math.max(-5, Math.min(4, bnn + bassDir));
+          }
         }
+
+        // 병행 완전음정 보정 — 위반 시 한 step 추가 이동
+        const currTMidi = getTrebleMidiAt(pos);
+        if (j > 0 && hasParallelPerfect(prevBMidi, prevTMidi, bnnToMidi(bnn), currTMidi)) {
+          bnn = Math.max(-5, Math.min(4, bnn + bassDir));
+        }
+
         bnn = emitNote(bnn, bassRhythm[j], bassOff);
+        prevBMidi = bnnToMidi(bnn);
+        prevTMidi = currTMidi;
         bassOff += bassRhythm[j];
+        pos += bassRhythm[j];
       }
       return bnn;
     }

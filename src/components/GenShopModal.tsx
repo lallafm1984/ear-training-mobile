@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, StyleSheet,
-  Pressable, ScrollView, ActivityIndicator, Dimensions,
+  TouchableWithoutFeedback, ScrollView, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Zap, X, Check, Info } from 'lucide-react-native';
 import { useAlert } from '../context/AlertContext';
@@ -77,7 +77,7 @@ export default function GenShopModal({ visible, onClose }: Props) {
   const handlePurchase = (pkg: GenPackage) => {
     const total = pkg.gen + pkg.bonus;
     showAlert({
-      title: `⚡ ${total.toLocaleString()} Gen 구매`,
+      title: `💎 ${total.toLocaleString()} Gen 구매`,
       message: `${pkg.price}\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 적용)`,
       type: 'info',
       buttons: [
@@ -107,8 +107,11 @@ export default function GenShopModal({ visible, onClose }: Props) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
+      <View style={styles.container}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.overlayBg} />
+        </TouchableWithoutFeedback>
+        <View style={styles.sheet}>
           {/* 드래그 핸들 */}
           <View style={styles.handle} />
 
@@ -238,8 +241,8 @@ export default function GenShopModal({ visible, onClose }: Props) {
               ))}
             </View>
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -249,10 +252,13 @@ export default function GenShopModal({ visible, onClose }: Props) {
 // ─────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
+  },
+  overlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
     backgroundColor: '#ffffff',

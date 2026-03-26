@@ -47,6 +47,7 @@ const PLAN_CARDS: PlanCard[] = [
     priceNote: '월 구독 / 언제든 취소',
     badge: '인기',
     features: [
+      { label: '가입 즉시 💎 500 Gen 지급', icon: <Sparkles size={13} color="#6366f1" /> },
       { label: '일일 200 Gen 자동 충전', icon: <Zap size={13} color="#6366f1" /> },
       { label: '큰보표 (Grand Staff) 사용', icon: <Check size={13} color="#6366f1" /> },
       { label: '모든 재생 모드 사용 가능', icon: <Disc3 size={13} color="#6366f1" /> },
@@ -98,7 +99,7 @@ const COMPARE_ROWS: CompareRow[] = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
-  const { tier: currentTier, upgradePlan, loading } = useSubscription();
+  const { tier: currentTier, upgradePlan, addPaidGen, loading } = useSubscription();
   const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState<PlanTier | null>(null);
   const [showCompare, setShowCompare] = useState(false);
@@ -146,9 +147,12 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           setPurchasing(tier);
           try {
             await upgradePlan(tier, 30);
+            if (tier === 'pro') await addPaidGen(500);
             showAlert({
               title: '구독 완료',
-              message: `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!`,
+              message: tier === 'pro'
+                ? `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n\n💎 웰컴 보너스 500 Gen이 지급되었습니다!`
+                : `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!`,
               type: 'success',
               buttons: [{ text: '확인', onPress: onClose }],
             });
