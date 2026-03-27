@@ -926,7 +926,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       if (lvl >= 3 && pendingResolution) {
         const rp = pendingResolution; pendingResolution = null;
         const degIdx = scale.indexOf(rp);
-        if (degIdx >= 0) nn = Math.round(nn / 7) * 7 + degIdx;
+        if (degIdx >= 0) {
+          // 현재 nn에서 가장 가까운 degIdx 인스턴스를 찾는다
+          const lower = Math.floor((nn - degIdx) / 7) * 7 + degIdx;
+          const upper = lower + 7;
+          nn = Math.abs(nn - lower) <= Math.abs(nn - upper) ? lower : upper;
+        }
         const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
         trebleNotes.push(makeNote(pitch, octave, durLabel));
         barPos += dur; prevInterval = 0; continue;
