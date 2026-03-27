@@ -1509,10 +1509,7 @@ export function generateAbc(state: ScoreState): string {
   );
   const measureCount = countMeasures(trebleBody);
 
-  const barsPerStaff = state.barsPerStaff ?? 4;
-  const directives: string[] = [`%%barsperstaff ${barsPerStaff}`];
-  const shouldStretch = measureCount > 0 && measureCount % barsPerStaff === 0;
-  directives.push(`%%stretchlast ${shouldStretch ? 'true' : 'false'}`);
+  const directives: string[] = [];
   if (useGrandStaff) directives.push('%%staves {V1 V2}');
 
   const header = [
@@ -1538,13 +1535,77 @@ export function generateAbc(state: ScoreState): string {
   );
 
   // 큰보표: 두 보표의 마디 수를 일치시켜 정렬 보장
-  const trebleMeasures = countMeasures(trebleBody);
-  const bassMeasures = countMeasures(bassBody);
-  if (trebleMeasures > bassMeasures) {
-    bassBody = padWithFullRests(bassBody, trebleMeasures);
-  } else if (bassMeasures > trebleMeasures) {
-    trebleBody = padWithFullRests(trebleBody, bassMeasures);
+  if (useGrandStaff) {
+    const trebleMeasures = countMeasures(trebleBody);
+    const bassMeasures = countMeasures(bassBody);
+    if (trebleMeasures > bassMeasures) {
+      bassBody = padWithFullRests(bassBody, trebleMeasures);
+    } else if (bassMeasures > trebleMeasures) {
+      trebleBody = padWithFullRests(trebleBody, bassMeasures);
+    }
   }
 
-  return header + '\nV:V1 clef=treble\n' + trebleBody + '\nV:V2 clef=bass\n' + bassBody;
+  // ── 마디 단위로 쪼개기 ──
+  const extractMeasures = (body: string) => {
+    let cleanBody = body.trim();
+    let endsWithEndBar = false;
+    if (cleanBody.endsWith('|]')) {
+      cleanBody = cleanBody.slice(0, -2) + '|';
+      endsWithEndBar = true;
+    }
+    const arr = cleanBody.split('|').map(m => m.trim()).filter(m => m.length > 0);
+    return { arr, endsWithEndBar };
+  };
+
+  const tData = extractMeasures(trebleBody);
+  const tArr = tData.arr;
+  const bData = useGrandStaff ? extractMeasures(bassBody) : { arr: [], endsWithEndBar: false };
+  const bArr = bData.arr;
+  const numM = tArr.length;
+
+  let finalAbc = header;
+
+  let mIdx = 0;
+  while (mIdx < numM) {
+    const remain = numM - mIdx;
+    let take = Math.min(2, remain);
+
+    // ── 동적 개행(Word Wrap) 로직 ──
+    // 남은 마디가 3개 이상이면 밀도를 검사하여 3마디 또는 4마디를 한 줄에 표시할 수 있는지 판단
+    if (remain >= 3) {
+      // 알파벳(음표)과 쉼표(Z, z) 문자의 개수를 세어 밀도를 대략 측정
+      const countNotes = (ms: string[]) => ms.join('').replace(/[^a-gA-GzZ]/g, '').length;
+
+      let bestTake = 2; // 기본 2마디
+      for (let cand = 4; cand >= 3; cand--) {
+        if (remain >= cand) {
+          const notesT = countNotes(tArr.slice(mIdx, mIdx + cand));
+          const notesB = useGrandStaff ? countNotes(bArr.slice(mIdx, mIdx + cand)) : 0;
+          const maxNotes = Math.max(notesT, notesB);
+
+          // 4마디 허용치 = 최대 22개, 3마디 허용치 = 최대 16개 (너무 촘촘해지지 않도록 조절)
+          const threshold = cand === 4 ? 22 : 16;
+          if (maxNotes <= threshold) {
+            bestTake = cand;
+            break;
+          }
+        }
+      }
+      take = bestTake;
+    }
+
+    if (useGrandStaff) {
+      finalAbc += '\nV:V1 clef=treble\n';
+      finalAbc += tArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && tData.endsWithEndBar) ? ' |]' : ' |');
+      finalAbc += '\nV:V2 clef=bass\n';
+      finalAbc += bArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && bData.endsWithEndBar) ? ' |]' : ' |');
+    } else {
+      finalAbc += '\n';
+      finalAbc += tArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && tData.endsWithEndBar) ? ' |]' : ' |');
+    }
+
+    mIdx += take;
+  }
+
+  return finalAbc;
 }

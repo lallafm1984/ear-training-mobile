@@ -846,6 +846,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   let prevBassNn = 0;
   /** 마디 경계를 넘어도 계단식·연속 베이스가 끊기지 않게 직전 실제 MIDI 추적 */
   let prevBassMidi: number | undefined = undefined;
+  let prevBassDir = 0;
   if (measures < 1) throw new Error('measures must be >= 1');
   if (!timeSignature || !timeSignature.includes('/')) throw new Error(`Invalid timeSignature: ${timeSignature}`);
   const scale             = getScaleDegrees(keySignature);
@@ -1042,9 +1043,11 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           bar,
           measures,
           nextChord,
+          prevBassDir,
         );
         prevBassNn = bassBar.prevBassNn;
         prevBassMidi = bassBar.lastMidi;
+        prevBassDir = bassBar.prevBassDir;
       } else if (lvl >= 4 && params.bassIndependence > 0.3) {
         generateIndependentBass(
           bassNotes, rhythm, sixteenthsPerBar, progression[bar], scale, params,
@@ -1256,7 +1259,9 @@ function generateBassForBar(
   totalMeasures: number,
   /** 다음 마디 코드 근음 (3단계 순차 경과음 연결용, 마지막 마디면 0) */
   nextChordRoot: number,
-): { prevBassNn: number; lastMidi: number | undefined } {
+  /** 직전 마디의 진행 방향 (계단식 베이스 연속성 유지용) */
+  prevBassDir: number,
+): { prevBassNn: number; lastMidi: number | undefined; prevBassDir: number } {
   const BASS_BASE = 3;
   const bp = BASS_LEVEL_PARAMS[bassDifficulty];
   const bTones = CHORD_TONES[chordRoot];
@@ -1338,7 +1343,7 @@ function generateBassForBar(
       note = smoothBassMelodicContinuity(note, durLabel, 0, prevMidiTrack, keySignature, trebleAttackMap);
       prevMidiTrack = noteToMidiWithKey(note, keySignature);
       bassNotes.push(note);
-      return { prevBassNn: pedalBnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: pedalBnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 2단: 근음 정박 — 모든 정박에 코드 근음 동일 배치 ─────────
@@ -1418,7 +1423,7 @@ function generateBassForBar(
         bassOff += rbPattern[j].dur;
       }
       bnn = rootBnn;
-      return { prevBassNn: rootBnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: rootBnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 3단: 순차 진행 — 마디 간 연속 2도 순차 (도약 없음) ──────
@@ -1476,17 +1481,18 @@ function generateBassForBar(
         startBnn = rand([0, 2, 4, -1, -3]);
         stepDir = Math.random() < 0.5 ? -1 : 1;
       } else {
-        // 이후 마디: 음역 위치로만 방향 결정 (랜덤 전환 없음)
-        // ─ 상단(bnn ≥ 2): 반드시 하행
-        // ─ 하단(bnn ≤ -3): 반드시 상행
-        // ─ 중간: barIndex 홀짝으로 교대 (곡의 구조적 방향성)
-        if (prevBassNn >= 2) {
+        // 이후 마디: 직전 마디의 방향을 계속 유지하되, 음역 끝부분에 다다르면 무조건 반전
+        stepDir = prevBassDir === 0 ? (Math.random() < 0.5 ? 1 : -1) : prevBassDir;
+
+        if (prevBassNn >= 3) {
           stepDir = -1;
-        } else if (prevBassNn <= -3) {
+        } else if (prevBassNn <= -4) {
           stepDir = 1;
         } else {
-          // 중간 음역: barIndex 짝수→하행, 홀수→상행 (일정한 패턴)
-          stepDir = barIndex % 2 === 0 ? -1 : 1;
+          // 일정한 지그재그 패턴 방지: 20% 확률로만 방향을 전환하여 연속적인 계단 진행 유도
+          if (Math.random() < 0.2) {
+            stepDir = stepDir === 1 ? -1 : 1;
+          }
         }
 
         // 직전 마디 마지막 음에서 한 스텝 진행 (중복 방지)
@@ -1538,7 +1544,7 @@ function generateBassForBar(
         bnn = seqBnn;
       }
       // prevBassNn은 의도한 순차 위치로 반환 (다음 마디 계산 기준)
-      return { prevBassNn: intendedLastBnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: intendedLastBnn, lastMidi: prevMidiTrack, prevBassDir: stepDir };
     }
 
     // ── 4단: 기본 반주 (근음 4분음표 반복 + 마지막 박 어프로치) ────────────
@@ -1574,7 +1580,7 @@ function generateBassForBar(
         emitPatternNote(bnn, bassRhythm[j], bassOff);
         bassOff += bassRhythm[j];
       }
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 5단: 도약 진행 (4·5도 도약, C→낮은 솔 패턴) ────────────
@@ -1588,7 +1594,7 @@ function generateBassForBar(
         emitPatternNote(bnn, bassRhythm[j], bassOff);
         bassOff += bassRhythm[j];
       }
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 6단: 분산화음 arpeggio (근-3-5-3 반복) ─────────────────
@@ -1607,7 +1613,7 @@ function generateBassForBar(
         emitPatternNote(bnn, bassRhythm[j], bassOff);
         bassOff += bassRhythm[j];
       }
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 7단: 전위 화음 — 3음 또는 5음이 베이스 ─────────────────
@@ -1627,7 +1633,7 @@ function generateBassForBar(
         bnn = emitNote(descLine[j % descLine.length], bassRhythm[j], bassOff);
         bassOff += bassRhythm[j];
       }
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 8단: 싱코페이션 — (쉼표)-근음 교차 / 구절 해소는 isSyncopationPhraseResolutionBar 참조
@@ -1645,7 +1651,7 @@ function generateBassForBar(
           pos += resolutionRhythm[j];
         }
         bassOff = pos;
-        return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+        return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
       }
 
       const [topStr, bs] = timeSignature.split('/');
@@ -1666,7 +1672,7 @@ function generateBassForBar(
         pos += dur;
       }
       bassOff = pos;
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     // ── 9단: 반진행 — 마디 단위 반진행 + 강박 이동 보장 + 병행 완전음정 방지 ─
@@ -1762,11 +1768,11 @@ function generateBassForBar(
         bassOff += bassRhythm[j];
         pos += bassRhythm[j];
       }
-      return { prevBassNn: bnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
     }
 
     default:
-      return { prevBassNn: rootBnn, lastMidi: prevMidiTrack };
+      return { prevBassNn: rootBnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
   }
 }
 

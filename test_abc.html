@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
+</head>
+<body>
+  <div id="paper"></div>
+  <script>
+    var abc = `X:1
+T:Test
+M:4/4
+L:1/4
+%%staves {V1 V2}
+V:V1 clef=treble
+C D E F | G A B c |
+V:V2 clef=bass
+C, D, E, F, | G, A, B, c, |
+V:V1 clef=treble
+c B A G | F E D C |
+V:V2 clef=bass
+c, B, A, G, | F, E, D, C, |`;
+    ABCJS.renderAbc("paper", abc);
+  </script>
+</body>
+</html>
