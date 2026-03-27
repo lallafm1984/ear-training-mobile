@@ -102,7 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadProfile(s.user.id);
+        // TOKEN_REFRESHED는 프로필 데이터 변경 없음 → 재로드 불필요 (profileLoading 플래시 방지)
+        if (event !== 'TOKEN_REFRESHED') {
+          loadProfile(s.user.id);
+        }
       } else {
         // #region agent log
         fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'AuthContext.tsx:onAuthStateChange',message:'session cleared',data:{event},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
