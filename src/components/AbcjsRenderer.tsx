@@ -803,7 +803,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     clearPlaybackHighlights();
   }
 
-  function startTimingCallbacks() {
+  function startTimingCallbacks(noDelay) {
     stopTimingCallbacks();
     var p = currentParams;
     if (!displayVisualObj) return;
@@ -815,14 +815,16 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       });
     } catch(e) { return; }
 
-    // 스케일/메트로놈 프리펜드 시간만큼 지연 후 시작
-    var ts  = (p.timeSignature || '4/4').split('/');
-    var top = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
-    var beat  = (60 / (p.tempo || 120)) * (4 / btm);
-    var sBeat = (60 / (p.scaleTempo || 120)) * (4 / btm);
     var delayMs = 0;
-    if (p.prependBasePitch) delayMs += 16 * sBeat * 1000;
-    if (p.prependMetronome) delayMs += top * beat * 1000;
+    if (!noDelay) {
+      // 스케일/메트로놈 프리펜드 시간만큼 지연 후 시작
+      var ts  = (p.timeSignature || '4/4').split('/');
+      var top = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
+      var beat  = (60 / (p.tempo || 120)) * (4 / btm);
+      var sBeat = (60 / (p.scaleTempo || 120)) * (4 / btm);
+      if (p.prependBasePitch) delayMs += 16 * sBeat * 1000;
+      if (p.prependMetronome) delayMs += top * beat * 1000;
+    }
 
     if (delayMs > 0) {
       setTimeout(function() {
@@ -881,7 +883,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   }
 
   /* ── 시험용 재생: 마디 단위 순차 ── */
-  function playSingleAbcAsync(abc, durationSec) {
+  function playSingleAbcAsync(abc, durationSec, useTimingCallbacks) {
     return new Promise(function(resolve) {
       if (cancelFlag) { resolve(); return; }
       var parsed = ABCJS.renderAbc('synth-target', abc, {});
@@ -894,13 +896,17 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         .then(function(){ return synth.prime(); })
         .then(function(){
           synth.start();
+          if (useTimingCallbacks) startTimingCallbacks(true);
           var waitMs = durationSec * 1000 + 200;
           var step = 100, elapsed = 0;
           function tick() {
-            if (cancelFlag) { try { synth.stop(); } catch(e){} resolve(); return; }
+            if (cancelFlag) {
+              if (useTimingCallbacks) stopTimingCallbacks();
+              try { synth.stop(); } catch(e){} resolve(); return;
+            }
             elapsed += step;
             if (elapsed < waitMs) { setTimeout(tick, step); }
-            else { resolve(); }
+            else { if (useTimingCallbacks) stopTimingCallbacks(); resolve(); }
           }
           setTimeout(tick, step);
         }).catch(function(){ resolve(); });
@@ -934,7 +940,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         setTimeout(resolve, examWait);
       });
     }
-    function playRange(from, to) {
+    function playRange(from, to, useTimingCallbacks) {
       if (cancelFlag) return Promise.resolve();
       var end   = Math.min(to, N);
       var count = end - from;
@@ -942,7 +948,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       var segAbc = rebuildSegmentAbc(parts.header, parts.isGrand,
         parts.treble.slice(from, end),
         parts.isGrand ? parts.bass.slice(from, end) : []);
-      return playSingleAbcAsync(segAbc, count * measureDur);
+      return playSingleAbcAsync(segAbc, count * measureDur, useTimingCallbacks);
     }
 
     // 스케일 빌드
@@ -981,7 +987,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         // 2) 메트로놈 → 전체 → 휴식
         if (cancelFlag) return;
         return playMetro()
-          .then(function(){ return cancelFlag ? null : playRange(0, N); })
+          .then(function(){ return cancelFlag ? null : playRange(0, N, true); })
           .then(function(){ return cancelFlag ? null : rest(); });
       })
       .then(function() {
@@ -1014,7 +1020,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       .then(function() {
         // 4) 마지막: 메트로놈 → 전체
         if (cancelFlag) return;
-        return playMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
+        return playMetro().then(function(){ return cancelFlag ? null : playRange(0, N, true); });
       })
       .then(function() {
         isPlayingState = false; setPlayBtnUI(false);
