@@ -131,6 +131,8 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
   ).current;
 
   // ── combined ABC 빌드 (스케일 + 메트로놈 프리픽스 포함) ──
+  // 일반 재생 모드일 때만 스케일·카운트인 프리픽스를 추가
+  const isNormalMode = !examMode && !playbackMode;
   const buildCombinedAbc = useCallback(() => {
     const lines = abcString.split('\n');
     const isHeader = (l: string) => (/^[A-Z]:/.test(l) && !/^V:/.test(l)) || /^%%/.test(l);
@@ -146,7 +148,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     const sixteenthsPerBar = top * (16 / bottom);
 
     let scalePrepend = '';
-    if (prependBasePitch) {
+    if (isNormalMode && prependBasePitch) {
       const ascending  = generateAbcScaleNotes(keySignature);
       const descending = [...ascending].slice(0, -1).reverse();
       const allNotes   = [...ascending, ...descending, 'z'];
@@ -162,7 +164,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     }
 
     let metronomePrepend = '';
-    if (prependMetronome) {
+    if (isNormalMode && prependMetronome) {
       for (let i = 0; i < top; i++) metronomePrepend += `z${multiplier} `;
       metronomePrepend += '| ';
     }
@@ -179,7 +181,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     if (!v1Match || !v2Match) return headerStr + '\n' + prepends + bodyStr;
 
     let bassSilence = '';
-    if (prependBasePitch) {
+    if (isNormalMode && prependBasePitch) {
       let barPos = 0;
       for (let i = 0; i < 16; i++) {
         bassSilence += `z${multiplier} `;
@@ -188,12 +190,12 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
       }
       if (barPos > 0) bassSilence += '| ';
     }
-    if (prependMetronome) {
+    if (isNormalMode && prependMetronome) {
       for (let i = 0; i < top; i++) bassSilence += `z${multiplier} `;
       bassSilence += '| ';
     }
     return headerStr + '\n' + v1Match[1] + prepends + v1Match[2] + v2Match[1] + bassSilence + v2Match[2];
-  }, [abcString, prependBasePitch, prependMetronome, timeSignature, tempo, scaleTempo, keySignature]);
+  }, [abcString, prependBasePitch, prependMetronome, timeSignature, tempo, scaleTempo, keySignature, isNormalMode]);
 
   const combinedAbc = buildCombinedAbc();
 
@@ -928,6 +930,10 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         setTimeout(resolve, measureDur * 1000);
       });
     }
+    function maybeMetro() {
+      if (!shouldMetro) return Promise.resolve();
+      return playMetro();
+    }
     function rest() {
       return new Promise(function(resolve) {
         if (cancelFlag) { resolve(); return; }
@@ -971,16 +977,30 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       return cleanHdr + '\\n' + body.trimEnd().replace(/\\|$/, '').trimEnd() + ' |]';
     }
 
+    // 모드별 스케일·메트로놈 결정 (일반 재생 설정과 독립)
+    var mode = p.playbackMode || 'practice';
+    var shouldScale = false;
+    var shouldMetro = true; // practice 모드 기본값
+    if (mode === 'practice') { shouldScale = true; shouldMetro = true; }
+    else if (mode === 'ap_exam') { shouldScale = true; shouldMetro = false; }
+    else if (mode === 'korean_exam') { shouldScale = true; shouldMetro = false; }
+    else if (mode === 'echo') { shouldScale = false; shouldMetro = false; }
+    else if (mode === 'custom') {
+      var cs = p.customPlaySettings || {};
+      shouldScale = !!cs.prependScale;
+      shouldMetro = !!cs.prependCountIn;
+    }
+
     Promise.resolve()
       .then(function() {
         // 1) 스케일
-        if (!p.prependBasePitch || cancelFlag) return;
+        if (!shouldScale || cancelFlag) return;
         return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
       })
       .then(function() {
         // 2) 메트로놈 → 전체 → 휴식
         if (cancelFlag) return;
-        return playMetro()
+        return maybeMetro()
           .then(function(){ return cancelFlag ? null : playRange(0, N); })
           .then(function(){ return cancelFlag ? null : rest(); });
       })
@@ -992,16 +1012,16 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
             chain = chain.then(function() {
               if (cancelFlag) return;
               var pairEnd = Math.min(s + 2, N);
-              return playMetro()
+              return maybeMetro()
                 .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
                 .then(function(){ return cancelFlag ? null : rest(); })
-                .then(function(){ return cancelFlag ? null : playMetro(); })
+                .then(function(){ return cancelFlag ? null : maybeMetro(); })
                 .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
                 .then(function(){ return cancelFlag ? null : rest(); })
                 .then(function() {
                   if (s + 2 < N && !cancelFlag) {
                     var cumEnd = Math.min(s + 4, N);
-                    return playMetro()
+                    return maybeMetro()
                       .then(function(){ return cancelFlag ? null : playRange(s, cumEnd); })
                       .then(function(){ return cancelFlag ? null : rest(); });
                   }
@@ -1014,7 +1034,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       .then(function() {
         // 4) 마지막: 메트로놈 → 전체
         if (cancelFlag) return;
-        return playMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
+        return maybeMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
       })
       .then(function() {
         isPlayingState = false; setPlayBtnUI(false);
