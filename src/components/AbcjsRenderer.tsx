@@ -702,9 +702,13 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     };
   }
   function rebuildSegmentAbc(header, isGrand, treble, bass) {
-    if (!isGrand) return header + '\\n' + treble.join(' | ') + ' |]';
-    return header + '\\nV:V1 clef=treble\\n' + treble.join(' | ') + ' |]' +
-                    '\\nV:V2 clef=bass\\n'   + bass.join(' | ')   + ' |]';
+    // 오디오 전용: 레이아웃 지시자 제거 (%%barsperstaff, %%staves 등이 신스 재생을 제한할 수 있음)
+    var cleanHdr = header.split('\\n')
+      .filter(function(l){ return l.trim() && !/^%%staves/.test(l) && !/^%%barsperstaff/.test(l); })
+      .join('\\n');
+    if (!isGrand) return cleanHdr + '\\n' + treble.join(' | ') + ' |]';
+    return cleanHdr + '\\nV:V1 clef=treble\\n' + treble.join(' | ') + ' |]' +
+                      '\\nV:V2 clef=bass\\n'   + bass.join(' | ')   + ' |]';
   }
 
   /* ── 재생 중 시각 피드백 (커서 / 마디 하이라이트) ── */
@@ -724,6 +728,77 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     ct.querySelectorAll('.abcjs-measure-highlight').forEach(function(el) {
       el.parentNode.removeChild(el);
     });
+  }
+
+  // 시험 모드용: 마디 범위(from~to-1)를 SVG에 직접 하이라이트
+  function highlightMeasureRange(from, to, isGrand) {
+    if (!currentParams.showMeasureHighlight) return;
+    if (from >= to) return;
+    var ct = document.getElementById('score-container');
+    if (!ct) return;
+    var svg = ct.querySelector('svg');
+    if (!svg) return;
+
+    ct.querySelectorAll('.abcjs-measure-highlight').forEach(function(el) {
+      el.parentNode && el.parentNode.removeChild(el);
+    });
+
+    var barEls = svg.querySelectorAll('.abcjs-bar');
+    if (!barEls.length) return;
+    var bars = [];
+    for (var i = 0; i < barEls.length; i++) {
+      var bb = barEls[i].getBBox ? barEls[i].getBBox() : null;
+      if (bb && bb.height > 5) bars.push({ x: bb.x, y: bb.y, h: bb.height });
+    }
+    if (!bars.length) return;
+
+    bars.sort(function(a, b) { return a.y !== b.y ? a.y - b.y : a.x - b.x; });
+
+    // y 좌표로 스태프 행 그룹화
+    var rows = [];
+    var Y_THR = 10;
+    bars.forEach(function(b) {
+      for (var ri = 0; ri < rows.length; ri++) {
+        if (Math.abs(b.y - rows[ri].y) <= Y_THR) { rows[ri].bars.push(b); return; }
+      }
+      rows.push({ y: b.y, h: b.h, bars: [b] });
+    });
+    rows.forEach(function(r) { r.bars.sort(function(a, b) { return a.x - b.x; }); });
+
+    var stavesPerSystem = isGrand ? 2 : 1;
+    var numSystems = Math.ceil(rows.length / stavesPerSystem);
+    var measureIdx = 0;
+
+    for (var si = 0; si < numSystems; si++) {
+      var sysRows = rows.slice(si * stavesPerSystem, (si + 1) * stavesPerSystem);
+      if (!sysRows.length) continue;
+      var refRow = sysRows[0];
+      // N개의 barline = N개의 마디
+      // 마디 mi: x1 = (mi===0 ? 0 : bars[mi-1].x), x2 = bars[mi].x
+      var measInSys = refRow.bars.length;
+
+      for (var mi = 0; mi < measInSys; mi++) {
+        var gmi = measureIdx + mi;
+        if (gmi >= from && gmi < to) {
+          (function(mi) {
+            sysRows.forEach(function(row) {
+              if (mi >= row.bars.length) return;
+              var x1 = mi === 0 ? 0 : row.bars[mi - 1].x;
+              var x2 = row.bars[mi].x;
+              var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              rect.setAttribute('x',      String(x1));
+              rect.setAttribute('y',      String(row.y));
+              rect.setAttribute('width',  String(x2 - x1));
+              rect.setAttribute('height', String(row.h));
+              rect.setAttribute('class',  'abcjs-measure-highlight');
+              rect.setAttribute('rx', '3');
+              svg.insertBefore(rect, svg.firstChild);
+            });
+          })(mi);
+        }
+      }
+      measureIdx += measInSys;
+    }
   }
 
   function onPlaybackEvent(ev) {
@@ -883,20 +958,27 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
   }
 
   /* ── 시험용 재생: 마디 단위 순차 ── */
-  function playSingleAbcAsync(abc, durationSec) {
+  /* voOverride: 이미 렌더링된 visualObj 직접 사용 (display:none 렌더링 우회) */
+  function playSingleAbcAsync(abc, durationSec, voOverride) {
     return new Promise(function(resolve) {
       if (cancelFlag) { resolve(); return; }
-      var parsed = ABCJS.renderAbc('synth-target', abc, {});
-      var vo = parsed && parsed[0];
+      if (synthInstance) { try { synthInstance.stop(); } catch(e){} synthInstance = null; }
+      var vo = voOverride || null;
+      if (!vo) {
+        var parsed = ABCJS.renderAbc('synth-target', abc, {});
+        vo = parsed && parsed[0];
+      }
       if (!vo) { resolve(); return; }
       var synth = new ABCJS.synth.CreateSynth();
       synthInstance = synth;
       synth.init({ audioContext: audioCtx, visualObj: vo,
                    options:{ soundFontVolumeMultiplier:2.0 } })
         .then(function(){ return synth.prime(); })
-        .then(function(){
+        .then(function(res){
           synth.start();
-          var waitMs = durationSec * 1000 + 200;
+          /* voOverride(displayVisualObj) 사용 시 res.duration이 정확, 아니면 계산값 fallback */
+          var dur = (voOverride && res && res.duration) ? res.duration : durationSec;
+          var waitMs = dur * 1000 + 200;
           var step = 100, elapsed = 0;
           function tick() {
             if (cancelFlag) { try { synth.stop(); } catch(e){} resolve(); return; }
@@ -945,10 +1027,37 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       var end   = Math.min(to, N);
       var count = end - from;
       if (count <= 0) return Promise.resolve();
-      var segAbc = rebuildSegmentAbc(parts.header, parts.isGrand,
-        parts.treble.slice(from, end),
-        parts.isGrand ? parts.bass.slice(from, end) : []);
-      return playSingleAbcAsync(segAbc, count * measureDur);
+
+      // TimingCallbacks로 음표 커서 + 마디 하이라이트 (displayVisualObj 기반)
+      stopTimingCallbacks();
+      var rangeStopTimer = null;
+      if (displayVisualObj) {
+        try {
+          timingCb = new ABCJS.TimingCallbacks(displayVisualObj, {
+            eventCallback: onPlaybackEvent
+          });
+          timingCb.start(from / N, 'percent');
+          // 세그먼트 끝에서 다음 마디가 잠깐 보이지 않도록 미리 정지
+          rangeStopTimer = setTimeout(function() {
+            stopTimingCallbacks();
+          }, Math.max(0, count * measureDur * 1000 - 100));
+        } catch(e) {}
+      }
+
+      /* 전체 재생: displayVisualObj 직접 사용 (synth-target 렌더링 우회)
+         부분 재생: rebuildSegmentAbc로 구간 ABC 생성 후 synth-target 렌더링 */
+      var isFullRange = (from === 0 && end >= N);
+      var segAbc = isFullRange
+        ? null
+        : rebuildSegmentAbc(parts.header, parts.isGrand,
+            parts.treble.slice(from, end),
+            parts.isGrand ? parts.bass.slice(from, end) : []);
+      var voOverride = isFullRange ? displayVisualObj : null;
+      return playSingleAbcAsync(segAbc, count * measureDur, voOverride)
+        .then(function() {
+          if (rangeStopTimer) { clearTimeout(rangeStopTimer); rangeStopTimer = null; }
+          stopTimingCallbacks();
+        });
     }
 
     // 스케일 빌드
@@ -977,69 +1086,267 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
       return cleanHdr + '\\n' + body.trimEnd().replace(/\\|$/, '').trimEnd() + ' |]';
     }
 
-    // 모드별 스케일·메트로놈 결정 (일반 재생 설정과 독립)
     var mode = p.playbackMode || 'practice';
-    var shouldScale = false;
-    var shouldMetro = true; // practice 모드 기본값
-    if (mode === 'practice') { shouldScale = true; shouldMetro = true; }
-    else if (mode === 'ap_exam') { shouldScale = true; shouldMetro = false; }
-    else if (mode === 'korean_exam') { shouldScale = true; shouldMetro = false; }
-    else if (mode === 'echo') { shouldScale = false; shouldMetro = false; }
-    else if (mode === 'custom') {
-      var cs = p.customPlaySettings || {};
-      shouldScale = !!cs.prependScale;
-      shouldMetro = !!cs.prependCountIn;
+
+    // 공통 헬퍼: 으뜸화음 ABC 빌드
+    function buildTonicChordAbc() {
+      var cleanHdr = parts.header.split('\\n')
+        .filter(function(l){ return l.trim() && !/^%%staves/.test(l) && !/^%%barsperstaff/.test(l); })
+        .join('\\n');
+      var chords = {
+        'C':'[CEG]','G':'[GBd]','D':'[DFA]','A':'[Ace]','F':'[FAc]',
+        'Bb':'[BDF]','Eb':'[EGB]',
+        'Am':'[Ace]','Em':'[EGB]','Bm':'[Bdf]','Dm':'[DFA]','Gm':'[GBd]','Cm':'[CEG]'
+      };
+      var chord = chords[p.keySignature || 'C'] || '[CEG]';
+      var mult = 16 / btm;
+      return cleanHdr + '\\n' + chord + (mult * top) + ' |]';
     }
 
-    Promise.resolve()
-      .then(function() {
-        // 1) 스케일
-        if (!shouldScale || cancelFlag) return;
-        return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
-      })
-      .then(function() {
-        // 2) 메트로놈 → 전체 → 휴식
-        if (cancelFlag) return;
-        return maybeMetro()
-          .then(function(){ return cancelFlag ? null : playRange(0, N); })
-          .then(function(){ return cancelFlag ? null : rest(); });
-      })
-      .then(function() {
-        // 3) 2마디 단위 반복
-        var chain = Promise.resolve();
-        for (var s = 0; s < N; s += 2) {
-          (function(s) {
+    // 공통 헬퍼: 시작음 ABC 빌드 (첫 번째 음 추출)
+    function buildStartingNoteAbc() {
+      var cleanHdr = parts.header.split('\\n')
+        .filter(function(l){ return l.trim() && !/^%%staves/.test(l) && !/^%%barsperstaff/.test(l); })
+        .join('\\n');
+      var firstMeasure = parts.treble[0] || 'C';
+      var m = firstMeasure.match(/[=^_]*[A-Ga-g][,']*/);
+      var note = m ? m[0] : 'C';
+      var mult = 16 / btm;
+      return cleanHdr + '\\n' + note + (mult * top) + ' |]';
+    }
+
+    // 공통 헬퍼: 초 단위 휴식
+    function restSec(seconds) {
+      return new Promise(function(resolve) {
+        if (cancelFlag) { resolve(); return; }
+        setTimeout(resolve, seconds * 1000);
+      });
+    }
+
+    // 완료 처리
+    function finish() {
+      clearPlaybackHighlights();
+      isPlayingState = false; setPlayBtnUI(false);
+      postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
+    }
+
+    if (mode === 'practice') {
+      // ② 연습 모드: 스케일 → 카운트인→전체→휴식 → 2마디 슬라이딩 → 카운트인→전체
+      Promise.resolve()
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); })
+            .then(function(){ return cancelFlag ? null : rest(); });
+        })
+        .then(function() {
+          var chain = Promise.resolve();
+          for (var s = 0; s < N; s += 2) {
+            (function(s) {
+              chain = chain.then(function() {
+                if (cancelFlag) return;
+                var pairEnd = Math.min(s + 2, N);
+                return playMetro()
+                  .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
+                  .then(function(){ return cancelFlag ? null : rest(); })
+                  .then(function(){ return cancelFlag ? null : playMetro(); })
+                  .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
+                  .then(function(){ return cancelFlag ? null : rest(); })
+                  .then(function() {
+                    if (s + 2 < N && !cancelFlag) {
+                      var cumEnd = Math.min(s + 4, N);
+                      return playMetro()
+                        .then(function(){ return cancelFlag ? null : playRange(s, cumEnd); })
+                        .then(function(){ return cancelFlag ? null : rest(); });
+                    }
+                  });
+              });
+            })(s);
+          }
+          return chain;
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); });
+        })
+        .then(finish);
+
+    } else if (mode === 'ap_exam') {
+      // ③ AP 시험: 스케일→으뜸화음→(카운트인→전체)×4 (첫 휴식 firstRest, 이후 rest)
+      var ap = p.apExamSettings || { firstRestSeconds: 30, restSeconds: 60 };
+      Promise.resolve()
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildTonicChordAbc(), measureDur);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); })
+            .then(function(){ return cancelFlag ? null : restSec(ap.firstRestSeconds); });
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); })
+            .then(function(){ return cancelFlag ? null : restSec(ap.restSeconds); });
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); })
+            .then(function(){ return cancelFlag ? null : restSec(ap.restSeconds); });
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); });
+        })
+        .then(finish);
+
+    } else if (mode === 'korean_exam') {
+      // ④ 한국 입시: 스케일→으뜸화음→시작음→(카운트인→전체→휴식)×totalPlays
+      var kr = p.koreanExamSettings || { totalPlays: 3, restSeconds: 60 };
+      Promise.resolve()
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildTonicChordAbc(), measureDur);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildStartingNoteAbc(), measureDur);
+        })
+        .then(function() {
+          var chain = Promise.resolve();
+          for (var i = 0; i < kr.totalPlays; i++) {
+            (function(i) {
+              chain = chain.then(function() {
+                if (cancelFlag) return;
+                return playMetro().then(function(){ return playRange(0, N); })
+                  .then(function() {
+                    if (i < kr.totalPlays - 1 && !cancelFlag) return restSec(kr.restSeconds);
+                  });
+              });
+            })(i);
+          }
+          return chain;
+        })
+        .then(finish);
+
+    } else if (mode === 'echo') {
+      // ⑤ 에코: 스케일→으뜸화음→(카운트인→N마디→응답시간)×구간 수
+      var echo = p.echoSettings || { phraseMeasures: 2, responseSeconds: 5 };
+      var phraseSize = echo.phraseMeasures || 2;
+      Promise.resolve()
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
+        })
+        .then(function() {
+          if (cancelFlag) return;
+          return playSingleAbcAsync(buildTonicChordAbc(), measureDur);
+        })
+        .then(function() {
+          var chain = Promise.resolve();
+          for (var s = 0; s < N; s += phraseSize) {
+            (function(s) {
+              chain = chain.then(function() {
+                if (cancelFlag) return;
+                var end = Math.min(s + phraseSize, N);
+                return playMetro().then(function(){ return playRange(s, end); })
+                  .then(function(){ return cancelFlag ? null : restSec(echo.responseSeconds); });
+              });
+            })(s);
+          }
+          return chain;
+        })
+        .then(finish);
+
+    } else if (mode === 'custom') {
+      // ⑥ 커스텀
+      var cs = p.customPlaySettings || {};
+      Promise.resolve()
+        .then(function() {
+          if (cs.prependScale && !cancelFlag)
+            return playSingleAbcAsync(buildScaleAbc(), 16 * sBeat);
+        })
+        .then(function() {
+          if (cs.prependTonicChord && !cancelFlag)
+            return playSingleAbcAsync(buildTonicChordAbc(), measureDur);
+        })
+        .then(function() {
+          if (cs.useSegments) {
+            // 구간 분할: 카운트인→전체→휴식 → (카운트인→segment→휴식)×repeats per segment → 카운트인→전체
+            var segSize = cs.segmentMeasures || 2;
+            var segRep  = cs.segmentRepeats || 2;
+            var chain = Promise.resolve()
+              .then(function() {
+                if (cancelFlag) return;
+                return playMetro()
+                  .then(function(){ return cancelFlag ? null : playRange(0, N); })
+                  .then(function(){ if (!cancelFlag) return restSec(cs.restSeconds || 30); });
+              });
+            for (var s = 0; s < N; s += segSize) {
+              (function(s) {
+                chain = chain.then(function() {
+                  if (cancelFlag) return;
+                  var end = Math.min(s + segSize, N);
+                  var repChain = Promise.resolve();
+                  for (var r = 0; r < segRep; r++) {
+                    (function(r) {
+                      repChain = repChain.then(function() {
+                        if (cancelFlag) return;
+                        return playMetro()
+                          .then(function(){ return cancelFlag ? null : playRange(s, end); })
+                          .then(function(){ if (!cancelFlag) return restSec(cs.restSeconds || 30); });
+                      });
+                    })(r);
+                  }
+                  return repChain;
+                });
+              })(s);
+            }
             chain = chain.then(function() {
               if (cancelFlag) return;
-              var pairEnd = Math.min(s + 2, N);
-              return maybeMetro()
-                .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
-                .then(function(){ return cancelFlag ? null : rest(); })
-                .then(function(){ return cancelFlag ? null : maybeMetro(); })
-                .then(function(){ return cancelFlag ? null : playRange(s, pairEnd); })
-                .then(function(){ return cancelFlag ? null : rest(); })
-                .then(function() {
-                  if (s + 2 < N && !cancelFlag) {
-                    var cumEnd = Math.min(s + 4, N);
-                    return maybeMetro()
-                      .then(function(){ return cancelFlag ? null : playRange(s, cumEnd); })
-                      .then(function(){ return cancelFlag ? null : rest(); });
-                  }
-                });
+              return playMetro().then(function(){ return playRange(0, N); });
             });
-          })(s);
-        }
-        return chain;
-      })
-      .then(function() {
-        // 4) 마지막: 메트로놈 → 전체
-        if (cancelFlag) return;
-        return maybeMetro().then(function(){ return cancelFlag ? null : playRange(0, N); });
-      })
-      .then(function() {
-        isPlayingState = false; setPlayBtnUI(false);
-        postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
-      });
+            return chain;
+          } else {
+            // 통재생: (카운트인→전체→휴식)×totalPlays
+            var total = cs.totalPlays || 3;
+            var chain = Promise.resolve();
+            for (var i = 0; i < total; i++) {
+              (function(i) {
+                chain = chain.then(function() {
+                  if (cancelFlag) return;
+                  return playMetro().then(function(){ return playRange(0, N); })
+                    .then(function() {
+                      if (i < total - 1 && !cancelFlag) return restSec(cs.restSeconds || 30);
+                    });
+                });
+              })(i);
+            }
+            return chain;
+          }
+        })
+        .then(finish);
+
+    } else {
+      // fallback: practice와 동일
+      Promise.resolve()
+        .then(function() {
+          if (cancelFlag) return;
+          return playMetro().then(function(){ return playRange(0, N); });
+        })
+        .then(finish);
+    }
   }
 
 

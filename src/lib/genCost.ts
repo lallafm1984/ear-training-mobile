@@ -4,11 +4,9 @@
 
 import type { Difficulty, BassDifficulty } from './scoreGenerator';
 
-/** 베이스 난이도별 추가 Gen 비용 (1단계 +2, 2단계 +4, ..., 9단계 +18) */
+/** 베이스 난이도별 추가 Gen 비용 */
 export const BASS_EXTRA_COSTS: Record<BassDifficulty, number> = {
-  bass_1: 2,  bass_2: 4,  bass_3: 6,
-  bass_4: 8,  bass_5: 10, bass_6: 12,
-  bass_7: 14, bass_8: 16, bass_9: 18,
+  bass_1: 2, bass_2: 4, bass_3: 6,
 };
 
 /**

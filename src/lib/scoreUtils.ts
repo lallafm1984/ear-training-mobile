@@ -532,6 +532,50 @@ function pitchToMidi(note: ScoreNote): number {
   return (note.octave + 1) * 12 + base + accVal;
 }
 
+// ── nn → MIDI 변환 (선율 규칙용) ──────────────────────────────
+const PITCH_ORDER_UTILS: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+/** nn(스케일 디그리 인덱스) → MIDI 번호 변환 (조표 반영) */
+export function nnToMidi(
+  nn: number, scale: PitchName[], baseOctave: number, keySignature: string,
+): number {
+  const deg = ((nn % 7) + 7) % 7;
+  const octOff = Math.floor(nn / 7);
+  const pitch = scale[deg];
+  const rootIdx = PITCH_ORDER_UTILS.indexOf(scale[0]);
+  const pitchIdx = PITCH_ORDER_UTILS.indexOf(pitch);
+  const wrap = pitchIdx < rootIdx ? 1 : 0;
+  const octave = baseOctave + octOff + wrap;
+
+  const base = PITCH_SEMITONES[pitch] ?? 0;
+  const ka = getKeySigAlteration(keySignature, pitch);
+  let accVal = 0;
+  if (ka === '#') accVal = 1;
+  else if (ka === 'b') accVal = -1;
+  return (octave + 1) * 12 + base + accVal;
+}
+
+/** 두 nn 사이의 반음(semitone) 거리 (절대값) */
+export function getMidiInterval(
+  nn1: number, nn2: number,
+  scale: PitchName[], baseOctave: number, keySignature: string,
+): number {
+  return Math.abs(nnToMidi(nn1, scale, baseOctave, keySignature) - nnToMidi(nn2, scale, baseOctave, keySignature));
+}
+
+/**
+ * 금지 음정 여부 판별.
+ * - 6반음 + 스케일 3~4도 간격 = 트라이톤/증4도/감5도
+ * - 3반음 + 스케일 1도 간격 = 증2도 (화성 단음계 F-G# 등)
+ */
+export function isForbiddenMelodicInterval(semitoneDist: number, nnDist: number): boolean {
+  // 트라이톤 (aug4 / dim5)
+  if (semitoneDist === 6 && nnDist >= 3 && nnDist <= 4) return true;
+  // 증2도 (harmonic minor의 6음→7음)
+  if (semitoneDist === 3 && nnDist === 1) return true;
+  return false;
+}
+
 /**
  * 조표를 반영한 실제 MIDI 음높이 (건반 비교·성부 충돌 검사용).
  * 명시 임시표가 없으면 조표의 #/b를 적용하고, 제자리표(n)는 조표를 무시한 자연음.

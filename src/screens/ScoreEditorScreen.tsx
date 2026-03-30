@@ -124,7 +124,7 @@ const ALL_DIFFICULTIES: Difficulty[] = [
   'advanced_1', 'advanced_2', 'advanced_3',
 ];
 const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
-  'bass_1', 'bass_2', 'bass_3', 'bass_4', 'bass_5', 'bass_6', 'bass_7', 'bass_8', 'bass_9',
+  'bass_1', 'bass_2', 'bass_3',
 ];
 
 // ── 조성 데이터 ──
@@ -1351,7 +1351,7 @@ export default function ScoreEditorScreen() {
                 <View style={[styles.modeSettingsBox, { borderColor: '#bbf7d0' }]}>
                   <View style={styles.modeSeqBox}>
                     <Text style={styles.modeSeqText}>
-                      {'으뜸화음 →\n('}
+                      {'스케일 → 으뜸화음 →\n('}
                       <Text style={styles.modeSeqHighlight}>{echoSettings.phraseMeasures}마디</Text>
                       {' 재생 → '}
                       <Text style={styles.modeSeqHighlight}>{echoSettings.responseSeconds}초</Text>
@@ -1402,7 +1402,8 @@ export default function ScoreEditorScreen() {
           // 본 재생 순서 텍스트
           let bodyText = '';
           if (useSegments) {
-            bodyText = `${segmentMeasures}마디×${segmentRepeats}회 → ` +
+            bodyText = `전체 재생 → ${restSeconds}초 휴식 → ` +
+              `${segmentMeasures}마디×${segmentRepeats}회 → ` +
               `${restSeconds}초 휴식 (전 구간 반복) → 전체 재생`;
           } else {
             const playParts: string[] = [];
@@ -1711,9 +1712,7 @@ export default function ScoreEditorScreen() {
                       <View style={{ marginTop: 14, opacity: (state.useGrandStaff ?? false) ? 1 : 0.4 }}>
                         <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>베이스 난이도</Text>
                         {[
-                          ALL_BASS_DIFFICULTIES.slice(0, 3),
-                          ALL_BASS_DIFFICULTIES.slice(3, 6),
-                          ALL_BASS_DIFFICULTIES.slice(6, 9),
+                          ALL_BASS_DIFFICULTIES,
                         ].map((row, rowIdx) => (
                           <View key={rowIdx} style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
                             {row.map(bd => {
