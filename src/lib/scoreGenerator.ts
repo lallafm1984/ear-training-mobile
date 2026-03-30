@@ -1045,8 +1045,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     const bot = parseInt(botStr, 10);
     // 복합 박자(6/8, 9/8, 12/8): 점4분(6 sixteenths)이 한 박
     if (bot === 8 && top % 3 === 0 && top >= 6) return 6;
-    // 비복합 x/8 박자(5/8, 7/8 등): beatSize=2면 모든 8분이 강박으로 인식되어
-    // 스냅 과다 → 반복음 발생. 4분음표 단위(4 sixteenths)로 상향하여 강박 빈도 절감
+    // 비복합 홀수 박자(5/8, 7/8): 마디 절반을 한 주박으로 — 강박 빈도 절감
+    if (bot === 8 && (top === 5 || top === 7)) return Math.ceil(top / 2) * 2; // 5/8→6, 7/8→8
+    // 홀수 x/4 박자(5/4, 7/4): 마디 절반을 한 주박으로
+    if (bot === 4 && (top === 5 || top === 7)) return Math.ceil(top / 2) * 4; // 5/4→12, 7/4→16
     if (bot === 8) return 4;
     return 16 / (bot || 4);
   })();
@@ -1059,19 +1061,20 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     Math.min(1.75, 0.48 + measures * 0.092),
   );
   const keyDensityBase = keyAccCount * 0.6 + (keyAccCount >= 5 ? 1 : 0);
-  const accidentalBudgetExtra = Math.min(
-    8,
-    Math.floor(keyDensityBase * measureDensity),
-  );
+  const accidentalBudgetExtra = params.chromaticProb > 0
+    ? Math.min(8, Math.floor(keyDensityBase * measureDensity))
+    : 0;
   let accidentalBudget = params.chromaticBudget[0] +
     Math.floor(Math.random() * (params.chromaticBudget[1] - params.chromaticBudget[0] + 1));
   accidentalBudget += accidentalBudgetExtra;
-  const chromaticProbEffective = Math.min(
-    0.48,
-    params.chromaticProb
-      + keyAccCount * 0.017 * measureDensity
-      + (lvl >= 4 ? 0.035 * Math.min(1.25, 0.75 + measures * 0.04) : 0),
-  );
+  const chromaticProbEffective = params.chromaticProb > 0
+    ? Math.min(
+        0.48,
+        params.chromaticProb
+          + keyAccCount * 0.017 * measureDensity
+          + (lvl >= 4 ? 0.035 * Math.min(1.25, 0.75 + measures * 0.04) : 0),
+      )
+    : 0;
 
   let tripletBudget = params.tripletBudget[0] +
     Math.floor(Math.random() * (params.tripletBudget[1] - params.tripletBudget[0] + 1));
@@ -1243,11 +1246,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
               Math.floor(nn/7)*7+t+7,
             ]) {
               const d = Math.abs(base - nn);
-              // 직전 이동 반대 방향으로 역행하는 스냅에 패널티 (C→D 이동 후 다시 C로 스냅되는 현상 방지)
+              // 직전 이동 반대 방향으로 역행하는 스냅에 패널티
               const goesBack = interval !== 0 && Math.sign(base - prev) !== Math.sign(interval);
-              // 현재 위치와 동일한 음으로 스냅 시 패널티 — 이미 화음톤 위에 있을 때 제자리 스냅 방지
+              // 현재 위치와 동일한 음으로 스냅 시 패널티
               const staysStill = base === nn;
-              const adjDist = d + (goesBack ? 2.0 : 0) + (staysStill ? 4.0 : 0);
+              // 직전 확정 nn과 동일한 음으로 스냅되면 반복음 — 강한 패널티
+              const repeats = base === prevFinalNn;
+              const adjDist = d + (goesBack ? 2.0 : 0) + (staysStill ? 2.5 : 0) + (repeats ? 5.0 : 0);
               if (adjDist < bestDist) { bestDist = adjDist; best = base; }
             }
           }
@@ -1417,14 +1422,14 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     }
   }
 
-  // ── ★ 최종 검토: 화성·성부 진행·마디 정합성 자동 검증 및 보정 ──
-  const reviewed = reviewAndFixScore(
-    finalTreble, finalBass,
-    keySignature, timeSignature, scale,
-    useGrandStaff, params.consonanceRatio,
-  );
+  // ── ★ 최종 검토: 비활성화 (reviewAndFixScore 연쇄 보정이 선율 품질 저하 유발) ──
+  // const reviewed = reviewAndFixScore(
+  //   finalTreble, finalBass,
+  //   keySignature, timeSignature, scale,
+  //   useGrandStaff, params.consonanceRatio,
+  // );
 
-  return { trebleNotes: reviewed.treble, bassNotes: reviewed.bass };
+  return { trebleNotes: finalTreble, bassNotes: finalBass };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -1558,6 +1563,9 @@ function reviewAndFixScore(
   // Pass 1: 마디 음가 합계 정합성 검증
   // ════════════════════════════════════════════════════════════════
   const verifyMeasureDurations = (notes: ScoreNote[], label: string): void => {
+    // 반복: splice 후 인덱스 변동이 있을 수 있으므로 안정될 때까지 재검증
+    for (let pass = 0; pass < 3; pass++) {
+    let anyFix = false;
     const measures = splitNotesIntoMeasures(notes, sixteenthsPerBar);
     for (let m = 0; m < measures.length; m++) {
       let total = 0;
@@ -1578,28 +1586,75 @@ function reviewAndFixScore(
         const gap = sixteenthsPerBar - total;
         const fillDur = SIXTEENTHS_TO_DUR[gap];
         if (fillDur) {
-          // 원본 배열에서 해당 마디 끝 위치 찾아 삽입
-          let pos = 0;
           let insertIdx = 0;
-          for (let mi = 0; mi < m; mi++) {
-            let mni = 0;
-            while (mni < measures[mi].length) {
-              if (measures[mi][mni].tuplet && measures[mi][mni].tuplet !== '') {
-                mni += parseInt(measures[mi][mni].tuplet as string, 10);
-              } else {
-                mni += 1;
-              }
-              insertIdx++;
-            }
-          }
+          for (let mi = 0; mi < m; mi++) insertIdx += measures[mi].length;
           insertIdx += measures[m].length;
           notes.splice(insertIdx, 0, {
             id: Math.random().toString(36).substr(2, 9),
             pitch: 'rest', octave: 4, accidental: '', duration: fillDur, tie: false,
           });
+          anyFix = true;
+          break; // 재분할 필요 → 다음 pass에서 재검증
         }
       }
+
+      // 초과한 경우: 마디 끝에서 역순으로 음표를 줄여 맞춤
+      if (total > sixteenthsPerBar) {
+        let excess = total - sixteenthsPerBar;
+        let startIdx = 0;
+        for (let mi = 0; mi < m; mi++) startIdx += measures[mi].length;
+
+        // 마디 내 요소를 "청크" 단위로 분류 (일반 음표 1개 또는 tuplet 그룹)
+        const chunks: { start: number; count: number; dur: number; isTuplet: boolean }[] = [];
+        let ci = 0;
+        while (ci < measures[m].length) {
+          const n = measures[m][ci];
+          if (n.tuplet) {
+            const cnt = parseInt(n.tuplet, 10);
+            const dur = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+            chunks.push({ start: ci, count: cnt, dur, isTuplet: true });
+            ci += cnt;
+          } else {
+            chunks.push({ start: ci, count: 1, dur: durationToSixteenths(n.duration), isTuplet: false });
+            ci += 1;
+          }
+        }
+
+        // 뒤에서부터 청크 단위로 제거/축소
+        for (let ch = chunks.length - 1; ch >= 0 && excess > 0; ch--) {
+          const chunk = chunks[ch];
+          if (chunk.dur <= excess) {
+            notes.splice(startIdx + chunk.start, chunk.count);
+            excess -= chunk.dur;
+          } else if (!chunk.isTuplet) {
+            const newDur = chunk.dur - excess;
+            const newDurLabel = SIXTEENTHS_TO_DUR[newDur];
+            if (newDurLabel) {
+              notes[startIdx + chunk.start] = { ...notes[startIdx + chunk.start], duration: newDurLabel };
+            }
+            excess = 0;
+          } else {
+            // tuplet 그룹 전체 제거 후, 남는 공간을 쉼표로 채움
+            const gap = chunk.dur - excess;
+            notes.splice(startIdx + chunk.start, chunk.count);
+            excess -= chunk.dur;
+            if (gap > 0) {
+              const fillDur = SIXTEENTHS_TO_DUR[gap];
+              if (fillDur) {
+                notes.splice(startIdx + chunk.start, 0, {
+                  id: Math.random().toString(36).substr(2, 9),
+                  pitch: 'rest', octave: 4, accidental: '', duration: fillDur, tie: false,
+                });
+              }
+            }
+          }
+        }
+        anyFix = true;
+        break; // 재분할 필요 → 다음 pass에서 재검증
+      }
     }
+    if (!anyFix) break; // 수정 없으면 종료
+    } // end pass loop
   };
 
   verifyMeasureDurations(treble, 'treble');
