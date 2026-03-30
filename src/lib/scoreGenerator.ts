@@ -1093,7 +1093,513 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     }
   }
 
-  return { trebleNotes: finalTreble, bassNotes: finalBass };
+  // ── ★ 최종 검토: 화성·성부 진행·마디 정합성 자동 검증 및 보정 ──
+  const reviewed = reviewAndFixScore(
+    finalTreble, finalBass,
+    keySignature, timeSignature, scale,
+    useGrandStaff, params.consonanceRatio,
+  );
+
+  return { trebleNotes: reviewed.treble, bassNotes: reviewed.bass };
+}
+
+// ────────────────────────────────────────────────────────────────
+// ★ 최종 검토: 자동 생성 악보의 화성·성부 진행·마디 정합성 검증 및 보정
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * 트레블·베이스 공격점(attack) 타임라인 구축.
+ * 반환: { offset: 16분음표 위치, noteIdx: 원본 배열 인덱스, midi: MIDI 값 }[]
+ */
+function buildAttackTimeline(
+  notes: ScoreNote[],
+  keySignature: string,
+): { offset: number; noteIdx: number; midi: number }[] {
+  const tl: { offset: number; noteIdx: number; midi: number }[] = [];
+  let off = 0;
+  let i = 0;
+  while (i < notes.length) {
+    const n = notes[i];
+    if (n.tuplet) {
+      const p = parseInt(n.tuplet, 10);
+      const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+      if (n.pitch !== 'rest') {
+        tl.push({ offset: off, noteIdx: i, midi: noteToMidiWithKey(n, keySignature) });
+      }
+      off += span;
+      i += p;
+    } else {
+      const dur = durationToSixteenths(n.duration);
+      if (n.pitch !== 'rest') {
+        tl.push({ offset: off, noteIdx: i, midi: noteToMidiWithKey(n, keySignature) });
+      }
+      off += dur;
+      i += 1;
+    }
+  }
+  return tl;
+}
+
+/**
+ * 두 MIDI 값의 음정(반음 수)으로 협화/불협화 판별.
+ * 협화: 유니즌(0), 단3(3), 장3(4), 완전4(5), 완전5(7),
+ *       단6(8), 장6(9), 옥타브(12) 및 그 복합음정(+12, +24…)
+ */
+function isConsonantInterval(semitones: number): boolean {
+  const mod = ((semitones % 12) + 12) % 12;
+  return [0, 3, 4, 5, 7, 8, 9].includes(mod);
+}
+
+/**
+ * 병행 완전음정(5도/옥타브) 검사.
+ * 연속 두 공격점에서 동일 완전음정(0,7)이 같은 방향으로 진행하면 위반.
+ */
+function isParallelPerfect(
+  prevTrebleMidi: number, prevBassMidi: number,
+  currTrebleMidi: number, currBassMidi: number,
+): boolean {
+  const prevInt = ((prevTrebleMidi - prevBassMidi) % 12 + 12) % 12;
+  const currInt = ((currTrebleMidi - currBassMidi) % 12 + 12) % 12;
+  // 둘 다 완전 유니즌(0) 또는 완전5도(7)
+  if (prevInt !== 0 && prevInt !== 7) return false;
+  if (currInt !== 0 && currInt !== 7) return false;
+  // 같은 방향으로 진행해야 병행
+  const trebleDir = Math.sign(currTrebleMidi - prevTrebleMidi);
+  const bassDir   = Math.sign(currBassMidi - prevBassMidi);
+  return trebleDir !== 0 && trebleDir === bassDir;
+}
+
+/**
+ * 마디별 음표 그룹으로 분할 (16분음표 단위 기준).
+ */
+function splitNotesIntoMeasures(
+  notes: ScoreNote[],
+  sixteenthsPerBar: number,
+): ScoreNote[][] {
+  const measures: ScoreNote[][] = [];
+  let currentMeasure: ScoreNote[] = [];
+  let posInBar = 0;
+
+  let i = 0;
+  while (i < notes.length) {
+    const n = notes[i];
+    if (n.tuplet) {
+      const p = parseInt(n.tuplet, 10);
+      const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+      for (let k = 0; k < p && i + k < notes.length; k++) {
+        currentMeasure.push(notes[i + k]);
+      }
+      posInBar += span;
+      i += p;
+    } else {
+      const dur = durationToSixteenths(n.duration);
+      currentMeasure.push(n);
+      posInBar += dur;
+      i += 1;
+    }
+    if (posInBar >= sixteenthsPerBar) {
+      measures.push(currentMeasure);
+      currentMeasure = [];
+      posInBar = 0;
+    }
+  }
+  if (currentMeasure.length > 0) measures.push(currentMeasure);
+  return measures;
+}
+
+/**
+ * ★ reviewAndFixScore — 자동 생성 악보의 최종 검토 및 보정
+ *
+ * 검증 항목:
+ *  1. 마디 음가 합계 정합성 (각 마디의 16분음표 합이 박자와 일치)
+ *  2. 병행 완전5도/옥타브 제거 (2성부)
+ *  3. 수직 화성 협화도 검증 (consonanceRatio 기준)
+ *  4. 선율 윤곽: 증음정(augmented 2nd = 3반음) 제거
+ *  5. 마디 경계 성부 진행 매끄러움 (7반음 초과 도약 보정)
+ *  6. 종지 마디 확인 (으뜸음으로 종결)
+ */
+function reviewAndFixScore(
+  treble: ScoreNote[],
+  bass: ScoreNote[],
+  keySignature: string,
+  timeSignature: string,
+  scale: PitchName[],
+  useGrandStaff: boolean,
+  consonanceRatio: number,
+): { treble: ScoreNote[]; bass: ScoreNote[] } {
+  const sixteenthsPerBar = getSixteenthsPerBar(timeSignature);
+  const BASS_BASE = 3;
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 1: 마디 음가 합계 정합성 검증
+  // ════════════════════════════════════════════════════════════════
+  const verifyMeasureDurations = (notes: ScoreNote[], label: string): void => {
+    const measures = splitNotesIntoMeasures(notes, sixteenthsPerBar);
+    for (let m = 0; m < measures.length; m++) {
+      let total = 0;
+      let ni = 0;
+      while (ni < measures[m].length) {
+        const n = measures[m][ni];
+        if (n.tuplet) {
+          const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+          total += span;
+          ni += parseInt(n.tuplet, 10);
+        } else {
+          total += durationToSixteenths(n.duration);
+          ni += 1;
+        }
+      }
+      // 부족한 경우 쉼표로 채움
+      if (total < sixteenthsPerBar) {
+        const gap = sixteenthsPerBar - total;
+        const fillDur = SIXTEENTHS_TO_DUR[gap];
+        if (fillDur) {
+          // 원본 배열에서 해당 마디 끝 위치 찾아 삽입
+          let pos = 0;
+          let insertIdx = 0;
+          for (let mi = 0; mi < m; mi++) {
+            let mni = 0;
+            while (mni < measures[mi].length) {
+              if (measures[mi][mni].tuplet && measures[mi][mni].tuplet !== '') {
+                mni += parseInt(measures[mi][mni].tuplet as string, 10);
+              } else {
+                mni += 1;
+              }
+              insertIdx++;
+            }
+          }
+          insertIdx += measures[m].length;
+          notes.splice(insertIdx, 0, {
+            id: Math.random().toString(36).substr(2, 9),
+            pitch: 'rest', octave: 4, accidental: '', duration: fillDur, tie: false,
+          });
+        }
+      }
+    }
+  };
+
+  verifyMeasureDurations(treble, 'treble');
+  if (useGrandStaff && bass.length > 0) {
+    verifyMeasureDurations(bass, 'bass');
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 2: 2성부 수직 화성 검증 (병행 완전음정 + 협화도)
+  // ════════════════════════════════════════════════════════════════
+  if (useGrandStaff && bass.length > 0) {
+    const trebleTL = buildAttackTimeline(treble, keySignature);
+    const bassTL   = buildAttackTimeline(bass, keySignature);
+
+    // 동시 공격점 매칭 (offset 기준)
+    const bassMap = new Map<number, { noteIdx: number; midi: number }>();
+    for (const b of bassTL) {
+      bassMap.set(b.offset, { noteIdx: b.noteIdx, midi: b.midi });
+    }
+
+    type SimultaneousPoint = {
+      offset: number;
+      trebleIdx: number; trebleMidi: number;
+      bassIdx: number;   bassMidi: number;
+    };
+    const simultaneous: SimultaneousPoint[] = [];
+    for (const t of trebleTL) {
+      const b = bassMap.get(t.offset);
+      if (b) {
+        simultaneous.push({
+          offset: t.offset,
+          trebleIdx: t.noteIdx, trebleMidi: t.midi,
+          bassIdx: b.noteIdx,   bassMidi: b.midi,
+        });
+      }
+    }
+
+    // 2a: 병행 완전5도/옥타브 제거 — 베이스 음을 인접 화음톤으로 이동
+    for (let i = 1; i < simultaneous.length; i++) {
+      const prev = simultaneous[i - 1];
+      const curr = simultaneous[i];
+      if (isParallelPerfect(prev.trebleMidi, prev.bassMidi, curr.trebleMidi, curr.bassMidi)) {
+        const bassNote = bass[curr.bassIdx];
+        if (bassNote.pitch === 'rest') continue;
+
+        // 반음 올리거나 내려서 완전음정 해소
+        const currPitchIdx = PITCH_ORDER.indexOf(bassNote.pitch as PitchName);
+        if (currPitchIdx < 0) continue;
+
+        // 인접 음계 음으로 이동 (한 스텝 위 또는 아래)
+        const stepUp   = (currPitchIdx + 1) % 7;
+        const stepDown = (currPitchIdx + 6) % 7;
+        const candidatePitches = [PITCH_ORDER[stepUp], PITCH_ORDER[stepDown]];
+
+        let fixed = false;
+        for (const candPitch of candidatePitches) {
+          const candNote: ScoreNote = {
+            ...bassNote, pitch: candPitch, accidental: '' as Accidental,
+            id: bassNote.id,
+          };
+          const candMidi = noteToMidiWithKey(candNote, keySignature);
+          // 새 음이 트레블과 병행 완전음정을 만들지 않는지 확인
+          if (!isParallelPerfect(prev.trebleMidi, prev.bassMidi, curr.trebleMidi, candMidi)) {
+            // 간격도 충분한지 확인
+            if (curr.trebleMidi - candMidi >= MIN_TREBLE_BASS_SEMITONES) {
+              bass[curr.bassIdx] = candNote;
+              curr.bassMidi = candMidi;
+              fixed = true;
+              break;
+            }
+          }
+        }
+        // 인접 음으로도 해결 안 되면 옥타브 조정
+        if (!fixed && bassNote.octave > 2) {
+          const lowered: ScoreNote = { ...bassNote, octave: bassNote.octave - 1 };
+          const loweredMidi = noteToMidiWithKey(lowered, keySignature);
+          if (!isParallelPerfect(prev.trebleMidi, prev.bassMidi, curr.trebleMidi, loweredMidi)) {
+            bass[curr.bassIdx] = lowered;
+            curr.bassMidi = loweredMidi;
+          }
+        }
+      }
+    }
+
+    // 2b: 수직 협화도 검증 — 불협화 비율이 (1-consonanceRatio) 초과 시 보정
+    let dissonantCount = 0;
+    const dissonantPoints: number[] = [];
+    for (let i = 0; i < simultaneous.length; i++) {
+      const s = simultaneous[i];
+      const interval = Math.abs(s.trebleMidi - s.bassMidi);
+      if (!isConsonantInterval(interval)) {
+        dissonantCount++;
+        dissonantPoints.push(i);
+      }
+    }
+    const maxDissonant = Math.floor(simultaneous.length * (1 - consonanceRatio));
+    if (dissonantCount > maxDissonant) {
+      // 초과 불협화음을 협화음으로 보정 (가장 가까운 협화 음정으로 베이스 이동)
+      const excessCount = dissonantCount - maxDissonant;
+      const toFix = dissonantPoints.slice(0, excessCount);
+      for (const idx of toFix) {
+        const s = simultaneous[idx];
+        const bassNote = bass[s.bassIdx];
+        if (bassNote.pitch === 'rest') continue;
+        const bassMidi = s.bassMidi;
+        const trebleMidi = s.trebleMidi;
+
+        // 협화 음정 목표: 현재 베이스에서 ±1~2 반음 내 협화음 탐색
+        let bestNote: ScoreNote | null = null;
+        let bestDist = Infinity;
+        for (let delta = -3; delta <= 3; delta++) {
+          if (delta === 0) continue;
+          const targetMidi = bassMidi + delta;
+          if (trebleMidi - targetMidi < MIN_TREBLE_BASS_SEMITONES) continue;
+          if (!isConsonantInterval(Math.abs(trebleMidi - targetMidi))) continue;
+
+          // MIDI → 가장 가까운 음계 음 매핑
+          const semitone = ((targetMidi % 12) + 12) % 12;
+          const PITCH_SEMITONES_REV: Record<number, PitchName> = {
+            0: 'C', 1: 'C', 2: 'D', 3: 'D', 4: 'E', 5: 'F',
+            6: 'F', 7: 'G', 8: 'G', 9: 'A', 10: 'A', 11: 'B',
+          };
+          const candPitch = PITCH_SEMITONES_REV[semitone];
+          if (!candPitch) continue;
+          const candOctave = Math.floor(targetMidi / 12) - 1;
+          if (candOctave < 2 || candOctave > 4) continue;
+
+          const candNote: ScoreNote = {
+            ...bassNote, pitch: candPitch, octave: candOctave,
+            accidental: '' as Accidental,
+          };
+          const actualMidi = noteToMidiWithKey(candNote, keySignature);
+          const dist = Math.abs(actualMidi - bassMidi);
+          if (dist < bestDist && isConsonantInterval(Math.abs(trebleMidi - actualMidi))) {
+            bestDist = dist;
+            bestNote = candNote;
+          }
+        }
+        if (bestNote) {
+          bass[s.bassIdx] = bestNote;
+        }
+      }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 3: 선율 윤곽 검증 — 증음정(augmented 2nd = 3반음) 제거
+  // ════════════════════════════════════════════════════════════════
+  const fixAugmentedIntervals = (notes: ScoreNote[]): void => {
+    for (let i = 1; i < notes.length; i++) {
+      if (notes[i].pitch === 'rest' || notes[i - 1].pitch === 'rest') continue;
+      if (notes[i].tuplet && notes[i].tuplet !== '') continue; // 잇단음표 내부는 건너뜀
+
+      const prevMidi = noteToMidiWithKey(notes[i - 1], keySignature);
+      const currMidi = noteToMidiWithKey(notes[i], keySignature);
+      const interval = Math.abs(currMidi - prevMidi);
+
+      // 증2도(3반음) = 자연단음계 6→7도 등에서 발생 — 순차진행처럼 보이지만 소리가 어색
+      if (interval === 3) {
+        // 현재 음을 한 반음 줄여 장2도(2반음)로 만듦
+        const dir = Math.sign(currMidi - prevMidi);
+        const targetMidi = prevMidi + dir * 2; // 장2도
+
+        // 가장 가까운 음계 음 찾기
+        const targetSemitone = ((targetMidi % 12) + 12) % 12;
+        let bestPitch: PitchName | null = null;
+        let bestDist = Infinity;
+        for (const sp of scale) {
+          if (sp === 'rest') continue;
+          const spNote: ScoreNote = {
+            id: '', pitch: sp, octave: notes[i].octave,
+            accidental: '' as Accidental, duration: notes[i].duration,
+          };
+          const spMidi = noteToMidiWithKey(spNote, keySignature);
+          const spSemitone = ((spMidi % 12) + 12) % 12;
+          const d = Math.abs(spSemitone - targetSemitone);
+          const dWrap = Math.min(d, 12 - d);
+          if (dWrap < bestDist) {
+            bestDist = dWrap;
+            bestPitch = sp;
+          }
+        }
+        if (bestPitch && bestDist <= 1) {
+          notes[i] = { ...notes[i], pitch: bestPitch, accidental: '' as Accidental };
+        }
+      }
+    }
+  };
+
+  fixAugmentedIntervals(treble);
+  if (useGrandStaff && bass.length > 0) {
+    fixAugmentedIntervals(bass);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 4: 마디 경계 성부 진행 매끄러움 (7반음 초과 도약 보정)
+  // ════════════════════════════════════════════════════════════════
+  const smoothMeasureBoundaries = (notes: ScoreNote[]): void => {
+    const measures = splitNotesIntoMeasures(notes, sixteenthsPerBar);
+    // 마디 경계: 이전 마디 마지막 음 → 다음 마디 첫 음
+    let globalIdx = 0;
+    for (let m = 0; m < measures.length; m++) {
+      const measureLen = measures[m].length;
+      if (m > 0 && measureLen > 0) {
+        const prevMeasure = measures[m - 1];
+        // 이전 마디 마지막 비쉼표 음
+        let prevNote: ScoreNote | null = null;
+        for (let k = prevMeasure.length - 1; k >= 0; k--) {
+          if (prevMeasure[k].pitch !== 'rest') { prevNote = prevMeasure[k]; break; }
+        }
+        // 현재 마디 첫 비쉼표 음
+        let currNote: ScoreNote | null = null;
+        let currNoteLocalIdx = -1;
+        for (let k = 0; k < measureLen; k++) {
+          if (measures[m][k].pitch !== 'rest') { currNote = measures[m][k]; currNoteLocalIdx = k; break; }
+        }
+
+        if (prevNote && currNote) {
+          const prevMidi = noteToMidiWithKey(prevNote, keySignature);
+          const currMidi = noteToMidiWithKey(currNote, keySignature);
+          const leap = Math.abs(currMidi - prevMidi);
+
+          // 7반음(완전5도) 초과 도약 → 인접 음계 음으로 보정
+          if (leap > 7) {
+            const dir = Math.sign(currMidi - prevMidi);
+            // 목표: 직전 음에서 2~5반음 거리의 음계 음
+            const targetMidi = prevMidi + dir * 4; // 장3도 거리
+            let bestPitch: PitchName | null = null;
+            let bestOctave = currNote.octave;
+            let bestDist = Infinity;
+
+            for (const sp of scale) {
+              if (sp === 'rest') continue;
+              for (let oct = currNote.octave - 1; oct <= currNote.octave + 1; oct++) {
+                if (oct < 2 || oct > 5) continue;
+                const candNote: ScoreNote = {
+                  id: '', pitch: sp, octave: oct,
+                  accidental: '' as Accidental, duration: currNote.duration,
+                };
+                const candMidi = noteToMidiWithKey(candNote, keySignature);
+                const d = Math.abs(candMidi - targetMidi);
+                if (d < bestDist && Math.abs(candMidi - prevMidi) <= 7 && Math.abs(candMidi - prevMidi) >= 1) {
+                  bestDist = d;
+                  bestPitch = sp;
+                  bestOctave = oct;
+                }
+              }
+            }
+
+            if (bestPitch) {
+              const actualIdx = globalIdx + currNoteLocalIdx;
+              if (actualIdx < notes.length) {
+                notes[actualIdx] = {
+                  ...notes[actualIdx],
+                  pitch: bestPitch,
+                  octave: bestOctave,
+                  accidental: '' as Accidental,
+                };
+              }
+            }
+          }
+        }
+      }
+      globalIdx += measureLen;
+    }
+  };
+
+  smoothMeasureBoundaries(treble);
+  // 베이스는 패턴 기반이므로 마디 경계 보정은 treble에만 적용
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 5: 종지 마디 검증 — 마지막 실제 음이 으뜸음인지 확인
+  // ════════════════════════════════════════════════════════════════
+  const tonicPitch = scale[0];
+  // 트레블 마지막 비쉼표 음 확인
+  for (let i = treble.length - 1; i >= 0; i--) {
+    if (treble[i].pitch !== 'rest') {
+      if (treble[i].pitch !== tonicPitch) {
+        treble[i] = { ...treble[i], pitch: tonicPitch, accidental: '' as Accidental };
+      }
+      break;
+    }
+  }
+  // 베이스 마지막 비쉼표 음 확인
+  if (useGrandStaff && bass.length > 0) {
+    for (let i = bass.length - 1; i >= 0; i--) {
+      if (bass[i].pitch !== 'rest') {
+        if (bass[i].pitch !== tonicPitch) {
+          bass[i] = { ...bass[i], pitch: tonicPitch, accidental: '' as Accidental };
+        }
+        break;
+      }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Pass 6: 2성부 최종 간격 재검증 (보정 과정에서 간격이 좁아졌을 수 있음)
+  // ════════════════════════════════════════════════════════════════
+  if (useGrandStaff && bass.length > 0) {
+    const trebleTL2 = buildAttackTimeline(treble, keySignature);
+    const bassTL2   = buildAttackTimeline(bass, keySignature);
+    const bassMap2 = new Map<number, number>();
+    for (const b of bassTL2) bassMap2.set(b.offset, b.noteIdx);
+
+    for (const t of trebleTL2) {
+      const bIdx = bassMap2.get(t.offset);
+      if (bIdx === undefined) continue;
+      const bassNote = bass[bIdx];
+      if (bassNote.pitch === 'rest') continue;
+      const bassMidi = noteToMidiWithKey(bassNote, keySignature);
+      const trebleMidi = t.midi;
+
+      // 간격 부족 → 베이스 옥타브 내림
+      if (trebleMidi - bassMidi < MIN_TREBLE_BASS_SEMITONES && bassNote.octave > 2) {
+        bass[bIdx] = { ...bassNote, octave: Math.max(2, bassNote.octave - 1) };
+      }
+      // 동일 건반 → 베이스 옥타브 내림
+      if (trebleMidi === bassMidi && bassNote.octave > 2) {
+        bass[bIdx] = { ...bassNote, octave: Math.max(2, bassNote.octave - 1) };
+      }
+    }
+  }
+
+  return { treble, bass };
 }
 
 /** 트레블과 동시에 같은 건반이 아니고, §4 간격(단 10도 이상)을 만족하는지 */
