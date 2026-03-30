@@ -70,6 +70,11 @@ export interface GeneratedScore {
 
 const PITCH_ORDER: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
+/** 루트가 높은 조(G,A,B)에서 wrap 편향 보정용 베이스 옥타브 계산 */
+function getBassBaseOctave(scale: PitchName[]): number {
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  return rootIdx >= 4 ? 2 : 3;
+}
 
 const CHORD_TONES: Record<number, number[]> = {
   0: [0, 2, 4], 1: [1, 3, 5], 2: [2, 4, 6],
@@ -678,6 +683,78 @@ function tryInsertTriplet(
 }
 
 // ────────────────────────────────────────────────────────────────
+// ★ 후처리: 연속 동일음 3회 이상 제거 (안전망)
+// ────────────────────────────────────────────────────────────────
+/**
+ * MIDI 기준 연속 3회 이상 동일음을 인접 음계음으로 교체.
+ * 타이로 연결된 음은 의도적 반복이므로 건드리지 않는다.
+ */
+function fixConsecutiveRepeats(
+  notes: ScoreNote[],
+  scale: PitchName[],
+  baseOctave: number,
+  keySignature: string,
+): void {
+  // 종지 마디 마지막 음은 으뜸음이므로 교체 금지
+  let lastMelodicIdx = -1;
+  for (let k = notes.length - 1; k >= 0; k--) {
+    if (notes[k].pitch !== 'rest') { lastMelodicIdx = k; break; }
+  }
+
+  const MAX_REPEAT = 2; // 최대 허용 연속 동일음 (2 = 타이 1쌍)
+  let runStart = 0;
+  for (let i = 1; i <= notes.length; i++) {
+    const prev = notes[i - 1];
+    const cur = i < notes.length ? notes[i] : null;
+    const same = cur &&
+      cur.pitch !== 'rest' && prev.pitch !== 'rest' &&
+      noteToMidiWithKey(cur, keySignature) === noteToMidiWithKey(prev, keySignature);
+    if (same) continue;
+
+    // run: [runStart .. i-1] 모두 같은 MIDI
+    const runLen = i - runStart;
+    if (runLen > MAX_REPEAT) {
+      // runStart+MAX_REPEAT 부터 끝까지 교체
+      const baseMidi = noteToMidiWithKey(notes[runStart], keySignature);
+      for (let j = runStart + MAX_REPEAT; j < i; j++) {
+        const n = notes[j];
+        if (n.pitch === 'rest') continue;
+        // 종지음(마지막 멜로디 음)은 교체 금지
+        if (j === lastMelodicIdx) continue;
+        // 타이 앞 음이면 스킵 (타이 쌍은 의도적)
+        if (j > 0 && notes[j - 1].tie) continue;
+        // 순차 이동: 위로 1도 시도, 실패 시 아래로
+        const curNn = scaleNoteToNn(n.pitch, n.octave, scale, baseOctave);
+        const upNn = curNn + 1;
+        const dnNn = curNn - 1;
+        const up = noteNumToNote(upNn, scale, baseOctave);
+        const dn = noteNumToNote(dnNn, scale, baseOctave);
+        const upMidi = noteToMidiWithKey(makeNote(up.pitch, up.octave, n.duration), keySignature);
+        const dnMidi = noteToMidiWithKey(makeNote(dn.pitch, dn.octave, n.duration), keySignature);
+        // 이전 음과 다른 방향 우선
+        const target = (upMidi !== baseMidi && up.octave <= 5) ? up
+          : (dnMidi !== baseMidi && dn.octave >= 2) ? dn : up;
+        notes[j] = { ...n, pitch: target.pitch as PitchName, octave: target.octave, accidental: '' as Accidental };
+      }
+    }
+    runStart = i;
+  }
+}
+
+/** nn 역산: pitch+octave → nn (noteNumToNote의 역함수) */
+function scaleNoteToNn(
+  pitch: PitchName, octave: number, scale: PitchName[], baseOctave: number,
+): number {
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  const pitchIdx = PITCH_ORDER.indexOf(pitch);
+  const degIdx = scale.indexOf(pitch);
+  if (degIdx < 0) return 0; // fallback
+  const wrap = pitchIdx < rootIdx ? 1 : 0;
+  const octaveOffset = octave - baseOctave - wrap;
+  return octaveOffset * 7 + degIdx;
+}
+
+// ────────────────────────────────────────────────────────────────
 // ★ 종지 쉼표 — 마지막 마디 하드코딩
 // ────────────────────────────────────────────────────────────────
 function generateCadenceMeasure(
@@ -1082,11 +1159,14 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const trebleNotes: ScoreNote[] = [];
   const bassNotes:   ScoreNote[] = [];
 
-  const TREBLE_BASE = 4;
-  const BASS_BASE   = 3;
+  // 루트가 높은 조(G,A,B 등)에서 wrap 편향으로 옥타브5에 음이 몰리는 현상 보정
+  // wrapCount >= 4이면 TREBLE_BASE를 3으로 낮춰 한 옥타브 아래에서 시작
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  const wrapCount = rootIdx; // wrap이 발생하는 음계도 수 = rootIdx
+  const TREBLE_BASE = wrapCount >= 4 ? 3 : 4;
+  const BASS_BASE   = getBassBaseOctave(scale);
 
   // 조표의 wrap 보정을 반영한 트레블 실효 최대 nn 계산
-  // G·A·B 등 루트가 높은 조표에서 wrap=1 때문에 옥타브 6이 되는 것을 방지
   const rawTrebleMax = lvl <= 2 ? 8 : 12;
   let effectiveTrebleMax = rawTrebleMax;
   while (effectiveTrebleMax > 0 && noteNumToNote(effectiveTrebleMax, scale, TREBLE_BASE).octave > 5) {
@@ -1102,6 +1182,9 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   // ── 연속 반복음 방지 상태 ──
   let prevFinalNn     = -1;   // 직전 확정 nn
   let consecutiveSame = 0;    // 연속 같은 nn 횟수
+
+  // ── 선율 윤곽 다양성: 같은 방향 연속 진행 제한 ──
+  let consecutiveSameDir = 0; // 같은 방향 연속 횟수
 
   // ── 선율 규칙 상태 ──
   let consecutiveLeapNotes: number[] = [];
@@ -1157,6 +1240,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         }
         const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
         trebleNotes.push(makeNote(pitch, octave, durLabel));
+        prevFinalNn = nn; consecutiveSame = 0;
         barPos += dur; prevInterval = 0; continue;
       }
 
@@ -1177,6 +1261,9 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           } else {
             interval = prevDir > 0 ? -1 : 1;
           }
+        } else if (consecutiveSameDir >= 3 && prevDir !== 0) {
+          // 윤곽 다양성: 같은 방향 3회 연속 후 반대 방향 강제
+          interval = prevDir > 0 ? rand([-1, -2]) : rand([1, 2]);
         } else if (Math.random() < params.stepwiseProb) {
           // 순차진행
           interval = rand([1, -1]);
@@ -1234,9 +1321,11 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         const isDownbeat = barPos % beatSize === 0;
         // 좁은 음역(초급 등)에서는 스냅 확률 40% 감소 — 같은 화음톤에 수렴하는 현상 방지
         const rangeFactor = effectiveTrebleMax <= 8 ? 0.6 : 1.0;
+        // 홀수 박자(7/8, 5/8)에서는 코드 스냅 빈도를 줄여 반복음 억제
+        const oddMeterFactor = /^[57]\/8$/.test(timeSignature) ? 0.55 : 1.0;
         const snapChance = (isDownbeat
           ? (lvl >= 7 ? 0.60 : 0.68)
-          : (lvl >= 7 ? 0.15 : 0.22)) * rangeFactor;
+          : (lvl >= 7 ? 0.15 : 0.22)) * rangeFactor * oddMeterFactor;
         if (Math.random() < snapChance) {
           let best = nn, bestDist = Infinity;
           for (const t of tones) {
@@ -1266,10 +1355,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           nn = Math.max(rangeMin, Math.min(rangeMax, nn));
         }
 
-        // ── 연속 반복음 방지: 같은 nn이 3회 이상 연속이면 강제 이동 ──
+        // ── 연속 반복음 방지: 같은 nn이 2회 이상 연속이면 강제 이동 ──
         if (nn === prevFinalNn) {
           consecutiveSame++;
-          if (consecutiveSame >= 2) {
+          if (consecutiveSame >= 1) {
             const nudge = prevDir > 0 ? -1 : 1;
             nn = Math.max(rangeMin, Math.min(rangeMax, nn + nudge));
             // 여전히 같으면 반대 방향
@@ -1284,7 +1373,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         prevFinalNn = nn;
 
         prevInterval = nn - prev;
-        prevDir = prevInterval > 0 ? 1 : prevInterval < 0 ? -1 : prevDir;
+        const newDir = nn > prev ? 1 : nn < prev ? -1 : 0;
+        if (newDir !== 0 && newDir === prevDir) consecutiveSameDir++;
+        else if (newDir !== 0) consecutiveSameDir = 1;
+        prevDir = newDir !== 0 ? newDir : prevDir;
         // 음역 경계 도달 시 방향 강제 전환 — 천장/바닥에서 같은 음 반복 방지
         if (nn >= rangeMax) prevDir = -1;
         if (nn <= rangeMin) prevDir = 1;
@@ -1300,7 +1392,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           nn = Math.max(0, Math.min(effectiveTrebleMax, nn + delta));
           return noteNumToNote(nn, scale, TREBLE_BASE);
         }, dur, params.tripletProb);
-        if (tripResult.inserted) { tripletBudget--; barPos += dur; continue; }
+        if (tripResult.inserted) { prevFinalNn = nn; consecutiveSame = 0; tripletBudget--; barPos += dur; continue; }
       }
 
       const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
@@ -1312,6 +1404,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         // V화음(degree 4) 위, 또는 종지 직전 마디에서 이끔음 적용
         if (chordDeg === 4 || isCadenceApproach) {
           trebleNotes.push(makeNote(pitch, octave, durLabel, minorLeadingAcc));
+          prevFinalNn = nn; consecutiveSame = 0;
           barPos += dur; continue;
         }
       }
@@ -1327,22 +1420,26 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
             pendingResolution = pitch;
           }
           accidentalBudget--;
+          prevFinalNn = nn; consecutiveSame = 0;
           barPos += dur; continue;
         }
       }
 
       // ── 붙임줄(타이): 직전 음과 높이가 같을 때 prevMel에 tie 부여 (ABC `-`는 앞→뒤 연결)
+      // 홀수 박자(7/8, 5/8)에서는 반복음 과다 방지를 위해 tieProb 절반
+      const tieProbEff = params.tieProb * (/^[57]\/8$/.test(timeSignature) ? 0.5 : 1.0);
       const prevMel = lastNonRestMelody(trebleNotes);
       if (
         prevMel &&
         samePitchHeight(prevMel, pitch, octave, '' as Accidental) &&
-        Math.random() < params.tieProb &&
+        Math.random() < tieProbEff &&
         i > 0 &&
         i < rhythm.length - 1 &&
         barPos > 0
       ) {
         prevMel.tie = true;
         trebleNotes.push(makeNote(pitch, octave, durLabel));
+        prevFinalNn = nn; consecutiveSame = 0;
         barPos += dur;
         continue;
       }
@@ -1421,6 +1518,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       }
     }
   }
+
+  // ── 후처리: 연속 동일음 3회 이상 방지 (안전망) ──
+  // 생성 루프의 bypass 경로(해결음·이끔음·임시표·타이)에서 누락된 연속 체크 보완
+  fixConsecutiveRepeats(finalTreble, scale, TREBLE_BASE, keySignature);
 
   // ── ★ 최종 검토: 비활성화 (reviewAndFixScore 연쇄 보정이 선율 품질 저하 유발) ──
   // const reviewed = reviewAndFixScore(
@@ -2323,7 +2424,7 @@ function generateBassForBar(
   /** bass_5: 도약 실행할 마디 인덱스 집합 */
   leapBarsSet?: Set<number>,
 ): { prevBassNn: number; lastMidi: number | undefined; prevBassDir: number } {
-  const BASS_BASE = 3;
+  const BASS_BASE = getBassBaseOctave(scale);
   const bp = BASS_LEVEL_PARAMS[bassDifficulty];
   const bTones = CHORD_TONES[chordRoot];
 
@@ -3007,7 +3108,7 @@ function generateBasicBass(
   pool?: number[],
   params?: LevelParams,
 ) {
-  const BASS_BASE   = 3;
+  const BASS_BASE   = getBassBaseOctave(scale);
   const bTones      = CHORD_TONES[chordRoot];
   // 난이도 풀 우선, 없으면 트레블 기반 폴백
   const bassPool = pool ?? (trebleRhythm.some(d => d <= 2) ? [16, 8] : [8, 4]);
@@ -3089,7 +3190,7 @@ function generateIndependentBass(
   timeSignature?: string,
   pool?: number[],
 ) {
-  const BASS_BASE   = 3;
+  const BASS_BASE   = getBassBaseOctave(scale);
   const bTones      = CHORD_TONES[chordRoot];
 
   // 난이도 풀 우선, 없으면 독립도 기반 폴백
@@ -3193,7 +3294,7 @@ function generateArpeggioBass(
   keySignature: string,
   trebleAttackMap: Map<number, number>,
 ) {
-  const BASS_BASE = 3;
+  const BASS_BASE = getBassBaseOctave(scale);
   const bTones = CHORD_TONES[chordRoot];
   const pattern = [bTones[0], bTones[2], bTones[1], bTones[2]];
 

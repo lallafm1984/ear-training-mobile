@@ -154,9 +154,17 @@ function analyzeRhythm(notes: ScoreNote[], difficulty: Difficulty, keySignature?
   const durations = new Set(notes.map(n => n.duration));
   const hasDotted = notes.some(n => n.duration.includes('.'));
   const hasTie = notes.some(n => n.tie);
-  const hasTriplet = notes.some(n => n.tuplet && n.tuplet !== '');
+  const hasTriplet = notes.some(n => !!n.tuplet);
   const has16th = notes.some(n => n.duration === '16');
-  const hasAccidental = notes.some(n => n.accidental !== '');
+  // 단조 이끔음(harmonic minor 7th)은 임시표가 아닌 기능적 음으로 제외
+  const isMinor = keySignature ? keySignature.endsWith('m') : false;
+  const minorLeadingPitch = isMinor && keySignature ? getScaleDegrees(keySignature)[6] : null;
+  const hasAccidental = notes.some(n => {
+    if (n.accidental === '') return false;
+    // 단조 7음의 올림표는 이끔음 — 임시표로 카운트하지 않음
+    if (isMinor && minorLeadingPitch && n.pitch === minorLeadingPitch) return false;
+    return true;
+  });
 
   const forbidden: string[] = [];
   const lvl = ALL_DIFFICULTIES.indexOf(difficulty) + 1;
