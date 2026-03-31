@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TouchableOpacity, StyleSheet, Pressable, Dimensions,
 } from 'react-native';
 import { Crown, Lock, X, Check } from 'lucide-react-native';
-import { PlanTier, PLAN_NAME, PLAN_COLOR } from '../types/subscription';
+import { PlanTier, PLAN_NAME, PLAN_COLOR } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

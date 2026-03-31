@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { Linking } from 'react-native';
-import { useAlert } from '../context/AlertContext';
+import { useAlert, useSubscription } from '../context';
 import * as MediaLibrary from 'expo-media-library';
-import { useSubscription } from '../context/SubscriptionContext';
-import type { UpgradeReason } from '../components/UpgradeModal';
+import type { UpgradeReason } from '../components';
 
 /**
  * 다운로드 권한 체크 + 소모 훅.

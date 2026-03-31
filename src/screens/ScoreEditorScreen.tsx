@@ -6,42 +6,38 @@ import {
   TextInput, Modal, Switch, KeyboardAvoidingView, Platform, Pressable, Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useAlert } from '../context/AlertContext';
+import { useAlert, useSubscription, useAuth } from '../context';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ScoreState, ScoreNote, NoteDuration, Accidental, PitchName, TupletType,
   generateAbc, getMeasureCount, getTupletNoteDuration, durationToSixteenths,
   getSixteenthsPerBar, sixteenthsToDuration, getValidTupletTypesForDuration,
-} from '../lib/scoreUtils';
-import { generateScore, Difficulty, DifficultyCategory, getDifficultyCategory, BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC } from '../lib/scoreGenerator';
-import { getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS } from '../lib/genCost';
-import AbcjsRenderer from '../components/AbcjsRenderer';
+  generateScore, Difficulty, DifficultyCategory, getDifficultyCategory,
+  BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC,
+  getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS,
+} from '../lib';
+import { AbcjsRenderer, AdModal, UpgradeModal, GenShopModal } from '../components';
+import type { UpgradeReason } from '../components';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
   Save, X, ChevronDown, Music2, RefreshCw, FileAudio, Lock, UserCircle,
   Eye, EyeOff, FileCode, Copy, Crown,
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useSubscription } from '../context/SubscriptionContext';
-import { PLAN_NAME, PLAN_COLOR } from '../types/subscription';
-import { useAuth } from '../context/AuthContext';
-import { useAdCounter } from '../hooks/useAdCounter';
-import { useDownloadQuota } from '../hooks/useDownloadQuota';
-import AdModal from '../components/AdModal';
-import UpgradeModal, { UpgradeReason } from '../components/UpgradeModal';
+import { PLAN_NAME, PLAN_COLOR } from '../types';
+import { useAdCounter, useDownloadQuota } from '../hooks';
 import PaywallScreen from './PaywallScreen';
 import ProfileScreen from './ProfileScreen';
-import GenShopModal from '../components/GenShopModal';
 import type {
   PlaybackMode, APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings,
-} from '../types/playback';
+} from '../types';
 import {
   PLAYBACK_MODE_LABELS, PLAYBACK_MODE_DESCRIPTIONS,
   DEFAULT_AP_SETTINGS, DEFAULT_KOREAN_SETTINGS,
   DEFAULT_ECHO_SETTINGS, DEFAULT_CUSTOM_SETTINGS,
   DEFAULT_PRACTICE_WAIT_SECONDS,
-} from '../types/playback';
+} from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

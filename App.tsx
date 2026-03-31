@@ -2,11 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useEffect, useRef } from 'react';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { SubscriptionProvider } from './src/context/SubscriptionContext';
-import { AlertProvider } from './src/context/AlertContext';
-import ScoreEditorScreen from './src/screens/ScoreEditorScreen';
-import LoginScreen from './src/screens/LoginScreen';
+import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
+import { ScoreEditorScreen, LoginScreen } from './src/screens';
 
 // ─────────────────────────────────────────────────────────────
 // Auth 게이트: 로그인 여부에 따라 화면 분기

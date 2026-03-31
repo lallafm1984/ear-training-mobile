@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types/subscription';
+import { supabase } from '../lib';
+import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
 
 

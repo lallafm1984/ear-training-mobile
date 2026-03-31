@@ -8,11 +8,9 @@ import {
   User, Mail, Crown, LogOut, Trash2, ChevronRight,
   Check, X, Shield, Zap,
 } from 'lucide-react-native';
-import { useAlert } from '../context/AlertContext';
-import { useAuth } from '../context/AuthContext';
-import { useSubscription } from '../context/SubscriptionContext';
-import { PLAN_NAME, PLAN_COLOR } from '../types/subscription';
-import GenShopModal from '../components/GenShopModal';
+import { useAlert, useAuth, useSubscription } from '../context';
+import { PLAN_NAME, PLAN_COLOR } from '../types';
+import { GenShopModal } from '../components';
 
 interface ProfileScreenProps {
   onClose: () => void;

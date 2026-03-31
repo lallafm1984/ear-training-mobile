@@ -4,8 +4,7 @@ import {
   TouchableWithoutFeedback, ScrollView, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Zap, X, Check, Info } from 'lucide-react-native';
-import { useAlert } from '../context/AlertContext';
-import { useSubscription } from '../context/SubscriptionContext';
+import { useAlert, useSubscription } from '../context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
