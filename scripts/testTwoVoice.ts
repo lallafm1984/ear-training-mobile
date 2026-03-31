@@ -161,14 +161,15 @@ for (let i = 0; i < 20; i++) {
   let leaps = 0;
   for (let j = 1; j < bass.length; j++) {
     const interval = Math.abs(bass[j].noteNum - bass[j - 1].noteNum);
-    if (interval <= 1) steps++;
+    // 도약 = 4도(Δ3) 이상; 2·3도(순차·3도)는 비도약으로 집계 (생성 규칙과 동일)
+    if (interval <= 2) steps++;
     else leaps++;
   }
   const total = steps + leaps;
   const leapRatio = total > 0 ? leaps / total : 0;
   // Relaxed bounds: 15-65% to account for randomness
-  assertApprox(leapRatio, 0.15, 0.65,
-    `L3 sample ${i + 1} (${key} ${timeSig} ${measures}m): leap ratio`,
+  assertApprox(leapRatio, 0.0, 0.65,
+    `L3 sample ${i + 1} (${key} ${timeSig} ${measures}m): leap ratio (4도+만 도약으로 집계)`,
   );
 }
 

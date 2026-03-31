@@ -511,7 +511,12 @@ export default function ScoreEditorScreen() {
       measures: genMeasures, useGrandStaff: state.useGrandStaff ?? false,
     });
     const tieDifficulties = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
-    const barsPerStaff = ['beginner_1', 'beginner_2'].includes(genDifficulty) ? 4 : undefined;
+    const barsPerStaff =
+      ['beginner_1', 'beginner_2'].includes(genDifficulty)
+        ? 4
+        : genDifficulty.startsWith('intermediate_') || genDifficulty.startsWith('advanced_')
+          ? 2
+          : undefined;
     setState(p => ({ ...p, notes: result.trebleNotes, bassNotes: result.bassNotes, disableTies: tieDifficulties.includes(genDifficulty), barsPerStaff }));
     setHideNotes(genHideNotes);
     setIsGenerating(false);

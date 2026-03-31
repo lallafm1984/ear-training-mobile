@@ -72,7 +72,9 @@ export function getScaleInfo(key: string, mode: 'major' | 'harmonic_minor'): Sca
 }
 
 // ────────────────────────────────────────────────────────────────
-// Strong beat position map (L:1/8 units, 1-based)
+// Strong beat position map (L:1/8 units, 1-based) — v4 문서 강박표와 동일
+// (temp/ear_training_bass_prompt_v4.md §강박 위치표)
+// 런타임 변환은 meter.ts (0-based eighths / sixteenths).
 // ────────────────────────────────────────────────────────────────
 
 export const STRONG_BEAT_MAP: Record<TimeSignature, {
@@ -132,12 +134,12 @@ export const MEASURE_TOTAL: Record<TimeSignature, number> = {
 
 /**
  * Bass register ranges per level.
- * Level 1: C, ~ C  (1 octave)  => MIDI 36..48
- * Level 2: C, ~ G  (1 oct + 5th) => MIDI 36..55
- * Level 3: G,, ~ G (2 octaves) => MIDI 31..55
+ * Level 1: E, ~ C  => MIDI 40..48
+ * Level 2: E, ~ G  => MIDI 40..55
+ * Level 3: E, ~ G  => MIDI 40..55
  */
 export const BASS_RANGE: Record<1 | 2 | 3, { low: number; high: number }> = {
-  1: { low: 36, high: 48 },
-  2: { low: 36, high: 55 },
-  3: { low: 31, high: 55 },
+  1: { low: 40, high: 48 },
+  2: { low: 40, high: 55 },
+  3: { low: 40, high: 55 },
 };

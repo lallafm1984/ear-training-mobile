@@ -1,5 +1,6 @@
 // ────────────────────────────────────────────────────────────────
-// Two-Voice Bass Generator — Module Entry Point
+// Two-voice generation (bass v4 + melody v4 + counterpoint)
+// Spec: temp/ear_training_bass_prompt_v4.md, temp/ear_training_melody_prompt_v4.md
 // ────────────────────────────────────────────────────────────────
 
 export type {
@@ -16,6 +17,9 @@ export type {
 
 export { generateTwoVoiceBass } from './bassGenerator';
 export { validateBass } from './validator';
+
+export { generateTwoVoiceMelody } from './melodyGenerator';
+export type { TwoVoiceMelodyOptions } from './melodyGenerator';
 
 export {
   validateStrongBeatConsonance,
@@ -36,37 +40,19 @@ export {
   getScaleInfo,
 } from './scales';
 
+export {
+  barTotalEighths,
+  isCompoundMeter,
+  strongBeatOffsetsEighths0,
+  strongBeatOffsetsSixteenths0,
+} from './meter';
+
+export { getMelodyMotionParams, inferChordDegreeFromBassMidi } from './melodyScoreParity';
+
+export { bassLineToScoreNotes } from './bassToScore';
+export { generateTwoVoiceStack } from './twoVoiceStack';
+export type { TwoVoiceStackInput, TwoVoiceStackResult } from './twoVoiceStack';
+
+export { generateBassWithRetry } from './bassWithRetry';
+
 export { ALL_BASS_PATTERNS, getApplicablePatterns, getPatternById, selectRandomPattern } from './bassPatterns';
-
-// ────────────────────────────────────────────────────────────────
-// Generate + Validate + Retry loop
-// ────────────────────────────────────────────────────────────────
-
-import type { TwoVoiceBassOptions, BassNote } from './types';
-import { generateTwoVoiceBass } from './bassGenerator';
-import { validateBass } from './validator';
-
-/**
- * Generate a bass line with automatic validation and retry.
- * Runs up to `maxRetries + 1` attempts, returning the result
- * with the fewest violations if none pass cleanly.
- */
-export function generateBassWithRetry(
-  opts: TwoVoiceBassOptions,
-  maxRetries = 3,
-): BassNote[] {
-  let bestResult: { bass: BassNote[]; violations: number } | null = null;
-
-  for (let i = 0; i <= maxRetries; i++) {
-    const bass = generateTwoVoiceBass(opts);
-    const validation = validateBass(opts, bass);
-
-    if (validation.passed) return bass;
-
-    if (!bestResult || validation.violationCount < bestResult.violations) {
-      bestResult = { bass, violations: validation.violationCount };
-    }
-  }
-
-  return bestResult!.bass;
-}

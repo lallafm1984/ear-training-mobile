@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────────
-// Two-Voice Bass Generator — Bass Generation Engine (L1/L2/L3)
+// Two-Voice Bass Generator — L1/L2/L3 (temp/ear_training_bass_prompt_v4.md)
 // ────────────────────────────────────────────────────────────────
 
 import type { BassLevel, BassNote, BassPatternDef, TwoVoiceBassOptions } from './types';
@@ -67,14 +67,19 @@ function getScaleInterval(from: number, to: number): number {
 }
 
 /**
- * Forbidden leap for Level 3.
- * Forbidden: 7th (6 degrees), 9th+, augmented 4th/5th.
+ * 베이스 선율 도약 규칙: 3도 이내(음계도 차이 1~2)가 기본, 도약 시에는 4도(차이 3)만.
+ * 즉 인접 음 nn 차이는 최대 3(5도·옥타브 등 금지).
+ */
+const MAX_BASS_SCALE_STEP = 3;
+
+/**
+ * Forbidden leap for Level 3 (and sanity for all levels).
+ * Span cap: MAX_BASS_SCALE_STEP; also 7th/9th+, tritone, aug5 when applicable.
  */
 function isForbiddenLeap(fromNN: number, toNN: number, ctx: BassGenContext): boolean {
   const interval = Math.abs(toNN - fromNN);
   if (interval <= 1) return false;
-  if (interval === 6) return true;  // 7th
-  if (interval > 7) return true;    // 9th+
+  if (interval > MAX_BASS_SCALE_STEP) return true;
 
   const semitones = getSemitoneInterval(fromNN, toNN, ctx);
   if (semitones === 6) return true;  // tritone
@@ -87,6 +92,22 @@ function isForbiddenLeap(fromNN: number, toNN: number, ctx: BassGenContext): boo
  * Uses scale degree indices directly since nnToMidi uses natural minor
  * and can't detect the raised 7th.
  */
+/** 현재 마디 코드 근음(구조도)에 가장 가까운 허용 nn (옥타브 시프트) */
+function nearestChordRootNn(rootDeg: number, nearNN: number, ctx: BassGenContext): number {
+  let best = rootDeg;
+  let bestDist = Infinity;
+  for (const off of [-21, -14, -7, 0, 7, 14, 21]) {
+    const nn = rootDeg + off;
+    if (!isInRange(nn, 2, ctx)) continue;
+    const d = Math.abs(nn - nearNN);
+    if (d < bestDist) {
+      bestDist = d;
+      best = nn;
+    }
+  }
+  return clampToRange(best, 2, ctx);
+}
+
 function isAugmentedSecond(fromNN: number, toNN: number, _ctx: BassGenContext): boolean {
   const degFrom = ((fromNN % 7) + 7) % 7;
   const degTo = ((toNN % 7) + 7) % 7;
@@ -103,6 +124,119 @@ function isAugmentedSecond(fromNN: number, toNN: number, _ctx: BassGenContext): 
 
 function generateBassStructure(measures: 4 | 8 | 12 | 16, isMinor: boolean): number[] {
   return generateProgression(measures, isMinor);
+}
+
+/** I / IV / V 근음 (0 / 3 / 4) — ear_training_bass_prompt_v4.md L1 “60% 이상” */
+function isPrimaryBassRootDegree(noteNum: number): boolean {
+  const d = ((noteNum % 7) + 7) % 7;
+  return d === 0 || d === 3 || d === 4;
+}
+
+/**
+ * Adjust interior bars so at least 60% of measures use I/IV/V roots,
+ * without breaking L1 max-leap (5th) between adjacent bars.
+ */
+/**
+ * 인접 마디 |Δ|≤3. `upTo` = 마지막으로 수정할 인덱스(포함).
+ */
+function fixL1AdjacentSpansUpTo(
+  notes: BassNote[],
+  ctx: BassGenContext,
+  upTo: number,
+): void {
+  const maxPass = notes.length + 2;
+  for (let pass = 0; pass < maxPass; pass++) {
+    let changed = false;
+    for (let i = 1; i <= upTo && i < notes.length; i++) {
+      const prev = notes[i - 1].noteNum;
+      let nn = notes[i].noteNum;
+      if (getScaleInterval(prev, nn) <= MAX_BASS_SCALE_STEP) continue;
+      const sign = nn > prev ? 1 : -1;
+      let best = prev + sign * MAX_BASS_SCALE_STEP;
+      if (!isInRange(best, 1, ctx)) best = prev - sign * MAX_BASS_SCALE_STEP;
+      if (!isInRange(best, 1, ctx)) best = clampToRange(nn, 1, ctx);
+      notes[i].noteNum = best;
+      changed = true;
+    }
+    if (!changed) break;
+  }
+}
+
+/**
+ * 마지막 마디 으뜸음과 직전 마디 사이 |Δ|≤3 이 되도록 직전 근음을 조정.
+ * (항상 noteNum=0만 쓰면 이전 마디가 높은 옥타브일 때 5도 이상 벌어질 수 있음)
+ */
+function fixL1CadenceLeap(
+  notes: BassNote[],
+  ctx: BassGenContext,
+): void {
+  if (notes.length < 2) return;
+  const li = notes.length - 1;
+  const pi = li - 1;
+  const prevBeforePen = pi > 0 ? notes[pi - 1].noteNum : notes[pi].noteNum;
+
+  const tonicCandidates: number[] = [];
+  for (let k = -4; k <= 4; k++) {
+    const t = k * 7;
+    if (!isInRange(t, 1, ctx)) continue;
+    if (((t % 7) + 7) % 7 !== 0) continue;
+    tonicCandidates.push(t);
+  }
+  tonicCandidates.sort((a, b) => Math.abs(a) - Math.abs(b));
+
+  for (const t of tonicCandidates) {
+    for (let s = 1; s <= MAX_BASS_SCALE_STEP; s++) {
+      for (const sg of [-1, 1] as const) {
+        const newPen = t - sg * s;
+        if (Math.abs(t - newPen) > MAX_BASS_SCALE_STEP) continue;
+        if (!isInRange(newPen, 1, ctx)) continue;
+        if (pi > 0 && getScaleInterval(prevBeforePen, newPen) > MAX_BASS_SCALE_STEP) continue;
+        notes[pi].noteNum = newPen;
+        notes[li].noteNum = t;
+        return;
+      }
+    }
+  }
+}
+
+function enforceBassL1PrimaryRootShare(
+  notes: BassNote[],
+  measures: number,
+  mode: 'major' | 'harmonic_minor',
+  ctx: BassGenContext,
+): void {
+  const countPrimary = () => notes.filter(n => isPrimaryBassRootDegree(n.noteNum)).length;
+  let primary = countPrimary();
+  const target = Math.ceil(0.6 * measures);
+  if (primary >= target) return;
+
+  const adjustable: number[] = [];
+  for (let m = 0; m < measures; m++) {
+    if (m === 0 || m === measures - 1) continue;
+    if (mode === 'harmonic_minor' && m === measures - 2) continue;
+    if (!isPrimaryBassRootDegree(notes[m].noteNum)) adjustable.push(m);
+  }
+  for (let i = adjustable.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [adjustable[i], adjustable[j]] = [adjustable[j], adjustable[i]];
+  }
+
+  const degs = [0, 3, 4];
+  for (const m of adjustable) {
+    if (primary >= target) break;
+    const prev = notes[m - 1].noteNum;
+    const next = notes[m + 1].noteNum;
+    const order = [...degs].sort(() => Math.random() - 0.5);
+    for (const deg of order) {
+      let nn = deg;
+      nn = clampToRange(nn, 1, ctx);
+      if (getScaleInterval(prev, nn) > MAX_BASS_SCALE_STEP) continue;
+      if (getScaleInterval(nn, next) > MAX_BASS_SCALE_STEP) continue;
+      notes[m] = { ...notes[m], noteNum: nn };
+      primary++;
+      break;
+    }
+  }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -128,12 +262,12 @@ function generateBassLevel1(opts: TwoVoiceBassOptions, structure: number[], ctx:
 
     noteNum = clampToRange(noteNum, 1, ctx);
 
-    // L1 rule: max leap of 5th (4 scale degrees) between adjacent bars
+    // L1: 인접 마디 nn 차이 ≤ 3 (3도 이내 또는 4도 도약 한 번)
     if (notes.length > 0) {
       const prev = notes[notes.length - 1].noteNum;
-      if (getScaleInterval(prev, noteNum) > 4) {
+      if (getScaleInterval(prev, noteNum) > MAX_BASS_SCALE_STEP) {
         for (const alt of [noteNum + 7, noteNum - 7]) {
-          if (isInRange(alt, 1, ctx) && getScaleInterval(prev, alt) <= 4) {
+          if (isInRange(alt, 1, ctx) && getScaleInterval(prev, alt) <= MAX_BASS_SCALE_STEP) {
             noteNum = alt;
             break;
           }
@@ -143,6 +277,11 @@ function generateBassLevel1(opts: TwoVoiceBassOptions, structure: number[], ctx:
 
     notes.push({ noteNum, duration, measure: m, beatPosition: 0 });
   }
+
+  enforceBassL1PrimaryRootShare(notes, measures, mode, ctx);
+  fixL1AdjacentSpansUpTo(notes, ctx, notes.length - 1);
+  fixL1CadenceLeap(notes, ctx);
+  fixL1AdjacentSpansUpTo(notes, ctx, notes.length - 2);
 
   return notes;
 }
@@ -158,22 +297,27 @@ function generateBassLevel2(
   ctx: BassGenContext,
 ): BassNote[] {
   const { timeSig, measures, mode } = opts;
-  const scaleInfo = getScaleInfo(opts.key, mode);
   const durationInfo = BASS_DURATION_MAP[timeSig];
   const noteDuration = durationInfo.level2;
   const notesPerBar = durationInfo.notesPerBar.level2;
   const measureTotal = MEASURE_TOTAL[timeSig];
   const totalNotes = measures * notesPerBar;
 
-  // Find the nearest tonic (0, 7, -7) that is reachable by stepwise motion
-  // from where we'll approximately be, to use as the ending target.
-  // We generate forward following contour, but plan the last few notes
-  // to arrive at tonic stepwise.
-
   const notes: BassNote[] = [];
   let currentNN = 0;
 
-  // Pre-compute: find nearest tonic for ending
+  // ── Sweep 방식: 한 방향으로 끝까지 간 뒤 경계에서 반전 ──
+  // 초기 방향은 패턴의 첫 non-hold contour에서 결정
+  let direction: 1 | -1 = -1; // default: descending
+  for (const c of pattern.contour) {
+    if (c === 'asc') { direction = 1; break; }
+    if (c === 'desc') { direction = -1; break; }
+  }
+
+  // 첫 마디 두 번째 음에서 도약할지 결정 (패턴 다양성)
+  const useInitialLeap = Math.random() < 0.5;
+
+  // 가장 가까운 으뜸음 찾기
   function nearestTonic(from: number): number {
     const candidates = [0, 7, -7, 14, -14];
     let best = 0;
@@ -188,90 +332,95 @@ function generateBassLevel2(
   }
 
   for (let m = 0; m < measures; m++) {
-    const contourDir = pattern.contour[m];
-
     for (let n = 0; n < notesPerBar; n++) {
       const beatPos = n * noteDuration;
       const noteIndex = m * notesPerBar + n;
       const isFirst = noteIndex === 0;
       const isLast = noteIndex === totalNotes - 1;
       const notesRemaining = totalNotes - noteIndex - 1;
+      let didLeap = false;
 
       if (isFirst) {
         currentNN = 0;
+      } else if (noteIndex === 1 && useInitialLeap) {
+        // ── 첫 마디 도약: IV(3·-4) / V(4·-3) 근음으로 점프 ──
+        const leapTargets = [3, 4, -3, -4]
+          .filter(t => isInRange(t, 2, ctx));
+        if (leapTargets.length > 0) {
+          currentNN = rand(leapTargets);
+          // 도약 후 sweep 방향: 도약 방향과 같은 쪽으로 계속 진행
+          direction = currentNN > 0 ? 1 : -1;
+          didLeap = true;
+        } else {
+          // 도약 불가 시 순차 진행
+          const nextNN = currentNN + direction;
+          currentNN = isInRange(nextNN, 2, ctx) ? nextNN : currentNN - direction;
+        }
       } else {
-        // Calculate target tonic and distance
+        // 종지 접근: 남은 음 수 ≤ 으뜸음까지 거리 → 으뜸음 향해 복귀
         const targetTonic = nearestTonic(currentNN);
         const distToTonic = Math.abs(currentNN - targetTonic);
         const dirToTonic = targetTonic > currentNN ? 1 : targetTonic < currentNN ? -1 : 0;
 
         if (isLast) {
-          // Must arrive at tonic: step toward it (should be 1 step away if planned correctly)
-          currentNN = currentNN + dirToTonic;
-          // Force to tonic if within 1 step
-          if (Math.abs(currentNN - targetTonic) <= 0) {
-            currentNN = targetTonic;
-          } else {
-            currentNN = targetTonic; // Force - validated later
-          }
+          currentNN = targetTonic;
         } else if (notesRemaining <= distToTonic) {
-          // Must start heading toward tonic to arrive stepwise
+          // 으뜸음으로 순차 복귀
           currentNN = currentNN + dirToTonic;
         } else {
-          // Normal stepwise motion following contour
-          const step = contourDir === 'asc' ? 1 : contourDir === 'desc' ? -1 : 0;
-          const nextNN = currentNN + step;
-
+          // ── 핵심: 현재 방향으로 한 칸 이동, 경계 도달 시 반전 ──
+          const nextNN = currentNN + direction;
           if (isInRange(nextNN, 2, ctx)) {
             currentNN = nextNN;
           } else {
-            const reversed = currentNN - step;
-            currentNN = isInRange(reversed, 2, ctx) ? reversed : clampToRange(currentNN, 2, ctx);
+            // 경계 도달 → 방향 반전
+            direction = -direction as 1 | -1;
+            const reversed = currentNN + direction;
+            currentNN = isInRange(reversed, 2, ctx) ? reversed : currentNN;
           }
         }
+      }
 
-        // Harmonic minor L2: no augmented 2nd (6->#7 forbidden)
+      // 도약한 음은 순차 제한 건너뜀
+      if (!didLeap) {
+        // Harmonic minor: 증2도(6→#7) 회피
         if (mode === 'harmonic_minor' && notes.length > 0) {
           const prevNN = notes[notes.length - 1].noteNum;
           if (isAugmentedSecond(prevNN, currentNN, ctx)) {
-            // Skip the leading tone: reverse direction instead
             const dir = currentNN > prevNN ? 1 : -1;
-            currentNN = prevNN - dir; // go opposite
+            currentNN = prevNN - dir;
             if (!isInRange(currentNN, 2, ctx)) {
-              currentNN = prevNN; // hold as last resort
+              currentNN = prevNN;
             }
           }
         }
 
-        // Check consecutive semitone limit (max 2)
+        // 연속 반음 3개 제한
         if (notes.length >= 2) {
           const prev1NN = notes[notes.length - 2].noteNum;
           const prev2NN = notes[notes.length - 1].noteNum;
           const semi1 = getSemitoneInterval(prev1NN, prev2NN, ctx) === 1;
           const semi2 = getSemitoneInterval(prev2NN, currentNN, ctx) === 1;
           if (semi1 && semi2) {
-            // Reverse to avoid 3 consecutive semitones, but stay stepwise
-            currentNN = notes[notes.length - 1].noteNum; // hold
+            currentNN = notes[notes.length - 1].noteNum;
           }
         }
 
-        // Final stepwise guarantee: ensure interval from previous note is <= 1
+        // 순차 보장: 이전 음과의 간격 ≤ 1
         if (notes.length > 0) {
           const prevNN = notes[notes.length - 1].noteNum;
           const interval = Math.abs(currentNN - prevNN);
           if (interval > 1) {
-            // Force stepwise: move 1 step toward target
             const dir = currentNN > prevNN ? 1 : -1;
             currentNN = prevNN + dir;
           }
-          // Re-check aug2nd after stepwise enforcement
           if (mode === 'harmonic_minor' && isAugmentedSecond(prevNN, currentNN, ctx)) {
-            currentNN = prevNN; // hold to avoid aug2nd
+            currentNN = prevNN;
           }
         }
       }
 
-      // Last note gets remaining duration to fill the bar
+      // 마지막 음: 남은 박자 채우기
       if (isLast) {
         const usedDuration = n * noteDuration;
         notes.push({
@@ -286,9 +435,6 @@ function generateBassLevel2(
       notes.push({ noteNum: currentNN, duration: noteDuration, measure: m, beatPosition: beatPos });
     }
   }
-
-  // L2: do NOT apply leading tone resolution — L2 avoids #7 entirely
-  // (per rules: "#7음은 종지부에서 순차 해결" but aug2nd is forbidden in L2)
 
   return notes;
 }
@@ -309,114 +455,119 @@ function generateBassLevel3(
   const noteDuration = durationInfo.level2;
   const notesPerBar = durationInfo.notesPerBar.level3;
   const measureTotal = MEASURE_TOTAL[timeSig];
+  const totalNotes = measures * notesPerBar;
   const notes: BassNote[] = [];
 
   let currentNN = 0;
-  let consecutiveSameDirectionLeaps = 0;
-  let lastLeapDirection = 0;
-  let totalSteps = 0;
-  let totalLeaps = 0;
+
+  // ── Sweep 방향 (L2와 동일): 한 방향으로 끝까지 간 뒤 경계에서 반전 ──
+  let direction: 1 | -1 = -1;
+  for (const c of pattern.contour) {
+    if (c === 'asc') { direction = 1; break; }
+    if (c === 'desc') { direction = -1; break; }
+  }
+
+  // ── 4마디당 도약 1회 위치 미리 결정 ──
+  const leapPositions = new Set<number>();
+  const groupSize = 4 * notesPerBar;
+  for (let g = 0; g * groupSize < totalNotes; g++) {
+    const groupStart = g * groupSize;
+    const groupEnd = Math.min(groupStart + groupSize, totalNotes);
+    const candidates: number[] = [];
+    for (let idx = groupStart + 1; idx < groupEnd - 1; idx++) {
+      candidates.push(idx);
+    }
+    if (candidates.length > 0) {
+      leapPositions.add(rand(candidates));
+    }
+  }
+
+  // 가장 가까운 으뜸음 찾기
+  function nearestTonic(from: number): number {
+    const candidates = [0, 7, -7, 14, -14];
+    let best = 0;
+    let bestDist = Infinity;
+    for (const c of candidates) {
+      if (isInRange(c, 3, ctx)) {
+        const d = Math.abs(from - c);
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+    }
+    return best;
+  }
 
   for (let m = 0; m < measures; m++) {
-    const contourDir = pattern.contour[m];
-
     for (let n = 0; n < notesPerBar; n++) {
       const beatPos = n * noteDuration;
-      const isFirstNote = m === 0 && n === 0;
-      const isLastNote = m === measures - 1 && n === notesPerBar - 1;
+      const noteIndex = m * notesPerBar + n;
+      const isFirstNote = noteIndex === 0;
+      const isLastNote = noteIndex === totalNotes - 1;
+      const notesRemaining = totalNotes - noteIndex - 1;
+      let didLeap = false;
 
       if (isFirstNote) {
         currentNN = 0;
       } else if (isLastNote) {
-        const candidates = [0, 7, -7];
-        let bestTonic = 0;
-        let bestDist = Infinity;
-        for (const c of candidates) {
-          if (isInRange(c, 3, ctx)) {
-            const d = Math.abs(currentNN - c);
-            if (d < bestDist) { bestDist = d; bestTonic = c; }
-          }
-        }
-        currentNN = bestTonic;
+        currentNN = nearestTonic(currentNN);
       } else {
-        const totalMoves = totalSteps + totalLeaps;
-        const currentLeapRatio = totalMoves > 0 ? totalLeaps / totalMoves : 0;
+        const targetTonic = nearestTonic(currentNN);
+        const distToTonic = Math.abs(currentNN - targetTonic);
+        const dirToTonic = targetTonic > currentNN ? 1 : targetTonic < currentNN ? -1 : 0;
 
-        // Target: 30-50% leaps
-        let shouldLeap: boolean;
-        if (currentLeapRatio < 0.3 && totalMoves > 2) {
-          shouldLeap = Math.random() < 0.6;
-        } else if (currentLeapRatio > 0.5) {
-          shouldLeap = Math.random() < 0.2;
+        if (notesRemaining <= distToTonic) {
+          // 으뜸음으로 순차 복귀
+          currentNN = currentNN + dirToTonic;
+        } else if (leapPositions.has(noteIndex)) {
+          // ── 4도 도약 (음계도 3칸) ──
+          const leapSize = 3;
+          let nextNN = currentNN + direction * leapSize;
+
+          if (isForbiddenLeap(currentNN, nextNN, ctx) || !isInRange(nextNN, 3, ctx)) {
+            nextNN = currentNN - direction * leapSize;
+            if (isForbiddenLeap(currentNN, nextNN, ctx) || !isInRange(nextNN, 3, ctx)) {
+              nextNN = currentNN + direction; // fallback 순차
+            }
+          }
+          currentNN = nextNN;
+          didLeap = true;
         } else {
-          shouldLeap = Math.random() < 0.4;
-        }
-
-        const direction = contourDir === 'asc' ? 1 : contourDir === 'desc' ? -1 :
-          (Math.random() < 0.5 ? 1 : -1);
-
-        let nextNN: number;
-
-        if (shouldLeap) {
-          if (direction === lastLeapDirection && consecutiveSameDirectionLeaps >= 2) {
-            nextNN = currentNN + direction;
-            totalSteps++;
+          // ── Sweep 순차 (±1), 경계에서 반전 (L2와 동일) ──
+          const nextNN = currentNN + direction;
+          if (isInRange(nextNN, 3, ctx)) {
+            currentNN = nextNN;
           } else {
-            const leapSize = rand([2, 3, 4, 5, 7]);
-            nextNN = currentNN + direction * leapSize;
-
-            if (isForbiddenLeap(currentNN, nextNN, ctx)) {
-              nextNN = currentNN + direction;
-              totalSteps++;
-            } else {
-              totalLeaps++;
-              if (direction === lastLeapDirection) {
-                consecutiveSameDirectionLeaps++;
-              } else {
-                consecutiveSameDirectionLeaps = 1;
-                lastLeapDirection = direction;
-              }
-            }
-          }
-        } else {
-          nextNN = currentNN + direction;
-          totalSteps++;
-          consecutiveSameDirectionLeaps = 0;
-        }
-
-        // Range check
-        if (!isInRange(nextNN, 3, ctx)) {
-          const opposite = currentNN - (nextNN - currentNN);
-          nextNN = isInRange(opposite, 3, ctx) ? opposite : clampToRange(nextNN, 3, ctx);
-        }
-
-        // Harmonic minor augmented 2nd: only ascending allowed
-        if (mode === 'harmonic_minor' && notes.length > 0) {
-          const prevNN = notes[notes.length - 1].noteNum;
-          if (isAugmentedSecond(prevNN, nextNN, ctx) && nextNN < prevNN) {
-            nextNN = prevNN - 2;
-            if (!isInRange(nextNN, 3, ctx)) nextNN = prevNN;
+            direction = -direction as 1 | -1;
+            const reversed = currentNN + direction;
+            currentNN = isInRange(reversed, 3, ctx) ? reversed : currentNN;
           }
         }
-
-        // Compensation after large leap (4th+)
-        if (notes.length > 0) {
-          const prevNN = notes[notes.length - 1].noteNum;
-          const leapSize = Math.abs(currentNN - prevNN);
-          if (leapSize >= 3 && !isFirstNote) {
-            const leapDir = currentNN > prevNN ? 1 : -1;
-            const nextDir = nextNN > currentNN ? 1 : -1;
-            if (nextDir === leapDir) {
-              const compensated = currentNN - leapDir;
-              if (isInRange(compensated, 3, ctx)) nextNN = compensated;
-            }
-          }
-        }
-
-        currentNN = nextNN;
       }
 
-      // Last note gets remaining duration
+      if (!didLeap) {
+        // Harmonic minor: 증2도 회피 (하행만 금지)
+        if (mode === 'harmonic_minor' && notes.length > 0) {
+          const prevNN = notes[notes.length - 1].noteNum;
+          if (isAugmentedSecond(prevNN, currentNN, ctx) && currentNN < prevNN) {
+            currentNN = prevNN - 2;
+            if (!isInRange(currentNN, 3, ctx)) currentNN = prevNN;
+          }
+        }
+
+        // 순차 보장: 이전 음과의 간격 ≤ 1 (도약 위치가 아닌 경우)
+        if (notes.length > 0) {
+          const prevNN = notes[notes.length - 1].noteNum;
+          const interval = Math.abs(currentNN - prevNN);
+          if (interval > 1) {
+            const dir = currentNN > prevNN ? 1 : -1;
+            currentNN = prevNN + dir;
+          }
+          if (mode === 'harmonic_minor' && isAugmentedSecond(prevNN, currentNN, ctx)) {
+            currentNN = prevNN;
+          }
+        }
+      }
+
+      // 마지막 음: 남은 박자 채우기
       if (isLastNote) {
         const usedDuration = n * noteDuration;
         notes.push({

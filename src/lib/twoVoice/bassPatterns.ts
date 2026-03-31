@@ -60,7 +60,7 @@ const PATTERNS_4: BassPatternDef[] = [
 ];
 
 // ────────────────────────────────────────────────────────────────
-// 8-measure patterns (16)
+// 8-measure patterns (14)
 // ────────────────────────────────────────────────────────────────
 
 const PATTERNS_8: BassPatternDef[] = [
@@ -161,14 +161,6 @@ const PATTERNS_8: BassPatternDef[] = [
     description: '4-note tetrachord units linked together',
   },
   {
-    id: 'converge_8',
-    measures: 8,
-    name: '수렴형',
-    contour: ['desc', 'asc', 'desc', 'asc', 'desc', 'asc', 'desc', 'hold'],
-    applicableLevels: [2, 3],
-    description: 'Amplitude narrows converging to cadence note',
-  },
-  {
     id: 'pedal_start_8',
     measures: 8,
     name: '페달 출발',
@@ -183,14 +175,6 @@ const PATTERNS_8: BassPatternDef[] = [
     contour: ['desc', 'desc', 'hold', 'hold', 'desc', 'desc', 'desc', 'hold'],
     applicableLevels: [2, 3],
     description: 'Stepwise then dominant pedal then stepwise',
-  },
-  {
-    id: 'circ_repeat_8',
-    measures: 8,
-    name: '순환 반복',
-    contour: ['desc', 'asc', 'desc', 'asc', 'desc', 'asc', 'desc', 'hold'],
-    applicableLevels: [2, 3],
-    description: 'Pattern repetition with varied cadence ending',
   },
 ];
 

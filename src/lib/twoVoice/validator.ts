@@ -211,16 +211,16 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       }
     }
 
-    // L1: adjacent measure interval ≤ 5th
+    // L1: 인접 마디 근음 |Δ| ≤ 3 (3도 이내 또는 4도)
     const measureRoots = Array.from(measures.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([, notes]) => notes[0]?.noteNum ?? 0);
     for (let i = 1; i < measureRoots.length; i++) {
       const interval = scaleDegreeInterval(measureRoots[i], measureRoots[i - 1]);
-      if (interval > 4) { // 4 scale degrees = 5th
+      if (interval > 3) {
         violations.push({
           type: 'l1_leap_limit',
-          message: `L1: Leap of ${interval + 1}th between measures ${i} and ${i + 1} exceeds 5th limit`,
+          message: `L1: |Δ|=${interval} between measures ${i} and ${i + 1} exceeds 4th (max span 3)`,
           measure: i,
           severity: 'error',
         });
@@ -280,19 +280,11 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       const direction = bass[i].noteNum > bass[i - 1].noteNum ? 1 : (bass[i].noteNum < bass[i - 1].noteNum ? -1 : 0);
       const isLeap = interval >= 2; // 3rd or larger
 
-      // Forbidden leaps: 7th (interval=6), 9th+ (interval>=8)
-      if (interval === 6) {
+      // 베이스 선율: 음계도 차이 최대 3 (3도 이내 또는 4도 도약). 그 이상 금지.
+      if (interval > 3) {
         violations.push({
           type: 'l3_forbidden_leap',
-          message: `L3: Forbidden 7th leap at note ${i + 1}`,
-          measure: bass[i].measure,
-          severity: 'error',
-        });
-      }
-      if (interval >= 8) {
-        violations.push({
-          type: 'l3_forbidden_leap',
-          message: `L3: Forbidden ${interval + 1}th leap at note ${i + 1}`,
+          message: `L3: Melodic span exceeds 4th (|Δ|=${interval}) at note ${i + 1}`,
           measure: bass[i].measure,
           severity: 'error',
         });

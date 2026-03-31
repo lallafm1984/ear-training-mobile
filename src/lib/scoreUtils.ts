@@ -35,7 +35,7 @@ export interface ScoreState {
   pickupSixteenths?: number;
   /** 붙임줄 비활성화 — 중급 2단계 미만 난이도에서 박 경계 분할·타이 생성 금지 */
   disableTies?: boolean;
-  /** 한 줄(보표 행)에 표시할 마디 수. 기본값 4 */
+  /** 한 줄(시스템)당 마디 수. 미정의면 ABC 생성 시 밀도 기준 2~4마디, WebView는 ABCJS 자동 줄바꿈 */
   barsPerStaff?: number;
 }
 
@@ -1609,33 +1609,40 @@ export function generateAbc(state: ScoreState): string {
 
   let finalAbc = header;
 
+  const bps = state.barsPerStaff;
   let mIdx = 0;
   while (mIdx < numM) {
     const remain = numM - mIdx;
-    let take = Math.min(2, remain);
+    let take: number;
 
-    // ── 동적 개행(Word Wrap) 로직 ──
-    // 남은 마디가 3개 이상이면 밀도를 검사하여 3마디 또는 4마디를 한 줄에 표시할 수 있는지 판단
-    if (remain >= 3) {
-      // 알파벳(음표)과 쉼표(Z, z) 문자의 개수를 세어 밀도를 대략 측정
-      const countNotes = (ms: string[]) => ms.join('').replace(/[^a-gA-GzZ]/g, '').length;
+    if (bps !== undefined && bps > 0) {
+      take = Math.min(bps, remain);
+    } else {
+      take = Math.min(2, remain);
 
-      let bestTake = 2; // 기본 2마디
-      for (let cand = 4; cand >= 3; cand--) {
-        if (remain >= cand) {
-          const notesT = countNotes(tArr.slice(mIdx, mIdx + cand));
-          const notesB = useGrandStaff ? countNotes(bArr.slice(mIdx, mIdx + cand)) : 0;
-          const maxNotes = Math.max(notesT, notesB);
+      // ── 동적 개행(Word Wrap) 로직 ──
+      // 남은 마디가 3개 이상이면 밀도를 검사하여 3마디 또는 4마디를 한 줄에 표시할 수 있는지 판단
+      if (remain >= 3) {
+        // 알파벳(음표)과 쉼표(Z, z) 문자의 개수를 세어 밀도를 대략 측정
+        const countNotes = (ms: string[]) => ms.join('').replace(/[^a-gA-GzZ]/g, '').length;
 
-          // 4마디 허용치 = 최대 22개, 3마디 허용치 = 최대 16개 (너무 촘촘해지지 않도록 조절)
-          const threshold = cand === 4 ? 22 : 16;
-          if (maxNotes <= threshold) {
-            bestTake = cand;
-            break;
+        let bestTake = 2; // 기본 2마디
+        for (let cand = 4; cand >= 3; cand--) {
+          if (remain >= cand) {
+            const notesT = countNotes(tArr.slice(mIdx, mIdx + cand));
+            const notesB = useGrandStaff ? countNotes(bArr.slice(mIdx, mIdx + cand)) : 0;
+            const maxNotes = Math.max(notesT, notesB);
+
+            // 4마디 허용치 = 최대 22개, 3마디 허용치 = 최대 16개 (너무 촘촘해지지 않도록 조절)
+            const threshold = cand === 4 ? 22 : 16;
+            if (maxNotes <= threshold) {
+              bestTake = cand;
+              break;
+            }
           }
         }
+        take = bestTake;
       }
-      take = bestTake;
     }
 
     if (useGrandStaff) {
