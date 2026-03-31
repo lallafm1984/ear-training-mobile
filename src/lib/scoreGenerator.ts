@@ -29,7 +29,7 @@ export type Difficulty =
   | 'intermediate_1' | 'intermediate_2' | 'intermediate_3'
   | 'advanced_1' | 'advanced_2' | 'advanced_3';
 
-export type BassDifficulty = 'bass_1' | 'bass_2' | 'bass_3'; // | 'bass_4' | 'bass_5' | 'bass_6' | 'bass_7' | 'bass_8' | 'bass_9'
+export type BassDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4'; // | 'bass_5' | 'bass_6' | 'bass_7' | 'bass_8' | 'bass_9'
 
 /** 상위 카테고리 */
 export type DifficultyCategory = 'beginner' | 'intermediate' | 'advanced';
@@ -144,7 +144,7 @@ function getMinorLeadingToneAccidental(keySignature: string, seventhDegree: Pitc
 // ────────────────────────────────────────────────────────────────
 
 export const BASS_DIFF_LABELS: Record<BassDifficulty, string> = {
-  bass_1: '1단계', bass_2: '2단계', bass_3: '3단계',
+  bass_1: '1단계', bass_2: '2단계', bass_3: '3단계', bass_4: '4단계',
   // bass_7: '7단계', bass_8: '8단계', bass_9: '9단계',
 };
 
@@ -152,6 +152,7 @@ export const BASS_DIFF_DESC: Record<BassDifficulty, string> = {
   bass_1: '지속음 — 한 음만 유지',
   bass_2: '2분음표',
   bass_3: '2분음표 + 4분음표',
+  bass_4: '순차 + 4도 도약',
 };
 
 interface BassLevelParams {
@@ -166,7 +167,8 @@ interface BassLevelParams {
     | 'syncopated'     // 8단: 싱코페이션 (박마다 쉼표·근음 교차)
     | 'contrary'       // 9단: 반진행 (트레블 반대 방향)
     | 'harmonic_half'  // 2단: 2분음표 협화 베이스
-    | 'harmonic_mixed'; // 3단: 2분음표 + 4분음표 협화 베이스
+    | 'harmonic_mixed' // 3단: 2분음표 + 4분음표 협화 베이스
+    | 'step_with_fourth'; // 4단: 순차 + 3도 이내 + 4도 도약 (4마디당 1~2회)
   durationPool: number[];
   minDur: number;
 }
@@ -175,6 +177,7 @@ const BASS_LEVEL_PARAMS: Record<BassDifficulty, BassLevelParams> = {
   bass_1: { mode: 'pedal',           durationPool: [16, 8], minDur: 8 },
   bass_2: { mode: 'harmonic_half',   durationPool: [8],     minDur: 8 },
   bass_3: { mode: 'harmonic_mixed',  durationPool: [8, 4],  minDur: 4 },
+  bass_4: { mode: 'step_with_fourth', durationPool: [8, 4], minDur: 4 },
   // bass_6: { mode: 'arpeggio',      durationPool: [2],     minDur: 2 },
   // bass_7: { mode: 'inversion',     durationPool: [4, 2],  minDur: 2 },
   // bass_8: { mode: 'syncopated',    durationPool: [4, 2],  minDur: 2 },
@@ -755,6 +758,59 @@ function scaleNoteToNn(
 }
 
 // ────────────────────────────────────────────────────────────────
+// ★ 후처리: 단조 대사관계(False Relation / Cross-Relation) 방지
+// ────────────────────────────────────────────────────────────────
+/**
+ * 단조에서 트레블이 올린 7음(이끔음)을 연주하는 박자에 베이스가 내린 7음(자연단음계)을
+ * 동시 또는 인접 박자에서 연주하면 대사관계(cross-relation)가 발생.
+ * 해당 베이스 음을 근음(1도)으로 교체하여 해결.
+ */
+function fixMinorCrossRelation(
+  treble: ScoreNote[], bass: ScoreNote[],
+  scale: PitchName[], seventhDeg: PitchName, leadingAcc: Accidental,
+  bassBase: number, keySignature: string, sixteenthsPerBar: number,
+): void {
+  if (!leadingAcc || bass.length === 0) return;
+
+  // 트레블/베이스 공격점 타임라인 구축
+  const trebleAttacks: { offset: number; idx: number; note: ScoreNote }[] = [];
+  const bassAttacks: { offset: number; idx: number; note: ScoreNote }[] = [];
+  let off = 0;
+  for (let i = 0; i < treble.length; i++) {
+    trebleAttacks.push({ offset: off, idx: i, note: treble[i] });
+    off += durationToSixteenths(treble[i].duration);
+  }
+  off = 0;
+  for (let i = 0; i < bass.length; i++) {
+    bassAttacks.push({ offset: off, idx: i, note: bass[i] });
+    off += durationToSixteenths(bass[i].duration);
+  }
+
+  // 트레블에서 올린 7음 사용 위치 수집
+  const raisedOffsets = new Set<number>();
+  for (const ta of trebleAttacks) {
+    if (ta.note.pitch === seventhDeg && ta.note.accidental === leadingAcc) {
+      raisedOffsets.add(ta.offset);
+    }
+  }
+  if (raisedOffsets.size === 0) return;
+
+  // 베이스에서 내린 7음(자연단음계 7음, 임시표 없음)이 동시 또는 ±1박 이내에 있으면 교체
+  const tonicPitch = scale[0];
+  for (const ba of bassAttacks) {
+    if (ba.note.pitch !== seventhDeg || ba.note.accidental !== '') continue;
+    // 동시 또는 인접 박자 확인
+    const beatLen = sixteenthsPerBar >= 12 ? 6 : 4; // 복합박자 6, 단순박자 4
+    const hasCrossRelation = [...raisedOffsets].some(ro => Math.abs(ro - ba.offset) <= beatLen);
+    if (!hasCrossRelation) continue;
+    // 근음으로 교체
+    const { octave } = noteNumToNote(0, scale, bassBase);
+    const oct = Math.max(2, Math.min(4, octave));
+    bass[ba.idx] = { ...ba.note, pitch: tonicPitch, octave: oct };
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
 // ★ 종지 쉼표 — 마지막 마디 하드코딩
 // ────────────────────────────────────────────────────────────────
 function generateCadenceMeasure(
@@ -1100,6 +1156,27 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   let prevBassMidi: number | undefined = undefined;
   let prevBassDir = 0;
 
+  // bass_4: 4마디당 1~2회 4도 도약할 마디 인덱스 집합
+  let bassLeapBarsSet: Set<number> | undefined;
+  if (bassDifficulty === 'bass_4') {
+    bassLeapBarsSet = new Set<number>();
+    const actualBars = measures - 1; // 종지 마디 제외
+    for (let g = 0; g < actualBars; g += 4) {
+      const groupEnd = Math.min(g + 4, actualBars);
+      const groupSize = groupEnd - g;
+      if (groupSize <= 0) break;
+      const leapCount = 1 + (Math.random() < 0.5 ? 1 : 0); // 1~2회
+      const indices = Array.from({ length: groupSize }, (_, i) => g + i);
+      // 셔플 후 앞에서 leapCount개 선택
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      for (let i = 0; i < Math.min(leapCount, groupSize); i++) {
+        bassLeapBarsSet.add(indices[i]);
+      }
+    }
+  }
 
   if (measures < 1) throw new Error('measures must be >= 1');
   if (!timeSignature || !timeSignature.includes('/')) throw new Error(`Invalid timeSignature: ${timeSignature}`);
@@ -1173,8 +1250,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     effectiveTrebleMax--;
   }
 
+  // 2성부 + TREBLE_BASE=3 인 조: 트레블이 옥타브3에 내려가면 베이스와 겹침
+  // → octave 4 이상만 사용하도록 최소 nn 설정 (Am:2→C4, Gm:3→C4, Bm:1→C#4)
+  const trebleRangeMin = (useGrandStaff && TREBLE_BASE <= 3) ? (7 - rootIdx) : 0;
+
   // 시작: 으뜸3화음 위주 + 5·7도로 초기 위치를 약간 높여 높은음자리 중·상단 비중 확보
-  let nn              = rand([0, 2, 4, 5, 7]);
+  const startCandidates = [0, 2, 4, 5, 7].filter(n => n >= trebleRangeMin);
+  let nn              = rand(startCandidates.length > 0 ? startCandidates : [trebleRangeMin]);
   let prevDir         = 0;
   let prevInterval    = 0;
   let pendingResolution: PitchName | null = null;
@@ -1236,7 +1318,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         const degIdx = scale.indexOf(rp);
         if (degIdx >= 0) {
           nn = Math.round(nn / 7) * 7 + degIdx;
-          nn = Math.max(0, Math.min(effectiveTrebleMax, nn));
+          nn = Math.max(trebleRangeMin, Math.min(effectiveTrebleMax, nn));
         }
         const { pitch, octave } = noteNumToNote(nn, scale, TREBLE_BASE);
         trebleNotes.push(makeNote(pitch, octave, durLabel));
@@ -1251,7 +1333,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         // 음역 경계 우선: 천장·바닥에서 항상 안쪽으로 이동 — 경계 반복음 방지
         if (nn >= effectiveTrebleMax) {
           interval = rand([-1, -2]);
-        } else if (nn <= 0) {
+        } else if (nn <= trebleRangeMin) {
           interval = rand([1, 2]);
         } else
         // 도약 후 반대방향 순차진행으로 보정 (문서 ②번 규칙)
@@ -1281,7 +1363,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         nn += interval;
 
         // ── 선율 규칙 파이프라인 (1성부 가이드라인) ──
-        const rangeMin = 0;
+        const rangeMin = trebleRangeMin;
         const rangeMax = effectiveTrebleMax;
 
         // Rule 2: 증/감음정 금지 (전 레벨)
@@ -1388,8 +1470,8 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           // 경계 근처에서 같은 방향 이동 시 반전 — 셋잇단 내 동일음 반복 방지
           let delta = rand([1, -1, 2, -2]);
           if (nn >= effectiveTrebleMax - 1 && delta > 0) delta = -delta;
-          if (nn <= 1 && delta < 0) delta = -delta;
-          nn = Math.max(0, Math.min(effectiveTrebleMax, nn + delta));
+          if (nn <= trebleRangeMin + 1 && delta < 0) delta = -delta;
+          nn = Math.max(trebleRangeMin, Math.min(effectiveTrebleMax, nn + delta));
           return noteNumToNote(nn, scale, TREBLE_BASE);
         }, dur, params.tripletProb);
         if (tripResult.inserted) { prevFinalNn = nn; consecutiveSame = 0; tripletBudget--; barPos += dur; continue; }
@@ -1461,6 +1543,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
           measures,
           nextChord,
           prevBassDir,
+          bassLeapBarsSet,
         );
         prevBassNn = bassBar.prevBassNn;
         prevBassMidi = bassBar.lastMidi;
@@ -1522,6 +1605,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   // ── 후처리: 연속 동일음 3회 이상 방지 (안전망) ──
   // 생성 루프의 bypass 경로(해결음·이끔음·임시표·타이)에서 누락된 연속 체크 보완
   fixConsecutiveRepeats(finalTreble, scale, TREBLE_BASE, keySignature);
+
+  // ── 후처리: 단조 대사관계(False Relation) 방지 ──
+  // 트레블이 올린 7음(이끔음, e.g. G#)을 쓰는 동시에 베이스가 내린 7음(G♮)을 연주하면
+  // 귀에 거슬리는 대사(cross-relation) 발생 → 베이스 음을 근음이나 5음으로 교체
+  if (isMinor && useGrandStaff && minorSeventhDeg) {
+    fixMinorCrossRelation(finalTreble, finalBass, scale, minorSeventhDeg, minorLeadingAcc, BASS_BASE, keySignature, sixteenthsPerBar);
+  }
 
   // ── ★ 최종 검토: 비활성화 (reviewAndFixScore 연쇄 보정이 선율 품질 저하 유발) ──
   // const reviewed = reviewAndFixScore(
@@ -2916,6 +3006,118 @@ function generateBassForBar(
         mOff += mRhythm[j];
       }
       return { prevBassNn: bnn, lastMidi: prevMidiTrack, prevBassDir: 0 };
+    }
+
+    // ── 4단: 순차 + 3도 이내 도약 + 4도 도약 (4마디당 1~2회) ──────
+    case 'step_with_fourth': {
+      // 박자별 리듬 결정: 2분+4분 혼합 (bass_3과 동일 리듬)
+      const [sfTopStr, sfBotStr] = timeSignature.split('/');
+      const sfTop = parseInt(sfTopStr, 10) || 4;
+      const sfBot = parseInt(sfBotStr, 10) || 4;
+      const isSfCompound = sfBot === 8 && sfTop % 3 === 0 && sfTop >= 6;
+      let sfRhythm: number[];
+      if (isSfCompound) {
+        const n = Math.round(sixteenthsPerBar / 6);
+        sfRhythm = Array(n).fill(6);
+        const rem = sixteenthsPerBar - n * 6;
+        if (rem > 0) sfRhythm.push(rem);
+      } else if (sfTop === 4 && sfBot === 4) {
+        sfRhythm = Math.random() < 0.5 ? [8, 8] : [8, 4, 4];
+      } else if (sfTop === 3 && sfBot === 4) {
+        sfRhythm = [8, 4];
+      } else if (sfTop === 2 && sfBot === 4) {
+        sfRhythm = [8];
+      } else {
+        sfRhythm = [];
+        let rem = sixteenthsPerBar;
+        while (rem > 0) { const c = Math.min(8, rem); sfRhythm.push(c); rem -= c; }
+      }
+
+      const sfSlots = sfRhythm.length;
+      const isLeapBar = leapBarsSet?.has(barIndex) ?? false;
+
+      // 시작음 결정
+      let sfCurrent: number;
+      let sfDir: number;
+
+      if (barIndex === 0) {
+        sfCurrent = snapToChordTone(rand([0, 2, 4, -3]));
+        sfDir = Math.random() < 0.5 ? -1 : 1;
+      } else {
+        sfDir = prevBassDir === 0 ? (Math.random() < 0.5 ? 1 : -1) : prevBassDir;
+        if (prevBassNn >= 3) sfDir = -1;
+        else if (prevBassNn <= -4) sfDir = 1;
+        else if (Math.random() < 0.2) sfDir = -sfDir;
+
+        sfCurrent = prevBassNn + sfDir;
+        if (sfCurrent > 4) { sfCurrent = prevBassNn - 1; sfDir = -1; }
+        if (sfCurrent < -5) { sfCurrent = prevBassNn + 1; sfDir = 1; }
+        sfCurrent = Math.max(-5, Math.min(4, sfCurrent));
+        sfCurrent = snapToChordTone(sfCurrent);
+      }
+
+      // 시퀀스 생성
+      const sfSequence: number[] = [sfCurrent];
+      // 4도 도약을 적용할 슬롯 (도약 마디일 때, 슬롯이 2개 이상이면 랜덤 슬롯 선택)
+      const leapSlot = isLeapBar && sfSlots >= 2
+        ? 1 + Math.floor(Math.random() * (sfSlots - 1)) // 첫 슬롯 제외
+        : -1;
+
+      for (let s = 1; s < sfSlots; s++) {
+        let next: number;
+        if (s === leapSlot) {
+          // 4도 도약: 현재 위치에서 ±3 (diatonic 4th)
+          const leapDir = sfDir;
+          next = sfCurrent + leapDir * 3;
+          // 음역 벗어나면 반대 방향
+          if (next > 4 || next < -5) next = sfCurrent - leapDir * 3;
+          next = Math.max(-5, Math.min(4, next));
+          next = snapToChordTone(next);
+        } else {
+          // 순차 또는 3도 이내 도약
+          const stepSize = Math.random() < 0.6 ? 1 : 2; // 60% 순차(2도), 40% 3도
+          next = sfCurrent + sfDir * stepSize;
+          // 경계 반전
+          if (next > 4) { next = sfCurrent - stepSize; sfDir = -1; }
+          if (next < -5) { next = sfCurrent + stepSize; sfDir = 1; }
+          next = Math.max(-5, Math.min(4, next));
+          next = snapToChordTone(next);
+        }
+        // 같은 음 반복 방지
+        if (next === sfSequence[s - 1] && sfSlots > 1) {
+          next = next + sfDir;
+          if (next > 4 || next < -5) next = sfSequence[s - 1] - sfDir;
+          next = Math.max(-5, Math.min(4, next));
+          next = snapToChordTone(next);
+        }
+        sfCurrent = next;
+        sfSequence.push(next);
+      }
+
+      // emit — directed_step과 동일한 패턴 보존 emit
+      let sfLastBnn = sfSequence[0];
+      let sfOff = bassOff;
+      for (let j = 0; j < sfRhythm.length; j++) {
+        const seqBnn = j < sfSequence.length ? sfSequence[j] : sfSequence[sfSequence.length - 1];
+        const n = Math.max(-5, Math.min(4, seqBnn));
+        const durLabel = SIXTEENTHS_TO_DUR[sfRhythm[j]] || '4';
+        const { pitch, octave } = noteNumToNote(n, scale, BASS_BASE);
+        let oct = Math.max(2, Math.min(3, octave));
+        let note = makeNote(pitch, oct, durLabel);
+        const clashMidi = trebleAttackMap.get(sfOff);
+        if (clashMidi !== undefined) {
+          const bassMidi = noteToMidiWithKey(note, keySignature);
+          if (bassMidi === clashMidi || clashMidi - bassMidi < MIN_TREBLE_BASS_SEMITONES) {
+            note = makeNote(pitch, Math.max(2, oct - 1), durLabel);
+          }
+        }
+        note = fixParallelPerfect(n, note, durLabel, sfOff, prevMidiTrack, trebleAttackMap, scale, BASS_BASE, keySignature);
+        prevMidiTrack = noteToMidiWithKey(note, keySignature);
+        bassNotes.push(note);
+        if (j < sfSequence.length) sfLastBnn = sfSequence[j];
+        sfOff += sfRhythm[j];
+      }
+      return { prevBassNn: sfLastBnn, lastMidi: prevMidiTrack, prevBassDir: sfDir };
     }
 
     // ── 6단: 분산화음 arpeggio (미사용 — 주석 처리) ─────────────

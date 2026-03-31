@@ -49,7 +49,7 @@ const DIFF_LABELS: Record<Difficulty, string> = {
 };
 
 const BASS_LABELS: Record<BassDifficulty, string> = {
-  bass_1: '베이스1(지속음)', bass_2: '베이스2(2분)', bass_3: '베이스3(2분+4분)',
+  bass_1: '베이스1(지속음)', bass_2: '베이스2(2분)', bass_3: '베이스3(2분+4분)', bass_4: '베이스4(순차+4도)',
 };
 
 // ── 검증 ──
