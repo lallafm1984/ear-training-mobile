@@ -271,27 +271,33 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
   }
 
   if (opts.bassLevel === 3) {
+    // L3: 5th (scale step 4) allowed, max 1 per 4 bars
     let sameDirectionLeaps = 0;
-    let prevDirection = 0; // -1 down, 0 none, 1 up
+    let prevDirection = 0;
+    const notesPerBar = BASS_DURATION_MAP[opts.timeSig].notesPerBar.level3;
+    const blockSize = 4 * notesPerBar;
+
+    // Count 5th leaps per 4-bar block
+    const fifthLeapsByBlock = new Map<number, number>();
 
     for (let i = 1; i < bass.length; i++) {
       const interval = scaleDegreeInterval(bass[i].noteNum, bass[i - 1].noteNum);
       const semitones = estimateSemitones(bass[i - 1].noteNum, bass[i].noteNum, opts.mode);
       const direction = bass[i].noteNum > bass[i - 1].noteNum ? 1 : (bass[i].noteNum < bass[i - 1].noteNum ? -1 : 0);
-      const isLeap = interval >= 2; // 3rd or larger
+      const isLeap = interval >= 2;
 
-      // 베이스 선율: 음계도 차이 최대 3 (3도 이내 또는 4도 도약). 그 이상 금지.
-      if (interval > 3) {
+      // Max span: 5th (scale step 4)
+      if (interval > 4) {
         violations.push({
           type: 'l3_forbidden_leap',
-          message: `L3: Melodic span exceeds 4th (|Δ|=${interval}) at note ${i + 1}`,
+          message: `L3: Melodic span exceeds 5th (|Δ|=${interval}) at note ${i + 1}`,
           measure: bass[i].measure,
           severity: 'error',
         });
       }
 
-      // Forbidden aug4/aug5 (tritone = 6 semitones with interval 3-4)
-      if (semitones === 6 && interval >= 3 && interval <= 4) {
+      // Tritone / aug5 forbidden
+      if (semitones === 6 && interval >= 3) {
         violations.push({
           type: 'l3_forbidden_leap',
           message: `L3: Forbidden augmented interval (tritone) at note ${i + 1}`,
@@ -300,24 +306,18 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
         });
       }
 
-      // After 4th+ leap: compensating motion (opposite direction)
-      if (isLeap && interval >= 3 && i + 1 < bass.length) { // 4th = interval 3
-        const nextDirection = bass[i + 1].noteNum > bass[i].noteNum ? 1 : (bass[i + 1].noteNum < bass[i].noteNum ? -1 : 0);
-        if (nextDirection !== 0 && nextDirection === direction) {
-          // No compensation — check if this is an arpeggio (allowed up to 3)
-          // We'll track same-direction leaps below
-        }
-        // The compensation check: after a 4th+ leap, the next move should be opposite
-        if (interval >= 3 && nextDirection === direction) {
-          // This will be caught by consecutive same-direction leap limit
-        }
+      // Track 5th leaps per 4-bar block
+      if (interval === 4) {
+        const noteIndex = i;
+        const blockIdx = Math.floor(noteIndex / blockSize);
+        fifthLeapsByBlock.set(blockIdx, (fifthLeapsByBlock.get(blockIdx) || 0) + 1);
       }
 
       // Same-direction consecutive leaps
       if (isLeap && direction !== 0) {
         if (direction === prevDirection) {
           sameDirectionLeaps++;
-          if (sameDirectionLeaps > 2) { // More than 2 = 3+ consecutive same-direction leaps
+          if (sameDirectionLeaps > 2) {
             violations.push({
               type: 'l3_consecutive_leaps',
               message: `L3: ${sameDirectionLeaps + 1} consecutive same-direction leaps at note ${i + 1}`,
@@ -334,15 +334,15 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
         prevDirection = 0;
       }
 
-      // Augmented 2nd: only ascending allowed in harmonic minor
+      // Augmented 2nd forbidden at L3
       if (opts.mode === 'harmonic_minor') {
         const degA = ((bass[i - 1].noteNum % 7) + 7) % 7;
         const degB = ((bass[i].noteNum % 7) + 7) % 7;
-        // Descending aug2: degree 6 → degree 5
-        if (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum) {
+        if ((degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
+            (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)) {
           violations.push({
-            type: 'l3_descending_aug2',
-            message: `L3: Descending augmented 2nd (#7→6) at note ${i + 1}`,
+            type: 'l3_augmented_second',
+            message: `L3: Augmented 2nd at note ${i + 1}`,
             measure: bass[i].measure,
             severity: 'error',
           });
@@ -350,16 +350,27 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       }
     }
 
-    // 4th+ leap compensation check (separate pass)
+    // Check 5th leap frequency: max 1 per 4-bar block
+    for (const [blockIdx, count] of fifthLeapsByBlock) {
+      if (count > 1) {
+        violations.push({
+          type: 'l3_fifth_leap_frequency',
+          message: `L3: ${count} fifth leaps in 4-bar block ${blockIdx + 1} (max 1)`,
+          severity: 'warning',
+        });
+      }
+    }
+
+    // 4th+ leap compensation check
     for (let i = 1; i < bass.length - 1; i++) {
       const interval = scaleDegreeInterval(bass[i].noteNum, bass[i - 1].noteNum);
-      if (interval >= 3) { // 4th or larger
+      if (interval >= 3) {
         const leapDir = bass[i].noteNum > bass[i - 1].noteNum ? 1 : -1;
         const nextDir = bass[i + 1].noteNum > bass[i].noteNum ? 1 : (bass[i + 1].noteNum < bass[i].noteNum ? -1 : 0);
         if (nextDir !== 0 && nextDir !== -leapDir) {
           violations.push({
             type: 'l3_no_compensation',
-            message: `L3: No compensating motion after ${interval + 1}th leap at note ${i + 1}`,
+            message: `L4: No compensating motion after ${interval + 1}th leap at note ${i + 1}`,
             measure: bass[i].measure,
             severity: 'warning',
           });

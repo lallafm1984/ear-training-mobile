@@ -1816,6 +1816,12 @@ export function generateProgression(measures: number, isMinor: boolean = false):
       if (result.length < measures) result.push(c);
     }
   }
+  // 반종지: 4마디 프레이즈 경계에 V (8마디 이상)
+  if (measures >= 8) {
+    for (let i = 3; i < measures - 1; i += 4) {
+      result[i] = 4; // V — half cadence
+    }
+  }
   if (measures >= 2) {
     result[measures - 2] = 4;   // V (dominant) — 종지 전
     result[measures - 1] = 0;   // I/i (tonic) — 종지

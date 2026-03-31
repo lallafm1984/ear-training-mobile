@@ -155,7 +155,7 @@ export const BASS_DIFF_LABELS: Record<BassDifficulty, string> = {
 export const BASS_DIFF_DESC: Record<BassDifficulty, string> = {
   bass_1: '지속음 — 마디당 한 음 유지',
   bass_2: '순차진행 — 2도 순차 이동만',
-  bass_3: '순차+도약 — 혼합 진행',
+  bass_3: '순차+도약 — 간헐적 5도 포함',
 };
 
 interface BassLevelParams {
