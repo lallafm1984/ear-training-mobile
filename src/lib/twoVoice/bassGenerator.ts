@@ -56,8 +56,14 @@ function isInRange(noteNum: number, level: BassLevel, ctx: BassGenContext): bool
 
 function clampToRange(noteNum: number, level: BassLevel, ctx: BassGenContext): number {
   if (isInRange(noteNum, level, ctx)) return noteNum;
+  // 옥타브 단위 시프트 시도
   for (const shift of [-7, 7, -14, 14]) {
     if (isInRange(noteNum + shift, level, ctx)) return noteNum + shift;
+  }
+  // 옥타브 시프트 실패 시 가장 가까운 범위 내 nn 탐색
+  for (let d = 1; d <= 14; d++) {
+    if (isInRange(noteNum - d, level, ctx)) return noteNum - d;
+    if (isInRange(noteNum + d, level, ctx)) return noteNum + d;
   }
   return noteNum;
 }
@@ -116,6 +122,32 @@ function isAugmentedSecond(fromNN: number, toNN: number, _ctx: BassGenContext): 
   // Descending: degree 6 -> degree 5 (raised 7th -> 6th)
   if (degFrom === 6 && degTo === 5 && toNN < fromNN) return true;
   return false;
+}
+
+/**
+ * 증2도 회피: 같은 방향으로 2도 건너뛰거나, 반대 방향으로 1도 이동.
+ * prevNN에 머무는(같은음 반복) 대신 항상 이동을 보장한다.
+ */
+function resolveAugSecond(
+  prevNN: number, currentNN: number, level: BassLevel, ctx: BassGenContext,
+): number {
+  const dir = currentNN > prevNN ? 1 : -1;
+  // Option 1: 같은 방향 2도 건너뛰기 (예: deg5→deg0′, deg6→deg4)
+  const skipNN = prevNN + dir * 2;
+  if (isInRange(skipNN, level, ctx) && !isAugmentedSecond(prevNN, skipNN, ctx)) {
+    return skipNN;
+  }
+  // Option 2: 반대 방향 1도
+  const revNN = prevNN - dir;
+  if (isInRange(revNN, level, ctx)) {
+    return revNN;
+  }
+  // Option 3: 같은 방향 3도 (4도 도약)
+  const skip3 = prevNN + dir * 3;
+  if (isInRange(skip3, level, ctx) && !isForbiddenLeap(prevNN, skip3, ctx)) {
+    return skip3;
+  }
+  return prevNN;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -387,11 +419,7 @@ function generateBassLevel2(
         if (mode === 'harmonic_minor' && notes.length > 0) {
           const prevNN = notes[notes.length - 1].noteNum;
           if (isAugmentedSecond(prevNN, currentNN, ctx)) {
-            const dir = currentNN > prevNN ? 1 : -1;
-            currentNN = prevNN - dir;
-            if (!isInRange(currentNN, 2, ctx)) {
-              currentNN = prevNN;
-            }
+            currentNN = resolveAugSecond(prevNN, currentNN, 2, ctx);
           }
         }
 
@@ -415,7 +443,7 @@ function generateBassLevel2(
             currentNN = prevNN + dir;
           }
           if (mode === 'harmonic_minor' && isAugmentedSecond(prevNN, currentNN, ctx)) {
-            currentNN = prevNN;
+            currentNN = resolveAugSecond(prevNN, currentNN, 2, ctx);
           }
         }
       }
@@ -450,7 +478,6 @@ function generateBassLevel3(
   ctx: BassGenContext,
 ): BassNote[] {
   const { timeSig, measures, mode } = opts;
-  const scaleInfo = getScaleInfo(opts.key, mode);
   const durationInfo = BASS_DURATION_MAP[timeSig];
   const noteDuration = durationInfo.level2;
   const notesPerBar = durationInfo.notesPerBar.level3;
@@ -544,12 +571,11 @@ function generateBassLevel3(
       }
 
       if (!didLeap) {
-        // Harmonic minor: 증2도 회피 (하행만 금지)
+        // Harmonic minor: 증2도 회피
         if (mode === 'harmonic_minor' && notes.length > 0) {
           const prevNN = notes[notes.length - 1].noteNum;
-          if (isAugmentedSecond(prevNN, currentNN, ctx) && currentNN < prevNN) {
-            currentNN = prevNN - 2;
-            if (!isInRange(currentNN, 3, ctx)) currentNN = prevNN;
+          if (isAugmentedSecond(prevNN, currentNN, ctx)) {
+            currentNN = resolveAugSecond(prevNN, currentNN, 3, ctx);
           }
         }
 
@@ -562,7 +588,7 @@ function generateBassLevel3(
             currentNN = prevNN + dir;
           }
           if (mode === 'harmonic_minor' && isAugmentedSecond(prevNN, currentNN, ctx)) {
-            currentNN = prevNN;
+            currentNN = resolveAugSecond(prevNN, currentNN, 3, ctx);
           }
         }
       }
@@ -584,6 +610,7 @@ function generateBassLevel3(
   }
 
   if (mode === 'harmonic_minor') {
+    const scaleInfo = getScaleInfo(opts.key, mode);
     applyLeadingToneResolution(notes, scaleInfo.leadingToneIndex);
   }
 

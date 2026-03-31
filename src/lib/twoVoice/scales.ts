@@ -36,6 +36,8 @@ export const MAJOR_SCALES: Record<string, ScaleInfo> = {
   'Ab': { notes: ['Ab', 'Bb', 'C', 'Db', 'Eb', 'F', 'G', 'Ab'],  leadingToneIndex: 6 },
   'Db': { notes: ['Db', 'Eb', 'F', 'Gb', 'Ab', 'Bb', 'C', 'Db'], leadingToneIndex: 6 },
   'Gb': { notes: ['Gb', 'Ab', 'Bb', 'Cb', 'Db', 'Eb', 'F', 'Gb'], leadingToneIndex: 6 },
+  'F#': { notes: ['F#', 'G#', 'A#', 'B', 'C#', 'D#', 'E#', 'F#'], leadingToneIndex: 6 },
+  'C#': { notes: ['C#', 'D#', 'E#', 'F#', 'G#', 'A#', 'B#', 'C#'], leadingToneIndex: 6 },
 };
 
 // ── Harmonic minor scales (11 keys) ────────────────────────────
@@ -52,6 +54,10 @@ export const HARMONIC_MINOR_SCALES: Record<string, ScaleInfo> = {
   'C#m': { notes: ['C#', 'D#', 'E', 'F#', 'G#', 'A', 'B#', 'C#'],  leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
   'Bbm': { notes: ['Bb', 'C', 'Db', 'Eb', 'F', 'Gb', 'A', 'Bb'],   leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
   'Ebm': { notes: ['Eb', 'F', 'Gb', 'Ab', 'Bb', 'Cb', 'D', 'Eb'],  leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
+  'G#m': { notes: ['G#', 'A#', 'B', 'C#', 'D#', 'E', 'F##', 'G#'], leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
+  'D#m': { notes: ['D#', 'E#', 'F#', 'G#', 'A#', 'B', 'C##', 'D#'], leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
+  'A#m': { notes: ['A#', 'B#', 'C#', 'D#', 'E#', 'F#', 'G##', 'A#'], leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
+  'Abm': { notes: ['Ab', 'Bb', 'Cb', 'Db', 'Eb', 'Fb', 'G', 'Ab'],  leadingToneIndex: 6, augmentedSecondIndices: [5, 6] },
 };
 
 /**
@@ -139,7 +145,7 @@ export const MEASURE_TOTAL: Record<TimeSignature, number> = {
  * Level 3: E, ~ G  => MIDI 40..55
  */
 export const BASS_RANGE: Record<1 | 2 | 3, { low: number; high: number }> = {
-  1: { low: 40, high: 48 },
+  1: { low: 40, high: 55 },
   2: { low: 40, high: 55 },
   3: { low: 40, high: 55 },
 };

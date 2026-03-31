@@ -547,6 +547,7 @@ function findDiatonicConsonantReplacement(
   const found: Cand[] = [];
 
   for (let oct = note.octave - 3; oct <= note.octave + 3; oct++) {
+    if (oct < 3) continue; // 트레블 최소 옥타브 보호
     for (const sp of scale) {
       const midi = diatonicMidiForScalePitch(sp, oct, keySignature);
       if (midi <= bassMidi) continue;
@@ -647,6 +648,7 @@ function fixTrebleDissonance(
     }
   }
 
+  if (newOctave < 3) return false; // 트레블 최소 옥타브 보호
   treble[trebleIdx] = {
     ...note,
     pitch: bestPitch,
@@ -688,27 +690,23 @@ function fixParallelPerfectCorrection(
     const note = treble[tIdx];
     if (note.pitch === 'rest') continue;
 
-    const PITCH_SEMITONES: Record<string, number> = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-    };
     const scaleIdx = scale.indexOf(note.pitch as PitchName);
     if (scaleIdx < 0) continue;
 
     const primaryDir = trebleDir > 0 ? -1 : 1;
     const shifts = [primaryDir, -primaryDir, primaryDir * 2, -primaryDir * 2, primaryDir * 3];
     let fixed = false;
+    const origMidi = diatonicMidiForScalePitch(note.pitch, note.octave, keySignature);
 
     for (const shift of shifts) {
       const candScaleIdx = ((scaleIdx + shift) % scale.length + scale.length) % scale.length;
       const candPitch = scale[candScaleIdx] as PitchName;
-      const origSem = PITCH_SEMITONES[note.pitch] ?? 0;
-      const candSem = PITCH_SEMITONES[candPitch] ?? 0;
       let candOctave = note.octave;
-      const origMidi = (note.octave + 1) * 12 + origSem;
-      let candMidi = (candOctave + 1) * 12 + candSem;
+      let candMidi = diatonicMidiForScalePitch(candPitch, candOctave, keySignature);
       if (shift > 0 && candMidi <= origMidi) candOctave++;
       if (shift < 0 && candMidi >= origMidi) candOctave--;
-      candMidi = (candOctave + 1) * 12 + candSem;
+      candMidi = diatonicMidiForScalePitch(candPitch, candOctave, keySignature);
+      if (candOctave < 3) continue;
 
       // 베이스와 불협화 확인
       const candPcCheck = pitchClassInterval(pair.curBass.midi, candMidi);
@@ -771,9 +769,6 @@ function fixParallelPerfectAtStrongBeats(
   }
 
   let fixCount = 0;
-  const PITCH_SEMITONES: Record<string, number> = {
-    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-  };
 
   for (let i = 1; i < beatPairs.length; i++) {
     const prev = beatPairs[i - 1];
@@ -808,18 +803,13 @@ function fixParallelPerfectAtStrongBeats(
       const candScaleIdx = ((scaleIdx + shift) % scale.length + scale.length) % scale.length;
       const candPitch = scale[candScaleIdx] as PitchName;
 
-      const origSem = PITCH_SEMITONES[note.pitch] ?? 0;
-      const candSem = PITCH_SEMITONES[candPitch] ?? 0;
       let candOctave = note.octave;
-      // 옥타브 넘김 보정
-      if (shift > 0 && candSem < origSem) candOctave += Math.ceil(shift / scale.length) || (candSem < origSem ? 1 : 0);
-      if (shift < 0 && candSem > origSem) candOctave -= Math.ceil(-shift / scale.length) || (candSem > origSem ? 1 : 0);
-      // 단순 보정: 반음 기준 방향 체크
-      const origMidi = (note.octave + 1) * 12 + origSem;
-      let candMidi = (candOctave + 1) * 12 + candSem;
+      const origMidi = diatonicMidiForScalePitch(note.pitch, note.octave, keySignature);
+      let candMidi = diatonicMidiForScalePitch(candPitch, candOctave, keySignature);
       if (shift > 0 && candMidi <= origMidi) candOctave++;
       if (shift < 0 && candMidi >= origMidi) candOctave--;
-      candMidi = (candOctave + 1) * 12 + candSem;
+      candMidi = diatonicMidiForScalePitch(candPitch, candOctave, keySignature);
+      if (candOctave < 3) continue;
 
       // 베이스와 불협화 확인
       const candPc = pitchClassInterval(cur.bassEvent.midi, candMidi);
@@ -884,10 +874,6 @@ function fixHiddenPerfectCorrection(
     const note = treble[tIdx];
     if (note.pitch === 'rest') continue;
 
-    const PITCH_SEMITONES: Record<string, number> = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-    };
-
     // Find the previous treble's scale position and step from there
     const prevNote = treble[pair.prevTreble.index];
     const prevScaleIdx = scale.indexOf(prevNote.pitch as PitchName);
@@ -898,14 +884,15 @@ function fixHiddenPerfectCorrection(
     const newScaleIdx = ((prevScaleIdx + stepDir) % scale.length + scale.length) % scale.length;
     const newPitch = scale[newScaleIdx] as PitchName;
 
-    const oldSem = PITCH_SEMITONES[prevNote.pitch] ?? 0;
-    const newSem = PITCH_SEMITONES[newPitch] ?? 0;
+    const prevMidi = diatonicMidiForScalePitch(prevNote.pitch, prevNote.octave, keySignature);
     let newOctave = prevNote.octave;
-    if (stepDir > 0 && newSem < oldSem) newOctave++;
-    if (stepDir < 0 && newSem > oldSem) newOctave--;
+    let newMidiCheck = diatonicMidiForScalePitch(newPitch, newOctave, keySignature);
+    if (stepDir > 0 && newMidiCheck <= prevMidi) newOctave++;
+    if (stepDir < 0 && newMidiCheck >= prevMidi) newOctave--;
+    if (newOctave < 3) continue;
 
     // Verify the fix doesn't create a new dissonance with bass
-    const newTrebleMidi = (newOctave + 1) * 12 + (PITCH_SEMITONES[newPitch] ?? 0);
+    const newTrebleMidi = diatonicMidiForScalePitch(newPitch, newOctave, keySignature);
     const newPcCheck = pitchClassInterval(pair.curBass.midi, newTrebleMidi);
     if (newPcCheck >= 0 && DISSONANT_PC.has(newPcCheck)) continue; // skip fix if it creates dissonance
 
