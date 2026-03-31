@@ -658,19 +658,26 @@ function generateBassLevel3(
           // ── 반종지 긴급 접근 (2음 이내, 같은방향 초과 아닐 때) ──
           currentNN = currentNN + (dirToTarget || direction);
         } else if (sameDirCount >= 3) {
-          // ── 3음 초과 같은 방향 → 강제 반대 방향 ──
+          // ── 3음 초과 같은 방향 → 반대 방향 도약 (3도/4도/5도 균등 확률) ──
           const revDir = (lastMoveDir !== 0 ? -lastMoveDir : -direction) as 1 | -1;
-          const revNN = currentNN + revDir;
-          if (isInRange(revNN, 3, ctx)) {
-            currentNN = revNN;
+          // 유효한 도약만 수집 후 균등 선택
+          const validLeaps: number[] = [];
+          for (const size of [2, 3, 4]) { // 3도, 4도, 5도
+            const nn = currentNN + revDir * size;
+            if (!isForbiddenLeapL3(currentNN, nn, ctx) && isInRange(nn, 3, ctx)) {
+              validLeaps.push(nn);
+            }
+          }
+          if (validLeaps.length > 0) {
+            currentNN = rand(validLeaps);
             direction = revDir;
+            didLeap = true;
           } else {
-            // 반전 불가 → 도약으로 방향 전환
-            const leapNN = currentNN + revDir * 2;
-            if (isInRange(leapNN, 3, ctx)) {
-              currentNN = leapNN;
+            // 도약 모두 불가 → 순차 반전 (±1)
+            const revNN = currentNN + revDir;
+            if (isInRange(revNN, 3, ctx)) {
+              currentNN = revNN;
               direction = revDir;
-              didLeap = true;
             }
           }
         } else if (notesToTarget <= distToTarget) {
