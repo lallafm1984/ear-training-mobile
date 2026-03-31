@@ -1653,3 +1653,189 @@ export function generateAbc(state: ScoreState): string {
 
   return finalAbc;
 }
+
+// ────────────────────────────────────────────────────────────────
+// Shared utilities (extracted from scoreGenerator.ts for reuse)
+// ────────────────────────────────────────────────────────────────
+
+export const PITCH_ORDER: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+/** 루트가 높은 조(G,A,B)에서 wrap 편향 보정용 베이스 옥타브 계산 */
+export function getBassBaseOctave(scale: PitchName[]): number {
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  return rootIdx >= 4 ? 2 : 3;
+}
+
+export const CHORD_TONES: Record<number, number[]> = {
+  0: [0, 2, 4], 1: [1, 3, 5], 2: [2, 4, 6],
+  3: [3, 5, 0], 4: [4, 6, 1], 5: [5, 0, 2], 6: [6, 1, 3],
+};
+
+/** 불협화 pitch-class 간격: m2, M2, P4, tritone, m7, M7 */
+export const DISSONANT_PC = new Set([1, 2, 5, 6, 10, 11]);
+
+/** 불완전 협화음 pitch-class 간격: m3, M3, m6, M6 */
+export const IMPERFECT_CONSONANT_PC = new Set([3, 4, 8, 9]);
+
+/** 낮은음자리표 §4: 두 성부 최소 간격 — 단 10도(= 15반음) */
+export const MIN_TREBLE_BASS_SEMITONES = 15;
+
+export function uid(): string {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+export function makeNote(
+  pitch: PitchName, octave: number, dur: NoteDuration,
+  accidental: Accidental = '', tie = false,
+): ScoreNote {
+  return { id: uid(), pitch, octave, accidental, duration: dur, tie };
+}
+
+export function makeRest(dur: NoteDuration): ScoreNote {
+  return makeNote('rest', 4, dur);
+}
+
+export function noteNumToNote(
+  noteNum: number, scale: PitchName[], baseOctave: number,
+): { pitch: PitchName; octave: number } {
+  const deg = ((noteNum % 7) + 7) % 7;
+  const octOff = Math.floor(noteNum / 7);
+  const pitch = scale[deg];
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  const pitchIdx = PITCH_ORDER.indexOf(pitch);
+  const wrap = pitchIdx < rootIdx ? 1 : 0;
+  return { pitch, octave: baseOctave + octOff + wrap };
+}
+
+/** nn 역산: pitch+octave → nn (noteNumToNote의 역함수) */
+export function scaleNoteToNn(
+  pitch: PitchName, octave: number, scale: PitchName[], baseOctave: number,
+): number {
+  const rootIdx = PITCH_ORDER.indexOf(scale[0]);
+  const pitchIdx = PITCH_ORDER.indexOf(pitch);
+  const degIdx = scale.indexOf(pitch);
+  if (degIdx < 0) return 0; // fallback
+  const wrap = pitchIdx < rootIdx ? 1 : 0;
+  const octaveOffset = octave - baseOctave - wrap;
+  return octaveOffset * 7 + degIdx;
+}
+
+/** 한 마디 트레블: 음 시작 offset(16분) → MIDI (조표 반영, 성부 동일 건반 회피용) */
+export function buildTrebleAttackMidiMap(barSlice: ScoreNote[], keySignature: string): Map<number, number> {
+  const map = new Map<number, number>();
+  let off = 0;
+  let i = 0;
+  while (i < barSlice.length) {
+    const n = barSlice[i];
+    if (n.tuplet) {
+      const p = parseInt(n.tuplet, 10);
+      const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+      if (n.pitch !== 'rest') {
+        map.set(off, noteToMidiWithKey(n, keySignature));
+      }
+      off += span;
+      i += p;
+    } else {
+      if (n.pitch !== 'rest') {
+        map.set(off, noteToMidiWithKey(n, keySignature));
+      }
+      off += durationToSixteenths(n.duration);
+      i += 1;
+    }
+  }
+  return map;
+}
+
+/** 트레블과 동시에 같은 건반이 아니고, §4 간격(단 10도 이상)을 만족하는지 */
+export function passesBassSpacing(
+  note: ScoreNote,
+  bassOff: number,
+  trebleAttackMap: Map<number, number>,
+  keySignature: string,
+): boolean {
+  const clashMidi = trebleAttackMap.get(bassOff);
+  if (clashMidi === undefined) return true;
+  const bassMidi = noteToMidiWithKey(note, keySignature);
+  if (bassMidi === clashMidi) return false;
+  return clashMidi - bassMidi >= MIN_TREBLE_BASS_SEMITONES;
+}
+
+/** 현재 bnn과 같은 옥타브 블록에서 화음 구성음 후보 (snapToChordTone과 동일 그리드) */
+export function chordToneBnnCandidates(n: number, bTones: number[]): number[] {
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const t of bTones) {
+    for (const base of [
+      Math.floor(n / 7) * 7 + t,
+      Math.floor(n / 7) * 7 + t - 7,
+      Math.floor(n / 7) * 7 + t + 7,
+    ]) {
+      const c = Math.max(-5, Math.min(4, base));
+      if (!seen.has(c)) {
+        seen.add(c);
+        out.push(c);
+      }
+    }
+  }
+  return out;
+}
+
+/** 가장 가까운 화음 구성음으로 snap — 음역(-5~4) 밖 후보는 거리 비교에서 제외 */
+export function snapToChordTone(nn: number, bTones: number[]): number {
+  let best = nn, bestDist = Infinity;
+  for (const t of bTones) {
+    for (const base of [
+      Math.floor(nn / 7) * 7 + t,
+      Math.floor(nn / 7) * 7 + t - 7,
+      Math.floor(nn / 7) * 7 + t + 7,
+    ]) {
+      if (base < -5 || base > 4) continue;
+      const d = Math.abs(base - nn);
+      if (d < bestDist) { bestDist = d; best = base; }
+    }
+  }
+  return Math.max(-5, Math.min(4, best));
+}
+
+export function generateProgression(measures: number, isMinor: boolean = false): number[] {
+  const rand = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  const majorPatterns = [[0,3,4,0],[0,4,5,3],[0,3,0,4]];
+  const minorPatterns = [[0,3,4,0],[0,5,3,4],[0,3,5,4],[0,2,4,0]];
+  const patterns = isMinor ? minorPatterns : majorPatterns;
+
+  const result: number[] = [];
+  while (result.length < measures) {
+    for (const c of rand(patterns)) {
+      if (result.length < measures) result.push(c);
+    }
+  }
+  if (measures >= 2) {
+    result[measures - 2] = 4;   // V (dominant) — 종지 전
+    result[measures - 1] = 0;   // I/i (tonic) — 종지
+  } else if (measures === 1) {
+    result[0] = 0;
+  }
+  return result;
+}
+
+/**
+ * 강박 16분음표 오프셋 집합 반환.
+ * 2성부 가이드라인: 강박은 협화음 필수, 약박은 제어된 불협화 허용.
+ */
+export function getStrongBeatOffsets(timeSignature: string): Set<number> {
+  const [topStr, botStr] = (timeSignature || '4/4').split('/');
+  const top = parseInt(topStr, 10) || 4;
+  const bot = parseInt(botStr, 10) || 4;
+  const isCompound = bot === 8 && top % 3 === 0 && top >= 6;
+  if (isCompound) {
+    const groups = Math.round((top / 3) * (16 / bot) * 3 / 6);
+    const s = new Set<number>();
+    for (let g = 0; g < groups; g++) s.add(g * 6);
+    return s;
+  }
+  if (top === 4 && bot === 4) return new Set([0, 8]);
+  if (top === 3 && bot === 4) return new Set([0]);
+  if (top === 2 && bot === 4) return new Set([0]);
+  if (top === 2 && bot === 2) return new Set([0]);
+  return new Set([0]);
+}
