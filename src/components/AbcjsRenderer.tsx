@@ -1069,10 +1069,10 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
         'G':['G','A','B','c','d','e','f','g'],'D':['D','E','F','G','A','B','c','d'],
         'A':['A,','B,','C','D','E','F','G','A'],'F':['F','G','A','B','c','d','e','f'],
         'Bb':['B,','C','D','E','F','G','A','B'],'Eb':['E','F','G','A','B','c','d','e'],
-        'Am':['A,','B,','C','D','E','F','G','A'],'Em':['E','F','G','A','B','c','d','e'],
-        'Bm':['B,','C','D','E','F','G','A','B'],'F#m':['F,','G,','A,','B,','C','D','E','F'],
-        'Dm':['D','E','F','G','A','B','c','d'],'Gm':['G,','A,','B,','C','D','E','F','G'],
-        'Cm':['C','D','E','F','G','A','B','c'] };
+        'Am':['A,','B,','C','D','E','F','^G','A'],'Em':['E','F','G','A','B','c','^d','e'],
+        'Bm':['B,','C','D','E','F','G','^A','B'],'F#m':['F,','G,','A,','B,','C','D','^E','F'],
+        'Dm':['D','E','F','G','A','B','^c','d'],'Gm':['G,','A,','B,','C','D','E','^F','G'],
+        'Cm':['C','D','E','F','G','A','=B','c'] };
       var asc  = scaleNotes[p.keySignature || 'C'] || scaleNotes['C'];
       var desc = asc.slice(0, -1).reverse();
       var all  = asc.concat(desc).concat(['z']);

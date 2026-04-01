@@ -368,6 +368,19 @@ export function generateAbcScaleNotes(keySignature: string): string[] {
   const lowThreshold = isMinor ? 3 : 5;
   let octave = rootIdx >= lowThreshold ? 3 : 4;
 
+  // 화성단음계: 7번째 음(index 6) 올림 처리를 위한 접두사 결정
+  let seventhPrefix = '';
+  if (isMinor) {
+    const FLAT_ORDER = ['B', 'E', 'A', 'D', 'G', 'C', 'F'];
+    const FLAT_KEYS: Record<string, number> = {
+      'Dm': 1, 'Gm': 2, 'Cm': 3, 'Fm': 4, 'Bbm': 5, 'Ebm': 6, 'Abm': 7
+    };
+    const numFlats = FLAT_KEYS[keySignature] || 0;
+    const flattedNotes = FLAT_ORDER.slice(0, numFlats);
+    const seventhDegree = scale[6];
+    seventhPrefix = flattedNotes.includes(seventhDegree) ? '=' : '^';
+  }
+
   const result: string[] = [];
   for (let i = 0; i <= 7; i++) {
     const pitch = scale[i % 7];
@@ -377,13 +390,15 @@ export function generateAbcScaleNotes(keySignature: string): string[] {
         octave++;
       }
     }
+    // 화성단음계 7번째 음 접두사 추가
+    const prefix = (isMinor && i === 6) ? seventhPrefix : '';
     // ABC 옥타브 표기: 3→콤마, 4→대문자, 5→소문자
     if (octave <= 3) {
-      result.push(pitch + ','.repeat(4 - octave));
+      result.push(prefix + pitch + ','.repeat(4 - octave));
     } else if (octave === 4) {
-      result.push(pitch);
+      result.push(prefix + pitch);
     } else {
-      result.push(pitch.toLowerCase() + "'".repeat(octave - 5));
+      result.push(prefix + pitch.toLowerCase() + "'".repeat(octave - 5));
     }
   }
   return result;
