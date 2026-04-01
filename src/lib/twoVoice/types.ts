@@ -2,7 +2,7 @@
 // Two-Voice Bass Generator — Type Definitions
 // ────────────────────────────────────────────────────────────────
 
-export type BassLevel = 1 | 2 | 3;
+export type BassLevel = 1 | 2 | 3 | 4;
 
 export type TimeSignature = '2/4' | '3/4' | '4/4' | '2/2' | '6/8' | '9/8' | '12/8';
 

@@ -42,7 +42,7 @@ const ALL_DIFFICULTIES: Difficulty[] = [
   'advanced_1', 'advanced_2', 'advanced_3',
 ];
 
-const ALL_BASS_DIFFICULTIES: BassDifficulty[] = ['bass_1', 'bass_2', 'bass_3'];
+const ALL_BASS_DIFFICULTIES: BassDifficulty[] = ['bass_1', 'bass_2', 'bass_3', 'bass_4'];
 
 const MEASURE_OPTIONS = [4, 8];
 
@@ -56,6 +56,7 @@ const BASS_LABELS: Record<BassDifficulty, string> = {
   bass_1: '베이스1(지속음)',
   bass_2: '베이스2(순차진행)',
   bass_3: '베이스3(순차+도약)',
+  bass_4: '베이스4(혼합리듬)',
 };
 
 // ── 검증 ──

@@ -50,7 +50,7 @@ export type Difficulty =
   | 'intermediate_1' | 'intermediate_2' | 'intermediate_3'
   | 'advanced_1' | 'advanced_2' | 'advanced_3';
 
-export type BassDifficulty = 'bass_1' | 'bass_2' | 'bass_3';
+export type BassDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4';
 
 /** 상위 카테고리 */
 export type DifficultyCategory = 'beginner' | 'intermediate' | 'advanced';
@@ -149,13 +149,14 @@ function getMinorLeadingToneAccidental(keySignature: string, seventhDegree: Pitc
 // ────────────────────────────────────────────────────────────────
 
 export const BASS_DIFF_LABELS: Record<BassDifficulty, string> = {
-  bass_1: '1단계', bass_2: '2단계', bass_3: '3단계',
+  bass_1: '1단계', bass_2: '2단계', bass_3: '3단계', bass_4: '4단계',
 };
 
 export const BASS_DIFF_DESC: Record<BassDifficulty, string> = {
   bass_1: '지속음 — 마디당 한 음 유지',
   bass_2: '순차진행 — 2도 순차 이동만',
   bass_3: '순차+도약 — 간헐적 5도 포함',
+  bass_4: '혼합리듬 — 도약+리듬 변화',
 };
 
 interface BassLevelParams {
@@ -168,6 +169,7 @@ const BASS_LEVEL_PARAMS: Record<BassDifficulty, BassLevelParams> = {
   bass_1: { mode: 'pedal',           durationPool: [16, 8], minDur: 8 },
   bass_2: { mode: 'harmonic_half',   durationPool: [8],     minDur: 8 },
   bass_3: { mode: 'harmonic_mixed',  durationPool: [8, 4],  minDur: 4 },
+  bass_4: { mode: 'harmonic_mixed',  durationPool: [8, 4, 2], minDur: 2 },
 };
 
 // MIN_TREBLE_BASS_SEMITONES, DISSONANT_PC, IMPERFECT_CONSONANT_PC, buildTrebleAttackMidiMap → imported from scoreUtils
@@ -177,7 +179,7 @@ const BASS_LEVEL_PARAMS: Record<BassDifficulty, BassLevelParams> = {
 // ────────────────────────────────────────────────────────────────
 
 function mapBassDifficultyToLevel(bd: BassDifficulty): BassLevel {
-  const map: Record<BassDifficulty, BassLevel> = { bass_1: 1, bass_2: 2, bass_3: 3 };
+  const map: Record<BassDifficulty, BassLevel> = { bass_1: 1, bass_2: 2, bass_3: 3, bass_4: 4 };
   return map[bd];
 }
 

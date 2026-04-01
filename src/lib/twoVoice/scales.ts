@@ -144,8 +144,9 @@ export const MEASURE_TOTAL: Record<TimeSignature, number> = {
  * Level 2: E, ~ G  => MIDI 40..55
  * Level 3: E, ~ G  => MIDI 40..55
  */
-export const BASS_RANGE: Record<1 | 2 | 3, { low: number; high: number }> = {
+export const BASS_RANGE: Record<1 | 2 | 3 | 4, { low: number; high: number }> = {
   1: { low: 40, high: 55 },
   2: { low: 40, high: 55 },
-  3: { low: 40, high: 55 },
+  3: { low: 43, high: 55 },  // G2 이상 (E,,/F,, 극저음 제거)
+  4: { low: 43, high: 55 },  // G2 이상 (E,,/F,, 극저음 제거)
 };

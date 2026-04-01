@@ -120,7 +120,7 @@ const ALL_DIFFICULTIES: Difficulty[] = [
   'advanced_1', 'advanced_2', 'advanced_3',
 ];
 const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
-  'bass_1', 'bass_2', 'bass_3',
+  'bass_1', 'bass_2', 'bass_3', 'bass_4',
 ];
 
 // ── 조성 데이터 ──

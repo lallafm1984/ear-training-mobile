@@ -379,6 +379,155 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
     }
   }
 
+  if (opts.bassLevel === 4) {
+    // ── L4 음정 검증 ──
+    // 6도 이상 금지 (5도까지 자유), tritone/aug5 금지
+    for (let i = 1; i < bass.length; i++) {
+      const interval = scaleDegreeInterval(bass[i].noteNum, bass[i - 1].noteNum);
+      const semitones = estimateSemitones(bass[i - 1].noteNum, bass[i].noteNum, opts.mode);
+
+      // Max span: 5th (scale step 4), 6도+ 금지
+      if (interval > 4) {
+        violations.push({
+          type: 'l4_forbidden_leap',
+          message: `L4: Melodic span exceeds 5th (|Δ|=${interval}) at note ${i + 1}`,
+          measure: bass[i].measure,
+          severity: 'error',
+        });
+      }
+
+      // Tritone / aug5 forbidden
+      if (semitones === 6 && interval >= 3) {
+        violations.push({
+          type: 'l4_forbidden_leap',
+          message: `L4: Forbidden augmented interval (tritone) at note ${i + 1}`,
+          measure: bass[i].measure,
+          severity: 'error',
+        });
+      }
+
+      // Augmented 2nd forbidden at L4
+      if (opts.mode === 'harmonic_minor') {
+        const degA = ((bass[i - 1].noteNum % 7) + 7) % 7;
+        const degB = ((bass[i].noteNum % 7) + 7) % 7;
+        if ((degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
+            (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)) {
+          violations.push({
+            type: 'l4_augmented_second',
+            message: `L4: Augmented 2nd at note ${i + 1}`,
+            measure: bass[i].measure,
+            severity: 'error',
+          });
+        }
+      }
+
+      // 8분음표 위치에서 도약 금지 (순차 경과음만 허용)
+      if (bass[i].duration === 1 && interval > 1) {
+        violations.push({
+          type: 'l4_eighth_note_leap',
+          message: `L4: Leap (${interval + 1}th) on 8th note position at note ${i + 1}`,
+          measure: bass[i].measure,
+          severity: 'warning',
+        });
+      }
+      // 직전 음이 8분이면서 도약한 경우도 체크
+      if (bass[i - 1].duration === 1 && interval > 1) {
+        violations.push({
+          type: 'l4_eighth_note_leap',
+          message: `L4: Leap (${interval + 1}th) from 8th note at note ${i}→${i + 1}`,
+          measure: bass[i].measure,
+          severity: 'warning',
+        });
+      }
+    }
+
+    // ── L4 화성적 뼈대 검증: 마디 첫 박 = 화성 근음(I,ii,iii,IV,V,vi) ──
+    const chordRootDegrees = new Set([0, 1, 2, 3, 4, 5]); // I~vi
+    for (const [mIdx, mNotes] of measures) {
+      if (mNotes.length > 0) {
+        const firstDeg = ((mNotes[0].noteNum % 7) + 7) % 7;
+        if (!chordRootDegrees.has(firstDeg)) {
+          violations.push({
+            type: 'l4_strong_beat_root',
+            message: `L4: Measure ${mIdx + 1} first beat (deg=${firstDeg}) is not a chord root`,
+            measure: mIdx,
+            severity: 'warning',
+          });
+        }
+      }
+    }
+
+    // ── L4 리듬 검증 ──
+    const isCompound = opts.timeSig === '6/8' || opts.timeSig === '9/8' || opts.timeSig === '12/8';
+
+    // 리듬 다양성: 8마디 블록당 최소 3종류 패턴
+    for (let blockStart = 0; blockStart < opts.measures; blockStart += 8) {
+      const blockEnd = Math.min(blockStart + 8, opts.measures);
+      const patternSignatures = new Set<string>();
+      for (let m = blockStart; m < blockEnd; m++) {
+        const mNotes = measures.get(m) ?? [];
+        const sig = mNotes.map(n => n.duration).join(',');
+        patternSignatures.add(sig);
+      }
+      if (patternSignatures.size < 3 && (blockEnd - blockStart) >= 4) {
+        violations.push({
+          type: 'l4_rhythm_diversity',
+          message: `L4: Only ${patternSignatures.size} rhythm patterns in bars ${blockStart + 1}-${blockEnd} (min 3)`,
+          severity: 'warning',
+        });
+      }
+    }
+
+    // 8분 시작 마디 제한: 8마디당 최대 2회
+    for (let blockStart = 0; blockStart < opts.measures; blockStart += 8) {
+      const blockEnd = Math.min(blockStart + 8, opts.measures);
+      let eighthStartCount = 0;
+      for (let m = blockStart; m < blockEnd; m++) {
+        const mNotes = measures.get(m) ?? [];
+        if (mNotes.length > 0 && mNotes[0].duration === 1) {
+          eighthStartCount++;
+        }
+      }
+      if (eighthStartCount > 2) {
+        violations.push({
+          type: 'l4_eighth_start_excess',
+          message: `L4: ${eighthStartCount} measures start with 8th note in bars ${blockStart + 1}-${blockEnd} (max 2)`,
+          severity: 'warning',
+        });
+      }
+    }
+
+    // 마지막 마디: 긴 음가로 마무리
+    const lastMeasureNotes4 = measures.get(opts.measures - 1) ?? [];
+    if (lastMeasureNotes4.length > 0) {
+      const lastDur = lastMeasureNotes4[lastMeasureNotes4.length - 1].duration;
+      const longThreshold = isCompound ? 3 : 4;
+      if (lastDur < longThreshold) {
+        violations.push({
+          type: 'l4_cadence_rhythm',
+          message: `L4: Last measure ends with short note (duration=${lastDur})`,
+          measure: opts.measures - 1,
+          severity: 'warning',
+        });
+      }
+    }
+
+    // 홑박자 점음가 금지 검증
+    if (!isCompound) {
+      for (let i = 0; i < bass.length; i++) {
+        const dur = bass[i].duration;
+        if (dur === 3 || dur === 6) {
+          violations.push({
+            type: 'l4_dotted_note',
+            message: `L4: Dotted note (duration=${dur}) in simple meter at note ${i + 1}`,
+            measure: bass[i].measure,
+            severity: 'error',
+          });
+        }
+      }
+    }
+  }
+
   // ── Key checks ────────────────────────────────────────────────
 
   if (opts.mode === 'harmonic_minor') {
