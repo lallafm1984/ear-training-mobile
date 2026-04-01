@@ -33,6 +33,7 @@ import {
 
 import type { BassLevel, TimeSignature as TVTimeSignature } from './twoVoice';
 import { applyCounterpointCorrections, generateTwoVoiceStack } from './twoVoice';
+import { applyMelodyAccidentals } from './twoVoice/chromaticAccidental';
 import { fillRhythm } from './trebleRhythmFill';
 
 // ────────────────────────────────────────────────────────────────
@@ -408,7 +409,10 @@ function tryInsertTriplet(
     notes.push({
       id: uid(), pitch, octave, accidental: '' as Accidental,
       duration: '8', tie: false,
-      ...(k === 0 ? { tuplet: '3' as const, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 } : {}),
+      // tupletNoteDur: [2, 1, 1] — 합계 4 (4분음표 span)
+      ...(k === 0
+        ? { tuplet: '3' as const, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
+        : { tupletNoteDur: 1 }),
     });
   }
   return { inserted: true };
@@ -416,6 +420,97 @@ function tryInsertTriplet(
 
 // ────────────────────────────────────────────────────────────────
 // ★ 후처리: 연속 동일음 3회 이상 제거 (안전망)
+// ────────────────────────────────────────────────────────────────
+// ★ 후처리: 임시표 정리 — 대위법 보정 후 깨진 임시표 제거
+// ────────────────────────────────────────────────────────────────
+/**
+ * 대위법·강박 보정 등의 후처리에서 음이 이동하면 임시표의 해결 관계가 깨질 수 있다.
+ * 1) 해결 없는 임시표 (다음 음과 >3반음) → 임시표 제거
+ * 2) 인접 동일 임시표 (같은 음·같은 임시표 연속) → 두 번째 임시표 제거
+ */
+function cleanupBrokenAccidentals(notes: ScoreNote[], keySignature: string): void {
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i];
+    if (!n.accidental) continue;
+    if (n.pitch === 'rest') continue;
+
+    // ── 인접 동일 임시표: 직전 음과 같은 음+임시표면 두 번째 제거 ──
+    if (i > 0) {
+      const prev = notes[i - 1];
+      if (prev.pitch === n.pitch && prev.octave === n.octave &&
+          prev.accidental === n.accidental) {
+        notes[i] = { ...n, accidental: '' as Accidental };
+        continue;
+      }
+    }
+
+    // ── 해결 없는 임시표: 다음 피치음과 >3반음이면 제거 ──
+    const curMidi = noteToMidiWithKey(n, keySignature);
+    let nextMidi = -1;
+    for (let j = i + 1; j < notes.length; j++) {
+      if (notes[j].pitch !== 'rest') {
+        nextMidi = noteToMidiWithKey(notes[j], keySignature);
+        break;
+      }
+    }
+    if (nextMidi > 0 && Math.abs(curMidi - nextMidi) > 3) {
+      notes[i] = { ...n, accidental: '' as Accidental };
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// ★ 후처리: 삼전음(Tritone, 6반음) 도약 보정
+// ────────────────────────────────────────────────────────────────
+/**
+ * 인접한 두 음의 MIDI 거리가 정확히 6반음(증4도/감5도)이면
+ * 두 번째 음을 ±1 스케일도 이동하여 삼전음을 회피.
+ */
+function fixTritoneleaps(
+  notes: ScoreNote[],
+  scale: PitchName[],
+  baseOctave: number,
+  keySignature: string,
+): void {
+  for (let i = 1; i < notes.length; i++) {
+    const prev = notes[i - 1];
+    const cur = notes[i];
+    if (prev.pitch === 'rest' || cur.pitch === 'rest') continue;
+    // 타이로 연결된 음은 스킵
+    if (prev.tie) continue;
+
+    const prevMidi = noteToMidiWithKey(prev, keySignature);
+    const curMidi = noteToMidiWithKey(cur, keySignature);
+    if (Math.abs(curMidi - prevMidi) !== 6) continue;
+
+    // 임시표가 있는 음은 임시표 제거로 해결 시도
+    if (cur.accidental) {
+      const stripped = { ...cur, accidental: '' as Accidental };
+      const strippedMidi = noteToMidiWithKey(stripped, keySignature);
+      if (Math.abs(strippedMidi - prevMidi) !== 6) {
+        notes[i] = stripped;
+        continue;
+      }
+    }
+
+    // 스케일 음 ±1도 이동
+    const curNn = scaleNoteToNn(cur.pitch, cur.octave, scale, baseOctave);
+    if (curNn < 0) continue; // 스케일 음이 아니면 스킵
+
+    const dir = curMidi > prevMidi ? -1 : 1; // 반대 방향으로 축소
+    for (const delta of [dir, -dir]) {
+      const candNn = curNn + delta;
+      if (candNn < 0) continue;
+      const cand = noteNumToNote(candNn, scale, baseOctave);
+      const candMidi = noteToMidiWithKey(makeNote(cand.pitch, cand.octave, cur.duration), keySignature);
+      if (Math.abs(candMidi - prevMidi) !== 6 && cand.octave >= 2 && cand.octave <= 6) {
+        notes[i] = { ...cur, pitch: cand.pitch as PitchName, octave: cand.octave, accidental: '' as Accidental };
+        break;
+      }
+    }
+  }
+}
+
 // ────────────────────────────────────────────────────────────────
 /**
  * MIDI 기준 연속 3회 이상 동일음을 인접 음계음으로 교체.
@@ -1305,7 +1400,8 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       }
 
       // ── 임시표(반음계) 삽입 — 조표·난이도에 맞게 #/b/n 분배 (조표만으로는 표기 안 되는 중복 방지) ──
-      if (accidentalBudget > 0 && i < rhythm.length - 1 && Math.random() < chromaticProbEffective) {
+      // L8 이상: 알고리즘 기반 삽입 (루프 종료 후 applyMelodyAccidentals 호출)
+      if (lvl < 8 && accidentalBudget > 0 && i < rhythm.length - 1 && Math.random() < chromaticProbEffective) {
         if (scale.includes(pitch)) {
           const acc = pickChromaticAccidental(keySignature, pitch, difficulty);
           trebleNotes.push(makeNote(pitch, octave, durLabel, acc));
@@ -1371,55 +1467,18 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     bassNotes.push(...newBassScoreNotes);
   }
 
-  // ── 2성부 전용 멜로디 크로매틱 삽입 후처리 ──
-  // 메인 멜로디 루프가 스킵되므로, 고급2/3의 chromaticBudget을 여기서 적용
-  if (useDedicatedTwoVoiceMelody && accidentalBudget > 0 && trebleNotes.length > 2) {
-    // 삽입 가능한 후보 인덱스 수집: 첫 음, 마디 마지막 음, 종지 직전 2음 제외
-    const eligible: number[] = [];
-    let pos = 0;
-    let barIdx = 0;
-    let barPos = 0;
-    const barNoteRanges: { start: number; end: number }[] = [];
-    let barStart = 0;
-    for (let ni = 0; ni < trebleNotes.length; ni++) {
-      const dur = durationToSixteenths(trebleNotes[ni].duration);
-      barPos += dur;
-      if (barPos >= sixteenthsPerBar) {
-        barNoteRanges.push({ start: barStart, end: ni });
-        barStart = ni + 1;
-        barPos = 0;
-        barIdx++;
-      }
-    }
-    if (barStart < trebleNotes.length) {
-      barNoteRanges.push({ start: barStart, end: trebleNotes.length - 1 });
-    }
-
-    for (let ni = 1; ni < trebleNotes.length; ni++) {
-      const n = trebleNotes[ni];
-      if (n.pitch === 'rest') continue;
-      if (n.accidental && n.accidental !== '') continue;
-      if (!scale.includes(n.pitch)) continue;
-      // 마디 마지막 음 제외
-      const isBarLast = barNoteRanges.some(r => r.end === ni);
-      if (isBarLast) continue;
-      // 마디 첫 음 제외 (강박 협화 보정과 충돌 방지)
-      const isBarFirst = barNoteRanges.some(r => r.start === ni);
-      if (isBarFirst) continue;
-      eligible.push(ni);
-    }
-
-    // 랜덤 셔플 후 budget만큼 선택
-    for (let i = eligible.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [eligible[i], eligible[j]] = [eligible[j], eligible[i]];
-    }
-    const selected = eligible.slice(0, accidentalBudget);
-    for (const ni of selected) {
-      const n = trebleNotes[ni];
-      const acc = pickChromaticAccidental(keySignature, n.pitch, difficulty);
-      trebleNotes[ni] = { ...n, accidental: acc };
-    }
+  // ── 알고리즘 기반 임시표 삽입 (고급 2단계 L8 이상) ──
+  // 2성부: melodyGenerator 내부에서 bassMaps와 함께 호출됨
+  // 1성부: 여기서 bassMaps=null로 호출 (베이스 관련 제약 자동 스킵)
+  if (!useDedicatedTwoVoiceMelody && lvl >= 8) {
+    const mode1v = isMinor ? 'harmonic_minor' as const : 'major' as const;
+    const strong16 = new Set(getStrongBeatOffsets(timeSignature));
+    applyMelodyAccidentals(
+      trebleNotes, null, keySignature, mode1v,
+      lvl, sixteenthsPerBar, strong16,
+    );
+    cleanupBrokenAccidentals(trebleNotes, keySignature);
+    fixTritoneleaps(trebleNotes, scale, TREBLE_BASE, keySignature);
   }
 
   // ── 종지 마디 ──
@@ -1443,6 +1502,10 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     const tvTimeSig = timeSignature as TVTimeSignature;
     applyCounterpointCorrections(trebleNotes, bassNotes, tvTimeSig, keySignature, lvl);
 
+    // ── Step C-1.5: 임시표 정리 + 삼전음 보정 (안전망 이전) ──
+    cleanupBrokenAccidentals(trebleNotes, keySignature);
+    fixTritoneleaps(trebleNotes, scale, TREBLE_BASE, keySignature);
+
     // ── Step C-2: 최종 강박 불협화 안전망 ──
     // counterpoint 보정 후에도 남은 강박 불협화를 직접 보정
     // 음표 onset뿐 아니라 지속 중인 강박 위치도 모두 검사
@@ -1453,7 +1516,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       const bassTimeline: { start: number; end: number; midi: number }[] = [];
       let bPos = 0;
       for (const bn of bassNotes) {
-        const dur = durationToSixteenths(bn.duration);
+        const dur = bn.tupletNoteDur ?? durationToSixteenths(bn.duration);
         if (bn.pitch !== 'rest') {
           bassTimeline.push({ start: bPos, end: bPos + dur, midi: noteToMidiWithKey(bn, keySignature) });
         }
@@ -1464,7 +1527,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       const trebleTimeline: { start: number; end: number; idx: number }[] = [];
       let tPos = 0;
       for (let ti = 0; ti < trebleNotes.length; ti++) {
-        const dur = durationToSixteenths(trebleNotes[ti].duration);
+        const dur = trebleNotes[ti].tupletNoteDur ?? durationToSixteenths(trebleNotes[ti].duration);
         if (trebleNotes[ti].pitch !== 'rest') {
           trebleTimeline.push({ start: tPos, end: tPos + dur, idx: ti });
         }
@@ -1539,6 +1602,9 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   if (useNewBassModule) {
     const tvTimeSig2 = timeSignature as TVTimeSignature;
     applyCounterpointCorrections(trebleNotes, bassNotes, tvTimeSig2, keySignature, lvl);
+
+    // ── Step C-4: 최종 임시표 정리 (모든 보정 완료 후) ──
+    cleanupBrokenAccidentals(trebleNotes, keySignature);
   }
 
   // ── 후처리: 내부 쉼표 ──

@@ -60,7 +60,7 @@ function buildTimeline(notes: ScoreNote[], keySignature: string): NoteEvent[] {
   let offset = 0;
   for (let i = 0; i < notes.length; i++) {
     const n = notes[i];
-    const dur = durationToSixteenths(n.duration);
+    const dur = n.tupletNoteDur ?? durationToSixteenths(n.duration);
     events.push({
       midi: n.pitch === 'rest' ? -1 : noteToMidiWithKey(n, keySignature),
       startSixteenths: offset,

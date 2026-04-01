@@ -32,6 +32,7 @@ import {
   getTrebleRhythmParamsForMelodyLevel,
 } from '../melodyRhythmLevel';
 import { getMelodyMotionParams, inferChordDegreeFromBassMidi } from './melodyScoreParity';
+import { applyMelodyAccidentals } from './chromaticAccidental';
 
 // ────────────────────────────────────────────────────────────────
 // Public interface
@@ -755,15 +756,23 @@ export function generateTwoVoiceMelody(opts: TwoVoiceMelodyOptions): ScoreNote[]
 
       if (cell.nns.length === 3) {
         const spanDur = '4' as NoteDuration;
-        const tnd = getTupletNoteDuration('3', spanDur);
+        const spanSixteenths = durationToSixteenths(spanDur); // 4
+        const tnd = getTupletNoteDuration('3', spanDur);       // 2 (written eighth)
         const innerDur = sixteenthsToDuration(tnd);
         const first = nnToScoreNote(cell.nns[0], innerDur, ctx);
         first.tuplet = '3';
         first.tupletSpan = spanDur;
         first.tupletNoteDur = tnd;
+        // 2·3번째 음에도 tupletNoteDur 설정: 합계 = spanSixteenths (4)
+        const rem = spanSixteenths - tnd;              // 2
+        const perRem = Math.floor(rem / 2);            // 1
+        const second = nnToScoreNote(cell.nns[1], innerDur, ctx);
+        second.tupletNoteDur = perRem;
+        const third = nnToScoreNote(cell.nns[2], innerDur, ctx);
+        third.tupletNoteDur = rem - perRem;
         allNotes.push(first);
-        allNotes.push(nnToScoreNote(cell.nns[1], innerDur, ctx));
-        allNotes.push(nnToScoreNote(cell.nns[2], innerDur, ctx));
+        allNotes.push(second);
+        allNotes.push(third);
       } else {
         const nn = cell.nns[0];
         const { pitch, octave } = noteNumToNote(nn, ctx.scale, ctx.baseOctave);
@@ -791,7 +800,17 @@ export function generateTwoVoiceMelody(opts: TwoVoiceMelodyOptions): ScoreNote[]
     if (ctx.mode === 'harmonic_minor') {
       resolveLeadingTones(allPitchedNNs, ctx);
     }
+    // 전체 시퀀스에서 금지 음정 재검사 (마디 경계 + gap-fill/이끔음 재도입 보정)
+    fixForbiddenIntervals(allPitchedNNs, ctx);
     writePitchedNNsBack(allNotes, allPitchedNNs, ctx);
+  }
+
+  // ── 임시표 삽입 (고급 2단계 이상: 알고리즘 기반) ──
+  if (ctx.level >= 8) {
+    applyMelodyAccidentals(
+      allNotes, bassMaps, ctx.keySignature, ctx.mode,
+      ctx.level, sixteenthsPerBar, strong16,
+    );
   }
 
   return allNotes;
