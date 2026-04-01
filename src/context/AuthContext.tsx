@@ -2,7 +2,8 @@ import React, {
   createContext, useContext, useEffect, useState, useCallback, ReactNode,
 } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase } from '../lib';
+import type { Profile } from '../lib';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 

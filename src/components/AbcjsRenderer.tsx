@@ -2,13 +2,13 @@ import React, { useRef, useCallback, useEffect, useState, forwardRef, useImperat
 import {
   View, StyleSheet, Platform, PanResponder,
 } from 'react-native';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings } from '../types/playback';
-import { generateAbcScaleNotes } from '../lib/scoreUtils';
+import type { APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings } from '../types';
+import { generateAbcScaleNotes } from '../lib';
 
 export interface AbcjsRendererHandle {
   requestExportImage: () => void;

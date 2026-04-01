@@ -2,7 +2,7 @@
 // MelodyGen 구독 타입 정의
 // ─────────────────────────────────────────────────────────────
 
-import type { Difficulty } from '../lib/scoreGenerator';
+import type { Difficulty } from '../lib';
 
 /** 3단계 요금제 */
 export type PlanTier = 'free' | 'pro' | 'premium';

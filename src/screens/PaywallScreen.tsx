@@ -4,9 +4,8 @@ import {
   SafeAreaView, StatusBar, Platform, Dimensions,
 } from 'react-native';
 import { Crown, Check, X, Sparkles, Music2, Download, Zap, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
-import { useAlert } from '../context/AlertContext';
-import { useSubscription } from '../context/SubscriptionContext';
-import { PlanTier, PLAN_LIMITS, PLAN_COLOR, PLAN_NAME } from '../types/subscription';
+import { useAlert, useSubscription } from '../context';
+import { PlanTier, PLAN_LIMITS, PLAN_COLOR, PLAN_NAME } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

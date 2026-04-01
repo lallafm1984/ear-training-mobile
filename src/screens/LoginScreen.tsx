@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Music2 } from 'lucide-react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context';
 
 import Svg, { Path } from 'react-native-svg';
 
