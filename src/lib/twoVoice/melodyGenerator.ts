@@ -116,6 +116,7 @@ interface MelodyGenContext {
   baseOctave: number;
   keySignature: string;
   mode: 'major' | 'harmonic_minor';
+  timeSig: TimeSignature;
   constraints: LevelConstraints;
   level: number;
   /** Range limits in nn */
@@ -169,7 +170,7 @@ function buildContext(opts: MelodyGeneratorOptions): MelodyGenContext {
 
   return {
     scale, baseOctave, keySignature, mode: opts.mode,
-    constraints, level,
+    timeSig: opts.timeSig, constraints, level,
     nnLow, nnHigh,
     hasBass, phrasePeaks,
   };
@@ -497,7 +498,7 @@ function selectPitchWithoutBass(
   // 화음톤 스냅
   const isDownbeat = barPos % beatSize === 0;
   const rangeFactor = (ctx.nnHigh - ctx.nnLow) <= 8 ? 0.6 : 1.0;
-  const oddMeterFactor = /^[57]\/8$/.test('') ? 0.55 : 1.0; // timeSig is not available here, handled in caller
+  const oddMeterFactor = /^[57]\/8$/.test(ctx.timeSig) ? 0.55 : 1.0;
   const snapChance = (isDownbeat
     ? ctx.constraints.chordSnapStrong
     : ctx.constraints.chordSnapWeak) * rangeFactor;
