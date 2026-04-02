@@ -21,7 +21,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       } else {
         showAlert({
           title: '음원 다운로드 불가',
-          message: '청음 음원(MP3) 다운로드는 Premium 플랜 전용 기능입니다.',
+          message: '청음 음원(MP3) 다운로드는 Pro 플랜 전용 기능입니다.',
           type: 'warning',
         });
       }
@@ -36,7 +36,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         } else {
           showAlert({
             title: '다운로드 한도 초과',
-            message: `이번 달 다운로드 ${limits.monthlyDownloadLimit}회를 모두 사용했습니다.\n\n무제한 다운로드는 Premium 플랜에서 이용 가능합니다.`,
+            message: `이번 달 다운로드 ${limits.monthlyDownloadLimit}회를 모두 사용했습니다.\n\n무제한 다운로드는 Pro 플랜에서 이용 가능합니다.`,
             type: 'warning',
           });
         }
@@ -89,7 +89,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       } else {
         showAlert({
           title: '이미지 저장 불가',
-          message: '악보 이미지(PNG) 저장은 Premium 플랜 전용 기능입니다.',
+          message: '악보 이미지(PNG) 저장은 Pro 플랜 전용 기능입니다.',
           type: 'warning',
         });
       }

@@ -46,7 +46,7 @@ export default function TrackDetailScreen({
   skillProfile,
 }: Props) {
   const { tier } = useSubscription();
-  const isPro = tier === 'pro' || tier === 'premium';
+  const isPro = tier === 'pro';
 
   const meta = TRACK_META[track];
   const colors = TRACK_COLORS[track];

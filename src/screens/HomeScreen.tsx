@@ -54,9 +54,9 @@ export default function HomeScreen({
   onOpenProfile,
   skillProfile,
 }: Props) {
-  const { tier, genBalance } = useSubscription();
+  const { tier } = useSubscription();
   const profile = skillProfile ?? DEFAULT_SKILL_PROFILE;
-  const isPro = tier === 'pro' || tier === 'premium';
+  const isPro = tier === 'pro';
 
   // Quick Start 추천
   const recommendation = useMemo(
@@ -120,10 +120,6 @@ export default function HomeScreen({
           <Text style={styles.headerTitle}>MelodyGen</Text>
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.genBadge}>
-            <Zap size={13} color={COLORS.primary500} />
-            <Text style={styles.genBadgeText}>{genBalance}</Text>
-          </View>
           <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
             <Crown size={16} color={COLORS.amber500} />
           </TouchableOpacity>

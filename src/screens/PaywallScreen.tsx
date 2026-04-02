@@ -3,9 +3,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   SafeAreaView, StatusBar, Platform, Dimensions,
 } from 'react-native';
-import { Crown, Check, X, Sparkles, Music2, Download, Zap, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
+import { Crown, Check, X, Sparkles, Music2, Download, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
 import { useAlert, useSubscription } from '../context';
-import { PlanTier, PLAN_LIMITS, PLAN_COLOR, PLAN_NAME } from '../types';
+import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,40 +31,28 @@ const PLAN_CARDS: PlanCard[] = [
     price: '무료',
     priceNote: '영구 무료',
     features: [
-      { label: '일일 100 Gen 자동 충전', icon: <Zap size={13} color="#94a3b8" /> },
+      { label: '다장조(C) · 4/4박자만', icon: <Music2 size={13} color="#94a3b8" /> },
       { label: '초급 난이도 선택 가능', icon: <BookOpen size={13} color="#94a3b8" /> },
       { label: '최대 4마디 생성', icon: <Music2 size={13} color="#94a3b8" /> },
       { label: '악보 최대 5개 저장', icon: <Check size={13} color="#94a3b8" /> },
       { label: '악보 이미지 저장 가능', icon: <Download size={13} color="#94a3b8" /> },
       { label: '일반 재생 모드만 사용 가능', icon: <Disc3 size={13} color="#94a3b8" /> },
-      { label: '5회 생성마다 광고 시청', icon: <X size={13} color="#ef4444" /> },
     ],
   },
   {
     tier: 'pro',
     price: '5,500원',
     priceNote: '월 구독 / 언제든 취소',
-    badge: '인기',
+    badge: '모든 기능 잠금 해제',
     features: [
-      { label: '가입 즉시 💎 500 Gen 지급', icon: <Sparkles size={13} color="#6366f1" /> },
-      { label: '일일 200 Gen 자동 충전', icon: <Zap size={13} color="#6366f1" /> },
+      { label: '모든 조성 · 박자 사용 가능', icon: <Music2 size={13} color="#6366f1" /> },
       { label: '큰보표 (Grand Staff) 사용', icon: <Check size={13} color="#6366f1" /> },
       { label: '모든 재생 모드 사용 가능', icon: <Disc3 size={13} color="#6366f1" /> },
       { label: '초·중·고급 전 난이도', icon: <BookOpen size={13} color="#6366f1" /> },
       { label: '모든 마디 수 선택 가능', icon: <Music2 size={13} color="#6366f1" /> },
-      { label: '광고 완전 제거', icon: <Check size={13} color="#6366f1" /> },
-    ],
-  },
-  {
-    tier: 'premium',
-    price: '11,000원',
-    priceNote: '월 구독 / 언제든 취소',
-    badge: '교사·학원 추천',
-    features: [
-      { label: 'Pro 모든 기능 포함', icon: <Check size={13} color="#f59e0b" /> },
-      { label: 'Gen 무제한 자동생성', icon: <Zap size={13} color="#f59e0b" /> },
-      { label: '음원 · 악보 무제한 다운로드', icon: <Download size={13} color="#f59e0b" /> },
-      { label: '음표 편집 기능 사용 가능', icon: <Edit3 size={13} color="#f59e0b" /> },
+      { label: '음표 편집 기능', icon: <Edit3 size={13} color="#6366f1" /> },
+      { label: '음원 · 이미지 무제한 다운로드', icon: <Download size={13} color="#6366f1" /> },
+      { label: '악보 최대 20개 저장', icon: <Check size={13} color="#6366f1" /> },
     ],
   },
 ];
@@ -77,20 +65,19 @@ interface CompareRow {
   label: string;
   free: string;
   pro: string;
-  premium: string;
 }
 
 const COMPARE_ROWS: CompareRow[] = [
-  { label: '⚡ Gen/일', free: '+100', pro: '+200', premium: '무제한' },
-  { label: '큰보표', free: '✕', pro: '✓', premium: '✓' },
-  { label: '재생 모드', free: '일반만', pro: '전체', premium: '전체' },
-  { label: '난이도', free: '초급', pro: '전체', premium: '전체' },
-  { label: '마디 수', free: '최대 4', pro: '무제한', premium: '무제한' },
-  { label: '악보 저장', free: '5개', pro: '10개', premium: '30개' },
-  { label: '음표 편집', free: '✕', pro: '✕', premium: '✓' },
-  { label: '음원 다운로드', free: '✕', pro: '✕', premium: '무제한' },
-  { label: '이미지 저장', free: '✓', pro: '✓', premium: '✓' },
-  { label: '광고', free: '5회당 1회', pro: '없음', premium: '없음' },
+  { label: '조성', free: 'C만', pro: '전체 (24개)' },
+  { label: '박자', free: '4/4만', pro: '전체 (8종)' },
+  { label: '큰보표', free: '✕', pro: '✓' },
+  { label: '재생 모드', free: '일반만', pro: '전체' },
+  { label: '난이도', free: '초급', pro: '전체' },
+  { label: '마디 수', free: '최대 4', pro: '무제한' },
+  { label: '악보 저장', free: '5개', pro: '20개' },
+  { label: '음표 편집', free: '✕', pro: '✓' },
+  { label: '음원 다운로드', free: '✕', pro: '무제한' },
+  { label: '이미지 저장', free: '✓', pro: '✓' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -98,16 +85,10 @@ const COMPARE_ROWS: CompareRow[] = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
-  const { tier: currentTier, upgradePlan, addPaidGen, loading } = useSubscription();
+  const { tier: currentTier, upgradePlan, loading } = useSubscription();
   const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState<PlanTier | null>(null);
   const [showCompare, setShowCompare] = useState(false);
-
-  const isDowngrade = (tier: PlanTier) => {
-    if (currentTier === 'premium' && tier !== 'premium') return true;
-    if (currentTier === 'pro' && tier === 'free') return true;
-    return false;
-  };
 
   const handleSelectPlan = async (tier: PlanTier) => {
     if (tier === currentTier) {
@@ -115,12 +96,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       return;
     }
 
-    if (isDowngrade(tier)) {
+    if (currentTier === 'pro' && tier === 'free') {
       showAlert({
         title: '플랜 변경 불가',
-        message: currentTier === 'premium'
-          ? 'Premium은 최상위 플랜입니다. 다른 플랜으로 변경하려면 스토어에서 구독을 직접 취소하세요.'
-          : 'Pro 플랜에서 무료 플랜으로는 직접 변경할 수 없습니다.\n\nGoogle Play / App Store에서 구독을 취소하세요.',
+        message: 'Pro 플랜에서 무료 플랜으로는 직접 변경할 수 없습니다.\n\nGoogle Play / App Store에서 구독을 취소하세요.',
         type: 'warning',
       });
       return;
@@ -138,7 +117,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     // TODO: 실제 IAP 연동 시 아래 showAlert를 RevenueCat / StoreKit 구매 플로우로 교체
     showAlert({
       title: `${PLAN_NAME[tier]} 플랜 구독`,
-      message: `${tier === 'pro' ? '5,500원' : '11,000원'} / 월\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 구독 적용)`,
+      message: `5,500원 / 월\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 구독 적용)`,
       type: 'info',
       buttons: [
         { text: '취소', style: 'cancel' },
@@ -146,12 +125,9 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           setPurchasing(tier);
           try {
             await upgradePlan(tier, 30);
-            if (tier === 'pro') await addPaidGen(500);
             showAlert({
               title: '구독 완료',
-              message: tier === 'pro'
-                ? `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n\n💎 웰컴 보너스 500 Gen이 지급되었습니다!`
-                : `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!`,
+              message: `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n모든 기능을 자유롭게 이용하세요.`,
               type: 'success',
               buttons: [{ text: '확인', onPress: onClose }],
             });
@@ -178,7 +154,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           <X size={18} color="#64748b" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Crown size={18} color="#f59e0b" />
+          <Crown size={18} color="#6366f1" />
           <Text style={styles.headerTitle}>MelodyGen 요금제</Text>
         </View>
         <View style={{ width: 36 }} />
@@ -252,10 +228,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
                 style={[
                   styles.selectBtn,
                   { backgroundColor: isCurrentPlan ? '#f1f5f9' : color },
-                  (isPurchasing || isDowngrade(card.tier)) && { opacity: 0.4 },
+                  isPurchasing && { opacity: 0.4 },
                 ]}
                 onPress={() => handleSelectPlan(card.tier)}
-                disabled={isPurchasing || loading || isDowngrade(card.tier)}
+                disabled={isPurchasing || loading}
               >
                 <Text
                   style={[
@@ -267,11 +243,9 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
                     ? '현재 플랜'
                     : isPurchasing
                       ? '처리 중...'
-                      : isDowngrade(card.tier)
-                        ? '선택 불가'
-                        : card.tier === 'free'
-                          ? '무료로 계속'
-                          : `${PLAN_NAME[card.tier]} 시작하기`}
+                      : card.tier === 'free'
+                        ? '무료로 계속'
+                        : `${PLAN_NAME[card.tier]} 시작하기`}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -296,7 +270,6 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
               <Text style={[styles.compareCell, styles.compareLabel, styles.compareHeaderText]}>기능</Text>
               <Text style={[styles.compareCell, styles.compareHeaderText, { color: PLAN_COLOR.free }]}>Free</Text>
               <Text style={[styles.compareCell, styles.compareHeaderText, { color: PLAN_COLOR.pro }]}>Pro</Text>
-              <Text style={[styles.compareCell, styles.compareHeaderText, { color: PLAN_COLOR.premium }]}>Premium</Text>
             </View>
             {COMPARE_ROWS.map((row, i) => (
               <View
@@ -306,7 +279,6 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
                 <Text style={[styles.compareCell, styles.compareLabel]}>{row.label}</Text>
                 <Text style={[styles.compareCell, row.free === '✕' && { color: '#ef4444' }]}>{row.free}</Text>
                 <Text style={[styles.compareCell, { color: PLAN_COLOR.pro, fontWeight: 'bold' }]}>{row.pro}</Text>
-                <Text style={[styles.compareCell, { color: PLAN_COLOR.premium, fontWeight: 'bold' }]}>{row.premium}</Text>
               </View>
             ))}
           </View>
@@ -376,7 +348,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#fef9c3',
+    backgroundColor: '#eef2ff',
     borderRadius: 12,
     paddingVertical: 10,
     marginBottom: 16,
