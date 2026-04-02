@@ -46,9 +46,7 @@ export const COLORS = {
   bgOverlay:   'rgba(0,0,0,0.45)',
 
   // Track colors
-  trackRhythm:       '#6366f1',  // indigo
-  trackInterval:     '#8b5cf6',  // violet
-  trackKey:          '#0ea5e9',  // sky
+  trackPartPractice: '#6366f1',  // indigo
   trackComprehensive:'#f59e0b',  // amber
 
   // Plan tier
@@ -64,7 +62,7 @@ export const COLORS = {
 // 트랙별 색상 세트
 // ─────────────────────────────────────────────────────────────
 
-export type TrackType = 'rhythm' | 'interval' | 'key' | 'comprehensive';
+export type TrackType = 'partPractice' | 'comprehensive';
 
 export const TRACK_COLORS: Record<TrackType, {
   main: string;
@@ -72,23 +70,11 @@ export const TRACK_COLORS: Record<TrackType, {
   bgActive: string;
   text: string;
 }> = {
-  rhythm: {
-    main: COLORS.trackRhythm,
+  partPractice: {
+    main: COLORS.trackPartPractice,
     bg: '#eef2ff',
     bgActive: '#6366f1',
     text: '#4338ca',
-  },
-  interval: {
-    main: COLORS.trackInterval,
-    bg: '#f5f3ff',
-    bgActive: '#8b5cf6',
-    text: '#6d28d9',
-  },
-  key: {
-    main: COLORS.trackKey,
-    bg: '#f0f9ff',
-    bgActive: '#0ea5e9',
-    text: '#0369a1',
   },
   comprehensive: {
     main: COLORS.trackComprehensive,

@@ -28,6 +28,8 @@ export type {
 export {
   getDurationPoolForMelodyLevel,
   getTrebleRhythmParamsForMelodyLevel,
+  getDurationPoolForPartPractice,
+  getRhythmParamsForPartPractice,
 } from './melodyRhythmLevel';
 export type { TrebleRhythmParams } from './melodyRhythmLevel';
 

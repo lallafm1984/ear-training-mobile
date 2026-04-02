@@ -79,6 +79,10 @@ export interface GeneratorOptions {
   bassDifficulty?: BassDifficulty;
   measures: number;
   useGrandStaff: boolean;
+  /** 부분연습 모드 */
+  practiceMode?: 'part' | 'comprehensive';
+  /** 부분연습 레벨 (1~9) — practiceMode === 'part' 일 때 사용 */
+  partPracticeLevel?: number;
 }
 
 export interface GeneratedScore {
@@ -1127,6 +1131,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     trebleBaseOctave: TREBLE_BASE,
     melodyNnMin: Math.max(trebleRangeMin, 0),
     melodyNnMax: effectiveTrebleMax,
+    partPracticeLevel: opts.partPracticeLevel,
   });
   const internalBassNotes = stack.bassScoreNotes;
   trebleNotes.push(...stack.trebleScoreNotes);

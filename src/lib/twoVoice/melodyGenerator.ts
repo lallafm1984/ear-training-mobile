@@ -31,6 +31,8 @@ import { fillRhythm } from '../trebleRhythmFill';
 import {
   getDurationPoolForMelodyLevel,
   getTrebleRhythmParamsForMelodyLevel,
+  getDurationPoolForPartPractice,
+  getRhythmParamsForPartPractice,
 } from '../melodyRhythmLevel';
 import { getMelodyMotionParams, inferChordDegreeFromBassMidi } from './melodyScoreParity';
 import { applyMelodyAccidentals } from './chromaticAccidental';
@@ -59,6 +61,8 @@ export interface MelodyGeneratorOptions {
    */
   melodyNnMin?: number;
   melodyNnMax?: number;
+  /** 부분연습 레벨 (1~9) — 설정 시 해당 레벨 전용 duration pool/rhythm params 사용 */
+  partPracticeLevel?: number;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -133,7 +137,17 @@ function buildContext(opts: MelodyGeneratorOptions): MelodyGenContext {
     : opts.key;
   const scale = getScaleDegrees(keySignature);
   const baseOctave = opts.trebleBaseOctave ?? TREBLE_BASE;
-  const constraints = buildLevelConstraints(opts.melodyLevel);
+  let constraints = buildLevelConstraints(opts.melodyLevel);
+
+  // 부분연습: 선율 파라미터를 간소화 (순차진행 위주, 도약 제한)
+  if (opts.partPracticeLevel) {
+    constraints = {
+      ...constraints,
+      stepwiseRatio: 0.80,
+      maxLeap: 4,
+      maxInterval: 4,
+    };
+  }
 
   // Range: center around tonic at treble base octave (nn=0 = root at baseOctave)
   const rangeHalf = Math.ceil(constraints.rangeOctaves * 7);
@@ -778,8 +792,12 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
 
   const allNotes: ScoreNote[] = [];
 
-  const pool = getDurationPoolForMelodyLevel(melodyLevel);
-  const rhythmParams = getTrebleRhythmParamsForMelodyLevel(melodyLevel);
+  const pool = opts.partPracticeLevel
+    ? getDurationPoolForPartPractice(opts.partPracticeLevel)
+    : getDurationPoolForMelodyLevel(melodyLevel);
+  const rhythmParams = opts.partPracticeLevel
+    ? getRhythmParamsForPartPractice(opts.partPracticeLevel)
+    : getTrebleRhythmParamsForMelodyLevel(melodyLevel);
   let tripletBudget = rhythmParams.tripletBudget[0] +
     Math.floor(
       Math.random() * (rhythmParams.tripletBudget[1] - rhythmParams.tripletBudget[0] + 1),
@@ -1077,7 +1095,11 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
   }
 
   // ── 임시표 삽입 (고급 2단계 이상: 알고리즘 기반) ──
-  if (ctx.level >= 8) {
+  // 부분연습: 임시표 레벨(8단계)에서만 임시표 삽입
+  const applyAccidentals = opts.partPracticeLevel
+    ? opts.partPracticeLevel === 8
+    : ctx.level >= 8;
+  if (applyAccidentals) {
     const bassMapsForAccidentals = bassMaps ?? [];
     applyMelodyAccidentals(
       allNotes, bassMapsForAccidentals, ctx.keySignature, ctx.mode,

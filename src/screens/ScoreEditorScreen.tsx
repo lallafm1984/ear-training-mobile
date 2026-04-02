@@ -16,6 +16,8 @@ import {
   generateScore, Difficulty, DifficultyCategory, getDifficultyCategory,
   BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC,
 } from '../lib';
+import { TRACK_META, buildGeneratorOptions } from '../lib/trackConfig';
+import type { TrackType } from '../theme/colors';
 import { AbcjsRenderer, UpgradeModal } from '../components';
 import type { UpgradeReason } from '../components';
 import {
@@ -245,6 +247,10 @@ export default function ScoreEditorScreen() {
   const [genBassDifficulty, setGenBassDifficulty] = useState<BassDifficulty>('bass_1');
   const [genMeasures, setGenMeasures] = useState(4);
   const [genTab, setGenTab] = useState<'melody' | 'grand'>('melody');
+  // 부분연습 / 종합연습
+  const [genPracticeMode, setGenPracticeMode] = useState<'partPractice' | 'comprehensive'>('partPractice');
+  const [genPartLevel, setGenPartLevel] = useState(1);
+  const [genCompLevel, setGenCompLevel] = useState(1);
   const [savedScores, setSavedScores] = useState<SavedScore[]>([]);
 
   // 악보 설정 - 조성 탭 (장조/단조)
@@ -463,8 +469,14 @@ export default function ScoreEditorScreen() {
     // 바텀시트 열린 상태에서 로딩 표시
     setIsGenerating(true);
 
+    // 트랙/레벨에서 GeneratorOptions 빌드
+    const level = genPracticeMode === 'partPractice' ? genPartLevel : genCompLevel;
+    const trackOpts = buildGeneratorOptions(genPracticeMode as TrackType, level);
+    const { levelOverrides: _lo, ...baseOpts } = trackOpts;
+    const effectiveDifficulty = baseOpts.difficulty;
+
     // AI API 연결 연출 (난이도별 랜덤 딜레이)
-    const category = getDifficultyCategory(genDifficulty);
+    const category = getDifficultyCategory(effectiveDifficulty);
     const [minMs, maxMs] = {
       beginner: [800, 1300],
       intermediate: [1300, 1800],
@@ -473,27 +485,42 @@ export default function ScoreEditorScreen() {
     const delay = minMs + Math.random() * (maxMs - minMs);
     await new Promise(resolve => setTimeout(resolve, delay));
 
+    // 종합연습: 큰보표 설정은 트랙 config에서 결정
+    // 부분연습: 항상 1성부 (C장조/4/4/4마디)
     const result = generateScore({
-      keySignature: state.keySignature, timeSignature: state.timeSignature,
-      difficulty: genDifficulty,
-      bassDifficulty: (state.useGrandStaff ?? false) ? genBassDifficulty : undefined,
-      measures: genMeasures, useGrandStaff: state.useGrandStaff ?? false,
+      keySignature: baseOpts.keySignature,
+      timeSignature: baseOpts.timeSignature,
+      difficulty: effectiveDifficulty,
+      bassDifficulty: baseOpts.useGrandStaff ? baseOpts.bassDifficulty : undefined,
+      measures: baseOpts.measures,
+      useGrandStaff: baseOpts.useGrandStaff,
+      practiceMode: genPracticeMode === 'partPractice' ? 'part' : 'comprehensive',
+      partPracticeLevel: genPracticeMode === 'partPractice' ? genPartLevel : undefined,
     });
-    const tieDifficulties = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
+    const tieDifficulties: Difficulty[] = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
     const barsPerStaff =
-      ['beginner_1', 'beginner_2'].includes(genDifficulty)
+      ['beginner_1', 'beginner_2'].includes(effectiveDifficulty)
         ? 4
-        : genDifficulty.startsWith('intermediate_') || genDifficulty.startsWith('advanced_')
+        : effectiveDifficulty.startsWith('intermediate_') || effectiveDifficulty.startsWith('advanced_')
           ? 2
           : undefined;
-    setState(p => ({ ...p, notes: result.trebleNotes, bassNotes: result.bassNotes, disableTies: tieDifficulties.includes(genDifficulty), barsPerStaff }));
+    setState(p => ({
+      ...p,
+      keySignature: baseOpts.keySignature,
+      timeSignature: baseOpts.timeSignature,
+      useGrandStaff: baseOpts.useGrandStaff,
+      notes: result.trebleNotes,
+      bassNotes: result.bassNotes,
+      disableTies: tieDifficulties.includes(effectiveDifficulty),
+      barsPerStaff,
+    }));
     setHideNotes(genHideNotes);
     setIsGenerating(false);
 
     // 생성 완료 후 0.5초 딜레이 후 바텀시트 닫기
     await new Promise(resolve => setTimeout(resolve, 500));
     setMobileSheet(null);
-  }, [state.keySignature, state.timeSignature, state.useGrandStaff, genDifficulty, genBassDifficulty, genMeasures, genHideNotes, isPlaying]);
+  }, [genPracticeMode, genPartLevel, genCompLevel, genHideNotes, isPlaying]);
 
   const handleSave = useCallback(async () => {
     const scores = await getSavedScores();
@@ -1507,97 +1534,156 @@ export default function ScoreEditorScreen() {
                 >
                   {genTab === 'melody' ? (
                     <>
-                      {/* 선율 난이도 */}
-                      <Text style={styles.genSectionLabel}>선율 난이도</Text>
-                      {(['beginner', 'intermediate', 'advanced'] as DifficultyCategory[]).map(cat => {
-                        const catColors = DIFF_CATEGORY_COLORS[cat];
-                        const subLevels = ALL_DIFFICULTIES.filter(d => getDifficultyCategory(d) === cat);
-                        return (
-                          <View key={cat} style={{ marginBottom: 7 }}>
-                            <View style={[styles.genCatChip, { backgroundColor: catColors.bg }]}>
-                              <Text style={[styles.genCatChipText, { color: catColors.text }]}>
-                                {DIFF_CATEGORY_LABELS[cat]}
-                              </Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', gap: 6 }}>
-                              {subLevels.map(d => {
-                                const allowed = limits.allowedDifficulties.includes(d);
-                                const isActive = genDifficulty === d;
-                                const subNum = d.split('_')[1];
-                                return (
-                                  <TouchableOpacity
-                                    key={d}
-                                    onPress={() => {
-                                      if (!allowed) { setMobileSheet(null); openUpgrade('difficulty'); return; }
-                                      setGenDifficulty(d);
-                                    }}
-                                    style={[
-                                      styles.genDiffBtn,
-                                      {
-                                        backgroundColor: isActive ? catColors.activeBg : catColors.bg,
-                                        borderColor: isActive ? catColors.activeBg : catColors.text + '28',
-                                        opacity: allowed ? 1 : 0.45,
-                                        shadowColor: isActive ? catColors.activeBg : 'transparent',
-                                        shadowOpacity: isActive ? 0.35 : 0,
-                                        shadowRadius: 5,
-                                        shadowOffset: { width: 0, height: 2 },
-                                        elevation: isActive ? 3 : 0,
-                                      },
-                                    ]}
-                                  >
-                                    {!allowed && (
-                                      <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : catColors.text + '99'} style={{ marginBottom: 1 }} />
-                                    )}
-                                    <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : catColors.text }]}>
-                                      {subNum}단계
-                                    </Text>
-                                    <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : catColors.text + 'cc' }]} numberOfLines={2}>
-                                      {DIFF_DESC[d]}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </View>
-                          </View>
-                        );
-                      })}
-                      {/* 마디 수 */}
-                      <Text style={styles.genSectionLabel}>마디 수</Text>
-                      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
-                        {[4, 8, 12, 16].map(n => {
-                          const allowed = n <= limits.maxMeasures;
-                          const isActive = genMeasures === n;
+                      {/* 연습 모드 선택 탭 */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                        {(['partPractice', 'comprehensive'] as const).map(mode => {
+                          const meta = TRACK_META[mode];
+                          const isActive = genPracticeMode === mode;
+                          const modeColor = mode === 'partPractice' ? '#6366f1' : '#f59e0b';
                           return (
                             <TouchableOpacity
-                              key={n}
-                              onPress={() => {
-                                if (!allowed) { setMobileSheet(null); openUpgrade('measures'); return; }
-                                setGenMeasures(n);
-                              }}
+                              key={mode}
+                              onPress={() => setGenPracticeMode(mode)}
                               style={[
-                                styles.genMeasureBtn,
+                                styles.genCatChip,
                                 {
-                                  backgroundColor: isActive ? '#6366f1' : '#f1f5f9',
-                                  borderColor: isActive ? '#6366f1' : '#e2e8f0',
-                                  opacity: allowed ? 1 : 0.45,
-                                  shadowColor: isActive ? '#6366f1' : 'transparent',
-                                  shadowOpacity: isActive ? 0.3 : 0,
-                                  shadowRadius: 5,
-                                  shadowOffset: { width: 0, height: 2 },
-                                  elevation: isActive ? 3 : 0,
+                                  flex: 1,
+                                  backgroundColor: isActive ? modeColor : '#f1f5f9',
+                                  borderColor: isActive ? modeColor : '#e2e8f0',
+                                  borderWidth: 1.5,
+                                  borderRadius: 10,
+                                  paddingVertical: 10,
+                                  alignItems: 'center',
                                 },
                               ]}
                             >
-                              {!allowed && <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8'} style={{ marginBottom: 1 }} />}
-                              <Text style={[styles.genMeasureBtnNum, { color: isActive ? '#fff' : '#334155' }]}>{n}</Text>
-                              <Text style={[styles.genMeasureBtnSub, { color: isActive ? 'rgba(255,255,255,0.75)' : '#94a3b8' }]}>마디</Text>
+                              <Text style={[
+                                styles.genCatChipText,
+                                {
+                                  color: isActive ? '#fff' : '#475569',
+                                  fontWeight: isActive ? '700' : '600',
+                                  fontSize: 13,
+                                },
+                              ]}>
+                                {meta.name}
+                              </Text>
+                              <Text style={{
+                                color: isActive ? 'rgba(255,255,255,0.8)' : '#94a3b8',
+                                fontSize: 10,
+                                marginTop: 2,
+                              }}>
+                                {meta.description}
+                              </Text>
                             </TouchableOpacity>
                           );
                         })}
                       </View>
 
+                      {/* 레벨 선택 */}
+                      {genPracticeMode === 'partPractice' ? (
+                        <>
+                          <Text style={styles.genSectionLabel}>단계 선택</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {TRACK_META.partPractice.levels.map(lv => {
+                              const isActive = genPartLevel === lv.level;
+                              const allowed = !lv.requiresPro || limits.canUseGrandStaff;
+                              return (
+                                <TouchableOpacity
+                                  key={lv.level}
+                                  onPress={() => {
+                                    if (!allowed) { setMobileSheet(null); openUpgrade('difficulty'); return; }
+                                    setGenPartLevel(lv.level);
+                                  }}
+                                  style={[
+                                    styles.genDiffBtn,
+                                    {
+                                      backgroundColor: isActive ? '#6366f1' : '#eef2ff',
+                                      borderColor: isActive ? '#6366f1' : '#c7d2fe',
+                                      opacity: allowed ? 1 : 0.45,
+                                      shadowColor: isActive ? '#6366f1' : 'transparent',
+                                      shadowOpacity: isActive ? 0.35 : 0,
+                                      shadowRadius: 5,
+                                      shadowOffset: { width: 0, height: 2 },
+                                      elevation: isActive ? 3 : 0,
+                                    },
+                                  ]}
+                                >
+                                  {!allowed && (
+                                    <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#4338ca99'} style={{ marginBottom: 1 }} />
+                                  )}
+                                  <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#4338ca' }]}>
+                                    {lv.name}
+                                  </Text>
+                                  <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#4338cacc' }]} numberOfLines={2}>
+                                    {lv.description}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          {/* 부분연습 안내 */}
+                          <View style={{ marginTop: 10, padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                            <Text style={{ fontSize: 11, color: '#64748b', lineHeight: 16 }}>
+                              선택한 요소 + 기본음표(2분·4분)만 나옵니다.{'\n'}
+                              C장조 · 4/4박자 · 4마디 고정
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.genSectionLabel}>단계 선택</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {TRACK_META.comprehensive.levels.map(lv => {
+                              const isActive = genCompLevel === lv.level;
+                              const allowed = !lv.requiresPro || limits.canUseGrandStaff;
+                              return (
+                                <TouchableOpacity
+                                  key={lv.level}
+                                  onPress={() => {
+                                    if (!allowed) { setMobileSheet(null); openUpgrade('difficulty'); return; }
+                                    setGenCompLevel(lv.level);
+                                  }}
+                                  style={[
+                                    styles.genDiffBtn,
+                                    {
+                                      backgroundColor: isActive ? '#f59e0b' : '#fffbeb',
+                                      borderColor: isActive ? '#f59e0b' : '#fde68a',
+                                      opacity: allowed ? 1 : 0.45,
+                                      shadowColor: isActive ? '#f59e0b' : 'transparent',
+                                      shadowOpacity: isActive ? 0.35 : 0,
+                                      shadowRadius: 5,
+                                      shadowOffset: { width: 0, height: 2 },
+                                      elevation: isActive ? 3 : 0,
+                                    },
+                                  ]}
+                                >
+                                  {!allowed && (
+                                    <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#b4530999'} style={{ marginBottom: 1 }} />
+                                  )}
+                                  <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#b45309' }]}>
+                                    {lv.name}
+                                  </Text>
+                                  <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#b45309cc' }]} numberOfLines={2}>
+                                    {lv.description}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          {/* 종합연습 안내 */}
+                          <View style={{ marginTop: 10, padding: 10, backgroundColor: '#fffbeb', borderRadius: 8, borderWidth: 1, borderColor: '#fde68a' }}>
+                            <Text style={{ fontSize: 11, color: '#92400e', lineHeight: 16 }}>
+                              선택한 범위의 모든 요소가 종합적으로 나옵니다.{'\n'}
+                              조성·박자·큰보표가 랜덤으로 결정됩니다 · 8마디
+                            </Text>
+                          </View>
+                        </>
+                      )}
+
                       {/* 음표 숨기기 */}
-                      <View style={[styles.genOptionRow, genHideNotes && { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
+                      <View style={[styles.genOptionRow, { marginTop: 14 }, genHideNotes && { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
                         <View style={[styles.genCardIconWrap, { backgroundColor: genHideNotes ? '#fef3c7' : '#f1f5f9' }]}>
                           {genHideNotes
                             ? <EyeOff size={13} color="#d97706" />
