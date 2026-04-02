@@ -52,3 +52,43 @@ export function getTrebleRhythmParamsForMelodyLevel(level: number): TrebleRhythm
   const k = Math.max(1, Math.min(9, Math.floor(level)));
   return { ...RHYTHM_PARAMS_BY_LEVEL[k] };
 }
+
+// ────────────────────────────────────────────────────────────────
+// 부분연습 전용 — 해당 레벨 고유 요소 + 기본(2분/4분)만 사용
+// ────────────────────────────────────────────────────────────────
+
+/** 부분연습 Duration Pool (16분음표 단위) */
+const PART_PRACTICE_DURATION_POOL: Record<number, number[]> = {
+  1: [8, 4],           // 2분 + 4분 (기본)
+  2: [8, 4, 2],        // + 8분음표
+  3: [8, 6, 4],        // + 점4분음표
+  4: [8, 4],           // 붙임줄 (tieProb로 제어)
+  5: [8, 4],           // 당김음 (syncopationProb로 제어)
+  6: [8, 4, 1],        // + 16분음표
+  7: [8, 4, 3],        // + 점8분음표
+  8: [8, 4],           // 임시표 (chromaticProb로 제어)
+  9: [8, 4],           // 셋잇단음표 (tripletProb로 제어)
+};
+
+/** 부분연습 리듬 파라미터 — 해당 레벨 고유 요소만 활성화 */
+const PART_PRACTICE_RHYTHM_PARAMS: Record<number, TrebleRhythmParams> = {
+  1: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  2: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  3: { syncopationProb: 0, dottedProb: 0.80, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  4: { syncopationProb: 0, dottedProb: 0,    tieProb: 0.40, tripletProb: 0,    tripletBudget: [0, 0] },
+  5: { syncopationProb: 0.40, dottedProb: 0, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  6: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  7: { syncopationProb: 0, dottedProb: 0.45, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  8: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  9: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0.60, tripletBudget: [2, 4] },
+};
+
+export function getDurationPoolForPartPractice(level: number): number[] {
+  const k = Math.max(1, Math.min(9, Math.floor(level)));
+  return PART_PRACTICE_DURATION_POOL[k];
+}
+
+export function getRhythmParamsForPartPractice(level: number): TrebleRhythmParams {
+  const k = Math.max(1, Math.min(9, Math.floor(level)));
+  return { ...PART_PRACTICE_RHYTHM_PARAMS[k] };
+}

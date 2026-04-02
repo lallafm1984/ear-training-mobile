@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// 트랙 시스템 설정 — 기획서 v2.0 기반
+// 트랙 시스템 설정 — 부분연습 + 종합연습
 // ─────────────────────────────────────────────────────────────
 
 import type { Difficulty, BassDifficulty, GeneratorOptions } from './scoreGenerator';
@@ -9,12 +9,10 @@ import type { TrackType } from '../theme/colors';
 // 타입 정의
 // ─────────────────────────────────────────────────────────────
 
-export type RhythmLevel = 1 | 2 | 3 | 4 | 5 | 6;
-export type IntervalLevel = 1 | 2 | 3 | 4;
-export type KeyLevel = 1 | 2 | 3 | 4;
-export type ComprehensiveLevel = 1 | 2 | 3;
+export type PartPracticeLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type ComprehensiveLevel = 1 | 2 | 3 | 4;
 
-export type TrackLevel = RhythmLevel | IntervalLevel | KeyLevel | ComprehensiveLevel;
+export type TrackLevel = PartPracticeLevel | ComprehensiveLevel;
 
 export interface TrackLevelConfig {
   difficulty: Difficulty;
@@ -86,132 +84,149 @@ export function getAllowedBassDifficulties(difficulty: Difficulty): BassDifficul
 }
 
 // ─────────────────────────────────────────────────────────────
-// 리듬 트랙 — 6레벨
+// 부분연습 트랙 — 9단계
+// 해당 레벨 고유 요소 + 기본(2분/4분)만 사용
+// C장조 고정, 4/4 고정, 4마디, 큰보표 비활성
 // ─────────────────────────────────────────────────────────────
 
-const RHYTHM_CONFIGS: Record<RhythmLevel, TrackLevelConfig> = {
+const PART_PRACTICE_CONFIGS: Record<PartPracticeLevel, TrackLevelConfig> = {
+  // 1단계: 2분 + 4분 (기본)
   1: {
     difficulty: 'beginner_1', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
-    levelOverrides: { maxInterval: 2 },
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
+    },
   },
-  2: {
-    difficulty: 'beginner_2', keySignature: 'C', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-    levelOverrides: { maxInterval: 3 },
-  },
-  3: {
-    difficulty: 'beginner_3', keySignature: 'C', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-    levelOverrides: { maxInterval: 3 },
-  },
-  4: {
-    difficulty: 'intermediate_2', keySignature: 'C', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-  },
-  5: {
-    difficulty: 'intermediate_3', keySignature: 'C', timeSignature: '4/4',
-    measures: 8, useGrandStaff: false,
-  },
-  6: {
-    difficulty: 'advanced_3', keySignature: 'C', timeSignature: '4/4',
-    measures: 8, useGrandStaff: false,
-  },
-};
-
-// ─────────────────────────────────────────────────────────────
-// 음정 트랙 — 4레벨
-// ─────────────────────────────────────────────────────────────
-
-const INTERVAL_CONFIGS: Record<IntervalLevel, TrackLevelConfig> = {
-  1: {
-    difficulty: 'beginner_1', keySignature: 'C', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-    levelOverrides: { maxInterval: 2, stepwiseProb: 0.95, maxLeap: 2 },
-  },
+  // 2단계: 8분음표
   2: {
     difficulty: 'beginner_3', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
-      maxInterval: 3, stepwiseProb: 0.82, maxLeap: 3,
-      syncopationProb: 0, tieProb: 0, dottedProb: 0.15,
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
     },
   },
+  // 3단계: 점4분음표
   3: {
     difficulty: 'intermediate_1', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
-      maxInterval: 5, stepwiseProb: 0.70, maxLeap: 5,
-      syncopationProb: 0, tieProb: 0, dottedProb: 0.15,
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0.80, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
     },
   },
+  // 4단계: 붙임줄
   4: {
-    difficulty: 'advanced_1', keySignature: 'C', timeSignature: '4/4',
-    measures: 8, useGrandStaff: false,
+    difficulty: 'intermediate_2', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
     levelOverrides: {
-      maxInterval: 8, stepwiseProb: 0.55, maxLeap: 8,
-      syncopationProb: 0, tieProb: 0, dottedProb: 0.20,
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0.40,
+      tripletProb: 0, chromaticProb: 0,
+    },
+  },
+  // 5단계: 당김음
+  5: {
+    difficulty: 'intermediate_2', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0.40, dottedProb: 0, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
+    },
+  },
+  // 6단계: 16분음표
+  6: {
+    difficulty: 'intermediate_3', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
+    },
+  },
+  // 7단계: 점8분음표
+  7: {
+    difficulty: 'advanced_1', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0.45, tieProb: 0,
+      tripletProb: 0, chromaticProb: 0,
+    },
+  },
+  // 8단계: 임시표
+  8: {
+    difficulty: 'advanced_2', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0,
+      tripletProb: 0, chromaticBudget: [2, 4], chromaticProb: 0.20,
+    },
+  },
+  // 9단계: 셋잇단음표
+  9: {
+    difficulty: 'advanced_3', keySignature: 'C', timeSignature: '4/4',
+    measures: 4, useGrandStaff: false,
+    levelOverrides: {
+      stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0,
+      tripletProb: 0.60, tripletBudget: [2, 4], chromaticProb: 0,
     },
   },
 };
 
 // ─────────────────────────────────────────────────────────────
-// 조성 트랙 — 4레벨
-// ─────────────────────────────────────────────────────────────
-
-const KEY_CONFIGS: Record<KeyLevel, TrackLevelConfig> = {
-  1: {
-    difficulty: 'beginner_3', keySignature: 'random', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-  },
-  2: {
-    difficulty: 'beginner_3', keySignature: 'random', timeSignature: '4/4',
-    measures: 4, useGrandStaff: false,
-  },
-  3: {
-    difficulty: 'intermediate_1', keySignature: 'random', timeSignature: '4/4',
-    measures: 8, useGrandStaff: false,
-  },
-  4: {
-    difficulty: 'advanced_2', keySignature: 'random', timeSignature: '4/4',
-    measures: 8, useGrandStaff: false,
-  },
-};
-
-// ─────────────────────────────────────────────────────────────
-// 종합 트랙 — 3레벨
+// 종합연습 트랙 — 4단계 (모두 8마디)
 // ─────────────────────────────────────────────────────────────
 
 interface ComprehensiveConfig {
   difficultyPool: Difficulty[];
   keyPool: string[];
   timePool: string[];
-  measureRange: [number, number];
+  measures: number;
   allowGrandStaff: boolean;
   bassPool?: BassDifficulty[];
 }
 
 const COMPREHENSIVE_CONFIGS: Record<ComprehensiveLevel, ComprehensiveConfig> = {
+  // 1단계: 기초 종합 (부분연습 L1~2 범위)
   1: {
     difficultyPool: ['beginner_1', 'beginner_2', 'beginner_3'],
     keyPool: KEY_POOL_K1,
     timePool: ['4/4', '3/4'],
-    measureRange: [4, 4],
+    measures: 8,
     allowGrandStaff: false,
   },
+  // 2단계: 중급 종합 (부분연습 L1~5 범위)
   2: {
-    difficultyPool: ['beginner_3', 'intermediate_1', 'intermediate_2', 'intermediate_3'],
+    difficultyPool: ['beginner_3', 'intermediate_1', 'intermediate_2'],
     keyPool: KEY_POOL_K2,
     timePool: ['4/4', '3/4', '6/8'],
-    measureRange: [4, 8],
+    measures: 8,
+    allowGrandStaff: false,
+  },
+  // 3단계: 고급 종합 (부분연습 L1~7 범위)
+  3: {
+    difficultyPool: ['intermediate_1', 'intermediate_2', 'intermediate_3', 'advanced_1'],
+    keyPool: KEY_POOL_K3,
+    timePool: ['4/4', '3/4', '2/4', '6/8', '9/8'],
+    measures: 8,
     allowGrandStaff: true,
     bassPool: ['bass_2', 'bass_3'],
   },
-  3: {
-    difficultyPool: ['intermediate_2', 'intermediate_3', 'advanced_1', 'advanced_2', 'advanced_3'],
+  // 4단계: 완전 종합 (부분연습 L1~9 전체)
+  4: {
+    difficultyPool: ['intermediate_3', 'advanced_1', 'advanced_2', 'advanced_3'],
     keyPool: KEY_POOL_K4,
     timePool: ['4/4', '3/4', '2/4', '6/8', '9/8', '12/8', '2/2'],
-    measureRange: [8, 16],
+    measures: 8,
     allowGrandStaff: true,
     bassPool: ['bass_3', 'bass_4'],
   },
@@ -222,62 +237,40 @@ const COMPREHENSIVE_CONFIGS: Record<ComprehensiveLevel, ComprehensiveConfig> = {
 // ─────────────────────────────────────────────────────────────
 
 export const TRACK_META: Record<TrackType, TrackMeta> = {
-  rhythm: {
-    type: 'rhythm',
-    name: '리듬',
-    description: 'C장조 고정, 리듬 패턴만 단계적으로 상승',
-    icon: 'drum',
-    maxLevel: 6,
+  partPractice: {
+    type: 'partPractice',
+    name: '부분연습',
+    description: '해당 요소 + 기본음표(2분/4분)만으로 집중 연습',
+    icon: 'target',
+    maxLevel: 9,
     levels: [
-      { level: 1, name: '기본 박',   description: '온·2분·4분음표',         requiresPro: false },
-      { level: 2, name: '점음표',    description: '+ 점2분·점4분, 쉼표',    requiresPro: false },
-      { level: 3, name: '8분음표',   description: '+ 8분·8분쉼표',          requiresPro: false },
-      { level: 4, name: '당김음',    description: '+ 붙임줄, 당김음',       requiresPro: false },
-      { level: 5, name: '16분음표',  description: '+ 16분·16분쉼표',        requiresPro: true },
-      { level: 6, name: '셋잇단',    description: '+ 셋잇단음표, 점8분',    requiresPro: true },
-    ],
-  },
-  interval: {
-    type: 'interval',
-    name: '음정',
-    description: '단순 리듬 고정, 도약 폭만 단계적으로 상승',
-    icon: 'music',
-    maxLevel: 4,
-    levels: [
-      { level: 1, name: '순차',      description: '2도 이내',              requiresPro: false },
-      { level: 2, name: '3도 도약',   description: '3도 포함',              requiresPro: false },
-      { level: 3, name: '5도 도약',   description: '5도 포함',              requiresPro: false },
-      { level: 4, name: '넓은 도약',  description: '8도(옥타브)까지',       requiresPro: true },
-    ],
-  },
-  key: {
-    type: 'key',
-    name: '조성',
-    description: '단순 리듬 고정, 조표 복잡도만 상승',
-    icon: 'key',
-    maxLevel: 4,
-    levels: [
-      { level: 1, name: '기본 조성',  description: 'C, G, F, Am 등 (♯♭ 0~1)', requiresPro: false },
-      { level: 2, name: '2~3개 조표', description: 'D, Bb, Em 등 (♯♭ 2~3)',   requiresPro: false },
-      { level: 3, name: '4~5개 조표', description: 'E, Ab, F#m 등',            requiresPro: true },
-      { level: 4, name: '전체 조성',  description: '모든 24 조성 + 임시표',     requiresPro: true },
+      { level: 1, name: '1단계', description: '2분음표·4분음표',         requiresPro: false },
+      { level: 2, name: '2단계', description: '8분음표',                 requiresPro: false },
+      { level: 3, name: '3단계', description: '점4분음표',               requiresPro: false },
+      { level: 4, name: '4단계', description: '붙임줄',                  requiresPro: false },
+      { level: 5, name: '5단계', description: '당김음',                  requiresPro: false },
+      { level: 6, name: '6단계', description: '16분음표',                requiresPro: true },
+      { level: 7, name: '7단계', description: '점8분음표',               requiresPro: true },
+      { level: 8, name: '8단계', description: '임시표',                  requiresPro: true },
+      { level: 9, name: '9단계', description: '셋잇단음표',              requiresPro: true },
     ],
   },
   comprehensive: {
     type: 'comprehensive',
-    name: '종합',
+    name: '종합연습',
     description: '리듬+음정+조성 결합 실전 훈련',
     icon: 'star',
-    maxLevel: 3,
+    maxLevel: 4,
     levels: [
-      { level: 1, name: '기초 종합', description: '초급 범위 · 쉬운 조성',         requiresPro: false },
-      { level: 2, name: '실전 종합', description: '중급 범위 · 6/8 포함 · 큰보표', requiresPro: true },
-      { level: 3, name: '완전 종합', description: '고급 범위 · 전체 조성·박자',    requiresPro: true },
+      { level: 1, name: '1단계', description: '기초 종합 · 기본+8분',                     requiresPro: false },
+      { level: 2, name: '2단계', description: '중급 종합 · +점4분·붙임줄·당김음',          requiresPro: true },
+      { level: 3, name: '3단계', description: '고급 종합 · +16분·점8분',                   requiresPro: true },
+      { level: 4, name: '4단계', description: '완전 종합 · 전체 요소',                     requiresPro: true },
     ],
   },
 };
 
-export const ALL_TRACKS: TrackType[] = ['rhythm', 'interval', 'key', 'comprehensive'];
+export const ALL_TRACKS: TrackType[] = ['partPractice', 'comprehensive'];
 
 // ─────────────────────────────────────────────────────────────
 // 설정 조회 함수
@@ -300,42 +293,31 @@ export function buildGeneratorOptions(
     const difficulty = pickRandom(cfg.difficultyPool);
     const keySignature = pickRandom(cfg.keyPool);
     const timeSignature = pickRandom(cfg.timePool);
-    const [minM, maxM] = cfg.measureRange;
-    const measures = minM === maxM ? minM : pickRandom([minM, maxM]);
     const useGrandStaff = cfg.allowGrandStaff && Math.random() > 0.5;
     const bassDifficulty = useGrandStaff && cfg.bassPool
       ? pickRandom(cfg.bassPool) : undefined;
 
     return {
-      difficulty, keySignature, timeSignature, measures,
+      difficulty, keySignature, timeSignature,
+      measures: cfg.measures,
       useGrandStaff, bassDifficulty,
     };
   }
 
-  const configMap: Record<string, Record<number, TrackLevelConfig>> = {
-    rhythm: RHYTHM_CONFIGS,
-    interval: INTERVAL_CONFIGS,
-    key: KEY_CONFIGS,
-  };
-
-  const cfg = configMap[track]?.[level];
-  if (!cfg) throw new Error(`Invalid track/level: ${track}/${level}`);
-
-  let keySignature = cfg.keySignature;
-  if (keySignature === 'random') {
-    // 조성 트랙: 레벨에 맞는 풀에서 선택
-    const pool = track === 'key' ? (KEY_POOLS[level] ?? KEY_POOL_K1) : KEY_POOL_K1;
-    keySignature = pickRandom(pool);
-  }
+  // partPractice
+  const cfg = PART_PRACTICE_CONFIGS[level as PartPracticeLevel];
+  if (!cfg) throw new Error(`Invalid partPractice level: ${level}`);
 
   return {
     difficulty: cfg.difficulty,
-    keySignature,
-    timeSignature: cfg.timeSignature === 'random' ? '4/4' : cfg.timeSignature,
+    keySignature: cfg.keySignature,
+    timeSignature: cfg.timeSignature,
     measures: cfg.measures,
     useGrandStaff: cfg.useGrandStaff,
     bassDifficulty: cfg.bassDifficulty,
     levelOverrides: cfg.levelOverrides,
+    practiceMode: 'part',
+    partPracticeLevel: level,
   };
 }
 
@@ -366,9 +348,7 @@ export function getTrackGenCost(track: TrackType, level: number): number {
 // ─────────────────────────────────────────────────────────────
 
 export interface UserSkillProfile {
-  rhythmLevel: number;
-  intervalLevel: number;
-  keyLevel: number;
+  partPracticeLevel: number;
   comprehensiveLevel: number;
   recentAccuracy: number;
   streakDays: number;
@@ -377,9 +357,7 @@ export interface UserSkillProfile {
 }
 
 export const DEFAULT_SKILL_PROFILE: UserSkillProfile = {
-  rhythmLevel: 1,
-  intervalLevel: 1,
-  keyLevel: 1,
+  partPracticeLevel: 1,
   comprehensiveLevel: 1,
   recentAccuracy: 0.6,
   streakDays: 0,
@@ -396,15 +374,13 @@ export interface QuickStartRecommendation {
 export function getQuickStartRecommendation(
   profile: UserSkillProfile,
 ): QuickStartRecommendation {
-  // 1. 각 트랙 진행률 계산
+  // 각 트랙 진행률 계산
   const progress: { track: TrackType; ratio: number; level: number; max: number }[] = [
-    { track: 'rhythm',        ratio: profile.rhythmLevel / 6,        level: profile.rhythmLevel,        max: 6 },
-    { track: 'interval',      ratio: profile.intervalLevel / 4,      level: profile.intervalLevel,      max: 4 },
-    { track: 'key',           ratio: profile.keyLevel / 4,           level: profile.keyLevel,           max: 4 },
-    { track: 'comprehensive', ratio: profile.comprehensiveLevel / 3, level: profile.comprehensiveLevel, max: 3 },
+    { track: 'partPractice',  ratio: profile.partPracticeLevel / 9,   level: profile.partPracticeLevel,   max: 9 },
+    { track: 'comprehensive', ratio: profile.comprehensiveLevel / 4,  level: profile.comprehensiveLevel,  max: 4 },
   ];
 
-  // 2. 가장 약한 트랙 (같은 트랙 3회 연속 시 순환)
+  // 가장 약한 트랙 (같은 트랙 3회 연속 시 순환)
   progress.sort((a, b) => a.ratio - b.ratio);
 
   let selected = progress[0];
@@ -416,7 +392,7 @@ export function getQuickStartRecommendation(
     selected = progress[1];
   }
 
-  // 3. 정확도 기반 레벨 조정
+  // 정확도 기반 레벨 조정
   let level = selected.level;
   if (profile.recentAccuracy >= 0.8 && level < selected.max) {
     level = level + 1;

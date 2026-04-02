@@ -27,6 +27,8 @@ export interface TwoVoiceStackInput {
   /** Align with scoreGenerator treble nn floor/ceiling (grand staff). */
   melodyNnMin?: number;
   melodyNnMax?: number;
+  /** 부분연습 레벨 (1~9) — 설정 시 해당 레벨 전용 duration pool/rhythm params 사용 */
+  partPracticeLevel?: number;
 }
 
 export interface TwoVoiceStackResult {
@@ -80,6 +82,7 @@ export function generateTwoVoiceStack(input: TwoVoiceStackInput): TwoVoiceStackR
     trebleBaseOctave,
     melodyNnMin,
     melodyNnMax,
+    partPracticeLevel: input.partPracticeLevel,
   };
 
   const trebleScoreNotes = generateMelody(melodyOpts);

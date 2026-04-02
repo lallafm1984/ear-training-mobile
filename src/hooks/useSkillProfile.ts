@@ -40,9 +40,7 @@ export function useSkillProfile() {
       .then(({ data }) => {
         if (data) {
           const remote: UserSkillProfile = {
-            rhythmLevel: data.rhythm_level ?? 1,
-            intervalLevel: data.interval_level ?? 1,
-            keyLevel: data.key_level ?? 1,
+            partPracticeLevel: data.part_practice_level ?? data.rhythm_level ?? 1,
             comprehensiveLevel: data.comprehensive_level ?? 1,
             recentAccuracy: data.recent_accuracy ?? 0.6,
             streakDays: data.streak_days ?? 0,
@@ -66,9 +64,7 @@ export function useSkillProfile() {
         .from('user_skill_profiles')
         .upsert({
           user_id: session.user.id,
-          rhythm_level: updated.rhythmLevel,
-          interval_level: updated.intervalLevel,
-          key_level: updated.keyLevel,
+          part_practice_level: updated.partPracticeLevel,
           comprehensive_level: updated.comprehensiveLevel,
           recent_accuracy: updated.recentAccuracy,
           streak_days: updated.streakDays,
@@ -94,20 +90,16 @@ export function useSkillProfile() {
 
     // 레벨 조정
     const trackLevelKey = {
-      rhythm: 'rhythmLevel',
-      interval: 'intervalLevel',
-      key: 'keyLevel',
+      partPractice: 'partPracticeLevel',
       comprehensive: 'comprehensiveLevel',
     }[track] as keyof UserSkillProfile;
 
-    const maxLevels = { rhythm: 6, interval: 4, key: 4, comprehensive: 3 };
+    const maxLevels: Record<TrackType, number> = { partPractice: 9, comprehensive: 4 };
     const currentLevel = updated[trackLevelKey] as number;
 
     if (rating === 'easy' && currentLevel === level && level < maxLevels[track]) {
-      // 쉬웠으면 다음 레벨 해금
       (updated as any)[trackLevelKey] = level + 1;
     }
-    // 'hard'일 때 레벨을 내리지는 않음 (동기 부여 유지)
 
     // 퀵스타트 트랙 순환 추적
     if (updated.lastQuickTrack === track) {
@@ -126,7 +118,7 @@ export function useSkillProfile() {
     const lastKey = '@melodygen_last_practice_date';
     const lastDate = await AsyncStorage.getItem(lastKey);
 
-    if (lastDate === today) return; // 오늘 이미 연습함
+    if (lastDate === today) return;
 
     const updated = { ...profile };
     const yesterday = new Date(Date.now() - 86400000).toDateString();
