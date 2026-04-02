@@ -57,7 +57,7 @@ const PLAN_CARDS: PlanCard[] = [
   },
   {
     tier: 'premium',
-    price: '16,500원',
+    price: '11,000원',
     priceNote: '월 구독 / 언제든 취소',
     badge: '교사·학원 추천',
     features: [
@@ -138,7 +138,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     // TODO: 실제 IAP 연동 시 아래 showAlert를 RevenueCat / StoreKit 구매 플로우로 교체
     showAlert({
       title: `${PLAN_NAME[tier]} 플랜 구독`,
-      message: `${tier === 'pro' ? '5,500원' : '16,500원'} / 월\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 구독 적용)`,
+      message: `${tier === 'pro' ? '5,500원' : '11,000원'} / 월\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 구독 적용)`,
       type: 'info',
       buttons: [
         { text: '취소', style: 'cancel' },

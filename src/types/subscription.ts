@@ -11,7 +11,7 @@ export type PlanTier = 'free' | 'pro' | 'premium';
 export const PLAN_PRICE: Record<PlanTier, string> = {
   free:    '무료',
   pro:     '5,500원 / 월',
-  premium: '16,500원 / 월',
+  premium: '11,000원 / 월',
 };
 
 /** 플랜별 한국어 이름 */

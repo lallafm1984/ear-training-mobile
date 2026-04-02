@@ -27,15 +27,15 @@ const GEN_PACKAGES: GenPackage[] = [
     id: 'gen_300',
     gen: 300,
     bonus: 0,
-    price: '1,100원',
-    priceNum: 1100,
+    price: '1,500원',
+    priceNum: 1500,
   },
   {
     id: 'gen_900',
     gen: 900,
     bonus: 100,
-    price: '2,900원',
-    priceNum: 2900,
+    price: '3,900원',
+    priceNum: 3900,
     badge: '인기',
     highlight: true,
   },
@@ -43,15 +43,15 @@ const GEN_PACKAGES: GenPackage[] = [
     id: 'gen_2500',
     gen: 2500,
     bonus: 300,
-    price: '6,600원',
-    priceNum: 6600,
+    price: '8,900원',
+    priceNum: 8900,
   },
   {
     id: 'gen_6000',
     gen: 6000,
     bonus: 800,
-    price: '13,200원',
-    priceNum: 13200,
+    price: '17,900원',
+    priceNum: 17900,
     badge: '최고 가성비',
   },
 ];
@@ -224,11 +224,11 @@ export default function GenShopModal({ visible, onClose }: Props) {
               </View>
               <Text style={styles.infoDesc}>Gen은 AI 악보 자동생성에 사용되는 재화입니다.</Text>
               {[
-                { label: '초급 1단계', cost: '8 Gen', note: '(큰보표 12 Gen)' },
+                { label: '초급 1단계', cost: '8 Gen', note: '(큰보표 10 Gen)' },
                 { label: '초급 3단계', cost: '12 Gen', note: '(큰보표 18 Gen)' },
-                { label: '중급 1단계', cost: '14 Gen', note: '(큰보표 21 Gen)' },
-                { label: '고급 3단계', cost: '24 Gen', note: '(큰보표 36 Gen)' },
-                { label: '8마디 이상', cost: '+5~15 Gen', note: '추가' },
+                { label: '중급 1단계', cost: '14 Gen', note: '(큰보표 20 Gen)' },
+                { label: '고급 3단계', cost: '22 Gen', note: '(큰보표 30 Gen)' },
+                { label: '8마디 이상', cost: '+2~6 Gen', note: '추가' },
               ].map((r, i) => (
                 <View key={i} style={styles.infoRow}>
                   <Check size={11} color="#10b981" />

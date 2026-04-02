@@ -4,3 +4,4 @@
 
 export { useAdCounter } from './useAdCounter';
 export { useDownloadQuota } from './useDownloadQuota';
+export { useSkillProfile } from './useSkillProfile';

@@ -13,3 +13,6 @@ export { default as GenShopModal } from './GenShopModal';
 
 export { default as UpgradeModal } from './UpgradeModal';
 export type { UpgradeReason } from './UpgradeModal';
+
+export { default as SelfEvalModal } from './SelfEvalModal';
+export type { EvalRating } from './SelfEvalModal';

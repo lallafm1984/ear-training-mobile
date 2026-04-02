@@ -17,15 +17,19 @@ import {
   BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC,
   getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS,
 } from '../lib';
-import { AbcjsRenderer, AdModal, UpgradeModal, GenShopModal } from '../components';
+import { AbcjsRenderer, AdModal, UpgradeModal, GenShopModal, SelfEvalModal } from '../components';
+import type { EvalRating } from '../components';
 import type { UpgradeReason } from '../components';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
-  Save, X, ChevronDown, Music2, RefreshCw, FileAudio, Lock, UserCircle,
+  Save, X, ChevronDown, ChevronLeft, Music2, RefreshCw, FileAudio, Lock, UserCircle,
   Eye, EyeOff, FileCode, Copy, Crown,
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
+import { buildGeneratorOptions, TRACK_META } from '../lib/trackConfig';
+import { COLORS, TRACK_COLORS } from '../theme';
+import type { TrackType } from '../theme';
 import { useAdCounter, useDownloadQuota } from '../hooks';
 import PaywallScreen from './PaywallScreen';
 import ProfileScreen from './ProfileScreen';
@@ -174,7 +178,18 @@ function BottomSheet({ open, onClose, title, children }: {
   );
 }
 
-export default function ScoreEditorScreen() {
+interface ScoreEditorProps {
+  /** 트랙 모드: 특화/퀵스타트 연습에서 진입 시 설정 */
+  trackMode?: { track: TrackType; level: number };
+  /** 홈 화면으로 돌아가기 */
+  onBackToHome?: () => void;
+  /** 자기 평가 콜백 */
+  onEvaluate?: (track: TrackType, level: number, rating: EvalRating) => void;
+  /** 연습 완료 콜백 (스트릭 업데이트) */
+  onPracticeComplete?: () => void;
+}
+
+export default function ScoreEditorScreen({ trackMode, onBackToHome, onEvaluate, onPracticeComplete }: ScoreEditorProps = {}) {
   const insets = useSafeAreaInsets();
   const { showAlert } = useAlert();
 
@@ -193,6 +208,7 @@ export default function ScoreEditorScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showGenShop, setShowGenShop] = useState(false);
+  const [showSelfEval, setShowSelfEval] = useState(false);
 
   // 업그레이드 모달 열기 헬퍼
   const openUpgrade = useCallback((reason: UpgradeReason) => {
@@ -280,6 +296,52 @@ export default function ScoreEditorScreen() {
   }, []);
 
   useEffect(() => { getSavedScores().then(setSavedScores); }, []);
+
+  // ── 트랙 모드: 진입 시 자동 생성 ──
+  const trackModeInitRef = useRef(false);
+  useEffect(() => {
+    if (!trackMode || trackModeInitRef.current) return;
+    trackModeInitRef.current = true;
+
+    const opts = buildGeneratorOptions(trackMode.track as TrackType, trackMode.level);
+    // 설정 반영
+    setState(p => ({
+      ...p,
+      keySignature: opts.keySignature,
+      timeSignature: opts.timeSignature,
+      useGrandStaff: opts.useGrandStaff ?? false,
+    }));
+    setGenDifficulty(opts.difficulty);
+    if (opts.bassDifficulty) setGenBassDifficulty(opts.bassDifficulty);
+    setGenMeasures(opts.measures);
+
+    // 약간의 딜레이 후 자동 생성
+    const timer = setTimeout(() => {
+      const result = generateScore({
+        keySignature: opts.keySignature,
+        timeSignature: opts.timeSignature,
+        difficulty: opts.difficulty,
+        bassDifficulty: opts.useGrandStaff ? opts.bassDifficulty : undefined,
+        measures: opts.measures,
+        useGrandStaff: opts.useGrandStaff ?? false,
+      });
+      const tieDifficulties = ['beginner_1', 'beginner_2', 'beginner_3', 'intermediate_1'];
+      const barsPerStaff =
+        ['beginner_1', 'beginner_2'].includes(opts.difficulty)
+          ? 4
+          : opts.difficulty.startsWith('intermediate_') || opts.difficulty.startsWith('advanced_')
+            ? 2
+            : undefined;
+      setState(p => ({
+        ...p,
+        notes: result.trebleNotes,
+        bassNotes: result.bassNotes,
+        disableTies: tieDifficulties.includes(opts.difficulty),
+        barsPerStaff,
+      }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [trackMode]);
 
   const curNotes = state.useGrandStaff && activeStaff === 'bass' ? (state.bassNotes || []) : state.notes;
 
@@ -624,53 +686,83 @@ export default function ScoreEditorScreen() {
       edges={['bottom']}
     >
       {/* 상단 시스템 상태바 색상 영역 */}
-      <View style={{ height: insets.top, backgroundColor: '#6366f1' }} />
+      <View style={{ height: insets.top, backgroundColor: trackMode ? TRACK_COLORS[trackMode.track].main : '#6366f1' }} />
       {/* ═══════════════════════════════════════════════
           모바일: 상단 앱바 (타이틀 + 계정)
           ═══════════════════════════════════════════════ */}
-      <View style={styles.topBar}>
-        {/* 좌측: 타이틀 */}
+      <View style={[styles.topBar, trackMode && { backgroundColor: TRACK_COLORS[trackMode.track].main }]}>
+        {/* 좌측 */}
         <View style={styles.topBarLeft}>
-          <Music2 size={18} color="#6366f1" />
-          <Text style={styles.topBarTitle}>MelodyGen</Text>
+          {trackMode ? (
+            <>
+              <TouchableOpacity
+                style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}
+                onPress={() => {
+                  // 악보가 생성된 상태면 자기 평가 모달 표시
+                  if (state.notes.length > 0) {
+                    setShowSelfEval(true);
+                  } else {
+                    onBackToHome?.();
+                  }
+                }}
+              >
+                <ChevronLeft size={20} color="#fff" />
+              </TouchableOpacity>
+              <View style={{ marginLeft: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
+                  {TRACK_META[trackMode.track].name} {trackMode.level}단계
+                </Text>
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
+                  {TRACK_META[trackMode.track].levels[trackMode.level - 1]?.name ?? ''}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Music2 size={18} color="#6366f1" />
+              <Text style={styles.topBarTitle}>MelodyGen</Text>
+            </>
+          )}
         </View>
-        {/* 중앙: 등급 배지 (절대 위치로 진짜 중앙) */}
-        <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' as const, pointerEvents: 'box-none' as const }}>
-          <TouchableOpacity
-            style={[styles.tierBadge, { backgroundColor: `${PLAN_COLOR[tier]}18`, borderColor: `${PLAN_COLOR[tier]}44` }]}
-            onPress={() => setShowPaywall(true)}
-            activeOpacity={0.7}
-          >
-            <Crown size={11} color={PLAN_COLOR[tier]} />
-            <Text style={[styles.tierBadgeText, { color: PLAN_COLOR[tier] }]}>{PLAN_NAME[tier]}</Text>
-          </TouchableOpacity>
-        </View>
+        {/* 중앙: 등급 배지 (자유 연습 모드에서만) */}
+        {!trackMode && (
+          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' as const, pointerEvents: 'box-none' as const }}>
+            <TouchableOpacity
+              style={[styles.tierBadge, { backgroundColor: `${PLAN_COLOR[tier]}18`, borderColor: `${PLAN_COLOR[tier]}44` }]}
+              onPress={() => setShowPaywall(true)}
+              activeOpacity={0.7}
+            >
+              <Crown size={11} color={PLAN_COLOR[tier]} />
+              <Text style={[styles.tierBadgeText, { color: PLAN_COLOR[tier] }]}>{PLAN_NAME[tier]}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {/* 우측: Gen 잔액 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {limits.usesGenPoints && (
             <TouchableOpacity
-              style={styles.genBadge}
+              style={[styles.genBadge, trackMode && { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)' }]}
               onPress={() => setShowGenShop(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.genBadgeIcon}>⚡</Text>
-              <Text style={styles.genBadgeText}>{genBalance.toLocaleString()}</Text>
+              <Text style={[styles.genBadgeIcon, trackMode && { color: '#fff' }]}>⚡</Text>
+              <Text style={[styles.genBadgeText, trackMode && { color: '#fff' }]}>{genBalance.toLocaleString()}</Text>
               {genPaidBalance > 0 && (
                 <>
-                  <Text style={[styles.genBadgeText, { color: '#94a3b8', marginHorizontal: 1 }]}>·</Text>
-                  <Text style={[styles.genBadgeText, { color: '#7c3aed' }]}>💎{genPaidBalance.toLocaleString()}</Text>
+                  <Text style={[styles.genBadgeText, { color: trackMode ? 'rgba(255,255,255,0.6)' : '#94a3b8', marginHorizontal: 1 }]}>·</Text>
+                  <Text style={[styles.genBadgeText, { color: trackMode ? '#fff' : '#7c3aed' }]}>💎{genPaidBalance.toLocaleString()}</Text>
                 </>
               )}
             </TouchableOpacity>
           )}
           {!limits.usesGenPoints && tier === 'premium' && (
             <TouchableOpacity
-              style={[styles.genBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}
+              style={[styles.genBadge, trackMode ? { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)' } : { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}
               onPress={() => setShowGenShop(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.genBadgeIcon}>⚡</Text>
-              <Text style={[styles.genBadgeText, { color: '#92400e' }]}>∞</Text>
+              <Text style={[styles.genBadgeIcon, trackMode && { color: '#fff' }]}>⚡</Text>
+              <Text style={[styles.genBadgeText, { color: trackMode ? '#fff' : '#92400e' }]}>∞</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1531,6 +1623,34 @@ export default function ScoreEditorScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {trackMode ? (
+                  /* ── 트랙 모드: 간단 요약 ── */
+                  <ScrollView
+                    contentContainerStyle={styles.genSheetInner}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <View style={{ backgroundColor: TRACK_COLORS[trackMode.track].bg, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: TRACK_COLORS[trackMode.track].text, marginBottom: 8 }}>
+                        {TRACK_META[trackMode.track].name} · {trackMode.level}단계
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                        {TRACK_META[trackMode.track].levels[trackMode.level - 1]?.description ?? ''}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                        <Text style={{ fontSize: 12, color: '#475569' }}>난이도: <Text style={{ fontWeight: '700' }}>{genDifficulty.replace('_', ' ')}</Text></Text>
+                        <Text style={{ fontSize: 12, color: '#475569' }}>마디: <Text style={{ fontWeight: '700' }}>{genMeasures}</Text></Text>
+                        {(state.useGrandStaff ?? false) && (
+                          <Text style={{ fontSize: 12, color: '#7c3aed' }}>큰보표 <Text style={{ fontWeight: '700' }}>{genBassDifficulty.replace('_', ' ')}</Text></Text>
+                        )}
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
+                      트랙 설정에 따라 자동으로 구성됩니다.{'\n'}다시 생성하면 새로운 악보가 만들어집니다.
+                    </Text>
+                  </ScrollView>
+                ) : (
+                  <>
                 {/* 탭 바 */}
                 <View style={styles.genTabBar}>
                   <TouchableOpacity
@@ -1757,6 +1877,8 @@ export default function ScoreEditorScreen() {
                     </>
                   )}
                 </ScrollView>
+                  </>
+                )}
 
                 {/* 고정 하단 - 생성 버튼 */}
                 <View style={[styles.genSheetFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -1925,6 +2047,24 @@ export default function ScoreEditorScreen() {
         visible={showGenShop}
         onClose={() => setShowGenShop(false)}
       />
+      {trackMode && (
+        <SelfEvalModal
+          visible={showSelfEval}
+          trackName={TRACK_META[trackMode.track].name}
+          level={trackMode.level}
+          onRate={(rating) => {
+            setShowSelfEval(false);
+            onEvaluate?.(trackMode.track, trackMode.level, rating);
+            onPracticeComplete?.();
+            onBackToHome?.();
+          }}
+          onSkip={() => {
+            setShowSelfEval(false);
+            onPracticeComplete?.();
+            onBackToHome?.();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -20,9 +20,9 @@ const GEN_COST_TABLE: Record<Difficulty, number> = {
   intermediate_1: 14,
   intermediate_2: 16,
   intermediate_3: 18,
-  advanced_1:     20,
-  advanced_2:     22,
-  advanced_3:     24,
+  advanced_1:     18,
+  advanced_2:     20,
+  advanced_3:     22,
 };
 
 /**
