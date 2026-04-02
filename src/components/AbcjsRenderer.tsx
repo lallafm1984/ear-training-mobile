@@ -693,12 +693,22 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
     if (!isGrand) {
       return { header: header, isGrand: false, treble: splitBodyMeasures(bodyStr), bass: [] };
     }
-    var v1 = bodyStr.match(/V:V1[^\\n]*\\n([\\s\\S]*?)(?=\\nV:V2)/m);
-    var v2 = bodyStr.match(/V:V2[^\\n]*\\n([\\s\\S]*)$/m);
+    // 큰보표: V:V1/V:V2 블록이 줄 단위로 반복될 수 있으므로 모든 블록을 수집
+    var allV1 = [];
+    var allV2 = [];
+    var v1Regex = /V:V1[^\\n]*\\n([\\s\\S]*?)(?=\\nV:V[12]|$)/gm;
+    var v2Regex = /V:V2[^\\n]*\\n([\\s\\S]*?)(?=\\nV:V[12]|$)/gm;
+    var m;
+    while ((m = v1Regex.exec(bodyStr)) !== null) {
+      allV1.push(m[1]);
+    }
+    while ((m = v2Regex.exec(bodyStr)) !== null) {
+      allV2.push(m[1]);
+    }
     return {
       header: header, isGrand: true,
-      treble: splitBodyMeasures(v1 ? v1[1] : ''),
-      bass:   splitBodyMeasures(v2 ? v2[1] : ''),
+      treble: splitBodyMeasures(allV1.join(' | ')),
+      bass:   splitBodyMeasures(allV2.join(' | ')),
     };
   }
   function rebuildSegmentAbc(header, isGrand, treble, bass) {
