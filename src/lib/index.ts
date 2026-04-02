@@ -24,9 +24,6 @@ export type {
   GeneratedScore,
 } from './scoreGenerator';
 
-// Gen 포인트 비용 계산
-export { getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS } from './genCost';
-
 // 멜로디 리듬 레벨
 export {
   getDurationPoolForMelodyLevel,

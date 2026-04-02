@@ -6,11 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User, Mail, Crown, LogOut, Trash2, ChevronRight,
-  Check, X, Shield, Zap,
+  Check, X, Shield,
 } from 'lucide-react-native';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
-import { GenShopModal } from '../components';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -84,13 +83,12 @@ function EditNameModal({
 
 export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenProps) {
   const { user, profile, signOut, updateProfile, deleteAccount, profileLoading } = useAuth();
-  const { tier, subscriptionState, isExpired, genBalance, genPaidBalance } = useSubscription();
+  const { tier, subscriptionState, isExpired } = useSubscription();
 
   const { showAlert } = useAlert();
 
   const [showEditName, setShowEditName] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [showGenShop, setShowGenShop] = useState(false);
 
   const tierColor = PLAN_COLOR[tier];
   const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? '사용자';
@@ -235,55 +233,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
           </View>
         </View>
 
-        {/* ── Gen 잔액 섹션 ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gen 잔액</Text>
-          <View style={styles.sectionCard}>
-            {/* 자동 충전 행 */}
-            <View style={styles.genRow}>
-              <View style={styles.genLeft}>
-                <Zap size={16} color="#6366f1" />
-                <View>
-                  <Text style={styles.genLabel}>자동 충전 Gen</Text>
-                  <Text style={styles.genDesc}>
-                    {tier === 'premium'
-                      ? '무제한 (Premium)'
-                      : tier === 'pro'
-                      ? '매일 오전 6시 +200 Gen'
-                      : '매일 오전 6시 +100 Gen'}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.genBalance}>
-                {tier === 'premium' ? '∞' : `⚡ ${genBalance.toLocaleString()}`}
-              </Text>
-            </View>
-            {/* 결제 Gen 행 */}
-            {tier !== 'premium' && (
-              <View style={[styles.genRow, { borderTopWidth: 1, borderTopColor: '#f1f5f9' }]}>
-                <View style={styles.genLeft}>
-                  <Zap size={16} color="#7c3aed" />
-                  <View>
-                    <Text style={[styles.genLabel, { color: '#7c3aed' }]}>결제 Gen</Text>
-                    <Text style={styles.genDesc}>구매로 획득한 Gen</Text>
-                  </View>
-                </View>
-                <View style={styles.genRight}>
-                  <Text style={[styles.genBalance, { color: '#7c3aed' }]}>
-                    💎 {genPaidBalance.toLocaleString()}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.genChargeBtn}
-                    onPress={() => setShowGenShop(true)}
-                  >
-                    <Text style={styles.genChargeBtnText}>+ 충전</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-
         {/* ── 계정 섹션 ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>계정</Text>
@@ -330,10 +279,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         currentName={displayName}
         onSave={name => updateProfile({ display_name: name }).then(() => { })}
         onClose={() => setShowEditName(false)}
-      />
-      <GenShopModal
-        visible={showGenShop}
-        onClose={() => setShowGenShop(false)}
       />
     </SafeAreaView>
   );

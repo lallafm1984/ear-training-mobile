@@ -15,9 +15,8 @@ import {
   getSixteenthsPerBar, sixteenthsToDuration, getValidTupletTypesForDuration,
   generateScore, Difficulty, DifficultyCategory, getDifficultyCategory,
   BassDifficulty, BASS_DIFF_LABELS, BASS_DIFF_DESC,
-  getGenCost, getMeasureExtraCost, BASS_EXTRA_COSTS,
 } from '../lib';
-import { AbcjsRenderer, AdModal, UpgradeModal, GenShopModal } from '../components';
+import { AbcjsRenderer, UpgradeModal } from '../components';
 import type { UpgradeReason } from '../components';
 import {
   Sliders, Disc3, Sparkles, Archive, Download, Trash2, Undo,
@@ -26,7 +25,7 @@ import {
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
-import { useAdCounter, useDownloadQuota } from '../hooks';
+import { useDownloadQuota } from '../hooks';
 import PaywallScreen from './PaywallScreen';
 import ProfileScreen from './ProfileScreen';
 import type {
@@ -179,20 +178,17 @@ export default function ScoreEditorScreen() {
   const { showAlert } = useAlert();
 
   // ── 구독 관련 훅 ──
-  const { tier, limits, remainingDownloads, genBalance, genPaidBalance, consumeGen } = useSubscription();
+  const { tier, limits, remainingDownloads } = useSubscription();
   const { profile } = useAuth();
-  const { shouldShowAd, recordGeneration, dismissAd } = useAdCounter(limits.adEveryNGenerations);
 
   // AI 생성 로딩 상태
   const [isGenerating, setIsGenerating] = useState(false);
 
   // ── 구독/계정 모달 상태 ──
-  const [showAdModal, setShowAdModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason>('grand_staff');
   const [showPaywall, setShowPaywall] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showGenShop, setShowGenShop] = useState(false);
 
   // 업그레이드 모달 열기 헬퍼
   const openUpgrade = useCallback((reason: UpgradeReason) => {
@@ -458,34 +454,16 @@ export default function ScoreEditorScreen() {
     });
   };
 
-  // Gen 비용 계산
-  const bassExtraCost = (state.useGrandStaff ?? false) ? BASS_EXTRA_COSTS[genBassDifficulty] : 0;
-  const currentGenCost = getGenCost(genDifficulty, genMeasures) + bassExtraCost;
-
   const handleGenerate = useCallback(async () => {
     // 재생 중인 경우 먼저 중단
     if (isPlaying) {
       rendererRef.current?.togglePlay();
     }
 
-    // Gen 포인트 체크 (Premium은 무제한)
-    if (limits.usesGenPoints) {
-      const cost = currentGenCost;
-      if (genBalance + genPaidBalance < cost) {
-        setMobileSheet(null);
-        showAlert({
-          title: 'Gen 부족',
-          message: `이 악보를 생성하려면 ${cost} Gen이 필요합니다.\n자동 충전: ${genBalance} Gen\n결제 Gen: ${genPaidBalance} Gen\n\n매일 오전 6시에 자동 충전됩니다.`,
-          type: 'warning',
-        });
-        return;
-      }
-    }
-
     // 바텀시트 열린 상태에서 로딩 표시
     setIsGenerating(true);
 
-    // AI API 연결 연출 (난이도별 랜덤 딜레이, 0.5초 단축)
+    // AI API 연결 연출 (난이도별 랜덤 딜레이)
     const category = getDifficultyCategory(genDifficulty);
     const [minMs, maxMs] = {
       beginner: [800, 1300],
@@ -494,11 +472,6 @@ export default function ScoreEditorScreen() {
     }[category];
     const delay = minMs + Math.random() * (maxMs - minMs);
     await new Promise(resolve => setTimeout(resolve, delay));
-
-    // Gen 차감
-    if (limits.usesGenPoints) {
-      await consumeGen(currentGenCost);
-    }
 
     const result = generateScore({
       keySignature: state.keySignature, timeSignature: state.timeSignature,
@@ -520,21 +493,13 @@ export default function ScoreEditorScreen() {
     // 생성 완료 후 0.5초 딜레이 후 바텀시트 닫기
     await new Promise(resolve => setTimeout(resolve, 500));
     setMobileSheet(null);
-
-    // 무료 유저: 광고 카운터 체크
-    if (limits.showAds) {
-      const shouldAd = await recordGeneration();
-      if (shouldAd) {
-        setShowAdModal(true);
-      }
-    }
-  }, [state.keySignature, state.timeSignature, state.useGrandStaff, genDifficulty, genBassDifficulty, genMeasures, genHideNotes, limits.showAds, limits.usesGenPoints, recordGeneration, isPlaying, genBalance, consumeGen]);
+  }, [state.keySignature, state.timeSignature, state.useGrandStaff, genDifficulty, genBassDifficulty, genMeasures, genHideNotes, isPlaying]);
 
   const handleSave = useCallback(async () => {
     const scores = await getSavedScores();
     const limit = limits.maxSavedScores;
     if (limit !== null && scores.length >= limit) {
-      // 저장 한도 초과 시 업그레이드 모달 표시 (Free: 5개, Pro: 50개, Premium: 무제한)
+      // 저장 한도 초과 시 업그레이드 모달 표시 (Free: 5개, Pro: 20개)
       openUpgrade('save_scores');
       return;
     }
@@ -645,35 +610,8 @@ export default function ScoreEditorScreen() {
             <Text style={[styles.tierBadgeText, { color: PLAN_COLOR[tier] }]}>{PLAN_NAME[tier]}</Text>
           </TouchableOpacity>
         </View>
-        {/* 우측: Gen 잔액 */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {limits.usesGenPoints && (
-            <TouchableOpacity
-              style={styles.genBadge}
-              onPress={() => setShowGenShop(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.genBadgeIcon}>⚡</Text>
-              <Text style={styles.genBadgeText}>{genBalance.toLocaleString()}</Text>
-              {genPaidBalance > 0 && (
-                <>
-                  <Text style={[styles.genBadgeText, { color: '#94a3b8', marginHorizontal: 1 }]}>·</Text>
-                  <Text style={[styles.genBadgeText, { color: '#7c3aed' }]}>💎{genPaidBalance.toLocaleString()}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-          {!limits.usesGenPoints && tier === 'premium' && (
-            <TouchableOpacity
-              style={[styles.genBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}
-              onPress={() => setShowGenShop(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.genBadgeIcon}>⚡</Text>
-              <Text style={[styles.genBadgeText, { color: '#92400e' }]}>∞</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* 우측: 빈 공간 (좌우 균형) */}
+        <View style={{ width: 40 }} />
       </View>
 
       {/* ── 상단 도구 바 (이미지/오디오 내보내기) ── */}
@@ -850,7 +788,7 @@ export default function ScoreEditorScreen() {
               </TouchableOpacity>
             ) : (
               <Text style={styles.statusBarText}>
-                {limits.canEditNotes ? '음표를 터치하면 수정할 수 있습니다' : '음표 편집은 Premium 플랜에서 사용 가능합니다'}
+                {limits.canEditNotes ? '음표를 터치하면 수정할 수 있습니다' : '음표 편집은 Pro 플랜에서 사용 가능합니다'}
               </Text>
             )}
           </View>
@@ -980,15 +918,22 @@ export default function ScoreEditorScreen() {
         <View style={styles.bsGroup}>
           <Text style={styles.bsLabel}>박자</Text>
           <View style={styles.settingsChipRow}>
-            {TIME_SIGNATURES.map(t => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => setState(p => ({ ...p, timeSignature: t }))}
-                style={[styles.settingsChip, state.timeSignature === t && styles.settingsChipActive]}
-              >
-                <Text style={[styles.settingsChipText, state.timeSignature === t && styles.settingsChipTextActive]}>{t}</Text>
-              </TouchableOpacity>
-            ))}
+            {TIME_SIGNATURES.map(t => {
+              const allowed = limits.allowedTimeSignatures.includes(t);
+              return (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => {
+                    if (!allowed) { setMobileSheet(null); openUpgrade('time_signature'); return; }
+                    setState(p => ({ ...p, timeSignature: t }));
+                  }}
+                  style={[styles.settingsChip, state.timeSignature === t && styles.settingsChipActive, !allowed && { opacity: 0.45 }]}
+                >
+                  {!allowed && <Lock size={8} color="#94a3b8" style={{ marginRight: 2 }} />}
+                  <Text style={[styles.settingsChipText, state.timeSignature === t && styles.settingsChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -1045,12 +990,17 @@ export default function ScoreEditorScreen() {
             {(keyMode === 'major' ? MAJOR_KEYS : MINOR_KEYS).map(k => {
               const isActive = state.keySignature === k;
               const acc = KEY_ACCIDENTAL[k] ?? '';
+              const allowed = limits.allowedKeySignatures.includes(k);
               return (
                 <TouchableOpacity
                   key={k}
-                  onPress={() => setState(p => ({ ...p, keySignature: k }))}
-                  style={[styles.keyChip, isActive && styles.keyChipActive]}
+                  onPress={() => {
+                    if (!allowed) { setMobileSheet(null); openUpgrade('key_signature'); return; }
+                    setState(p => ({ ...p, keySignature: k }));
+                  }}
+                  style={[styles.keyChip, isActive && styles.keyChipActive, !allowed && { opacity: 0.45 }]}
                 >
+                  {!allowed && <Lock size={7} color="#94a3b8" style={{ position: 'absolute', top: 3, right: 3 }} />}
                   <Text style={[styles.keyChipMain, isActive && styles.keyChipMainActive]}>{k}</Text>
                   {acc ? <Text style={[styles.keyChipSub, isActive && { color: '#c7d2fe' }]}>{acc}</Text> : null}
                 </TouchableOpacity>
@@ -1509,7 +1459,6 @@ export default function ScoreEditorScreen() {
 
       {/* ── AI 자동생성 Modal (탭 구조, 고정 생성버튼) ── */}
       {(() => {
-        const insufficient = limits.usesGenPoints && genBalance + genPaidBalance < currentGenCost;
         return (
           <Modal
             visible={mobileSheet === 'generate'}
@@ -1605,11 +1554,6 @@ export default function ScoreEditorScreen() {
                                     <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : catColors.text + 'cc' }]} numberOfLines={2}>
                                       {DIFF_DESC[d]}
                                     </Text>
-                                    {limits.usesGenPoints && (
-                                      <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.9)' : catColors.text }]}>
-                                        ⚡{getGenCost(d)}
-                                      </Text>
-                                    )}
                                   </TouchableOpacity>
                                 );
                               })}
@@ -1623,7 +1567,6 @@ export default function ScoreEditorScreen() {
                         {[4, 8, 12, 16].map(n => {
                           const allowed = n <= limits.maxMeasures;
                           const isActive = genMeasures === n;
-                          const extra = getMeasureExtraCost(n);
                           return (
                             <TouchableOpacity
                               key={n}
@@ -1648,11 +1591,6 @@ export default function ScoreEditorScreen() {
                               {!allowed && <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8'} style={{ marginBottom: 1 }} />}
                               <Text style={[styles.genMeasureBtnNum, { color: isActive ? '#fff' : '#334155' }]}>{n}</Text>
                               <Text style={[styles.genMeasureBtnSub, { color: isActive ? 'rgba(255,255,255,0.75)' : '#94a3b8' }]}>마디</Text>
-                              {limits.usesGenPoints && (
-                                <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.85)' : '#6366f1aa', marginTop: 1 }]}>
-                                  {extra > 0 ? `+⚡${extra}` : '기본'}
-                                </Text>
-                              )}
                             </TouchableOpacity>
                           );
                         })}
@@ -1743,11 +1681,6 @@ export default function ScoreEditorScreen() {
                                   <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#7c3aedcc' }]} numberOfLines={2}>
                                     {BASS_DIFF_DESC[bd]}
                                   </Text>
-                                  {limits.usesGenPoints && (
-                                    <Text style={[styles.genDiffBtnCost, { color: isActive ? 'rgba(255,255,255,0.9)' : '#7c3aed' }]}>
-                                      +⚡{BASS_EXTRA_COSTS[bd]}
-                                    </Text>
-                                  )}
                                 </TouchableOpacity>
                               );
                             })}
@@ -1761,29 +1694,15 @@ export default function ScoreEditorScreen() {
                 {/* 고정 하단 - 생성 버튼 */}
                 <View style={[styles.genSheetFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
                   <TouchableOpacity
-                    style={[styles.genPrimaryBtn, insufficient && styles.genPrimaryBtnDisabled]}
+                    style={styles.genPrimaryBtn}
                     onPress={handleGenerate}
                     activeOpacity={0.85}
                   >
-                    <Sparkles size={16} color={insufficient ? '#94a3b8' : '#fff'} />
-                    <Text style={[styles.genPrimaryBtnText, insufficient && { color: '#94a3b8' }]}>
+                    <Sparkles size={16} color="#fff" />
+                    <Text style={styles.genPrimaryBtnText}>
                       생성하기
                     </Text>
-                    {limits.usesGenPoints && (
-                      <View style={[styles.genPrimaryBadge, insufficient && { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
-                        <Text style={[styles.genPrimaryBadgeText, insufficient && { color: '#ef4444' }]}>
-                          ⚡ {currentGenCost}
-                        </Text>
-                      </View>
-                    )}
                   </TouchableOpacity>
-                  {insufficient && (
-                    <View style={[styles.genWarningRow, { marginTop: 8 }]}>
-                      <Text style={styles.genWarningText}>
-                        잔액 부족 · 보유 ⚡{genBalance} + 💎{genPaidBalance}
-                      </Text>
-                    </View>
-                  )}
                   <Text style={styles.genFooter}>
                     현재 조성 · 박자 · 큰보표 설정이 적용됩니다. 기존 음표는 교체됩니다.
                   </Text>
@@ -1881,14 +1800,6 @@ export default function ScoreEditorScreen() {
         </View>
       </Modal>
 
-      {/* ── 광고 모달 (무료 유저) ── */}
-      <AdModal
-        visible={showAdModal}
-        onClose={() => { dismissAd(); setShowAdModal(false); }}
-        onAdWatched={() => dismissAd()}
-        onUpgrade={() => setShowPaywall(true)}
-      />
-
       {/* ── 업그레이드 유도 모달 ── */}
       <UpgradeModal
         visible={showUpgradeModal}
@@ -1920,11 +1831,6 @@ export default function ScoreEditorScreen() {
         />
       </Modal>
 
-      {/* ── Gen 충전 바텀시트 ── */}
-      <GenShopModal
-        visible={showGenShop}
-        onClose={() => setShowGenShop(false)}
-      />
     </SafeAreaView>
   );
 }

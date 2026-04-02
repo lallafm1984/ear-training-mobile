@@ -42,11 +42,10 @@ export interface Profile {
   email:                 string;
   display_name:          string | null;
   avatar_url:            string | null;
-  tier:                  'free' | 'pro' | 'premium';
+  tier:                  'free' | 'pro';
   subscription_expires_at: string | null;
   monthly_download_count:  number;
   download_reset_month:    string;
-  gen_balance:           number;
   created_at:            string;
   updated_at:            string;
 }
