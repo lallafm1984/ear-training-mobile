@@ -38,3 +38,13 @@ export { fillRhythm, variateSixteenthNoteRuns } from './trebleRhythmFill';
 
 // 2성부 생성 모듈
 export * from './twoVoice';
+
+// 콘텐츠 카테고리 설정
+export * from './contentConfig';
+
+// 객관식 문제 생성기
+export { generateChoiceQuestion, generateChoiceQuestions } from './questionGenerator';
+export type { ChoiceQuestion } from './questionGenerator';
+
+// 모의시험 프리셋
+export { EXAM_PRESETS } from './examPresets';

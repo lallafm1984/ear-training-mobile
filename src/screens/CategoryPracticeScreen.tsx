@@ -1,0 +1,296 @@
+// ─────────────────────────────────────────────────────────────
+// CategoryPracticeScreen — 카테고리별 난이도 선택 → 연습 진입
+// ─────────────────────────────────────────────────────────────
+
+import React, { useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, Lock, Play } from 'lucide-react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
+
+import { useSubscription } from '../context';
+import { COLORS } from '../theme/colors';
+import { CATEGORY_COLORS } from '../theme/colors';
+import {
+  getContentConfig, getDifficultyList, getDifficultyLabel,
+} from '../lib/contentConfig';
+import type { ContentCategory, ContentDifficulty } from '../types/content';
+import type { MainStackParamList } from '../navigation/MainStack';
+
+type RouteProp = StackScreenProps<MainStackParamList, 'CategoryPractice'>['route'];
+type NavProp = StackNavigationProp<MainStackParamList>;
+
+export default function CategoryPracticeScreen() {
+  const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteProp>();
+  const { category } = route.params;
+  const { tier } = useSubscription();
+
+  const config = getContentConfig(category);
+  const colors = CATEGORY_COLORS[category];
+  const difficulties = getDifficultyList(category);
+
+  const [selectedDiff, setSelectedDiff] = useState<ContentDifficulty>(difficulties[0]);
+
+  const selectedIndex = difficulties.indexOf(selectedDiff);
+  const isLocked = tier === 'free' && selectedIndex >= config.freeMaxLevel;
+
+  const handleStart = () => {
+    if (isLocked) {
+      navigation.navigate('Paywall');
+      return;
+    }
+
+    // 선율/2성부/리듬은 기존 ScoreEditor로, 음정/화성/조성은 객관식 화면으로
+    if (category === 'melody' || category === 'twoVoice' || category === 'rhythm') {
+      navigation.navigate('ScoreEditor', {
+        category,
+        difficulty: selectedDiff,
+      });
+    } else {
+      navigation.navigate('ChoicePractice', {
+        category,
+        difficulty: selectedDiff,
+      });
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* 헤더 */}
+      <View style={[styles.header, { backgroundColor: colors.bg }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+        >
+          <ArrowLeft size={24} color={colors.main} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>{config.name}</Text>
+          <Text style={styles.headerDesc}>{config.description}</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 난이도 선택 */}
+        <Text style={styles.sectionTitle}>난이도 선택</Text>
+
+        <View style={styles.diffList}>
+          {difficulties.map((diff, index) => {
+            const locked = tier === 'free' && index >= config.freeMaxLevel;
+            const active = diff === selectedDiff;
+            return (
+              <TouchableOpacity
+                key={diff}
+                style={[
+                  styles.diffItem,
+                  active && { backgroundColor: colors.main, borderColor: colors.main },
+                  locked && styles.diffLocked,
+                ]}
+                onPress={() => setSelectedDiff(diff)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.diffLeft}>
+                  <View style={[
+                    styles.levelBadge,
+                    active
+                      ? { backgroundColor: 'rgba(255,255,255,0.25)' }
+                      : { backgroundColor: colors.bg },
+                  ]}>
+                    <Text style={[
+                      styles.levelText,
+                      active ? { color: '#fff' } : { color: colors.main },
+                    ]}>
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.diffLabel,
+                      active && { color: '#fff' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {getDifficultyLabel(category, diff)}
+                  </Text>
+                </View>
+                {locked && <Lock size={14} color={active ? '#fff' : '#94a3b8'} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* 시작 버튼 */}
+        <TouchableOpacity
+          style={[
+            styles.startBtn,
+            { backgroundColor: isLocked ? COLORS.slate300 : colors.main },
+          ]}
+          onPress={handleStart}
+          activeOpacity={0.8}
+        >
+          {isLocked ? (
+            <>
+              <Lock size={20} color="#fff" />
+              <Text style={styles.startText}>Pro 업그레이드 필요</Text>
+            </>
+          ) : (
+            <>
+              <Play size={20} color="#fff" fill="#fff" />
+              <Text style={styles.startText}>연습 시작</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* 카테고리 정보 */}
+        <View style={[styles.infoCard, { backgroundColor: colors.bg, borderColor: colors.main + '25' }]}>
+          <Text style={[styles.infoTitle, { color: colors.main }]}>카테고리 정보</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>답안 형태</Text>
+            <Text style={styles.infoValue}>
+              {config.answerType === 'notation' ? '악보 기보' : '객관식'}
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>전체 난이도</Text>
+            <Text style={styles.infoValue}>{config.maxLevel}단계</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Free 이용</Text>
+            <Text style={styles.infoValue}>
+              {config.freeMaxLevel === 0 ? 'Pro 전용' : `${config.freeMaxLevel}단계까지`}
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.bgPrimary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  backBtn: {
+    padding: 4,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  headerDesc: {
+    fontSize: 12,
+    color: COLORS.slate500,
+    marginTop: 2,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    gap: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.slate800,
+  },
+  diffList: {
+    gap: 8,
+  },
+  diffItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    backgroundColor: COLORS.white,
+  },
+  diffLocked: {
+    opacity: 0.6,
+  },
+  diffLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  levelBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  diffLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.slate700,
+    flex: 1,
+  },
+  startBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    gap: 8,
+  },
+  startText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  infoCard: {
+    borderRadius: 14,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: COLORS.slate500,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.slate700,
+  },
+});
