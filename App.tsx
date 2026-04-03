@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
 import { LoginScreen } from './src/screens';
 import MainStack from './src/navigation/MainStack';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 // ─────────────────────────────────────────────────────────────
 // Auth 게이트: 로그인 여부에 따라 화면 분기
@@ -43,15 +44,17 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor="#6366f1" />
-      <NavigationContainer>
-        <AlertProvider>
-          <AuthProvider>
-            <AppNavigator />
-          </AuthProvider>
-        </AlertProvider>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="light" backgroundColor="#6366f1" />
+        <NavigationContainer>
+          <AlertProvider>
+            <AuthProvider>
+              <AppNavigator />
+            </AuthProvider>
+          </AlertProvider>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

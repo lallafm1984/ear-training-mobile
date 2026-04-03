@@ -194,6 +194,7 @@ export default function MockExamScreen() {
     await updateStreak();
 
     navigation.replace('ExamResult', {
+      presetId: preset.id,
       title: preset.name,
       totalScore,
       maxScore,
@@ -201,7 +202,7 @@ export default function MockExamScreen() {
       elapsedSeconds,
       totalQuestions,
     });
-  }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation]);
+  }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation, stopAudio, addRecord, updateStreak]);
 
   const confirmSubmit = () => {
     const unanswered = questions.filter((_, idx) => {

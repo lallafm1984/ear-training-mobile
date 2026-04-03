@@ -33,7 +33,7 @@ export default function ChoicePracticeScreen() {
   const route = useRoute<RouteProp>();
   const { category, difficulty } = route.params;
   const { addRecord } = usePracticeHistory();
-  const { updateStreak } = useSkillProfile();
+  const { updateStreak, applyEvaluation } = useSkillProfile();
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -124,8 +124,14 @@ export default function ChoicePracticeScreen() {
 
     await addRecord(record);
     await updateStreak();
+
+    // 스킬 프로필 정확도 업데이트
+    const pct = stats.total > 0 ? stats.correct / stats.total : 0.5;
+    const evalRating = pct >= 0.8 ? 'easy' : pct >= 0.5 ? 'normal' : 'hard';
+    await applyEvaluation('partPractice', 1, evalRating);
+
     setShowResult(true);
-  }, [category, difficulty, stats, addRecord, updateStreak, stopAudio]);
+  }, [category, difficulty, stats, addRecord, updateStreak, applyEvaluation, stopAudio]);
 
   const getChoiceStyle = (choice: string) => {
     if (answerState === 'waiting') {

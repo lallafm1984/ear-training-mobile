@@ -29,6 +29,7 @@ export default function ExamResultScreen() {
   const { session } = useAuth();
   const savedRef = useRef(false);
   const {
+    presetId,
     title,
     totalScore,
     maxScore,
@@ -50,7 +51,7 @@ export default function ExamResultScreen() {
       .insert({
         id: `es_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         user_id: session.user.id,
-        preset_id: title,
+        preset_id: presetId,
         title,
         total_score: totalScore,
         max_score: maxScore,

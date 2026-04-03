@@ -16,5 +16,7 @@ export type { EvalRating } from './SelfEvalModal';
 export { default as BottomSheet } from './BottomSheet';
 
 export { default as CategoryCard } from './CategoryCard';
+export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as SplashScreen } from './SplashScreen';
 export { default as QuickStartCard } from './QuickStartCard';
 export { default as RecentActivityList } from './RecentActivityList';

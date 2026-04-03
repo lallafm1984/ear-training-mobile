@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import SplashScreen from '../components/SplashScreen';
 
 import HomeScreen from '../screens/HomeScreen';
 import ScoreEditorScreen from '../screens/ScoreEditor';
@@ -37,6 +38,7 @@ export type MainStackParamList = {
   MockExamSetup: undefined;
   MockExam: { presetId: string };
   ExamResult: {
+    presetId: string;
     title: string;
     totalScore: number;
     maxScore: number;
@@ -61,7 +63,7 @@ export default function MainStack() {
   }, []);
 
   // 초기 라우트 결정 대기
-  if (!initialRoute) return null;
+  if (!initialRoute) return <SplashScreen />;
 
   return (
     <Stack.Navigator
