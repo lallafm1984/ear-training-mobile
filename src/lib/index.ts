@@ -38,3 +38,6 @@ export { fillRhythm, variateSixteenthNoteRuns } from './trebleRhythmFill';
 
 // 2성부 생성 모듈
 export * from './twoVoice';
+
+// 콘텐츠 카테고리 설정
+export * from './contentConfig';

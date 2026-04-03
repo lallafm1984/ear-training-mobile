@@ -83,3 +83,22 @@ export const TRACK_COLORS: Record<TrackType, {
     text: '#b45309',
   },
 };
+
+// ─────────────────────────────────────────────────────────────
+// 콘텐츠 카테고리별 색상
+// ─────────────────────────────────────────────────────────────
+
+import type { ContentCategory } from '../types/content';
+
+export const CATEGORY_COLORS: Record<ContentCategory, {
+  main: string;
+  bg: string;
+  text: string;
+}> = {
+  melody:   { main: '#6366f1', bg: '#eef2ff', text: '#4338ca' },
+  rhythm:   { main: '#f59e0b', bg: '#fffbeb', text: '#b45309' },
+  interval: { main: '#10b981', bg: '#ecfdf5', text: '#065f46' },
+  chord:    { main: '#8b5cf6', bg: '#f5f3ff', text: '#5b21b6' },
+  key:      { main: '#ef4444', bg: '#fef2f2', text: '#991b1b' },
+  twoVoice: { main: '#0ea5e9', bg: '#f0f9ff', text: '#075985' },
+};

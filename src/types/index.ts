@@ -4,3 +4,5 @@
 
 export * from './playback';
 export * from './subscription';
+export * from './content';
+export * from './exam';

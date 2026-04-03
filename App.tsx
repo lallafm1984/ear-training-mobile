@@ -1,8 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
-import { ScoreEditorScreen, LoginScreen } from './src/screens';
+import { LoginScreen } from './src/screens';
+import MainStack from './src/navigation/MainStack';
 
 // ─────────────────────────────────────────────────────────────
 // Auth 게이트: 로그인 여부에 따라 화면 분기
@@ -27,10 +29,10 @@ function AppNavigator() {
     return <LoginScreen />;
   }
 
-  // 로그인 완료 → AI 자동생성 화면 바로 표시
+  // 로그인 완료 → 홈 대시보드 (네비게이션 스택)
   return (
     <SubscriptionProvider>
-      <ScoreEditorScreen />
+      <MainStack />
     </SubscriptionProvider>
   );
 }
@@ -43,11 +45,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" backgroundColor="#6366f1" />
-      <AlertProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </AlertProvider>
+      <NavigationContainer>
+        <AlertProvider>
+          <AuthProvider>
+            <AppNavigator />
+          </AuthProvider>
+        </AlertProvider>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
