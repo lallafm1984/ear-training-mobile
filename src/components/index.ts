@@ -12,3 +12,5 @@ export type { UpgradeReason } from './UpgradeModal';
 
 export { default as SelfEvalModal } from './SelfEvalModal';
 export type { EvalRating } from './SelfEvalModal';
+
+export { default as BottomSheet } from './BottomSheet';
