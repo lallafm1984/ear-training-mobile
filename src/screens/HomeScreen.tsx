@@ -7,7 +7,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { UserCircle, BookOpen, Target, Crown } from 'lucide-react-native';
+import { UserCircle, BookOpen, Target, Crown, BarChart3 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -131,6 +131,16 @@ export default function HomeScreen() {
             <Target size={24} color={COLORS.amber600} />
             <Text style={[styles.actionTitle, { color: COLORS.amber800 }]}>모의시험</Text>
             <Text style={styles.actionDesc}>실전 연습</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}
+            onPress={() => navigation.navigate('Stats')}
+            activeOpacity={0.7}
+          >
+            <BarChart3 size={24} color={COLORS.success} />
+            <Text style={[styles.actionTitle, { color: '#065f46' }]}>통계</Text>
+            <Text style={styles.actionDesc}>학습 진도</Text>
           </TouchableOpacity>
         </View>
 

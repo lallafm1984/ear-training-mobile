@@ -2,7 +2,7 @@
 // ExamResultScreen — 모의시험 결과 화면
 // ─────────────────────────────────────────────────────────────
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -15,6 +15,8 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig } from '../lib/contentConfig';
+import { useAuth } from '../context';
+import { supabase } from '../lib';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -24,6 +26,8 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
+  const { session } = useAuth();
+  const savedRef = useRef(false);
   const {
     title,
     totalScore,
@@ -35,6 +39,28 @@ export default function ExamResultScreen() {
 
   const categoryScores: Record<string, { score: number; max: number; count: number }> =
     JSON.parse(categoryScoresStr);
+
+  // Supabase에 시험 결과 저장 (1회)
+  useEffect(() => {
+    if (savedRef.current || !session?.user?.id) return;
+    savedRef.current = true;
+
+    supabase
+      .from('exam_sessions')
+      .insert({
+        id: `es_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        user_id: session.user.id,
+        preset_id: title,
+        title,
+        total_score: totalScore,
+        max_score: maxScore,
+        total_questions: totalQuestions,
+        elapsed_seconds: elapsedSeconds,
+        category_scores: categoryScores,
+        completed_at: new Date().toISOString(),
+      })
+      .then(() => { /* fire & forget */ });
+  }, [session?.user?.id]);
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 

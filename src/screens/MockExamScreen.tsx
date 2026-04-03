@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Volume2, ChevronRight, ChevronLeft, Check, X, Clock,
+  Volume2, VolumeX, ChevronRight, ChevronLeft, Check, X, Clock,
   AlertTriangle,
 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -19,6 +19,7 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
+import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import type { ExamQuestion, MockExamSession, ExamSection } from '../types/exam';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -38,6 +39,14 @@ export default function MockExamScreen() {
   const { presetId } = route.params;
 
   const preset = EXAM_PRESETS.find(p => p.id === presetId)!;
+
+  // 오디오 재생
+  const abcjsRef = useRef<AbcjsRendererHandle>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handlePlay = useCallback(() => {
+    abcjsRef.current?.togglePlay();
+  }, []);
 
   // 문제 생성 (최초 1회)
   const questions = useMemo<QuestionItem[]>(() => {
@@ -239,10 +248,29 @@ export default function MockExamScreen() {
           <>
             {/* 재생 카드 */}
             <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-              <TouchableOpacity style={[styles.playBtn, { backgroundColor: colors.main }]}>
-                <Volume2 size={28} color="#fff" />
+              <TouchableOpacity
+                style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                onPress={handlePlay}
+                activeOpacity={0.7}
+              >
+                {isPlaying
+                  ? <VolumeX size={28} color="#fff" />
+                  : <Volume2 size={28} color="#fff" />}
               </TouchableOpacity>
-              <Text style={[styles.playHint, { color: colors.text }]}>탭하여 재생</Text>
+              <Text style={[styles.playHint, { color: colors.text }]}>
+                {isPlaying ? '재생 중...' : '탭하여 재생'}
+              </Text>
+            </View>
+            {/* 숨겨진 렌더러 (오디오만) */}
+            <View style={styles.hiddenRenderer}>
+              <AbcjsRenderer
+                ref={abcjsRef}
+                abcString={currentQ.choiceQuestion.abcNotation}
+                hideNotes
+                tempo={80}
+                isPlaying={isPlaying}
+                onPlayStateChange={setIsPlaying}
+              />
             </View>
 
             {/* 보기 */}
@@ -286,11 +314,17 @@ export default function MockExamScreen() {
           <>
             {/* 기보형 문항 — 자기 평가 */}
             <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-              <TouchableOpacity style={[styles.playBtn, { backgroundColor: colors.main }]}>
-                <Volume2 size={28} color="#fff" />
+              <TouchableOpacity
+                style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                onPress={handlePlay}
+                activeOpacity={0.7}
+              >
+                {isPlaying
+                  ? <VolumeX size={28} color="#fff" />
+                  : <Volume2 size={28} color="#fff" />}
               </TouchableOpacity>
               <Text style={[styles.playHint, { color: colors.text }]}>
-                멜로디를 듣고 악보에 기보하세요
+                {isPlaying ? '재생 중...' : '멜로디를 듣고 악보에 기보하세요'}
               </Text>
             </View>
 
@@ -468,6 +502,11 @@ const styles = StyleSheet.create({
   playHint: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  hiddenRenderer: {
+    height: 0,
+    overflow: 'hidden',
+    opacity: 0,
   },
   choicesContainer: {
     gap: 8,

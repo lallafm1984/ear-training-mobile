@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Volume2, Check, X, RotateCcw, ChevronRight,
+  ArrowLeft, Volume2, VolumeX, Check, X, RotateCcw, ChevronRight,
 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +18,7 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
+import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -48,6 +49,14 @@ export default function ChoicePracticeScreen() {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [showResult, setShowResult] = useState(false);
+
+  // 오디오 재생
+  const abcjsRef = useRef<AbcjsRendererHandle>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handlePlay = useCallback(() => {
+    abcjsRef.current?.togglePlay();
+  }, []);
 
   // 애니메이션
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -200,14 +209,31 @@ export default function ChoicePracticeScreen() {
           {/* 문제 프롬프트 */}
           <Text style={styles.prompt}>{question.prompt}</Text>
 
-          {/* 재생 버튼 (ABC notation 기반 — 실제 오디오는 AbcjsRenderer 연동) */}
+          {/* 재생 버튼 + 숨겨진 AbcjsRenderer */}
           <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-            <TouchableOpacity style={[styles.playBtn, { backgroundColor: colors.main }]}>
-              <Volume2 size={28} color="#fff" />
+            <TouchableOpacity
+              style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+              onPress={handlePlay}
+              activeOpacity={0.7}
+            >
+              {isPlaying
+                ? <VolumeX size={28} color="#fff" />
+                : <Volume2 size={28} color="#fff" />}
             </TouchableOpacity>
             <Text style={[styles.playHint, { color: colors.text }]}>
-              탭하여 재생
+              {isPlaying ? '재생 중...' : '탭하여 재생'}
             </Text>
+          </View>
+          {/* 숨겨진 렌더러 (오디오만 사용) */}
+          <View style={styles.hiddenRenderer}>
+            <AbcjsRenderer
+              ref={abcjsRef}
+              abcString={question.abcNotation}
+              hideNotes
+              tempo={80}
+              isPlaying={isPlaying}
+              onPlayStateChange={setIsPlaying}
+            />
           </View>
 
           {/* 보기 */}
@@ -367,6 +393,11 @@ const styles = StyleSheet.create({
   playHint: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  hiddenRenderer: {
+    height: 0,
+    overflow: 'hidden',
+    opacity: 0,
   },
   choicesContainer: {
     gap: 10,

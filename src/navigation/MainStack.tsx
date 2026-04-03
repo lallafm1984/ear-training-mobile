@@ -12,6 +12,7 @@ import ChoicePracticeScreen from '../screens/ChoicePracticeScreen';
 import MockExamSetupScreen from '../screens/MockExamSetupScreen';
 import MockExamScreen from '../screens/MockExamScreen';
 import ExamResultScreen from '../screens/ExamResultScreen';
+import StatsScreen from '../screens/StatsScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -41,6 +42,7 @@ export type MainStackParamList = {
     elapsedSeconds: number;
     totalQuestions: number;
   };
+  Stats: undefined;
   Paywall: undefined;
   Profile: undefined;
 };
@@ -60,6 +62,7 @@ export default function MainStack() {
       <Stack.Screen name="MockExamSetup" component={MockExamSetupScreen} />
       <Stack.Screen name="MockExam" component={MockExamScreen} />
       <Stack.Screen name="ExamResult" component={ExamResultScreen} />
+      <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen
         name="Paywall"
         component={PaywallScreen}
