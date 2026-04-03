@@ -13,3 +13,4 @@ export { default as MockExamSetupScreen } from './MockExamSetupScreen';
 export { default as MockExamScreen } from './MockExamScreen';
 export { default as ExamResultScreen } from './ExamResultScreen';
 export { default as StatsScreen } from './StatsScreen';
+export { default as OnboardingScreen } from './OnboardingScreen';

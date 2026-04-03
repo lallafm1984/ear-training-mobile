@@ -2,7 +2,7 @@
 // MainStack — 인증 후 메인 네비게이션
 // ─────────────────────────────────────────────────────────────
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -13,6 +13,7 @@ import MockExamSetupScreen from '../screens/MockExamSetupScreen';
 import MockExamScreen from '../screens/MockExamScreen';
 import ExamResultScreen from '../screens/ExamResultScreen';
 import StatsScreen from '../screens/StatsScreen';
+import OnboardingScreen, { hasCompletedOnboarding } from '../screens/OnboardingScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -23,6 +24,7 @@ import type { ContentCategory, ContentDifficulty } from '../types/content';
 // ─────────────────────────────────────────────────────────────
 
 export type MainStackParamList = {
+  Onboarding: undefined;
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
@@ -50,11 +52,23 @@ export type MainStackParamList = {
 const Stack = createStackNavigator<MainStackParamList>();
 
 export default function MainStack() {
+  const [initialRoute, setInitialRoute] = useState<keyof MainStackParamList | null>(null);
+
+  useEffect(() => {
+    hasCompletedOnboarding().then(done => {
+      setInitialRoute(done ? 'Home' : 'Onboarding');
+    });
+  }, []);
+
+  // 초기 라우트 결정 대기
+  if (!initialRoute) return null;
+
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{ headerShown: false }}
     >
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
       <Stack.Screen name="ChoicePractice" component={ChoicePracticeScreen} />

@@ -17,9 +17,11 @@ interface CategoryCardProps {
   config: ContentTypeConfig;
   onPress: () => void;
   locked?: boolean;
+  /** 연습 횟수 (진도 표시용) */
+  practiceCount?: number;
 }
 
-export default function CategoryCard({ config, onPress, locked }: CategoryCardProps) {
+export default function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
   return (
@@ -41,6 +43,13 @@ export default function CategoryCard({ config, onPress, locked }: CategoryCardPr
         <View style={styles.lockBadge}>
           <Lock size={10} color="#94a3b8" />
           <Text style={styles.lockText}>Pro</Text>
+        </View>
+      )}
+      {!locked && practiceCount != null && practiceCount > 0 && (
+        <View style={[styles.countBadge, { backgroundColor: config.color + '20' }]}>
+          <Text style={[styles.countText, { color: config.color }]}>
+            {practiceCount}회
+          </Text>
         </View>
       )}
     </TouchableOpacity>
@@ -89,5 +98,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     color: '#94a3b8',
+  },
+  countBadge: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  countText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

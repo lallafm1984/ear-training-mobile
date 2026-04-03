@@ -179,6 +179,7 @@ export default function HomeScreen() {
                 config={config}
                 onPress={() => handleCategoryPress(config.id)}
                 locked={config.freeMaxLevel === 0 && tier === 'free'}
+                practiceCount={stats.totalByCategory[config.id] || 0}
               />
             ))}
           </View>

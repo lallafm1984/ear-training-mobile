@@ -19,6 +19,7 @@ import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { useSkillProfile } from '../hooks/useSkillProfile';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -32,6 +33,7 @@ export default function ChoicePracticeScreen() {
   const route = useRoute<RouteProp>();
   const { category, difficulty } = route.params;
   const { addRecord } = usePracticeHistory();
+  const { updateStreak } = useSkillProfile();
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -111,18 +113,19 @@ export default function ChoicePracticeScreen() {
   const handleFinish = useCallback(async () => {
     stopAudio();
 
-    // usePracticeHistory 훅으로 기록 저장 (AsyncStorage + Supabase)
+    const selfRating = stats.total > 0 ? Math.round((stats.correct / stats.total) * 5) : 3;
     const record: PracticeRecord = {
       id: `pr_${Date.now()}`,
       contentType: category,
       difficulty,
-      selfRating: stats.total > 0 ? Math.round((stats.correct / stats.total) * 5) : 3,
+      selfRating,
       practicedAt: new Date().toISOString(),
     };
 
     await addRecord(record);
+    await updateStreak();
     setShowResult(true);
-  }, [category, difficulty, stats, addRecord, stopAudio]);
+  }, [category, difficulty, stats, addRecord, updateStreak, stopAudio]);
 
   const getChoiceStyle = (choice: string) => {
     if (answerState === 'waiting') {
@@ -168,6 +171,7 @@ export default function ChoicePracticeScreen() {
                 setShowResult(false);
                 setAnswerState('waiting');
                 setSelectedChoice(null);
+                setIsPlaying(false);
                 setQuestion(generateChoiceQuestion(category, difficulty));
               }}
             >

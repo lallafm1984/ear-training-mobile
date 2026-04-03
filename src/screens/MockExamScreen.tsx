@@ -20,8 +20,10 @@ import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
+import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { useSkillProfile } from '../hooks/useSkillProfile';
 import type { ExamQuestion, MockExamSession, ExamSection } from '../types/exam';
-import type { ContentCategory } from '../types/content';
+import type { ContentCategory, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'MockExam'>['route'];
@@ -39,6 +41,8 @@ export default function MockExamScreen() {
   const { presetId } = route.params;
 
   const preset = EXAM_PRESETS.find(p => p.id === presetId)!;
+  const { addRecord } = usePracticeHistory();
+  const { updateStreak } = useSkillProfile();
 
   // 오디오 재생
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
@@ -148,10 +152,11 @@ export default function MockExamScreen() {
     }
   };
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    stopAudio();
 
-    // 결과 계산
+    // 결과 계산 + 문항별 연습 기록 저장
     let totalScore = 0;
     const maxScore = totalQuestions * 5;
 
@@ -165,19 +170,28 @@ export default function MockExamScreen() {
       categoryScores[cat].count++;
       categoryScores[cat].max += 5;
 
+      let score: number;
       if (isChoiceQuestion(q)) {
-        // 객관식: 정답 여부로 점수
         const isCorrect = answers[idx] === q.examQuestion.correctAnswer;
-        const score = isCorrect ? 5 : (selfRatings[idx] ?? 0);
-        totalScore += score;
-        categoryScores[cat].score += score;
+        score = isCorrect ? 5 : (selfRatings[idx] ?? 0);
       } else {
-        // 기보형: 자기 평가로 점수
-        const rating = selfRatings[idx] ?? 0;
-        totalScore += rating;
-        categoryScores[cat].score += rating;
+        score = selfRatings[idx] ?? 0;
       }
+      totalScore += score;
+      categoryScores[cat].score += score;
+
+      // 문항별 연습 기록 저장
+      const record: PracticeRecord = {
+        id: `pr_exam_${Date.now()}_${idx}`,
+        contentType: cat,
+        difficulty: q.examQuestion.difficulty,
+        selfRating: score,
+        practicedAt: new Date().toISOString(),
+      };
+      addRecord(record);
     });
+
+    await updateStreak();
 
     navigation.replace('ExamResult', {
       title: preset.name,
@@ -380,7 +394,7 @@ export default function MockExamScreen() {
                   answered && styles.dotAnswered,
                   isCurrent && styles.dotCurrent,
                 ]}
-                onPress={() => setCurrentIndex(idx)}
+                onPress={() => { stopAudio(); setCurrentIndex(idx); }}
               >
                 <Text style={[
                   styles.dotText,
