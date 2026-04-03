@@ -93,6 +93,15 @@ export default function StatsScreen() {
           </View>
         </View>
 
+        {/* 빈 상태 안내 */}
+        {stats.totalSessions === 0 && (
+          <View style={styles.emptyCard}>
+            <Target size={32} color={COLORS.slate300} />
+            <Text style={styles.emptyTitle}>아직 연습 기록이 없어요</Text>
+            <Text style={styles.emptyDesc}>연습을 시작하면 여기서 통계를 확인할 수 있습니다</Text>
+          </View>
+        )}
+
         {/* 카테고리별 진도 */}
         <Text style={styles.sectionTitle}>카테고리별 진도</Text>
         <View style={styles.progressCard}>
@@ -219,6 +228,26 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   // 요약
+  emptyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.slate600,
+    marginTop: 4,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: COLORS.slate400,
+    textAlign: 'center',
+  },
   summaryRow: {
     flexDirection: 'row',
     gap: 10,

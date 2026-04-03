@@ -173,9 +173,9 @@ export default function MockExamScreen() {
       let score: number;
       if (isChoiceQuestion(q)) {
         const isCorrect = answers[idx] === q.examQuestion.correctAnswer;
-        score = isCorrect ? 5 : (selfRatings[idx] ?? 0);
+        score = isCorrect ? 5 : (selfRatings[idx] ?? 1);
       } else {
-        score = selfRatings[idx] ?? 0;
+        score = selfRatings[idx] ?? 1;
       }
       totalScore += score;
       categoryScores[cat].score += score;
