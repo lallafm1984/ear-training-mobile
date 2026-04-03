@@ -124,8 +124,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}
             onPress={() => {
-              // Phase 2에서 MockExamSetupScreen으로 연결
-              navigation.navigate('ScoreEditor', undefined);
+              navigation.navigate('MockExamSetup');
             }}
             activeOpacity={0.7}
           >

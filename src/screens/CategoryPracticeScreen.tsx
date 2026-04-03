@@ -44,16 +44,14 @@ export default function CategoryPracticeScreen() {
       return;
     }
 
-    // 선율/2성부는 기존 ScoreEditor로, 나머지는 Phase 2에서 전용 화면
+    // 선율/2성부/리듬은 기존 ScoreEditor로, 음정/화성/조성은 객관식 화면으로
     if (category === 'melody' || category === 'twoVoice' || category === 'rhythm') {
       navigation.navigate('ScoreEditor', {
         category,
         difficulty: selectedDiff,
       });
     } else {
-      // Phase 2: interval, chord, key 전용 화면
-      // 임시로 ScoreEditor로 연결
-      navigation.navigate('ScoreEditor', {
+      navigation.navigate('ChoicePractice', {
         category,
         difficulty: selectedDiff,
       });

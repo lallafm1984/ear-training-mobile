@@ -8,6 +8,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '../screens/HomeScreen';
 import ScoreEditorScreen from '../screens/ScoreEditor';
 import CategoryPracticeScreen from '../screens/CategoryPracticeScreen';
+import ChoicePracticeScreen from '../screens/ChoicePracticeScreen';
+import MockExamSetupScreen from '../screens/MockExamSetupScreen';
+import MockExamScreen from '../screens/MockExamScreen';
+import ExamResultScreen from '../screens/ExamResultScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -20,12 +24,23 @@ import type { ContentCategory, ContentDifficulty } from '../types/content';
 export type MainStackParamList = {
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
+  ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
   ScoreEditor: {
     category?: ContentCategory;
     difficulty?: ContentDifficulty;
     practiceMode?: 'partPractice' | 'comprehensive';
     level?: number;
   } | undefined;
+  MockExamSetup: undefined;
+  MockExam: { presetId: string };
+  ExamResult: {
+    title: string;
+    totalScore: number;
+    maxScore: number;
+    categoryScores: string;
+    elapsedSeconds: number;
+    totalQuestions: number;
+  };
   Paywall: undefined;
   Profile: undefined;
 };
@@ -40,7 +55,11 @@ export default function MainStack() {
     >
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
+      <Stack.Screen name="ChoicePractice" component={ChoicePracticeScreen} />
       <Stack.Screen name="ScoreEditor" component={ScoreEditorScreen} />
+      <Stack.Screen name="MockExamSetup" component={MockExamSetupScreen} />
+      <Stack.Screen name="MockExam" component={MockExamScreen} />
+      <Stack.Screen name="ExamResult" component={ExamResultScreen} />
       <Stack.Screen
         name="Paywall"
         component={PaywallScreen}

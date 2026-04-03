@@ -8,3 +8,7 @@ export { default as PaywallScreen } from './PaywallScreen';
 export { default as ProfileScreen } from './ProfileScreen';
 export { default as HomeScreen } from './HomeScreen';
 export { default as CategoryPracticeScreen } from './CategoryPracticeScreen';
+export { default as ChoicePracticeScreen } from './ChoicePracticeScreen';
+export { default as MockExamSetupScreen } from './MockExamSetupScreen';
+export { default as MockExamScreen } from './MockExamScreen';
+export { default as ExamResultScreen } from './ExamResultScreen';
