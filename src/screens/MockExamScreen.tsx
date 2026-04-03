@@ -12,7 +12,7 @@ import {
   Volume2, VolumeX, ChevronRight, ChevronLeft, Check, X, Clock,
   AlertTriangle,
 } from 'lucide-react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
@@ -44,9 +44,20 @@ export default function MockExamScreen() {
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const stopAudio = useCallback(() => {
+    if (isPlaying) abcjsRef.current?.togglePlay();
+  }, [isPlaying]);
+
   const handlePlay = useCallback(() => {
     abcjsRef.current?.togglePlay();
   }, []);
+
+  // 화면 벗어날 때 오디오 정지
+  useFocusEffect(
+    useCallback(() => {
+      return () => { stopAudio(); };
+    }, [stopAudio]),
+  );
 
   // 문제 생성 (최초 1회)
   const questions = useMemo<QuestionItem[]>(() => {
@@ -125,12 +136,14 @@ export default function MockExamScreen() {
 
   const handleNext = () => {
     if (currentIndex < totalQuestions - 1) {
+      stopAudio();
       setCurrentIndex(prev => prev + 1);
     }
   };
 
   const handlePrev = () => {
     if (currentIndex > 0) {
+      stopAudio();
       setCurrentIndex(prev => prev - 1);
     }
   };

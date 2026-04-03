@@ -11,21 +11,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft, Volume2, VolumeX, Check, X, RotateCcw, ChevronRight,
 } from 'lucide-react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
+import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
-
-// ─────────────────────────────────────────────────────────────
-
-const RECENT_KEY = '@melodygen_recent_activity';
-const MAX_RECENT = 20;
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ChoicePractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -36,6 +31,7 @@ export default function ChoicePracticeScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
   const { category, difficulty } = route.params;
+  const { addRecord } = usePracticeHistory();
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -54,9 +50,20 @@ export default function ChoicePracticeScreen() {
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const stopAudio = useCallback(() => {
+    if (isPlaying) abcjsRef.current?.togglePlay();
+  }, [isPlaying]);
+
   const handlePlay = useCallback(() => {
     abcjsRef.current?.togglePlay();
   }, []);
+
+  // 화면 벗어날 때 오디오 정지
+  useFocusEffect(
+    useCallback(() => {
+      return () => { stopAudio(); };
+    }, [stopAudio]),
+  );
 
   // 애니메이션
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -85,6 +92,9 @@ export default function ChoicePracticeScreen() {
   }, [answerState, question.correctAnswer, shakeAnim]);
 
   const handleNext = useCallback(() => {
+    // 문제 전환 시 오디오 정지
+    stopAudio();
+
     // 페이드 아웃 → 새 문제 → 페이드 인
     Animated.timing(fadeAnim, {
       toValue: 0, duration: 150, useNativeDriver: true,
@@ -99,7 +109,9 @@ export default function ChoicePracticeScreen() {
   }, [category, difficulty, fadeAnim]);
 
   const handleFinish = useCallback(async () => {
-    // 연습 기록 저장
+    stopAudio();
+
+    // usePracticeHistory 훅으로 기록 저장 (AsyncStorage + Supabase)
     const record: PracticeRecord = {
       id: `pr_${Date.now()}`,
       contentType: category,
@@ -108,15 +120,9 @@ export default function ChoicePracticeScreen() {
       practicedAt: new Date().toISOString(),
     };
 
-    try {
-      const raw = await AsyncStorage.getItem(RECENT_KEY);
-      const records: PracticeRecord[] = raw ? JSON.parse(raw) : [];
-      records.unshift(record);
-      await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(records.slice(0, MAX_RECENT)));
-    } catch { /* ignore */ }
-
+    await addRecord(record);
     setShowResult(true);
-  }, [category, difficulty, stats]);
+  }, [category, difficulty, stats, addRecord, stopAudio]);
 
   const getChoiceStyle = (choice: string) => {
     if (answerState === 'waiting') {

@@ -2,31 +2,69 @@
 // HomeScreen — 카드형 대시보드 메인 화면
 // ─────────────────────────────────────────────────────────────
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserCircle, BookOpen, Target, Crown, BarChart3 } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { useAuth } from '../context';
 import { useSubscription } from '../context';
 import { useSkillProfile } from '../hooks';
+import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig, getDifficultyList } from '../lib/contentConfig';
-import type { ContentCategory, PracticeRecord, ContentDifficulty } from '../types/content';
+import type { ContentCategory, ContentDifficulty } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 import CategoryCard from '../components/CategoryCard';
 import QuickStartCard from '../components/QuickStartCard';
 import RecentActivityList from '../components/RecentActivityList';
 
-const RECENT_KEY = '@melodygen_recent_activity';
-
 type NavProp = StackNavigationProp<MainStackParamList>;
+
+/** 연습 기록 기반 가장 약한 카테고리 추천 */
+function getSmartRecommendation(
+  stats: { totalByCategory: Record<ContentCategory, number>; avgRatingByCategory: Record<ContentCategory, number> },
+  partPracticeLevel: number,
+): { category: ContentCategory; difficulty: ContentDifficulty } {
+  const candidates: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
+
+  // 연습 횟수가 가장 적은 카테고리, 동률이면 평균 점수가 낮은 카테고리
+  const sorted = [...candidates].sort((a, b) => {
+    const countDiff = (stats.totalByCategory[a] || 0) - (stats.totalByCategory[b] || 0);
+    if (countDiff !== 0) return countDiff;
+    return (stats.avgRatingByCategory[a] || 0) - (stats.avgRatingByCategory[b] || 0);
+  });
+
+  const category = sorted[0];
+  const difficulties = getDifficultyList(category);
+
+  // 카테고리별 적절한 난이도 결정
+  let levelIndex: number;
+  if (category === 'melody') {
+    levelIndex = Math.min(partPracticeLevel - 1, difficulties.length - 1);
+  } else {
+    // 평균 점수 기반: 3점 이상이면 다음 레벨
+    const avg = stats.avgRatingByCategory[category] || 0;
+    const count = stats.totalByCategory[category] || 0;
+    if (count === 0) {
+      levelIndex = 0;
+    } else if (avg >= 4) {
+      levelIndex = Math.min(Math.floor(count / 5), difficulties.length - 1);
+    } else {
+      levelIndex = Math.min(Math.floor(count / 8), difficulties.length - 1);
+    }
+  }
+
+  return {
+    category,
+    difficulty: difficulties[Math.max(0, levelIndex)],
+  };
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -34,24 +72,13 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { tier } = useSubscription();
   const { profile: skillProfile } = useSkillProfile();
+  const { stats } = usePracticeHistory();
 
-  const [recentRecords, setRecentRecords] = useState<PracticeRecord[]>([]);
-
-  // 최근 기록 로드
-  useEffect(() => {
-    AsyncStorage.getItem(RECENT_KEY).then(raw => {
-      if (raw) {
-        try { setRecentRecords(JSON.parse(raw)); } catch { /* ignore */ }
-      }
-    });
-  }, []);
-
-  // 추천 카테고리 결정 (기본 melody)
-  const recommendedCategory: ContentCategory = 'melody';
-  const recommendedDifficulty: ContentDifficulty =
-    getDifficultyList(recommendedCategory)[
-      Math.min(skillProfile.partPracticeLevel - 1, getDifficultyList(recommendedCategory).length - 1)
-    ];
+  // 스마트 추천
+  const recommendation = useMemo(
+    () => getSmartRecommendation(stats, skillProfile.partPracticeLevel),
+    [stats, skillProfile.partPracticeLevel],
+  );
 
   const handleCategoryPress = (category: ContentCategory) => {
     const config = getContentConfig(category);
@@ -63,7 +90,7 @@ export default function HomeScreen() {
   };
 
   const handleQuickStart = () => {
-    navigation.navigate('CategoryPractice', { category: recommendedCategory });
+    navigation.navigate('CategoryPractice', { category: recommendation.category });
   };
 
   const handlePractice = () => {
@@ -103,8 +130,8 @@ export default function HomeScreen() {
       >
         {/* 빠른 시작 */}
         <QuickStartCard
-          category={recommendedCategory}
-          difficulty={recommendedDifficulty}
+          category={recommendation.category}
+          difficulty={recommendation.difficulty}
           streakDays={skillProfile.streakDays}
           onPress={handleQuickStart}
         />
@@ -123,9 +150,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}
-            onPress={() => {
-              navigation.navigate('MockExamSetup');
-            }}
+            onPress={() => navigation.navigate('MockExamSetup')}
             activeOpacity={0.7}
           >
             <Target size={24} color={COLORS.amber600} />
@@ -162,7 +187,7 @@ export default function HomeScreen() {
         {/* 최근 연습 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>최근 연습</Text>
-          <RecentActivityList records={recentRecords} />
+          <RecentActivityList records={stats.recentRecords} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -220,22 +245,22 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   actionCard: {
     flex: 1,
     borderRadius: 16,
-    padding: 18,
+    padding: 14,
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     borderWidth: 1,
   },
   actionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
   },
   actionDesc: {
-    fontSize: 11,
+    fontSize: 10,
     color: COLORS.slate500,
   },
   section: {
