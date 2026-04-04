@@ -4,7 +4,7 @@
 
 import React, { useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserCircle, BookOpen, Target, Crown, BarChart3 } from 'lucide-react-native';
@@ -72,7 +72,7 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { tier } = useSubscription();
   const { profile: skillProfile } = useSkillProfile();
-  const { stats } = usePracticeHistory();
+  const { stats, loaded } = usePracticeHistory();
 
   // 스마트 추천
   const recommendation = useMemo(
@@ -96,6 +96,14 @@ export default function HomeScreen() {
   const handlePractice = () => {
     navigation.navigate('ScoreEditor', undefined);
   };
+
+  if (!loaded) {
+    return (
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+        <ActivityIndicator size="large" color={COLORS.primary500} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

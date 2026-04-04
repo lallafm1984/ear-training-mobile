@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -39,25 +39,43 @@ export default function StatsScreen() {
   const { session } = useAuth();
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
+  const [examLoading, setExamLoading] = useState(false);
+  const [examError, setExamError] = useState(false);
 
   // 시험 기록 로드
   useEffect(() => {
     if (!session?.user?.id) return;
+    setExamLoading(true);
+    setExamError(false);
     supabase
       .from('exam_sessions')
       .select('id, title, total_score, max_score, completed_at')
       .eq('user_id', session.user.id)
       .order('completed_at', { ascending: false })
       .limit(10)
-      .then(({ data }) => {
-        if (data) setExamRecords(data as ExamRecord[]);
-      });
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[StatsScreen] 시험 기록 로드 실패:', error.message);
+          setExamError(true);
+        } else if (data) {
+          setExamRecords(data as ExamRecord[]);
+        }
+      })
+      .finally(() => setExamLoading(false));
   }, [session?.user?.id]);
 
   const maxCategoryCount = Math.max(
     ...Object.values(stats.totalByCategory),
     1,
   );
+
+  if (!loaded) {
+    return (
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+        <ActivityIndicator size="large" color={COLORS.primary500} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -160,7 +178,18 @@ export default function StatsScreen() {
         </View>
 
         {/* 시험 기록 */}
-        {examRecords.length > 0 && (
+        {examLoading && (
+          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={COLORS.primary500} />
+            <Text style={[styles.emptyText, { marginTop: 8 }]}>시험 기록 로딩 중...</Text>
+          </View>
+        )}
+        {examError && !examLoading && (
+          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+            <Text style={[styles.emptyText, { color: COLORS.error }]}>시험 기록을 불러올 수 없습니다</Text>
+          </View>
+        )}
+        {!examLoading && !examError && examRecords.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>최근 모의시험</Text>
             <View style={styles.examCard}>

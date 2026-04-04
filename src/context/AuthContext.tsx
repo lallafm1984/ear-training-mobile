@@ -6,6 +6,7 @@ import { supabase } from '../lib';
 import type { Profile } from '../lib';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -197,8 +198,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (delError) return delError.message;
 
+    // 로컬 데이터 정리
+    await AsyncStorage.multiRemove([
+      '@melodygen_recent_activity',
+      '@melodygen_skill_profile',
+      '@melodygen_last_practice_date',
+      '@melodygen_onboarding_done',
+    ]).catch(() => {});
+
     // auth.users 삭제는 service_role key가 필요하므로
-    // Edge Function 호출 또는 Supabase Dashboard에서 처리.
+    // 프로덕션에서는 Supabase Edge Function으로 처리 필요.
     // 현재는 세션만 종료합니다.
     await supabase.auth.signOut();
     return null;

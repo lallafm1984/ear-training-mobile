@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User, Mail, Crown, LogOut, Trash2, ChevronRight,
-  Check, X, Shield,
+  Check, X, Shield, FileText,
 } from 'lucide-react-native';
+import { Linking } from 'react-native';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
 
@@ -252,6 +253,22 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         </View>
 
         {/* ── 기타 섹션 ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>약관 및 정책</Text>
+          <View style={styles.sectionCard}>
+            <MenuItem
+              icon={<FileText size={16} color="#64748b" />}
+              label="개인정보처리방침"
+              onPress={() => Linking.openURL('https://github.com/lallafm1984/ear-training-mobile/blob/master/docs/PRIVACY_POLICY.md')}
+            />
+            <MenuItem
+              icon={<FileText size={16} color="#64748b" />}
+              label="이용약관"
+              onPress={() => Linking.openURL('https://github.com/lallafm1984/ear-training-mobile/blob/master/docs/TERMS_OF_SERVICE.md')}
+            />
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>기타</Text>
           <View style={styles.sectionCard}>
