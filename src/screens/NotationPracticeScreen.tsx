@@ -146,38 +146,37 @@ const TRIPLET_MARKER = 'triplet' as const;
 type RhythmInput = NoteDuration | typeof TRIPLET_MARKER;
 
 const RHYTHM_BUTTONS: Record<string, RhythmInput[]> = {
-  rhythm_1: ['16', '8', '4'],
-  rhythm_2: ['16', '8', '4', '2'],
-  rhythm_3: ['16', '8', '4.', '4', '2.', '2'],
-  rhythm_4: ['16', '8', '4', '2', '1'],
-  rhythm_5: ['16', '8', '4', '2', '1', 'triplet'],
-  rhythm_6: ['16', '8', '8.', '4.', '4', '2.', '2', '1', 'triplet'],
+  rhythm_1: ['1', '2', '4'],                                  // 온, 2분, 4분
+  rhythm_2: ['1', '2', '4', '8'],                             // + 8분
+  rhythm_3: ['1', '2', '2.', '4', '4.', '8'],                // + 점2분, 점4분
+  rhythm_4: ['1', '2', '4', '4.', '8', '16'],                // + 16분
+  rhythm_5: ['1', '2', '4', '4.', '8', '16', 'triplet'],     // + 셋잇단
+  rhythm_6: ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'triplet'],
 };
 
 const DURATION_LABELS: Record<string, string> = {
-  '1': '16분',
-  '1.': '점16분',
-  '2': '8분',
+  '1': '온음표',
+  '1.': '점온음표',
+  '2': '2분',
+  '2.': '점2분',
   '4': '4분',
-  '8': '2분',
-  '16': '온음표',
-  '2.': '점8분',
   '4.': '점4분',
-  '8.': '점2분',
+  '8': '8분',
+  '8.': '점8분',
+  '16': '16분',
   'triplet': '셋잇단',
 };
 
 /** MaterialCommunityIcons 음표 아이콘 이름 매핑 */
 const DURATION_ICON: Record<string, string> = {
-  '16': 'music-note-whole',
-  '8': 'music-note-half',
-  '8.': 'music-note-half-dotted',
+  '1': 'music-note-whole',
+  '2': 'music-note-half',
+  '2.': 'music-note-half-dotted',
   '4': 'music-note-quarter',
   '4.': 'music-note-quarter-dotted',
-  '2': 'music-note-eighth',
-  '2.': 'music-note-eighth',
-  '1': 'music-note-sixteenth',
-  '1.': 'music-note-sixteenth',
+  '8': 'music-note-eighth',
+  '8.': 'music-note-eighth',
+  '16': 'music-note-sixteenth',
   'triplet': 'numeric-3-circle-outline',
 };
 
@@ -187,7 +186,7 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
   const durMap: Record<string, string> = {
     '16': 'B16', '8': 'B8', '8.': 'B8.', '4': 'B4', '4.': 'B4.',
     '2': 'B2', '2.': 'B2.', '1': 'B1', '1.': 'B1.',
-    'triplet': '(3B4/3B4/3B4/3',  // 셋잇단: 4분음표 자리에 3개
+    'triplet': '(3B4B4B4',  // 셋잇단: 3개 음표를 2개 자리에
   };
   const notes = input.map(d => durMap[d] ?? 'B4').join(' ');
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
@@ -197,13 +196,13 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
 function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
   const result: RhythmInput[] = [];
   let i = 0;
-  const filtered = notes.filter(n => n.pitch !== 'rest');
-  while (i < filtered.length) {
-    const note = filtered[i];
+  // 원본 배열에서 처리 (쉼표 필터 전에 tuplet 그룹핑)
+  while (i < notes.length) {
+    const note = notes[i];
+    if (note.pitch === 'rest') { i++; continue; }
     if (note.tuplet === '3') {
-      // 셋잇단 그룹: 3개 음표를 'triplet' 1개로 축약
       result.push('triplet');
-      i += 3;
+      i += 3; // 원본 배열에서 3개 건너뜀 (쉼표 포함)
     } else {
       result.push(note.duration);
       i++;
@@ -258,6 +257,7 @@ export default function NotationPracticeScreen() {
     setUserInput([]);
     setSubmitted(false);
     setRhythmResults([]);
+    setCorrectCounts([]);
 
     setTimeout(() => {
       const newScore = generatePracticeScore(category, difficulty);
@@ -297,7 +297,7 @@ export default function NotationPracticeScreen() {
   // ── 자기 평가 ──
   const handleRate = useCallback(async (rating: number) => {
     setSelfRating(rating);
-    setRated(true);
+    setTimeout(() => setRated(true), 300); // 선택 피드백 후 전환
     setHideNotes(false);
     setPracticeCount(prev => prev + 1);
     setRatings(prev => [...prev, rating]);
@@ -312,7 +312,14 @@ export default function NotationPracticeScreen() {
     };
     await addRecord(record);
     await updateStreak();
-  }, [category, difficulty, addRecord, updateStreak]);
+
+    // 스킬 프로필 반영
+    const evalRating = rating >= 4 ? 'easy' : rating >= 3 ? 'normal' : 'hard' as const;
+    const track = category === 'twoVoice' ? 'comprehensive' : 'partPractice' as const;
+    const levelMatch = difficulty.match(/\d+/);
+    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+    await applyEvaluation(track, level, evalRating);
+  }, [category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
   // ── 다음 문제 ──
   const handleNext = useCallback(() => {
@@ -367,7 +374,13 @@ export default function NotationPracticeScreen() {
     };
     await addRecord(record);
     await updateStreak();
-  }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak]);
+
+    // 스킬 프로필 반영
+    const evalRating = rating >= 4 ? 'easy' : rating >= 3 ? 'normal' : 'hard' as const;
+    const levelMatch = difficulty.match(/\d+/);
+    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+    await applyEvaluation('partPractice', level, evalRating);
+  }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
   const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
   const rhythmButtons = RHYTHM_BUTTONS[difficulty] ?? RHYTHM_BUTTONS.rhythm_1;
@@ -384,17 +397,8 @@ export default function NotationPracticeScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.resultContainer}>
           <View style={[styles.resultCircle, { borderColor: colors.main }]}>
-            {isRhythm ? (
-              <>
-                <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
-                <Text style={styles.resultMax}>/5</Text>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
-                <Text style={styles.resultMax}>/5</Text>
-              </>
-            )}
+            <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
+            <Text style={styles.resultMax}>/5</Text>
           </View>
 
           <Text style={styles.resultTitle}>연습 완료!</Text>
@@ -409,6 +413,7 @@ export default function NotationPracticeScreen() {
                 setShowResult(false);
                 setPracticeCount(0);
                 setRatings([]);
+                setCorrectCounts([]);
                 generate();
               }}
             >
