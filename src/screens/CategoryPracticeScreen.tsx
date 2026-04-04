@@ -76,9 +76,10 @@ export default function CategoryPracticeScreen() {
         </View>
       </View>
 
+      {/* 스크롤 영역: 난이도 목록 + 카테고리 정보 */}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* 난이도 선택 */}
@@ -129,28 +130,6 @@ export default function CategoryPracticeScreen() {
           })}
         </View>
 
-        {/* 시작 버튼 */}
-        <TouchableOpacity
-          style={[
-            styles.startBtn,
-            { backgroundColor: isLocked ? COLORS.slate300 : colors.main },
-          ]}
-          onPress={handleStart}
-          activeOpacity={0.8}
-        >
-          {isLocked ? (
-            <>
-              <Lock size={20} color="#fff" />
-              <Text style={styles.startText}>Pro 업그레이드 필요</Text>
-            </>
-          ) : (
-            <>
-              <Play size={20} color="#fff" fill="#fff" />
-              <Text style={styles.startText}>연습 시작</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
         {/* 카테고리 정보 */}
         <View style={[styles.infoCard, { backgroundColor: colors.bg, borderColor: colors.main + '25' }]}>
           <Text style={[styles.infoTitle, { color: colors.main }]}>카테고리 정보</Text>
@@ -172,6 +151,30 @@ export default function CategoryPracticeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* 하단 고정 시작 버튼 (MockExamSetupScreen과 동일 패턴) */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <TouchableOpacity
+          style={[
+            styles.startBtn,
+            { backgroundColor: isLocked ? COLORS.slate300 : colors.main },
+          ]}
+          onPress={handleStart}
+          activeOpacity={0.8}
+        >
+          {isLocked ? (
+            <>
+              <Lock size={20} color="#fff" />
+              <Text style={styles.startText}>Pro 업그레이드 필요</Text>
+            </>
+          ) : (
+            <>
+              <Play size={20} color="#fff" fill="#fff" />
+              <Text style={styles.startText}>연습 시작</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -209,7 +212,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 24,
     gap: 20,
   },
   sectionTitle: {
@@ -256,6 +259,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.slate700,
     flex: 1,
+  },
+  bottomBar: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate100,
+    backgroundColor: COLORS.bgPrimary,
   },
   startBtn: {
     flexDirection: 'row',
