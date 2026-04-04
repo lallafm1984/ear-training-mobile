@@ -290,6 +290,7 @@ export default function NotationPracticeScreen() {
   const [score, setScore] = useState<PracticeScore | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const playingRef = useRef(false);
   const [hideNotes, setHideNotes] = useState(true);
   const [selfRating, setSelfRating] = useState(0);
   const [rated, setRated] = useState(false);
@@ -331,9 +332,13 @@ export default function NotationPracticeScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        if (isPlaying) abcjsRef.current?.togglePlay();
+        if (playingRef.current) {
+          abcjsRef.current?.stopPlay();
+          playingRef.current = false;
+          setIsPlaying(false);
+        }
       };
-    }, [isPlaying]),
+    }, []),
   );
 
   // ── ABC 문자열 생성 ──
@@ -347,17 +352,23 @@ export default function NotationPracticeScreen() {
     useGrandStaff: score.useGrandStaff,
   }) : '';
 
-  // ── 재생/정지 ──
+  // ── 재생 상태 콜백 (WebView → React, 자연 종료 포함) ──
+  const handlePlayStateChange = useCallback((playing: boolean) => {
+    playingRef.current = playing;
+    setIsPlaying(playing);
+  }, []);
+
+  // ── 재생/정지 (ref 기반, 클로저 이슈 없음) ──
   const handlePlay = useCallback(() => {
-    if (isPlaying) {
-      // 정지: 명시적 STOP 명령 (TOGGLE이 아닌 STOP으로 재시작 방지)
+    if (playingRef.current) {
       abcjsRef.current?.stopPlay();
+      playingRef.current = false;
       setIsPlaying(false);
     } else {
-      // 재생: TOGGLE로 시작
       abcjsRef.current?.togglePlay();
+      // 상태는 WebView 콜백(handlePlayStateChange)으로 업데이트
     }
-  }, [isPlaying]);
+  }, []);
 
   // ── 자기 평가 ──
   const handleRate = useCallback(async (rating: number) => {
@@ -388,15 +399,23 @@ export default function NotationPracticeScreen() {
 
   // ── 다음 문제 ──
   const handleNext = useCallback(() => {
-    if (isPlaying) abcjsRef.current?.togglePlay();
+    if (playingRef.current) {
+      abcjsRef.current?.stopPlay();
+      playingRef.current = false;
+      setIsPlaying(false);
+    }
     generate();
-  }, [generate, isPlaying]);
+  }, [generate]);
 
   // ── 연습 종료 ──
   const handleFinish = useCallback(() => {
-    if (isPlaying) abcjsRef.current?.togglePlay();
+    if (playingRef.current) {
+      abcjsRef.current?.stopPlay();
+      playingRef.current = false;
+      setIsPlaying(false);
+    }
     setShowResult(true);
-  }, [isPlaying]);
+  }, []);
 
   // ── 리듬: 음표 입력 ──
   const handleRhythmInput = useCallback((dur: RhythmInput) => {
@@ -569,7 +588,7 @@ export default function NotationPracticeScreen() {
                 hideNotes={hideNotes}
                 tempo={90}
                 isPlaying={isPlaying}
-                onPlayStateChange={setIsPlaying}
+                onPlayStateChange={handlePlayStateChange}
                 barsPerStaff={score?.barsPerStaff}
                 prependMetronome={isRhythm}
                 timeSignature={score?.timeSignature ?? '4/4'}
