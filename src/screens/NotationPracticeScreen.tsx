@@ -153,25 +153,11 @@ function restDuration(input: RhythmInput): NoteDuration {
   return (input as string).slice(2) as NoteDuration;
 }
 
-// 음표 버튼 (난이도별)
-const NOTE_BUTTONS: Record<string, RhythmInput[]> = {
-  rhythm_1: ['1', '2', '4'],
-  rhythm_2: ['1', '2', '4', '8'],
-  rhythm_3: ['1', '2', '2.', '4', '4.', '8'],
-  rhythm_4: ['1', '2', '4', '4.', '8', '16'],
-  rhythm_5: ['1', '2', '4', '4.', '8', '16', 'triplet'],
-  rhythm_6: ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'triplet'],
-};
+// 음표 버튼 (전체 일관, 모든 난이도 동일)
+const NOTE_BUTTONS: RhythmInput[] = ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'triplet'];
 
-// 쉼표 버튼 (난이도별)
-const REST_BUTTONS: Record<string, RhythmInput[]> = {
-  rhythm_1: ['r_1', 'r_2', 'r_4'],
-  rhythm_2: ['r_1', 'r_2', 'r_4', 'r_8'],
-  rhythm_3: ['r_1', 'r_2', 'r_4', 'r_8'],
-  rhythm_4: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
-  rhythm_5: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
-  rhythm_6: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
-};
+// 쉼표 버튼 (전체 일관)
+const REST_BUTTONS: RhythmInput[] = ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'];
 
 const DURATION_LABELS: Record<string, string> = {
   '1': '온음표', '1.': '점온음표',
@@ -429,8 +415,8 @@ export default function NotationPracticeScreen() {
   }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
   const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
-  const noteButtons = NOTE_BUTTONS[difficulty] ?? NOTE_BUTTONS.rhythm_1;
-  const restButtons = REST_BUTTONS[difficulty] ?? REST_BUTTONS.rhythm_1;
+  const noteButtons = NOTE_BUTTONS;
+  const restButtons = REST_BUTTONS;
 
   // ── 결과 화면 ──
   if (showResult) {
