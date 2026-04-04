@@ -133,8 +133,11 @@ export function usePracticeHistory() {
 
   // ── 기록 추가 ──
   const addRecord = useCallback(async (record: PracticeRecord) => {
-    const updated = [record, ...records].slice(0, MAX_LOCAL);
-    setRecords(updated);
+    let updated: PracticeRecord[] = [];
+    setRecords(prev => {
+      updated = [record, ...prev].slice(0, MAX_LOCAL);
+      return updated;
+    });
     setStats(computeStats(updated));
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
@@ -152,7 +155,7 @@ export function usePracticeHistory() {
         })
         .then(() => { /* fire & forget */ });
     }
-  }, [records, session?.user?.id]);
+  }, [session?.user?.id]);
 
   return { records, stats, loaded, addRecord };
 }

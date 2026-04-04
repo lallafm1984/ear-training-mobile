@@ -113,7 +113,7 @@ export default function ChoicePracticeScreen() {
   const handleFinish = useCallback(async () => {
     stopAudio();
 
-    const selfRating = stats.total > 0 ? Math.round((stats.correct / stats.total) * 5) : 3;
+    const selfRating = stats.total > 0 ? Math.max(1, Math.round((stats.correct / stats.total) * 5)) : 3;
     const record: PracticeRecord = {
       id: `pr_${Date.now()}`,
       contentType: category,
@@ -128,7 +128,9 @@ export default function ChoicePracticeScreen() {
     // 스킬 프로필 정확도 업데이트
     const pct = stats.total > 0 ? stats.correct / stats.total : 0.5;
     const evalRating = pct >= 0.8 ? 'easy' : pct >= 0.5 ? 'normal' : 'hard';
-    await applyEvaluation('partPractice', 1, evalRating);
+    const levelMatch = difficulty.match(/\d+/);
+    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+    await applyEvaluation('partPractice', level, evalRating);
 
     setShowResult(true);
   }, [category, difficulty, stats, addRecord, updateStreak, applyEvaluation, stopAudio]);

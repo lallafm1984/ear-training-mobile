@@ -76,7 +76,9 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      try {
+        flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+      } catch { /* layout not ready */ }
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -107,7 +109,7 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         {!isLast && (
           <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>

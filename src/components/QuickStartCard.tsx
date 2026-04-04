@@ -5,7 +5,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Zap } from 'lucide-react-native';
-import { COLORS } from '../theme/colors';
+import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import type { ContentCategory } from '../types/content';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import type { ContentDifficulty } from '../types/content';
@@ -25,6 +25,7 @@ export default function QuickStartCard({
 }: QuickStartCardProps) {
   const config = getContentConfig(category);
   const diffLabel = getDifficultyLabel(category, difficulty);
+  const catColor = CATEGORY_COLORS[category].main;
 
   return (
     <View style={styles.container}>
@@ -38,7 +39,7 @@ export default function QuickStartCard({
       )}
 
       {/* 빠른 시작 */}
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.card, { backgroundColor: catColor }]} onPress={onPress} activeOpacity={0.8}>
         <View style={styles.left}>
           <View style={styles.iconCircle}>
             <Zap size={20} color={COLORS.white} fill={COLORS.white} />

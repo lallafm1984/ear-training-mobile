@@ -167,7 +167,11 @@ export default function ExamResultScreen() {
               <Text style={styles.tipText}>
                 {(() => {
                   const weakest = Object.entries(categoryScores)
-                    .sort(([, a], [, b]) => (a.score / a.max) - (b.score / b.max))[0];
+                    .sort(([, a], [, b]) => {
+                      const diff = (a.score / a.max) - (b.score / b.max);
+                      if (diff !== 0) return diff;
+                      return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
+                    })[0];
                   if (!weakest) return '꾸준히 연습하세요!';
                   const catName = getContentConfig(weakest[0] as ContentCategory).name;
                   return `${catName} 영역을 집중적으로 연습해 보세요. 카테고리별 연습에서 해당 영역을 선택할 수 있습니다.`;
@@ -182,7 +186,7 @@ export default function ExamResultScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: COLORS.amber500 }]}
-          onPress={() => navigation.navigate('MockExamSetup')}
+          onPress={() => navigation.replace('MockExamSetup')}
         >
           <RotateCcw size={18} color="#fff" />
           <Text style={styles.actionBtnText}>다시 시험보기</Text>
