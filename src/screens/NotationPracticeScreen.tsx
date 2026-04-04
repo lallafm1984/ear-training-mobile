@@ -347,10 +347,17 @@ export default function NotationPracticeScreen() {
     useGrandStaff: score.useGrandStaff,
   }) : '';
 
-  // ── 재생 ──
+  // ── 재생/정지 ──
   const handlePlay = useCallback(() => {
-    abcjsRef.current?.togglePlay();
-  }, []);
+    if (isPlaying) {
+      // 정지: WebView에 정지 명령 + 즉시 UI 업데이트
+      abcjsRef.current?.togglePlay();
+      setIsPlaying(false);
+    } else {
+      // 재생: WebView에 재생 명령 (상태는 WebView 콜백으로 업데이트)
+      abcjsRef.current?.togglePlay();
+    }
+  }, [isPlaying]);
 
   // ── 자기 평가 ──
   const handleRate = useCallback(async (rating: number) => {
