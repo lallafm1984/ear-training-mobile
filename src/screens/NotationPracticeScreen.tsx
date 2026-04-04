@@ -497,6 +497,7 @@ export default function NotationPracticeScreen() {
                       hideNotes={false}
                       tempo={90}
                       barsPerStaff={4}
+                      stretchLast={false}
                     />
                   </View>
                 ) : (
@@ -538,11 +539,8 @@ export default function NotationPracticeScreen() {
                   {rhythmButtons.map(dur => {
                     const isDotted = dur.endsWith('.');
                     const baseDur = isDotted ? dur.slice(0, -1) : dur;
-                    // 음표 시각: 속이 빈 머리(○) = 2분 이상, 채운 머리(●) = 4분 이하
-                    const filled = Number(baseDur) <= 4;
-                    // 기둥 없음 = 온음표(16)
-                    const hasStem = baseDur !== '16';
-                    // 꼬리 수: 8분=1, 16분=2
+                    const filled = Number(baseDur) <= 4;  // 4분 이하 = 채움
+                    const hasStem = baseDur !== '16';      // 온음표 = 기둥 없음
                     const flags = baseDur === '1' ? 2 : baseDur === '2' ? 1 : 0;
                     return (
                       <TouchableOpacity
@@ -553,19 +551,29 @@ export default function NotationPracticeScreen() {
                         activeOpacity={0.7}
                       >
                         <View style={styles.noteVisual}>
-                          {hasStem && <View style={[styles.noteStem, { backgroundColor: colors.main }]} />}
+                          {/* 기둥 */}
+                          {hasStem && (
+                            <View style={[styles.noteStem, { backgroundColor: colors.main }]} />
+                          )}
+                          {/* 머리: 타원형 (기울기 -20도) */}
                           <View style={[
                             styles.noteHead,
-                            filled ? { backgroundColor: colors.main } : { borderColor: colors.main, borderWidth: 2 },
+                            filled
+                              ? { backgroundColor: colors.main }
+                              : { backgroundColor: 'transparent', borderColor: colors.main, borderWidth: 2.5 },
+                            { transform: [{ rotate: '-20deg' }] },
                           ]} />
-                          {flags > 0 && (
-                            <View style={styles.noteFlagArea}>
-                              {Array.from({ length: flags }).map((_, fi) => (
-                                <View key={fi} style={[styles.noteFlag, { backgroundColor: colors.main, top: fi * 5 }]} />
-                              ))}
-                            </View>
+                          {/* 꼬리 (8분=1개, 16분=2개) */}
+                          {flags >= 1 && (
+                            <View style={[styles.noteFlag1, { backgroundColor: colors.main }]} />
                           )}
-                          {isDotted && <View style={[styles.noteDot, { backgroundColor: colors.main }]} />}
+                          {flags >= 2 && (
+                            <View style={[styles.noteFlag2, { backgroundColor: colors.main }]} />
+                          )}
+                          {/* 점음표 점 */}
+                          {isDotted && (
+                            <View style={[styles.noteDot, { backgroundColor: colors.main }]} />
+                          )}
                         </View>
                         <Text style={[styles.rhythmDurLabel, { color: colors.main }]}>
                           {DURATION_LABELS[dur] ?? dur}
@@ -921,43 +929,52 @@ const styles = StyleSheet.create({
   },
   // 음표 시각 요소
   noteVisual: {
-    width: 24,
-    height: 32,
+    width: 30,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
   noteHead: {
-    width: 12,
-    height: 9,
-    borderRadius: 6,
+    width: 14,
+    height: 10,
+    borderRadius: 7,
   },
   noteStem: {
     position: 'absolute',
-    right: 4,
-    bottom: 8,
-    width: 2,
-    height: 22,
-    borderRadius: 1,
+    right: 6,
+    bottom: 9,
+    width: 2.5,
+    height: 28,
+    borderRadius: 1.2,
   },
-  noteFlagArea: {
+  noteFlag1: {
     position: 'absolute',
-    right: 4,
-    top: 2,
-  },
-  noteFlag: {
-    position: 'absolute',
-    width: 8,
+    right: 6,
+    top: 4,
+    width: 10,
     height: 3,
-    borderRadius: 1,
-    left: 2,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 2,
+    transform: [{ rotate: '15deg' }],
+  },
+  noteFlag2: {
+    position: 'absolute',
+    right: 6,
+    top: 10,
+    width: 10,
+    height: 3,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 2,
+    transform: [{ rotate: '15deg' }],
   },
   noteDot: {
     position: 'absolute',
-    right: -2,
+    right: 2,
     bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   rhythmActionRow: {
     flexDirection: 'row',
