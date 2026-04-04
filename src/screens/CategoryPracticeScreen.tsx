@@ -45,9 +45,9 @@ export default function CategoryPracticeScreen() {
       return;
     }
 
-    // 선율/2성부/리듬은 기존 ScoreEditor로, 음정/화성/조성은 객관식 화면으로
+    // 선율/2성부/리듬은 기보형 연습 전용 화면, 음정/화성/조성은 객관식 화면
     if (category === 'melody' || category === 'twoVoice' || category === 'rhythm') {
-      navigation.navigate('ScoreEditor', {
+      navigation.navigate('NotationPractice', {
         category,
         difficulty: selectedDiff,
       });

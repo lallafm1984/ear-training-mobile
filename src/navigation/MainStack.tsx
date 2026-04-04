@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ScoreEditorScreen from '../screens/ScoreEditor';
 import CategoryPracticeScreen from '../screens/CategoryPracticeScreen';
 import ChoicePracticeScreen from '../screens/ChoicePracticeScreen';
+import NotationPracticeScreen from '../screens/NotationPracticeScreen';
 import MockExamSetupScreen from '../screens/MockExamSetupScreen';
 import MockExamScreen from '../screens/MockExamScreen';
 import ExamResultScreen from '../screens/ExamResultScreen';
@@ -29,6 +30,7 @@ export type MainStackParamList = {
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
+  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty };
   ScoreEditor: {
     category?: ContentCategory;
     difficulty?: ContentDifficulty;
@@ -74,6 +76,7 @@ export default function MainStack() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
       <Stack.Screen name="ChoicePractice" component={ChoicePracticeScreen} />
+      <Stack.Screen name="NotationPractice" component={NotationPracticeScreen} />
       <Stack.Screen name="ScoreEditor" component={ScoreEditorScreen} />
       <Stack.Screen name="MockExamSetup" component={MockExamSetupScreen} />
       <Stack.Screen name="MockExam" component={MockExamScreen} />
