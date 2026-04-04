@@ -17,8 +17,9 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import {
   generateScore, generateAbc, Difficulty, BassDifficulty,
-  ScoreNote, PitchName, Accidental,
+  ScoreNote, PitchName, Accidental, durationToSixteenths,
 } from '../lib';
+import type { NoteDuration } from '../lib/scoreUtils';
 import { buildGeneratorOptions } from '../lib/trackConfig';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
@@ -136,6 +137,48 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
 }
 
 // ─────────────────────────────────────────────────────────────
+// 리듬 전용: 난이도별 버튼 풀 + 음표 라벨
+// ─────────────────────────────────────────────────────────────
+
+const RHYTHM_BUTTONS: Record<string, NoteDuration[]> = {
+  rhythm_1: ['16', '8', '4'],
+  rhythm_2: ['16', '8', '4', '2'],
+  rhythm_3: ['16', '8', '4.', '4', '2.', '2'],
+  rhythm_4: ['16', '8', '4', '2', '1'],
+  rhythm_5: ['16', '8', '4', '2', '1'],
+  rhythm_6: ['16', '8', '8.', '4.', '4', '2.', '2', '1'],
+};
+
+const DURATION_LABELS: Record<NoteDuration, string> = {
+  '1': '16분',
+  '1.': '점16분',
+  '2': '8분',
+  '4': '4분',
+  '8': '2분',
+  '16': '온음표',
+  '2.': '점8분',
+  '4.': '점4분',
+  '8.': '점2분',
+};
+
+const DURATION_SYMBOLS: Record<NoteDuration, string> = {
+  '1': '\u{1D161}',   // 16분
+  '1.': '\u{1D161}.',
+  '2': '\u266A',       // 8분
+  '4': '\u2669',       // 4분
+  '8': '\u{1D15E}',   // 2분
+  '16': '\u{1D15D}',  // 온음표
+  '2.': '\u266A.',
+  '4.': '\u2669.',
+  '8.': '\u{1D15E}.',
+};
+
+/** 정답 음표 시퀀스 추출 (쉼표 제외) */
+function getAnswerSequence(notes: ScoreNote[]): NoteDuration[] {
+  return notes.filter(n => n.pitch !== 'rest').map(n => n.duration);
+}
+
+// ─────────────────────────────────────────────────────────────
 // 메인 컴포넌트
 // ─────────────────────────────────────────────────────────────
 
@@ -164,6 +207,13 @@ export default function NotationPracticeScreen() {
   const [ratings, setRatings] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
 
+  // ── 리듬 전용 상태 ──
+  const isRhythm = category === 'rhythm';
+  const [userInput, setUserInput] = useState<NoteDuration[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [rhythmResults, setRhythmResults] = useState<{ correct: NoteDuration; user: NoteDuration | null; isCorrect: boolean }[]>([]);
+  const [correctCounts, setCorrectCounts] = useState<number[]>([]);
+
   // ── 악보 생성 ──
   const generate = useCallback(() => {
     setIsGenerating(true);
@@ -171,8 +221,10 @@ export default function NotationPracticeScreen() {
     setSelfRating(0);
     setRated(false);
     setIsPlaying(false);
+    setUserInput([]);
+    setSubmitted(false);
+    setRhythmResults([]);
 
-    // 약간의 딜레이로 로딩 표시
     setTimeout(() => {
       const newScore = generatePracticeScore(category, difficulty);
       setScore(newScore);
@@ -240,18 +292,75 @@ export default function NotationPracticeScreen() {
     setShowResult(true);
   }, [isPlaying]);
 
+  // ── 리듬: 음표 입력 ──
+  const handleRhythmInput = useCallback((dur: NoteDuration) => {
+    if (submitted || !score) return;
+    const answer = getAnswerSequence(score.trebleNotes);
+    if (userInput.length >= answer.length) return;
+    setUserInput(prev => [...prev, dur]);
+  }, [submitted, score, userInput.length]);
+
+  const handleRhythmDelete = useCallback(() => {
+    if (submitted) return;
+    setUserInput(prev => prev.slice(0, -1));
+  }, [submitted]);
+
+  // ── 리듬: 제출 + 채점 ──
+  const handleRhythmSubmit = useCallback(async () => {
+    if (!score || submitted) return;
+    const answer = getAnswerSequence(score.trebleNotes);
+    const results = answer.map((dur, i) => ({
+      correct: dur,
+      user: userInput[i] ?? null,
+      isCorrect: dur === userInput[i],
+    }));
+    setRhythmResults(results);
+    setSubmitted(true);
+    setHideNotes(false);
+
+    const correctCount = results.filter(r => r.isCorrect).length;
+    const rating = Math.max(1, Math.round((correctCount / answer.length) * 5));
+    setPracticeCount(prev => prev + 1);
+    setRatings(prev => [...prev, rating]);
+    setCorrectCounts(prev => [...prev, correctCount]);
+
+    const record: PracticeRecord = {
+      id: `pr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      contentType: category,
+      difficulty,
+      selfRating: rating,
+      practicedAt: new Date().toISOString(),
+    };
+    await addRecord(record);
+    await updateStreak();
+  }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak]);
+
+  const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
+  const rhythmButtons = RHYTHM_BUTTONS[difficulty] ?? RHYTHM_BUTTONS.rhythm_1;
+
   // ── 결과 화면 ──
   if (showResult) {
     const avgRating = ratings.length > 0
       ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
       : 0;
+    const totalCorrect = correctCounts.reduce((a, b) => a + b, 0);
+    const totalNotes = correctCounts.length > 0 ? correctCounts.length * (rhythmAnswer.length || 1) : 0;
 
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.resultContainer}>
           <View style={[styles.resultCircle, { borderColor: colors.main }]}>
-            <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
-            <Text style={styles.resultMax}>/5</Text>
+            {isRhythm ? (
+              <>
+                <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
+                <Text style={styles.resultMax}>/5</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
+                <Text style={styles.resultMax}>/5</Text>
+              </>
+            )}
           </View>
 
           <Text style={styles.resultTitle}>연습 완료!</Text>
@@ -335,17 +444,19 @@ export default function NotationPracticeScreen() {
             <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
               <View style={styles.scoreHeader}>
                 <Text style={styles.scoreLabel}>
-                  {hideNotes ? '악보가 숨겨져 있습니다' : '악보'}
+                  {hideNotes ? (isRhythm ? '리듬을 듣고 맞춰보세요' : '악보가 숨겨져 있습니다') : '정답 악보'}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => rated && setHideNotes(h => !h)}
-                  disabled={!rated}
-                  style={{ opacity: rated ? 1 : 0.3 }}
-                >
-                  {hideNotes
-                    ? <EyeOff size={18} color={COLORS.slate400} />
-                    : <Eye size={18} color={colors.main} />}
-                </TouchableOpacity>
+                {!isRhythm && (
+                  <TouchableOpacity
+                    onPress={() => rated && setHideNotes(h => !h)}
+                    disabled={!rated}
+                    style={{ opacity: rated ? 1 : 0.3 }}
+                  >
+                    {hideNotes
+                      ? <EyeOff size={18} color={COLORS.slate400} />
+                      : <Eye size={18} color={colors.main} />}
+                  </TouchableOpacity>
+                )}
               </View>
               <AbcjsRenderer
                 ref={abcjsRef}
@@ -357,54 +468,159 @@ export default function NotationPracticeScreen() {
                 barsPerStaff={score?.barsPerStaff}
               />
             </View>
+
+            {/* 리듬 모드: 내 입력 표시 + 채점 결과 */}
+            {isRhythm && (
+              <View style={styles.rhythmInputDisplay}>
+                <Text style={styles.rhythmInputLabel}>
+                  내 입력 ({userInput.length}/{rhythmAnswer.length})
+                </Text>
+                <View style={styles.rhythmInputRow}>
+                  {rhythmAnswer.map((_, i) => {
+                    const userDur = userInput[i];
+                    const result = rhythmResults[i];
+                    const isFilled = !!userDur;
+                    const bgColor = result
+                      ? result.isCorrect ? '#dcfce7' : '#fee2e2'
+                      : isFilled ? colors.bg : COLORS.slate50;
+                    const textColor = result
+                      ? result.isCorrect ? '#166534' : '#991b1b'
+                      : isFilled ? colors.main : COLORS.slate300;
+                    return (
+                      <View key={i} style={[styles.rhythmSlot, { backgroundColor: bgColor, borderColor: result ? (result.isCorrect ? '#86efac' : '#fca5a5') : isFilled ? colors.main + '40' : COLORS.slate200 }]}>
+                        <Text style={[styles.rhythmSlotText, { color: textColor }]}>
+                          {userDur ? (DURATION_LABELS[userDur] ?? userDur) : '?'}
+                        </Text>
+                        {result && !result.isCorrect && (
+                          <Text style={styles.rhythmCorrectHint}>
+                            {DURATION_LABELS[result.correct] ?? result.correct}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+                {submitted && (
+                  <Text style={[styles.rhythmResultText, { color: colors.main }]}>
+                    {rhythmResults.filter(r => r.isCorrect).length}/{rhythmResults.length} 정답
+                  </Text>
+                )}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
 
-      {/* 하단 고정: 자기 평가 또는 다음/종료 */}
+      {/* 하단 고정 */}
       {!isGenerating && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          {!rated ? (
-            <>
-              <Text style={styles.rateLabel}>자기 평가</Text>
-              <View style={styles.rateRow}>
-                {[1, 2, 3, 4, 5].map(r => (
+          {isRhythm ? (
+            // ── 리듬 모드: 음표 버튼 팔레트 ──
+            !submitted ? (
+              <>
+                <View style={styles.rhythmBtnRow}>
+                  {rhythmButtons.map(dur => (
+                    <TouchableOpacity
+                      key={dur}
+                      style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
+                      onPress={() => handleRhythmInput(dur)}
+                      disabled={userInput.length >= rhythmAnswer.length}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.rhythmDurBtnText, { color: colors.main }]}>
+                        {DURATION_LABELS[dur] ?? dur}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.rhythmActionRow}>
                   <TouchableOpacity
-                    key={r}
-                    style={[
-                      styles.rateBtn,
-                      selfRating === r && { backgroundColor: colors.main, borderColor: colors.main },
-                    ]}
-                    onPress={() => handleRate(r)}
+                    style={[styles.rhythmActionBtn, { backgroundColor: COLORS.slate100 }]}
+                    onPress={handleRhythmDelete}
+                    disabled={userInput.length === 0}
                   >
-                    <Text style={[
-                      styles.rateBtnText,
-                      selfRating === r && { color: '#fff' },
-                    ]}>
-                      {r}
+                    <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>
+                      ← 삭제
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          ) : (
-            <View style={styles.nextRow}>
-              <TouchableOpacity
-                style={[styles.nextBtn, { backgroundColor: colors.main }]}
-                onPress={handleNext}
-              >
-                <Text style={styles.nextBtnText}>다음 문제</Text>
-                <ChevronRight size={18} color="#fff" />
-              </TouchableOpacity>
-              {practiceCount >= 1 && (
+                  <TouchableOpacity
+                    style={[styles.rhythmActionBtn, {
+                      backgroundColor: userInput.length === rhythmAnswer.length ? colors.main : COLORS.slate200,
+                    }]}
+                    onPress={handleRhythmSubmit}
+                    disabled={userInput.length !== rhythmAnswer.length}
+                  >
+                    <Text style={[styles.rhythmActionBtnText, {
+                      color: userInput.length === rhythmAnswer.length ? '#fff' : COLORS.slate400,
+                    }]}>
+                      제출
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.nextRow}>
                 <TouchableOpacity
-                  style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
-                  onPress={handleFinish}
+                  style={[styles.nextBtn, { backgroundColor: colors.main }]}
+                  onPress={handleNext}
                 >
-                  <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                  <Text style={styles.nextBtnText}>다음 문제</Text>
+                  <ChevronRight size={18} color="#fff" />
                 </TouchableOpacity>
-              )}
-            </View>
+                {practiceCount >= 1 && (
+                  <TouchableOpacity
+                    style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
+                    onPress={handleFinish}
+                  >
+                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
+          ) : (
+            // ── 선율/2성부 모드: 자기 평가 ──
+            !rated ? (
+              <>
+                <Text style={styles.rateLabel}>자기 평가</Text>
+                <View style={styles.rateRow}>
+                  {[1, 2, 3, 4, 5].map(r => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[
+                        styles.rateBtn,
+                        selfRating === r && { backgroundColor: colors.main, borderColor: colors.main },
+                      ]}
+                      onPress={() => handleRate(r)}
+                    >
+                      <Text style={[
+                        styles.rateBtnText,
+                        selfRating === r && { color: '#fff' },
+                      ]}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={styles.nextRow}>
+                <TouchableOpacity
+                  style={[styles.nextBtn, { backgroundColor: colors.main }]}
+                  onPress={handleNext}
+                >
+                  <Text style={styles.nextBtnText}>다음 문제</Text>
+                  <ChevronRight size={18} color="#fff" />
+                </TouchableOpacity>
+                {practiceCount >= 1 && (
+                  <TouchableOpacity
+                    style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
+                    onPress={handleFinish}
+                  >
+                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
           )}
         </View>
       )}
@@ -593,5 +809,74 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#fff',
+  },
+  // 리듬 전용
+  rhythmInputDisplay: {
+    gap: 8,
+  },
+  rhythmInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.slate500,
+  },
+  rhythmInputRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  rhythmSlot: {
+    minWidth: 52,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  rhythmSlotText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  rhythmCorrectHint: {
+    fontSize: 10,
+    color: '#991b1b',
+    marginTop: 2,
+  },
+  rhythmResultText: {
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  rhythmBtnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  rhythmDurBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    backgroundColor: '#fff',
+  },
+  rhythmDurBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  rhythmActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  rhythmActionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  rhythmActionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
