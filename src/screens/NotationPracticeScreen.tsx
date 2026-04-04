@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     marginBottom: 8,
-    minHeight: 62,
+    height: 120,
     alignContent: 'flex-start',
   },
   rhythmDurBtn: {
