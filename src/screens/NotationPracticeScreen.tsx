@@ -192,7 +192,7 @@ const DURATION_ICON: Record<string, string> = {
   '4': 'music-note-quarter',
   '4.': 'music-note-quarter-dotted',
   '8': 'music-note-eighth',
-  '8.': 'music-note-eighth',
+  '8.': 'music-note-eighth-dotted',
   '16': 'music-note-sixteenth',
   'triplet': 'numeric-3-circle-outline',
   'r_1': 'music-rest-whole',
@@ -284,6 +284,7 @@ export default function NotationPracticeScreen() {
   const [practiceCount, setPracticeCount] = useState(0);
   const [ratings, setRatings] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [rhythmTab, setRhythmTab] = useState<'note' | 'rest'>('note');
 
   // ── 리듬 전용 상태 ──
   const isRhythm = category === 'rhythm';
@@ -586,7 +587,7 @@ export default function NotationPracticeScreen() {
                         backgroundColor: r.isCorrect ? '#dcfce7' : '#fee2e2',
                         borderColor: r.isCorrect ? '#86efac' : '#fca5a5',
                       }]}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: r.isCorrect ? '#166534' : '#991b1b' }}>
+                        <Text style={{ fontSize: 8, fontWeight: '800', color: r.isCorrect ? '#166534' : '#991b1b' }}>
                           {r.isCorrect ? 'O' : 'X'}
                         </Text>
                       </View>
@@ -609,40 +610,31 @@ export default function NotationPracticeScreen() {
             // ── 리듬 모드: 음표 버튼 팔레트 ──
             !submitted ? (
               <>
-                {/* 음표 버튼 */}
-                <Text style={styles.rhythmSectionLabel}>음표</Text>
-                <View style={styles.rhythmBtnRow}>
-                  {noteButtons.map(dur => {
-                    const iconName = DURATION_ICON[dur] ?? 'music-note-quarter';
-                    return (
-                      <TouchableOpacity
-                        key={dur}
-                        style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
-                        onPress={() => handleRhythmInput(dur)}
-                        disabled={userInput.length >= rhythmAnswer.length}
-                        activeOpacity={0.7}
-                      >
-                        <MaterialCommunityIcons
-                          name={iconName as any}
-                          size={26}
-                          color={colors.main}
-                        />
-                        <Text style={[styles.rhythmDurLabel, { color: colors.main }]}>
-                          {DURATION_LABELS[dur] ?? dur}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                {/* 음표/쉼표 탭 */}
+                <View style={styles.rhythmTabRow}>
+                  <TouchableOpacity
+                    style={[styles.rhythmTab, rhythmTab === 'note' && { backgroundColor: colors.main }]}
+                    onPress={() => setRhythmTab('note')}
+                  >
+                    <MaterialCommunityIcons name="music-note-quarter" size={16} color={rhythmTab === 'note' ? '#fff' : COLORS.slate500} />
+                    <Text style={[styles.rhythmTabText, rhythmTab === 'note' && { color: '#fff' }]}>음표</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.rhythmTab, rhythmTab === 'rest' && { backgroundColor: COLORS.slate600 }]}
+                    onPress={() => setRhythmTab('rest')}
+                  >
+                    <MaterialCommunityIcons name="music-rest-quarter" size={16} color={rhythmTab === 'rest' ? '#fff' : COLORS.slate500} />
+                    <Text style={[styles.rhythmTabText, rhythmTab === 'rest' && { color: '#fff' }]}>쉼표</Text>
+                  </TouchableOpacity>
                 </View>
-                {/* 쉼표 버튼 */}
-                <Text style={styles.rhythmSectionLabel}>쉼표</Text>
                 <View style={styles.rhythmBtnRow}>
-                  {restButtons.map(dur => {
-                    const iconName = DURATION_ICON[dur] ?? 'music-rest-quarter';
+                  {(rhythmTab === 'note' ? noteButtons : restButtons).map(dur => {
+                    const iconName = DURATION_ICON[dur] ?? 'music-note-quarter';
+                    const isNote = rhythmTab === 'note';
                     return (
                       <TouchableOpacity
                         key={dur}
-                        style={[styles.rhythmDurBtn, { borderColor: COLORS.slate300 }]}
+                        style={[styles.rhythmDurBtn, { borderColor: isNote ? colors.main + '40' : COLORS.slate300 }]}
                         onPress={() => handleRhythmInput(dur)}
                         disabled={userInput.length >= rhythmAnswer.length}
                         activeOpacity={0.7}
@@ -650,9 +642,9 @@ export default function NotationPracticeScreen() {
                         <MaterialCommunityIcons
                           name={iconName as any}
                           size={26}
-                          color={COLORS.slate600}
+                          color={isNote ? colors.main : COLORS.slate600}
                         />
-                        <Text style={[styles.rhythmDurLabel, { color: COLORS.slate600 }]}>
+                        <Text style={[styles.rhythmDurLabel, { color: isNote ? colors.main : COLORS.slate600 }]}>
                           {DURATION_LABELS[dur] ?? dur}
                         </Text>
                       </TouchableOpacity>
@@ -965,15 +957,17 @@ const styles = StyleSheet.create({
   },
   rhythmGradeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
     marginTop: 4,
+    paddingHorizontal: 4,
   },
   rhythmGradeDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -983,11 +977,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 6,
   },
-  rhythmSectionLabel: {
-    fontSize: 11,
+  rhythmTabRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  rhythmTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: COLORS.slate100,
+  },
+  rhythmTabText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: COLORS.slate400,
-    marginBottom: 4,
+    color: COLORS.slate500,
   },
   rhythmBtnRow: {
     flexDirection: 'row',
