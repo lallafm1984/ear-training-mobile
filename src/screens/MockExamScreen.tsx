@@ -286,7 +286,7 @@ export default function MockExamScreen() {
         />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         {/* 문항 카테고리 표시 */}
         <View style={[styles.catChip, { backgroundColor: colors.bg }]}>
           <Text style={[styles.catChipText, { color: colors.main }]}>

@@ -573,7 +573,7 @@ export default function ScoreEditorScreen() {
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: selectedNote ? 320 : 140 }}
+        contentContainerStyle={{ paddingBottom: Math.max(selectedNote ? 320 : 140, insets.bottom + 140) }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={(e) => {

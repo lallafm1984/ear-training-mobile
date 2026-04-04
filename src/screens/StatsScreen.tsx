@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft, TrendingUp, Calendar, Target, Award,
 } from 'lucide-react-native';
@@ -33,6 +33,7 @@ interface ExamRecord {
 }
 
 export default function StatsScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { stats, loaded } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
@@ -89,7 +90,7 @@ export default function StatsScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 요약 카드 */}

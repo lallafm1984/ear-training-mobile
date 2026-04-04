@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft, Clock, Play, GraduationCap, BookOpen, Trophy,
   ArrowUpDown, Layers, Crown,
@@ -33,6 +33,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 };
 
 export default function MockExamSetupScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { tier } = useSubscription();
   const [selectedPreset, setSelectedPreset] = useState<ExamPreset | null>(null);
@@ -163,7 +164,7 @@ export default function MockExamSetupScreen() {
       </ScrollView>
 
       {/* 시작 버튼 */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity
           style={[
             styles.startBtn,
