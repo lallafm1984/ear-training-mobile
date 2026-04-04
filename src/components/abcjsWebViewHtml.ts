@@ -551,6 +551,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     stopTimingCallbacks();
     if (synthInstance) { try { synthInstance.stop(); } catch(e) {} synthInstance = null; }
     if (playTimeout)   { clearTimeout(playTimeout); playTimeout = null; }
+    // AudioContext suspend로 스케줄된 메트로놈 클릭도 즉시 중단
+    if (audioCtx && audioCtx.state === 'running') {
+      try { audioCtx.suspend(); } catch(e) {}
+    }
     isPlayingState = false; setPlayBtnUI(false);
     postMsg({ type:'PLAY_STATE', isPlaying:false });
     reportHeight();
