@@ -58,9 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 프로필 로드 ──────────────────────────────────────────
   const loadProfile = useCallback(async (uid: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'AuthContext.tsx:loadProfile:start',message:'loadProfile start',data:{uid},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     setProfileLoading(true);
     try {
       const { data, error } = await supabase
@@ -75,9 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(data as Profile);
       }
     } finally {
-      // #region agent log
-      fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'AuthContext.tsx:loadProfile:end',message:'loadProfile end',data:{uid},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setProfileLoading(false);
     }
   }, []);
@@ -97,9 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, s) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'AuthContext.tsx:onAuthStateChange',message:'auth state change',data:{event,hasUser:!!s?.user},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
@@ -108,9 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loadProfile(s.user.id);
         }
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7799/ingest/6d247eca-612c-4796-b0fb-a95a95970bf4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'62f487'},body:JSON.stringify({sessionId:'62f487',location:'AuthContext.tsx:onAuthStateChange',message:'session cleared',data:{event},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         setProfile(null);
       }
     });

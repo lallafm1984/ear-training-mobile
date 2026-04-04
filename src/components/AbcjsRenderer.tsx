@@ -363,8 +363,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback
           mixedContentMode="compatibility"
-          originWhitelist={['*']}
-          allowUniversalAccessFromFileURLs
+          originWhitelist={['about:*']}
           scrollEnabled={false}
           overScrollMode="never"
           nestedScrollEnabled={false}

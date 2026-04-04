@@ -60,7 +60,7 @@
 ### 3.1 기보형 연습 (ScoreEditor)
 - 대상: 선율, 리듬, 2성부
 - 음원을 듣고 악보 에디터에 직접 기보
-- 자기 평가(1-5점)로 학습 기록
+- 자기 평가(1-5점)로 학습 기록 <--생각해볼문제>
 
 ### 3.2 객관식 연습 (ChoicePractice)
 - 대상: 음정, 화성, 조성
@@ -312,3 +312,65 @@ sameTrackCount: number     (동일 트랙 연속 횟수)
 | 오디오 | abcjs (WebView 합성) |
 | UI 아이콘 | Lucide React Native |
 | 안전 영역 | react-native-safe-area-context |
+
+---
+
+---
+
+## 13. 출시 전 보안: profiles.tier RLS 잠금
+
+현재 `profiles` 테이블은 사용자가 본인 행을 자유롭게 UPDATE 가능하여,
+클라이언트에서 `tier: 'pro'`를 직접 설정하면 무료로 Pro 접근이 가능합니다.
+
+### Supabase SQL (대시보드 → SQL Editor에서 실행)
+
+```sql
+-- 1. 기존 UPDATE 정책 제거
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+
+-- 2. tier, subscription_expires_at 변경 불가 정책 재생성
+CREATE POLICY "Users can update own profile (tier protected)"
+ON profiles FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (
+  auth.uid() = id
+  AND tier = (SELECT tier FROM profiles WHERE id = auth.uid())
+  AND subscription_expires_at = (SELECT subscription_expires_at FROM profiles WHERE id = auth.uid())
+);
+
+-- 3. 구독 변경은 Edge Function (service_role)으로만 수행
+-- upgradePlan()은 향후 RevenueCat webhook → Edge Function으로 전환 필요
+```
+
+### 클라이언트 코드 변경 (IAP 연동 시)
+
+`SubscriptionContext.tsx`의 `upgradePlan()`은 IAP 연동 후:
+1. 클라이언트 → App Store/Play Store에서 결제
+2. 영수증 → Supabase Edge Function으로 전송
+3. Edge Function이 영수증 검증 후 `service_role`로 `tier` 업데이트
+
+현재는 테스트 목적으로 클라이언트 직접 업데이트를 유지하되,
+**프로덕션 출시 전 반드시 위 SQL을 적용**해야 합니다.
+
+---
+
+<!-- AUTONOMOUS DECISION LOG -->
+## Decision Audit Trail
+
+| # | Phase | Decision | Classification | Principle | Rationale | Rejected |
+|---|-------|----------|---------------|-----------|-----------|----------|
+| 1 | CEO | SELECTIVE EXPANSION 모드 선택 | Mechanical | P3(실용적) | 코드 100% 완성, 추가 기능보다 출시 우선 | SCOPE EXPANSION |
+| 2 | CEO | 웹앱 대안 유보 | Taste | P6(행동 우선) | 이미 RN 앱 완성. 전환 비용 > 이득 | 웹앱 우선 출시 |
+| 3 | CEO | 강사 추천 코드 유보 | Mechanical | P3(실용적) | 출시 후 데이터 기반 판단 | 즉시 구현 |
+| 4 | CEO | 카카오 로그인 유보 | Taste | P3(실용적) | 출시 차단 아님, 전환율 영향은 측정 후 | 즉시 구현 |
+| 5 | Design | 로딩/에러 상태 추가 필수 | Mechanical | P1(완전성) | 프로덕션 필수. 빈 화면은 버그로 인식 | 유보 |
+| 6 | Design | 시험 이탈 가드 추가 필수 | Mechanical | P1(완전성) | 45분 시험 데이터 손실은 1점 리뷰 직결 | 유보 |
+| 7 | Design | 접근성 라벨 출시 후 1차 업데이트 | Taste | P3(실용적) | MVP에서 전면 접근성은 과다. 기본만 추가 | 즉시 전면 구현 |
+| 8 | Design | 타이포/스페이싱 시스템 출시 후 | Taste | P5(명시적) | 현재 동작함. 일관성은 점진적 개선 | 즉시 정리 |
+| 9 | Design | 학습 경로 유보 | Taste | P3(실용적) | 사용자 데이터 없이 경로 설계는 가설 | 즉시 구현 |
+| 10 | Eng | 디버그 fetch 제거 필수 | Mechanical | P5(명시적) | 프로덕션 코드에 디버그 호출은 부적절 | 유지 |
+| 11 | Eng | profiles.tier RLS 잠금 필수 | Mechanical | P1(완전성) | 구독 우회는 수익 직결 보안 이슈 | 클라이언트 검증만 |
+| 12 | Eng | 핵심 함수 단위 테스트 추가 | Mechanical | P1(완전성) | questionGen, computeStats, applyEval | 테스트 없이 출시 |
+| 13 | Eng | Supabase 쓰기 재시도 큐 | Taste | P1(완전성) | 데이터 손실 방지. 출시 전 vs 후 판단 필요 | Fire-and-forget 유지 |
+| 14 | Eng | WebView 보안 제한 | Mechanical | P1(완전성) | originWhitelist 제한, 파일 접근 차단 | 현재 설정 유지 |
+| 15 | Eng | 시험 타이머 레이스 컨디션 수정 | Mechanical | P1(완전성) | 데이터 무결성 직결 | 현재 코드 유지 |

@@ -1,4 +1,6 @@
 
+언어는 무조건 한국어를 사용한다.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
