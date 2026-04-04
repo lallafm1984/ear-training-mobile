@@ -199,7 +199,7 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
     '8':  'B2',        // 8분 = 2 sixteenths
     '8.': 'B3',        // 점8분 = 3 sixteenths
     '16': 'B1',        // 16분 = 1 sixteenth
-    'triplet': '(3B4B4B4',  // 셋잇단: 4분 3개를 2개 자리에
+    'triplet': '(3:2:3B2B2B2',  // 셋잇단: 4분 자리에 8분 모양 3개 (문제 악보와 동일)
   };
   const notes = input.map(d => durToAbc[d] ?? 'B4').join(' ');
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
