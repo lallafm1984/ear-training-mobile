@@ -8,8 +8,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Volume2, VolumeX, Eye, EyeOff, RotateCcw, ChevronRight,
+  ArrowLeft, Volume2, VolumeX, Eye, EyeOff, RotateCcw, ChevronRight, Delete,
 } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
@@ -140,16 +141,20 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
 // 리듬 전용: 난이도별 버튼 풀 + 음표 라벨
 // ─────────────────────────────────────────────────────────────
 
-const RHYTHM_BUTTONS: Record<string, NoteDuration[]> = {
+// 특수 입력 식별자 (셋잇단음표)
+const TRIPLET_MARKER = 'triplet' as const;
+type RhythmInput = NoteDuration | typeof TRIPLET_MARKER;
+
+const RHYTHM_BUTTONS: Record<string, RhythmInput[]> = {
   rhythm_1: ['16', '8', '4'],
   rhythm_2: ['16', '8', '4', '2'],
   rhythm_3: ['16', '8', '4.', '4', '2.', '2'],
   rhythm_4: ['16', '8', '4', '2', '1'],
-  rhythm_5: ['16', '8', '4', '2', '1'],
-  rhythm_6: ['16', '8', '8.', '4.', '4', '2.', '2', '1'],
+  rhythm_5: ['16', '8', '4', '2', '1', 'triplet'],
+  rhythm_6: ['16', '8', '8.', '4.', '4', '2.', '2', '1', 'triplet'],
 };
 
-const DURATION_LABELS: Record<NoteDuration, string> = {
+const DURATION_LABELS: Record<string, string> = {
   '1': '16분',
   '1.': '점16분',
   '2': '8분',
@@ -159,18 +164,21 @@ const DURATION_LABELS: Record<NoteDuration, string> = {
   '2.': '점8분',
   '4.': '점4분',
   '8.': '점2분',
+  'triplet': '셋잇단',
 };
 
-const DURATION_SYMBOLS: Record<NoteDuration, string> = {
-  '1': '\u{1D161}',   // 16분
-  '1.': '\u{1D161}.',
-  '2': '\u266A',       // 8분
-  '4': '\u2669',       // 4분
-  '8': '\u{1D15E}',   // 2분
-  '16': '\u{1D15D}',  // 온음표
-  '2.': '\u266A.',
-  '4.': '\u2669.',
-  '8.': '\u{1D15E}.',
+/** MaterialCommunityIcons 음표 아이콘 이름 매핑 */
+const DURATION_ICON: Record<string, string> = {
+  '16': 'music-note-whole',
+  '8': 'music-note-half',
+  '8.': 'music-note-half-dotted',
+  '4': 'music-note-quarter',
+  '4.': 'music-note-quarter-dotted',
+  '2': 'music-note-eighth',
+  '2.': 'music-note-eighth',
+  '1': 'music-note-sixteenth',
+  '1.': 'music-note-sixteenth',
+  'triplet': 'numeric-3-circle-outline',
 };
 
 /** 사용자 입력을 ABC 문자열로 변환 (답지 악보용) */
@@ -537,44 +545,20 @@ export default function NotationPracticeScreen() {
               <>
                 <View style={styles.rhythmBtnRow}>
                   {rhythmButtons.map(dur => {
-                    const isDotted = dur.endsWith('.');
-                    const baseDur = isDotted ? dur.slice(0, -1) : dur;
-                    const filled = Number(baseDur) <= 4;  // 4분 이하 = 채움
-                    const hasStem = baseDur !== '16';      // 온음표 = 기둥 없음
-                    const flags = baseDur === '1' ? 2 : baseDur === '2' ? 1 : 0;
+                    const iconName = DURATION_ICON[dur] ?? 'music-note-quarter';
                     return (
                       <TouchableOpacity
                         key={dur}
                         style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
-                        onPress={() => handleRhythmInput(dur)}
+                        onPress={() => handleRhythmInput(dur as NoteDuration)}
                         disabled={userInput.length >= rhythmAnswer.length}
                         activeOpacity={0.7}
                       >
-                        <View style={styles.noteVisual}>
-                          {/* 기둥 */}
-                          {hasStem && (
-                            <View style={[styles.noteStem, { backgroundColor: colors.main }]} />
-                          )}
-                          {/* 머리: 타원형 (기울기 -20도) */}
-                          <View style={[
-                            styles.noteHead,
-                            filled
-                              ? { backgroundColor: colors.main }
-                              : { backgroundColor: 'transparent', borderColor: colors.main, borderWidth: 2.5 },
-                            { transform: [{ rotate: '-20deg' }] },
-                          ]} />
-                          {/* 꼬리 (8분=1개, 16분=2개) */}
-                          {flags >= 1 && (
-                            <View style={[styles.noteFlag1, { backgroundColor: colors.main }]} />
-                          )}
-                          {flags >= 2 && (
-                            <View style={[styles.noteFlag2, { backgroundColor: colors.main }]} />
-                          )}
-                          {/* 점음표 점 */}
-                          {isDotted && (
-                            <View style={[styles.noteDot, { backgroundColor: colors.main }]} />
-                          )}
-                        </View>
+                        <MaterialCommunityIcons
+                          name={iconName as any}
+                          size={28}
+                          color={colors.main}
+                        />
                         <Text style={[styles.rhythmDurLabel, { color: colors.main }]}>
                           {DURATION_LABELS[dur] ?? dur}
                         </Text>
@@ -926,55 +910,6 @@ const styles = StyleSheet.create({
   rhythmDurLabel: {
     fontSize: 10,
     fontWeight: '600',
-  },
-  // 음표 시각 요소
-  noteVisual: {
-    width: 30,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    position: 'relative',
-  },
-  noteHead: {
-    width: 14,
-    height: 10,
-    borderRadius: 7,
-  },
-  noteStem: {
-    position: 'absolute',
-    right: 6,
-    bottom: 9,
-    width: 2.5,
-    height: 28,
-    borderRadius: 1.2,
-  },
-  noteFlag1: {
-    position: 'absolute',
-    right: 6,
-    top: 4,
-    width: 10,
-    height: 3,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 2,
-    transform: [{ rotate: '15deg' }],
-  },
-  noteFlag2: {
-    position: 'absolute',
-    right: 6,
-    top: 10,
-    width: 10,
-    height: 3,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 2,
-    transform: [{ rotate: '15deg' }],
-  },
-  noteDot: {
-    position: 'absolute',
-    right: 2,
-    bottom: 2,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
   },
   rhythmActionRow: {
     flexDirection: 'row',
