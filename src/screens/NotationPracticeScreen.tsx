@@ -180,15 +180,28 @@ const DURATION_ICON: Record<string, string> = {
   'triplet': 'numeric-3-circle-outline',
 };
 
-/** 사용자 입력을 ABC 문자열로 변환 (답지 악보용) */
+/** 사용자 입력을 ABC 문자열로 변환 (답지 악보용)
+ *  NoteDuration → ABC duration: L:1/16 기준이므로 sixteenth 수로 변환 필요
+ *  NoteDuration '1' = 온음표 = 16 sixteenths → ABC 'B16'
+ *  NoteDuration '4' = 4분     = 4 sixteenths → ABC 'B4'
+ *  NoteDuration '8' = 8분     = 2 sixteenths → ABC 'B2'
+ */
 function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
   if (input.length === 0) return '';
-  const durMap: Record<string, string> = {
-    '16': 'B16', '8': 'B8', '8.': 'B8.', '4': 'B4', '4.': 'B4.',
-    '2': 'B2', '2.': 'B2.', '1': 'B1', '1.': 'B1.',
-    'triplet': '(3B4B4B4',  // 셋잇단: 3개 음표를 2개 자리에
+  // NoteDuration → sixteenths count (ABC duration with L:1/16)
+  const durToAbc: Record<string, string> = {
+    '1':  'B16',       // 온음표 = 16 sixteenths
+    '1.': 'B24',       // 점온음표 = 24 sixteenths
+    '2':  'B8',        // 2분 = 8 sixteenths
+    '2.': 'B12',       // 점2분 = 12 sixteenths
+    '4':  'B4',        // 4분 = 4 sixteenths
+    '4.': 'B6',        // 점4분 = 6 sixteenths
+    '8':  'B2',        // 8분 = 2 sixteenths
+    '8.': 'B3',        // 점8분 = 3 sixteenths
+    '16': 'B1',        // 16분 = 1 sixteenth
+    'triplet': '(3B4B4B4',  // 셋잇단: 4분 3개를 2개 자리에
   };
-  const notes = input.map(d => durMap[d] ?? 'B4').join(' ');
+  const notes = input.map(d => durToAbc[d] ?? 'B4').join(' ');
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
 }
 
