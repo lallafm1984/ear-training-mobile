@@ -39,7 +39,7 @@ function emptyStats(): PracticeStats {
   };
 }
 
-function computeStats(records: PracticeRecord[]): PracticeStats {
+export function computeStats(records: PracticeRecord[]): PracticeStats {
   const stats = emptyStats();
   stats.totalSessions = records.length;
   stats.recentRecords = records.slice(0, 20);
