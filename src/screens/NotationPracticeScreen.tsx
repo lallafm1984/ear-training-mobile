@@ -141,33 +141,50 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
 // 리듬 전용: 난이도별 버튼 풀 + 음표 라벨
 // ─────────────────────────────────────────────────────────────
 
-// 특수 입력 식별자 (셋잇단음표)
+// 특수 입력 식별자
 const TRIPLET_MARKER = 'triplet' as const;
-type RhythmInput = NoteDuration | typeof TRIPLET_MARKER;
+// 쉼표: 'r_' 접두사 + NoteDuration (예: 'r_4' = 4분쉼표)
+type RhythmInput = NoteDuration | typeof TRIPLET_MARKER | `r_${NoteDuration}`;
 
-const RHYTHM_BUTTONS: Record<string, RhythmInput[]> = {
-  rhythm_1: ['1', '2', '4'],                                  // 온, 2분, 4분
-  rhythm_2: ['1', '2', '4', '8'],                             // + 8분
-  rhythm_3: ['1', '2', '2.', '4', '4.', '8'],                // + 점2분, 점4분
-  rhythm_4: ['1', '2', '4', '4.', '8', '16'],                // + 16분
-  rhythm_5: ['1', '2', '4', '4.', '8', '16', 'triplet'],     // + 셋잇단
+function isRest(input: RhythmInput): boolean {
+  return typeof input === 'string' && input.startsWith('r_');
+}
+function restDuration(input: RhythmInput): NoteDuration {
+  return (input as string).slice(2) as NoteDuration;
+}
+
+// 음표 버튼 (난이도별)
+const NOTE_BUTTONS: Record<string, RhythmInput[]> = {
+  rhythm_1: ['1', '2', '4'],
+  rhythm_2: ['1', '2', '4', '8'],
+  rhythm_3: ['1', '2', '2.', '4', '4.', '8'],
+  rhythm_4: ['1', '2', '4', '4.', '8', '16'],
+  rhythm_5: ['1', '2', '4', '4.', '8', '16', 'triplet'],
   rhythm_6: ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'triplet'],
 };
 
-const DURATION_LABELS: Record<string, string> = {
-  '1': '온음표',
-  '1.': '점온음표',
-  '2': '2분',
-  '2.': '점2분',
-  '4': '4분',
-  '4.': '점4분',
-  '8': '8분',
-  '8.': '점8분',
-  '16': '16분',
-  'triplet': '셋잇단',
+// 쉼표 버튼 (난이도별)
+const REST_BUTTONS: Record<string, RhythmInput[]> = {
+  rhythm_1: ['r_1', 'r_2', 'r_4'],
+  rhythm_2: ['r_1', 'r_2', 'r_4', 'r_8'],
+  rhythm_3: ['r_1', 'r_2', 'r_4', 'r_8'],
+  rhythm_4: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
+  rhythm_5: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
+  rhythm_6: ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'],
 };
 
-/** MaterialCommunityIcons 음표 아이콘 이름 매핑 */
+const DURATION_LABELS: Record<string, string> = {
+  '1': '온음표', '1.': '점온음표',
+  '2': '2분', '2.': '점2분',
+  '4': '4분', '4.': '점4분',
+  '8': '8분', '8.': '점8분',
+  '16': '16분',
+  'triplet': '셋잇단',
+  'r_1': '온쉼표', 'r_2': '2분쉼표', 'r_4': '4분쉼표',
+  'r_8': '8분쉼표', 'r_16': '16분쉼표',
+};
+
+/** MaterialCommunityIcons 아이콘 매핑 */
 const DURATION_ICON: Record<string, string> = {
   '1': 'music-note-whole',
   '2': 'music-note-half',
@@ -178,6 +195,11 @@ const DURATION_ICON: Record<string, string> = {
   '8.': 'music-note-eighth',
   '16': 'music-note-sixteenth',
   'triplet': 'numeric-3-circle-outline',
+  'r_1': 'music-rest-whole',
+  'r_2': 'music-rest-half',
+  'r_4': 'music-rest-quarter',
+  'r_8': 'music-rest-eighth',
+  'r_16': 'music-rest-sixteenth',
 };
 
 /** 사용자 입력을 ABC 문자열로 변환 (답지 악보용)
@@ -199,23 +221,33 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
     '8':  'B2',        // 8분 = 2 sixteenths
     '8.': 'B3',        // 점8분 = 3 sixteenths
     '16': 'B1',        // 16분 = 1 sixteenth
-    'triplet': '(3:2:3B2B2B2',  // 셋잇단: 4분 자리에 8분 모양 3개 (문제 악보와 동일)
+    'triplet': '(3:2:3B2B2B2',
+    // 쉼표
+    'r_1':  'z16',     // 온쉼표
+    'r_2':  'z8',      // 2분쉼표
+    'r_2.': 'z12',
+    'r_4':  'z4',      // 4분쉼표
+    'r_4.': 'z6',
+    'r_8':  'z2',      // 8분쉼표
+    'r_8.': 'z3',
+    'r_16': 'z1',      // 16분쉼표
   };
   const notes = input.map(d => durToAbc[d] ?? 'B4').join(' ');
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
 }
 
-/** 정답 음표 시퀀스 추출 (쉼표 제외, 셋잇단 그룹은 'triplet' 1개로 축약) */
+/** 정답 시퀀스 추출 (음표 + 쉼표 포함, 셋잇단 그룹은 'triplet' 1개로 축약) */
 function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
   const result: RhythmInput[] = [];
   let i = 0;
-  // 원본 배열에서 처리 (쉼표 필터 전에 tuplet 그룹핑)
   while (i < notes.length) {
     const note = notes[i];
-    if (note.pitch === 'rest') { i++; continue; }
     if (note.tuplet === '3') {
       result.push('triplet');
-      i += 3; // 원본 배열에서 3개 건너뜀 (쉼표 포함)
+      i += 3;
+    } else if (note.pitch === 'rest') {
+      result.push(`r_${note.duration}` as RhythmInput);
+      i++;
     } else {
       result.push(note.duration);
       i++;
@@ -396,7 +428,8 @@ export default function NotationPracticeScreen() {
   }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
   const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
-  const rhythmButtons = RHYTHM_BUTTONS[difficulty] ?? RHYTHM_BUTTONS.rhythm_1;
+  const noteButtons = NOTE_BUTTONS[difficulty] ?? NOTE_BUTTONS.rhythm_1;
+  const restButtons = REST_BUTTONS[difficulty] ?? REST_BUTTONS.rhythm_1;
 
   // ── 결과 화면 ──
   if (showResult) {
@@ -576,8 +609,10 @@ export default function NotationPracticeScreen() {
             // ── 리듬 모드: 음표 버튼 팔레트 ──
             !submitted ? (
               <>
+                {/* 음표 버튼 */}
+                <Text style={styles.rhythmSectionLabel}>음표</Text>
                 <View style={styles.rhythmBtnRow}>
-                  {rhythmButtons.map(dur => {
+                  {noteButtons.map(dur => {
                     const iconName = DURATION_ICON[dur] ?? 'music-note-quarter';
                     return (
                       <TouchableOpacity
@@ -589,10 +624,35 @@ export default function NotationPracticeScreen() {
                       >
                         <MaterialCommunityIcons
                           name={iconName as any}
-                          size={28}
+                          size={26}
                           color={colors.main}
                         />
                         <Text style={[styles.rhythmDurLabel, { color: colors.main }]}>
+                          {DURATION_LABELS[dur] ?? dur}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {/* 쉼표 버튼 */}
+                <Text style={styles.rhythmSectionLabel}>쉼표</Text>
+                <View style={styles.rhythmBtnRow}>
+                  {restButtons.map(dur => {
+                    const iconName = DURATION_ICON[dur] ?? 'music-rest-quarter';
+                    return (
+                      <TouchableOpacity
+                        key={dur}
+                        style={[styles.rhythmDurBtn, { borderColor: COLORS.slate300 }]}
+                        onPress={() => handleRhythmInput(dur)}
+                        disabled={userInput.length >= rhythmAnswer.length}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name={iconName as any}
+                          size={26}
+                          color={COLORS.slate600}
+                        />
+                        <Text style={[styles.rhythmDurLabel, { color: COLORS.slate600 }]}>
                           {DURATION_LABELS[dur] ?? dur}
                         </Text>
                       </TouchableOpacity>
@@ -923,12 +983,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 6,
   },
+  rhythmSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate400,
+    marginBottom: 4,
+  },
   rhythmBtnRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 8,
   },
   rhythmDurBtn: {
     alignItems: 'center',
