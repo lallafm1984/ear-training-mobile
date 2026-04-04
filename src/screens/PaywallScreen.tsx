@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  SafeAreaView, StatusBar, Platform, Dimensions,
+  SafeAreaView, StatusBar, Platform, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { Crown, Check, X, Sparkles, Music2, Download, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
 import { useAlert, useSubscription } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
+import { getOfferings, purchasePackage, restorePurchases, isPro, getCustomerInfo } from '../lib/revenueCat';
+import type { PurchasesPackage } from 'react-native-purchases';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -85,10 +87,20 @@ const COMPARE_ROWS: CompareRow[] = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
-  const { tier: currentTier, upgradePlan, loading } = useSubscription();
+  const { tier: currentTier, loading } = useSubscription();
   const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState<PlanTier | null>(null);
   const [showCompare, setShowCompare] = useState(false);
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // RevenueCat에서 상품 정보 로드
+  useEffect(() => {
+    getOfferings()
+      .then(pkgs => setPackages(pkgs))
+      .catch(() => {})
+      .finally(() => setLoadingPackages(false));
+  }, []);
 
   const handleSelectPlan = async (tier: PlanTier) => {
     if (tier === currentTier) {
@@ -114,31 +126,64 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       return;
     }
 
-    // TODO: 실제 IAP 연동 시 아래 showAlert를 RevenueCat / StoreKit 구매 플로우로 교체
-    showAlert({
-      title: `${PLAN_NAME[tier]} 플랜 구독`,
-      message: `5,500원 / 월\n\n실제 결제는 Google Play 또는 App Store를 통해 처리됩니다.\n\n(현재 개발 버전: 테스트 구독 적용)`,
-      type: 'info',
-      buttons: [
-        { text: '취소', style: 'cancel' },
-        { text: '구독 시작', onPress: async () => {
-          setPurchasing(tier);
-          try {
-            await upgradePlan(tier, 30);
-            showAlert({
-              title: '구독 완료',
-              message: `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n모든 기능을 자유롭게 이용하세요.`,
-              type: 'success',
-              buttons: [{ text: '확인', onPress: onClose }],
-            });
-          } catch (e) {
-            showAlert({ title: '오류', message: '구독 처리 중 오류가 발생했습니다. 다시 시도해주세요.', type: 'error' });
-          } finally {
-            setPurchasing(null);
-          }
-        }},
-      ],
-    });
+    // RevenueCat 패키지 구매
+    const pkg = packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
+    if (!pkg) {
+      showAlert({
+        title: '상품 로드 실패',
+        message: '구독 상품 정보를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setPurchasing(tier);
+    try {
+      const customerInfo = await purchasePackage(pkg);
+      if (isPro(customerInfo)) {
+        showAlert({
+          title: '구독 완료',
+          message: `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n모든 기능을 자유롭게 이용하세요.`,
+          type: 'success',
+          buttons: [{ text: '확인', onPress: onClose }],
+        });
+      }
+    } catch (e: any) {
+      // 사용자가 취소한 경우 (userCancelled)
+      if (e?.userCancelled) return;
+      showAlert({
+        title: '구독 오류',
+        message: '구독 처리 중 오류가 발생했습니다. 다시 시도해주세요.',
+        type: 'error',
+      });
+    } finally {
+      setPurchasing(null);
+    }
+  };
+
+  const handleRestore = async () => {
+    setPurchasing('pro');
+    try {
+      const info = await restorePurchases();
+      if (isPro(info)) {
+        showAlert({
+          title: '복원 완료',
+          message: 'Pro 구독이 복원되었습니다!',
+          type: 'success',
+          buttons: [{ text: '확인', onPress: onClose }],
+        });
+      } else {
+        showAlert({
+          title: '복원 결과',
+          message: '활성 구독을 찾을 수 없습니다.',
+          type: 'info',
+        });
+      }
+    } catch {
+      showAlert({ title: '오류', message: '구독 복원 중 오류가 발생했습니다.', type: 'error' });
+    } finally {
+      setPurchasing(null);
+    }
   };
 
   return (
@@ -284,11 +329,22 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           </View>
         )}
 
+        {/* 구독 복원 */}
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          onPress={handleRestore}
+          disabled={!!purchasing}
+        >
+          <Text style={styles.restoreBtnText}>
+            {purchasing === 'pro' ? '복원 중...' : '이전 구독 복원'}
+          </Text>
+        </TouchableOpacity>
+
         {/* 면책 조항 */}
         <Text style={styles.disclaimer}>
           * 구독은 Google Play / App Store를 통해 처리됩니다.{'\n'}
           * 구독은 다음 갱신일 24시간 전까지 취소할 수 있습니다.{'\n'}
-          * 현재 버전은 개발 중으로, 실제 결제 대신 테스트 구독이 적용됩니다.
+          * 결제는 확인 시 iTunes/Google Play 계정에 청구됩니다.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -486,6 +542,16 @@ const styles = StyleSheet.create({
   compareHeaderText: {
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  restoreBtn: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  restoreBtnText: {
+    fontSize: 13,
+    color: '#6366f1',
+    textDecorationLine: 'underline',
   },
   disclaimer: {
     fontSize: 11,

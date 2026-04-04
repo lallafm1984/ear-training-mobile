@@ -60,8 +60,8 @@ export default function StatsScreen() {
         } else if (data) {
           setExamRecords(data as ExamRecord[]);
         }
-      })
-      .finally(() => setExamLoading(false));
+        setExamLoading(false);
+      });
   }, [session?.user?.id]);
 
   const maxCategoryCount = Math.max(
@@ -181,12 +181,12 @@ export default function StatsScreen() {
         {examLoading && (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
             <ActivityIndicator size="small" color={COLORS.primary500} />
-            <Text style={[styles.emptyText, { marginTop: 8 }]}>시험 기록 로딩 중...</Text>
+            <Text style={{ fontSize: 13, color: COLORS.slate400, marginTop: 8 }}>시험 기록 로딩 중...</Text>
           </View>
         )}
         {examError && !examLoading && (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-            <Text style={[styles.emptyText, { color: COLORS.error }]}>시험 기록을 불러올 수 없습니다</Text>
+            <Text style={{ fontSize: 13, color: COLORS.error }}>시험 기록을 불러올 수 없습니다</Text>
           </View>
         )}
         {!examLoading && !examError && examRecords.length > 0 && (

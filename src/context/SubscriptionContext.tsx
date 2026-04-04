@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '../lib';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
+import {
+  initRevenueCat, getCustomerInfo, isPro,
+  loginRevenueCat, logoutRevenueCat, ENTITLEMENT_ID,
+} from '../lib/revenueCat';
+import type { CustomerInfo } from 'react-native-purchases';
 
 
 // ─────────────────────────────────────────────────────────────
@@ -45,46 +51,86 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const [subState, setSubState] = useState<SubscriptionState>(DEFAULT_STATE);
   const [loading,  setLoading]  = useState(true);
+  const [rcReady, setRcReady] = useState(false);
 
-  // ── profile 변경 시 구독 상태 동기화 ────────────────────
+  // ── RevenueCat 초기화 ─────────────────────────────────────
   useEffect(() => {
+    initRevenueCat().then(() => setRcReady(true)).catch(() => setRcReady(true));
+  }, []);
+
+  // ── RevenueCat 사용자 연결 + 구독 상태 동기화 ─────────────
+  useEffect(() => {
+    if (!rcReady) return;
+
     if (!user || !profile) {
+      logoutRevenueCat().catch(() => {});
       setSubState(DEFAULT_STATE);
       setLoading(false);
       return;
     }
 
-    const currentMonth = getCurrentYearMonth();
-    let tier = (profile.tier as PlanTier) ?? 'free';
-    let expiresAt = profile.subscription_expires_at ?? null;
-    let downloadCount = profile.monthly_download_count ?? 0;
-    let resetMonth = profile.download_reset_month ?? currentMonth;
+    const syncSubscription = async () => {
+      try {
+        // RevenueCat에 Supabase user ID 연결
+        await loginRevenueCat(user.id);
+        const info = await getCustomerInfo();
+        const rcPro = isPro(info);
 
-    // premium → pro 마이그레이션 (DB에 아직 premium이 남아있을 수 있음)
-    if (tier === 'premium' as any) {
-      tier = 'pro';
-    }
+        const currentMonth = getCurrentYearMonth();
+        let tier: PlanTier = rcPro ? 'pro' : 'free';
+        let expiresAt: string | null = null;
+        let downloadCount = profile.monthly_download_count ?? 0;
+        let resetMonth = profile.download_reset_month ?? currentMonth;
 
-    // 만료 체크
-    if (expiresAt && new Date(expiresAt) < new Date()) {
-      tier      = 'free';
-      expiresAt = null;
-    }
+        // RevenueCat에서 만료일 가져오기
+        const entitlement = info.entitlements.active[ENTITLEMENT_ID];
+        if (entitlement?.expirationDate) {
+          expiresAt = entitlement.expirationDate;
+        }
 
-    // 월 변경 시 카운트 리셋
-    if (resetMonth !== currentMonth) {
-      downloadCount = 0;
-      resetMonth    = currentMonth;
-      supabase
-        .from('profiles')
-        .update({ monthly_download_count: 0, download_reset_month: currentMonth })
-        .eq('id', user.id)
-        .then(() => {});
-    }
+        // DB의 tier와 RevenueCat이 다르면 DB 동기화 (RevenueCat이 source of truth)
+        if (profile.tier !== tier) {
+          supabase
+            .from('profiles')
+            .update({ tier, subscription_expires_at: expiresAt })
+            .eq('id', user.id)
+            .then(() => {});
+        }
 
-    setSubState({ tier, expiresAt, monthlyDownloadCount: downloadCount, downloadResetMonth: resetMonth });
-    setLoading(false);
-  }, [user, profile]);
+        // 월 변경 시 카운트 리셋
+        if (resetMonth !== currentMonth) {
+          downloadCount = 0;
+          resetMonth = currentMonth;
+          supabase
+            .from('profiles')
+            .update({ monthly_download_count: 0, download_reset_month: currentMonth })
+            .eq('id', user.id)
+            .then(() => {});
+        }
+
+        setSubState({ tier, expiresAt, monthlyDownloadCount: downloadCount, downloadResetMonth: resetMonth });
+      } catch {
+        // RevenueCat 실패 시 DB 기반 폴백
+        const currentMonth = getCurrentYearMonth();
+        let tier = (profile.tier as PlanTier) ?? 'free';
+        let expiresAt = profile.subscription_expires_at ?? null;
+        let downloadCount = profile.monthly_download_count ?? 0;
+        let resetMonth = profile.download_reset_month ?? currentMonth;
+
+        if (tier === 'premium' as any) tier = 'pro';
+        if (expiresAt && new Date(expiresAt) < new Date()) {
+          tier = 'free';
+          expiresAt = null;
+        }
+
+        setSubState({ tier, expiresAt, monthlyDownloadCount: downloadCount, downloadResetMonth: resetMonth });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    syncSubscription();
+  }, [user, profile, rcReady]);
 
   // ── Supabase에 구독 상태 저장 ────────────────────────────
   const persistToSupabase = useCallback(async (next: SubscriptionState) => {

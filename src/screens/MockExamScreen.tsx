@@ -113,31 +113,6 @@ export default function MockExamScreen() {
   const isTimeUp = timeLimit ? elapsedSeconds >= timeLimit : false;
   const submittedRef = useRef(false);
 
-  useEffect(() => {
-    if (isTimeUp && !submittedRef.current) {
-      submittedRef.current = true;
-      if (timerRef.current) clearInterval(timerRef.current);
-      handleSubmit();
-    }
-  }, [isTimeUp, handleSubmit]);
-
-  // 시험 진행 중 실수로 뒤로가기 방지
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (submittedRef.current) return; // 이미 제출된 경우 허용
-      e.preventDefault();
-      Alert.alert(
-        '시험 종료',
-        '시험을 종료하시겠습니까? 진행 상황이 사라집니다.',
-        [
-          { text: '계속하기', style: 'cancel' },
-          { text: '종료', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
-        ]
-      );
-    });
-    return unsubscribe;
-  }, [navigation]);
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -224,6 +199,32 @@ export default function MockExamScreen() {
       totalQuestions,
     });
   }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation, stopAudio, addRecord, updateStreak]);
+
+  // 시간 초과 시 자동 제출
+  useEffect(() => {
+    if (isTimeUp && !submittedRef.current) {
+      submittedRef.current = true;
+      if (timerRef.current) clearInterval(timerRef.current);
+      handleSubmit();
+    }
+  }, [isTimeUp, handleSubmit]);
+
+  // 시험 진행 중 실수로 뒤로가기 방지
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (submittedRef.current) return;
+      e.preventDefault();
+      Alert.alert(
+        '시험 종료',
+        '시험을 종료하시겠습니까? 진행 상황이 사라집니다.',
+        [
+          { text: '계속하기', style: 'cancel' },
+          { text: '종료', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const confirmSubmit = () => {
     const unanswered = questions.filter((_, idx) => {
