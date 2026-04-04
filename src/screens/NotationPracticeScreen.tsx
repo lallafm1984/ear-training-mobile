@@ -218,8 +218,34 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
     'r_8.': 'z3',
     'r_16': 'z1',      // 16분쉼표
   };
-  const notes = input.map(d => durToAbc[d] ?? 'B4').join(' ');
-  return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
+  // 박자표에서 마디 길이 (sixteenths) 계산
+  const [top, bottom] = timeSignature.split('/').map(Number);
+  const barSixteenths = (top || 4) * (16 / (bottom || 4));
+
+  // 각 입력의 sixteenths 수
+  const sixteenthsMap: Record<string, number> = {
+    '1': 16, '1.': 24, '2': 8, '2.': 12, '4': 4, '4.': 6,
+    '8': 2, '8.': 3, '16': 1, 'triplet': 4,
+    'r_1': 16, 'r_2': 8, 'r_2.': 12, 'r_4': 4, 'r_4.': 6,
+    'r_8': 2, 'r_8.': 3, 'r_16': 1,
+  };
+
+  let abc = '';
+  let barPos = 0;
+  for (const d of input) {
+    abc += (durToAbc[d] ?? 'B4') + ' ';
+    barPos += sixteenthsMap[d] ?? 4;
+    if (barPos >= barSixteenths) {
+      abc += '| ';
+      barPos = 0;
+    }
+  }
+  // 마지막 마디선 정리
+  abc = abc.trimEnd();
+  if (!abc.endsWith('|')) abc += ' |]';
+  else abc = abc.slice(0, -1) + ']';
+
+  return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${abc}`;
 }
 
 /** 정답 시퀀스 추출 (음표 + 쉼표 포함, 셋잇단 그룹은 'triplet' 1개로 축약) */
