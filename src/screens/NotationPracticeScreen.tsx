@@ -182,19 +182,34 @@ const DURATION_ICON: Record<string, string> = {
 };
 
 /** 사용자 입력을 ABC 문자열로 변환 (답지 악보용) */
-function userInputToAbc(input: NoteDuration[], timeSignature: string): string {
+function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
   if (input.length === 0) return '';
-  const durMap: Record<NoteDuration, string> = {
+  const durMap: Record<string, string> = {
     '16': 'B16', '8': 'B8', '8.': 'B8.', '4': 'B4', '4.': 'B4.',
     '2': 'B2', '2.': 'B2.', '1': 'B1', '1.': 'B1.',
+    'triplet': '(3B4/3B4/3B4/3',  // 셋잇단: 4분음표 자리에 3개
   };
   const notes = input.map(d => durMap[d] ?? 'B4').join(' ');
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
 }
 
-/** 정답 음표 시퀀스 추출 (쉼표 제외) */
-function getAnswerSequence(notes: ScoreNote[]): NoteDuration[] {
-  return notes.filter(n => n.pitch !== 'rest').map(n => n.duration);
+/** 정답 음표 시퀀스 추출 (쉼표 제외, 셋잇단 그룹은 'triplet' 1개로 축약) */
+function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
+  const result: RhythmInput[] = [];
+  let i = 0;
+  const filtered = notes.filter(n => n.pitch !== 'rest');
+  while (i < filtered.length) {
+    const note = filtered[i];
+    if (note.tuplet === '3') {
+      // 셋잇단 그룹: 3개 음표를 'triplet' 1개로 축약
+      result.push('triplet');
+      i += 3;
+    } else {
+      result.push(note.duration);
+      i++;
+    }
+  }
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -228,9 +243,9 @@ export default function NotationPracticeScreen() {
 
   // ── 리듬 전용 상태 ──
   const isRhythm = category === 'rhythm';
-  const [userInput, setUserInput] = useState<NoteDuration[]>([]);
+  const [userInput, setUserInput] = useState<RhythmInput[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [rhythmResults, setRhythmResults] = useState<{ correct: NoteDuration; user: NoteDuration | null; isCorrect: boolean }[]>([]);
+  const [rhythmResults, setRhythmResults] = useState<{ correct: RhythmInput; user: RhythmInput | null; isCorrect: boolean }[]>([]);
   const [correctCounts, setCorrectCounts] = useState<number[]>([]);
 
   // ── 악보 생성 ──
@@ -312,7 +327,7 @@ export default function NotationPracticeScreen() {
   }, [isPlaying]);
 
   // ── 리듬: 음표 입력 ──
-  const handleRhythmInput = useCallback((dur: NoteDuration) => {
+  const handleRhythmInput = useCallback((dur: RhythmInput) => {
     if (submitted || !score) return;
     const answer = getAnswerSequence(score.trebleNotes);
     if (userInput.length >= answer.length) return;
@@ -550,7 +565,7 @@ export default function NotationPracticeScreen() {
                       <TouchableOpacity
                         key={dur}
                         style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
-                        onPress={() => handleRhythmInput(dur as NoteDuration)}
+                        onPress={() => handleRhythmInput(dur)}
                         disabled={userInput.length >= rhythmAnswer.length}
                         activeOpacity={0.7}
                       >
