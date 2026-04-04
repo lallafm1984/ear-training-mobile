@@ -15,6 +15,7 @@ export interface AbcjsRendererHandle {
   requestExportImage: () => void;
   requestExportAudio: () => void;
   togglePlay: () => void;
+  stopPlay: () => void;
 }
 
 interface AbcjsRendererProps {
@@ -331,6 +332,11 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     webViewRef.current.postMessage(JSON.stringify({ type: 'TOGGLE_PLAY' }));
   }, [abcString]);
 
+  const stopPlay = useCallback(() => {
+    if (!webViewRef.current) return;
+    webViewRef.current.postMessage(JSON.stringify({ type: 'STOP_AUDIO' }));
+  }, []);
+
   const requestExportImage = useCallback(() => {
     if (!webViewRef.current || !abcString) return;
     setIsExportingImage(true);
@@ -345,9 +351,10 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
 
   useImperativeHandle(ref, () => ({
     togglePlay,
+    stopPlay,
     requestExportImage,
     requestExportAudio,
-  }), [togglePlay, requestExportImage, requestExportAudio]);
+  }), [togglePlay, stopPlay, requestExportImage, requestExportAudio]);
 
   return (
     <View style={[styles.container, { height: webViewHeight }]}>

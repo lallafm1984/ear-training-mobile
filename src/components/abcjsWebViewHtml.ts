@@ -1223,6 +1223,8 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         }
       } else if (msg.type === 'TOGGLE_PLAY') {
         toggleAudioPlayback();
+      } else if (msg.type === 'STOP_AUDIO') {
+        if (isPlayingState) stopAudio();
       } else if (msg.type === 'EXPORT_IMAGE') {
         exportImage();
       } else if (msg.type === 'EXPORT_AUDIO') {

@@ -350,11 +350,11 @@ export default function NotationPracticeScreen() {
   // ── 재생/정지 ──
   const handlePlay = useCallback(() => {
     if (isPlaying) {
-      // 정지: WebView에 정지 명령 + 즉시 UI 업데이트
-      abcjsRef.current?.togglePlay();
+      // 정지: 명시적 STOP 명령 (TOGGLE이 아닌 STOP으로 재시작 방지)
+      abcjsRef.current?.stopPlay();
       setIsPlaying(false);
     } else {
-      // 재생: WebView에 재생 명령 (상태는 WebView 콜백으로 업데이트)
+      // 재생: TOGGLE로 시작
       abcjsRef.current?.togglePlay();
     }
   }, [isPlaying]);
