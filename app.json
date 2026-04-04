@@ -26,12 +26,14 @@
         "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
+      "versionCode": 1,
       "permissions": [
         "RECORD_AUDIO",
         "READ_MEDIA_IMAGES",
         "READ_MEDIA_AUDIO",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "com.android.vending.BILLING"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -39,6 +41,11 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
   }
 }
