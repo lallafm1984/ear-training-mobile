@@ -42,27 +42,42 @@ import {
 
 type ScoreEditorRouteProp = StackScreenProps<MainStackParamList, 'ScoreEditor'>['route'];
 
-/** ContentDifficulty → partPractice level 매핑 */
-function difficultyToPartLevel(category: ContentCategory, difficulty: ContentDifficulty): { mode: 'partPractice' | 'comprehensive'; level: number } {
-  // 선율: beginner_1~advanced_3 = partPractice L1~9
-  if (category === 'melody') {
-    const map: Record<string, number> = {
-      beginner_1: 1, beginner_2: 2, beginner_3: 3,
-      intermediate_1: 4, intermediate_2: 5, intermediate_3: 6,
-      advanced_1: 7, advanced_2: 8, advanced_3: 9,
-    };
-    return { mode: 'partPractice', level: map[difficulty] ?? 1 };
-  }
-  // 리듬: rhythm_1~6 = partPractice L1~6
-  if (category === 'rhythm') {
-    const num = parseInt(difficulty.replace('rhythm_', ''), 10);
-    return { mode: 'partPractice', level: Math.min(Math.max(num || 1, 1), 9) };
-  }
-  // 2성부: bass_1~4 = comprehensive L1~4
-  if (category === 'twoVoice') {
-    const num = parseInt(difficulty.replace('bass_', ''), 10);
-    return { mode: 'comprehensive', level: Math.min(Math.max(num || 1, 1), 4) };
-  }
+/** ContentDifficulty → partPractice level 매핑 (선율 전용) */
+function melodyDifficultyToLevel(difficulty: ContentDifficulty): number {
+  const map: Record<string, number> = {
+    beginner_1: 1, beginner_2: 2, beginner_3: 3,
+    intermediate_1: 4, intermediate_2: 5, intermediate_3: 6,
+    advanced_1: 7, advanced_2: 8, advanced_3: 9,
+  };
+  return map[difficulty] ?? 1;
+}
+
+/** 리듬 난이도 → partPractice level 매핑 (리듬 요소 기준) */
+function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
+  const map: Record<string, number> = {
+    rhythm_1: 1,  // 기본 음가 (온/2분/4분)
+    rhythm_2: 2,  // 8분음표
+    rhythm_3: 4,  // 점음표 + 붙임줄
+    rhythm_4: 6,  // 16분음표
+    rhythm_5: 9,  // 셋잇단음표
+    rhythm_6: 9,  // 복합 리듬
+  };
+  return map[difficulty] ?? 1;
+}
+
+/** 2성부 난이도 → bassDifficulty 직접 매핑 */
+function twoVoiceDifficultyToBassDiff(difficulty: ContentDifficulty): BassDifficulty {
+  const map: Record<string, BassDifficulty> = {
+    bass_1: 'bass_1', bass_2: 'bass_2', bass_3: 'bass_3', bass_4: 'bass_4',
+  };
+  return map[difficulty] ?? 'bass_1';
+}
+
+/** 카테고리 기반 초기 genPracticeMode/level 설정 */
+function categoryToInitialConfig(category: ContentCategory, difficulty: ContentDifficulty): { mode: 'partPractice' | 'comprehensive'; level: number } {
+  if (category === 'melody') return { mode: 'partPractice', level: melodyDifficultyToLevel(difficulty) };
+  if (category === 'rhythm') return { mode: 'partPractice', level: rhythmDifficultyToLevel(difficulty) };
+  if (category === 'twoVoice') return { mode: 'partPractice', level: 1 }; // 2성부는 handleGenerate에서 별도 처리
   return { mode: 'partPractice', level: 1 };
 }
 
@@ -151,7 +166,7 @@ export default function ScoreEditorScreen() {
   // params 기반 초기값 설정
   const initialGenConfig = (() => {
     if (routeParams?.category && routeParams?.difficulty) {
-      return difficultyToPartLevel(routeParams.category, routeParams.difficulty);
+      return categoryToInitialConfig(routeParams.category, routeParams.difficulty);
     }
     if (routeParams?.practiceMode && routeParams?.level) {
       return { mode: routeParams.practiceMode, level: routeParams.level };
@@ -368,27 +383,124 @@ export default function ScoreEditorScreen() {
     }
     setIsGenerating(true);
 
+    const contentCategory = routeParams?.category;
+    const contentDifficulty = routeParams?.difficulty;
+
+    // ── 카테고리 기반 생성 (CategoryPracticeScreen에서 진입) ──
+    if (contentCategory && contentDifficulty) {
+      const delay = 800 + Math.random() * 500;
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      if (contentCategory === 'melody') {
+        // 선율: partPractice level로 매핑
+        const level = melodyDifficultyToLevel(contentDifficulty);
+        const trackOpts = buildGeneratorOptions('partPractice', level);
+        const effectiveDifficulty = trackOpts.difficulty;
+        const result = generateScore({
+          keySignature: trackOpts.keySignature,
+          timeSignature: trackOpts.timeSignature,
+          difficulty: effectiveDifficulty,
+          measures: trackOpts.measures,
+          useGrandStaff: false,
+          practiceMode: 'part',
+          partPracticeLevel: level,
+        });
+        const barsPerStaff = level <= 2 ? 4 : level >= 4 ? 2 : undefined;
+        setState(p => ({
+          ...p,
+          keySignature: trackOpts.keySignature,
+          timeSignature: trackOpts.timeSignature,
+          useGrandStaff: false,
+          notes: result.trebleNotes,
+          bassNotes: [],
+          disableTies: level <= 3,
+          barsPerStaff,
+        }));
+      } else if (contentCategory === 'rhythm') {
+        // 리듬: 선율 생성 후 모든 음정을 B4로 치환 (순수 리듬 패턴)
+        const level = rhythmDifficultyToLevel(contentDifficulty);
+        const trackOpts = buildGeneratorOptions('partPractice', level);
+        const result = generateScore({
+          keySignature: 'C',
+          timeSignature: trackOpts.timeSignature,
+          difficulty: trackOpts.difficulty,
+          measures: 4,
+          useGrandStaff: false,
+          practiceMode: 'part',
+          partPracticeLevel: level,
+        });
+        // 모든 음표를 B4로 치환 (쉼표는 유지)
+        const rhythmNotes: ScoreNote[] = result.trebleNotes.map(n =>
+          n.pitch === 'rest'
+            ? n
+            : { ...n, pitch: 'B' as PitchName, octave: 4, accidental: '' as Accidental }
+        );
+        setState(p => ({
+          ...p,
+          keySignature: 'C',
+          timeSignature: trackOpts.timeSignature,
+          useGrandStaff: false,
+          notes: rhythmNotes,
+          bassNotes: [],
+          disableTies: level <= 3,
+          barsPerStaff: 4,
+        }));
+      } else if (contentCategory === 'twoVoice') {
+        // 2성부: useGrandStaff + 올바른 bassDifficulty
+        const bassDiff = twoVoiceDifficultyToBassDiff(contentDifficulty);
+        const diffMap: Record<string, Difficulty> = {
+          bass_1: 'beginner_3', bass_2: 'intermediate_1',
+          bass_3: 'intermediate_3', bass_4: 'advanced_1',
+        };
+        const difficulty = diffMap[contentDifficulty] ?? 'beginner_3';
+        const result = generateScore({
+          keySignature: 'C',
+          timeSignature: '4/4',
+          difficulty,
+          bassDifficulty: bassDiff,
+          measures: 4,
+          useGrandStaff: true,
+        });
+        setState(p => ({
+          ...p,
+          keySignature: 'C',
+          timeSignature: '4/4',
+          useGrandStaff: true,
+          notes: result.trebleNotes,
+          bassNotes: result.bassNotes,
+          disableTies: false,
+          barsPerStaff: 2,
+        }));
+      }
+
+      setHideNotes(genHideNotes);
+      setIsGenerating(false);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMobileSheet(null);
+      return;
+    }
+
+    // ── 트랙 기반 생성 (GenerateSheet에서 수동 생성) ──
     const level = genPracticeMode === 'partPractice' ? genPartLevel : genCompLevel;
     const trackOpts = buildGeneratorOptions(genPracticeMode as TrackType, level);
-    const { levelOverrides: _lo, ...baseOpts } = trackOpts;
-    const effectiveDifficulty = baseOpts.difficulty;
+    const effectiveDifficulty = trackOpts.difficulty;
 
-    const category = getDifficultyCategory(effectiveDifficulty);
+    const diffCategory = getDifficultyCategory(effectiveDifficulty);
     const [minMs, maxMs] = {
       beginner: [800, 1300],
       intermediate: [1300, 1800],
       advanced: [1800, 2300],
-    }[category];
+    }[diffCategory];
     const delay = minMs + Math.random() * (maxMs - minMs);
     await new Promise(resolve => setTimeout(resolve, delay));
 
     const result = generateScore({
-      keySignature: baseOpts.keySignature,
-      timeSignature: baseOpts.timeSignature,
+      keySignature: trackOpts.keySignature,
+      timeSignature: trackOpts.timeSignature,
       difficulty: effectiveDifficulty,
-      bassDifficulty: baseOpts.useGrandStaff ? baseOpts.bassDifficulty : undefined,
-      measures: baseOpts.measures,
-      useGrandStaff: baseOpts.useGrandStaff,
+      bassDifficulty: trackOpts.useGrandStaff ? trackOpts.bassDifficulty : undefined,
+      measures: trackOpts.measures,
+      useGrandStaff: trackOpts.useGrandStaff,
       practiceMode: genPracticeMode === 'partPractice' ? 'part' : 'comprehensive',
       partPracticeLevel: genPracticeMode === 'partPractice' ? genPartLevel : undefined,
     });
@@ -401,9 +513,9 @@ export default function ScoreEditorScreen() {
           : undefined;
     setState(p => ({
       ...p,
-      keySignature: baseOpts.keySignature,
-      timeSignature: baseOpts.timeSignature,
-      useGrandStaff: baseOpts.useGrandStaff,
+      keySignature: trackOpts.keySignature,
+      timeSignature: trackOpts.timeSignature,
+      useGrandStaff: trackOpts.useGrandStaff,
       notes: result.trebleNotes,
       bassNotes: result.bassNotes,
       disableTies: tieDifficulties.includes(effectiveDifficulty),
@@ -414,7 +526,7 @@ export default function ScoreEditorScreen() {
 
     await new Promise(resolve => setTimeout(resolve, 500));
     setMobileSheet(null);
-  }, [genPracticeMode, genPartLevel, genCompLevel, genHideNotes, isPlaying]);
+  }, [genPracticeMode, genPartLevel, genCompLevel, genHideNotes, isPlaying, routeParams]);
 
   // ── navigation params가 있으면 마운트 시 자동 생성 ──
   const autoGeneratedRef = useRef(false);
