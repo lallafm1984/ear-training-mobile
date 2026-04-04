@@ -48,7 +48,7 @@ function analyzeAccidentals(
       const n = notes[i];
       const dur = n.tupletNoteDur ?? durationToSixteenths(n.duration);
 
-      if (n.accidental && n.accidental !== '' && n.pitch !== 'rest') {
+      if (n.accidental && n.pitch !== 'rest') {
         const bar = Math.floor(pos / 16);
         const beatPos = `${Math.floor((pos % 16) / 4) + 1}박`;
 

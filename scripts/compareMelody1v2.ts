@@ -108,7 +108,7 @@ function analyzeMelody(notes: ScoreNote[], keySignature: string, progression: nu
 
   const uniquePitches = new Set(midis).size;
   const tieCount = notes.filter(n => n.tie).length;
-  const accidentalCount = notes.filter(n => n.accidental && n.accidental !== '').length;
+  const accidentalCount = notes.filter(n => n.accidental).length;
 
   // 강박 화음톤 비율 (4/4 기준: 0, 8 sixteenths)
   const CHORD_TONES_MAP: Record<number, number[]> = {

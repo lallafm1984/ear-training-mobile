@@ -81,14 +81,23 @@ export default function MainStack() {
       <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen
         name="Paywall"
-        component={PaywallScreen}
         options={{ presentation: 'modal' }}
-      />
+      >
+        {({ navigation }) => (
+          <PaywallScreen onClose={() => navigation.goBack()} />
+        )}
+      </Stack.Screen>
       <Stack.Screen
         name="Profile"
-        component={ProfileScreen}
         options={{ presentation: 'modal' }}
-      />
+      >
+        {({ navigation }) => (
+          <ProfileScreen
+            onClose={() => navigation.goBack()}
+            onGoToPaywall={() => navigation.navigate('Paywall')}
+          />
+        )}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }

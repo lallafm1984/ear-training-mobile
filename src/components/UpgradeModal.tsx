@@ -17,7 +17,8 @@ export type UpgradeReason =
   | 'download_image'
   | 'save_scores'
   | 'key_signature'
-  | 'time_signature';
+  | 'time_signature'
+  | 'download_limit';
 
 const REASON_INFO: Record<UpgradeReason, {
   title: string;
@@ -73,6 +74,11 @@ const REASON_INFO: Record<UpgradeReason, {
     title: '다양한 박자',
     description: 'Free 플랜에서는 4/4박자만 사용할 수 있습니다.\nPro에서 모든 박자를 이용해보세요.',
     benefits: ['3/4, 6/8, 12/8 등 전체 박자', '복합 박자 연습', '다양한 리듬 패턴 훈련'],
+  },
+  download_limit: {
+    title: '다운로드 한도 초과',
+    description: '이번 달 다운로드 횟수를 모두 사용했습니다.\nPro 플랜에서 무제한으로 다운로드하세요.',
+    benefits: ['MP3 음원 무제한 다운로드', '악보 이미지 무제한 저장', '모든 기능 잠금 해제'],
   },
 };
 
