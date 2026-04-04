@@ -538,6 +538,8 @@ export default function NotationPracticeScreen() {
                 isPlaying={isPlaying}
                 onPlayStateChange={setIsPlaying}
                 barsPerStaff={score?.barsPerStaff}
+                prependMetronome={isRhythm}
+                timeSignature={score?.timeSignature ?? '4/4'}
               />
             </View>
 
