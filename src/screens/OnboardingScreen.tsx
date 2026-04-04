@@ -7,7 +7,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   FlatList, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Music, Headphones, Target, BarChart3, ChevronRight,
 } from 'lucide-react-native';
@@ -69,6 +69,7 @@ const SLIDES: SlideData[] = [
 ];
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -173,7 +174,7 @@ export default function OnboardingScreen() {
       </View>
 
       {/* 하단 버튼 */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
         {isLast ? (
           <TouchableOpacity
             style={[styles.startBtn, { backgroundColor: COLORS.primary500 }]}

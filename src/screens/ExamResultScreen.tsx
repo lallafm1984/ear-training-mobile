@@ -6,7 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   RotateCcw, Home, Trophy, TrendingUp,
 } from 'lucide-react-native';
@@ -24,6 +24,7 @@ type RouteProp = StackScreenProps<MainStackParamList, 'ExamResult'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
 
 export default function ExamResultScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
   const { session } = useAuth();
@@ -183,7 +184,7 @@ export default function ExamResultScreen() {
       </ScrollView>
 
       {/* 하단 액션 */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: COLORS.amber500 }]}
           onPress={() => navigation.replace('MockExamSetup')}

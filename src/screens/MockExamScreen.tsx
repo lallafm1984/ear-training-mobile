@@ -7,7 +7,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated, Alert,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Volume2, VolumeX, ChevronRight, ChevronLeft, Check, X, Clock,
   AlertTriangle,
@@ -36,6 +36,7 @@ interface QuestionItem {
 }
 
 export default function MockExamScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
   const { presetId } = route.params;
@@ -435,7 +436,7 @@ export default function MockExamScreen() {
       </ScrollView>
 
       {/* 하단 네비게이션 */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
         <TouchableOpacity
           style={[styles.navBtn, currentIndex === 0 && { opacity: 0.4 }]}
           onPress={handlePrev}

@@ -7,7 +7,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft, Volume2, VolumeX, Check, X, RotateCcw, ChevronRight,
 } from 'lucide-react-native';
@@ -29,6 +29,7 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 type AnswerState = 'waiting' | 'correct' | 'wrong';
 
 export default function ChoicePracticeScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
   const { category, difficulty } = route.params;
@@ -305,7 +306,7 @@ export default function ChoicePracticeScreen() {
       </ScrollView>
 
       {/* 하단 버튼 */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {answerState !== 'waiting' ? (
           <View style={styles.bottomActions}>
             <TouchableOpacity
