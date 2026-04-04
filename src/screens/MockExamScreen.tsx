@@ -41,7 +41,7 @@ export default function MockExamScreen() {
   const { presetId } = route.params;
 
   const preset = EXAM_PRESETS.find(p => p.id === presetId)!;
-  const { addRecord } = usePracticeHistory();
+  const { addBatchRecords } = usePracticeHistory();
   const { updateStreak } = useSkillProfile();
 
   // 오디오 재생
@@ -152,9 +152,10 @@ export default function MockExamScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
     stopAudio();
 
-    // 결과 계산 + 문항별 연습 기록 저장
+    // 결과 계산 + 문항별 연습 기록 수집
     let totalScore = 0;
     const maxScore = totalQuestions * 5;
+    const practiceRecords: PracticeRecord[] = [];
 
     const categoryScores: Record<string, { score: number; max: number; count: number }> = {};
 
@@ -176,16 +177,17 @@ export default function MockExamScreen() {
       totalScore += score;
       categoryScores[cat].score += score;
 
-      // 문항별 연습 기록 저장
-      const record: PracticeRecord = {
+      practiceRecords.push({
         id: `pr_exam_${Date.now()}_${idx}`,
         contentType: cat,
         difficulty: q.examQuestion.difficulty,
         selfRating: score,
         practicedAt: new Date().toISOString(),
-      };
-      addRecord(record);
+      });
     });
+
+    // 배치로 한 번에 저장 (AsyncStorage 동시 쓰기 방지)
+    await addBatchRecords(practiceRecords);
 
     await updateStreak();
 
@@ -198,7 +200,7 @@ export default function MockExamScreen() {
       elapsedSeconds,
       totalQuestions,
     });
-  }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation, stopAudio, addRecord, updateStreak]);
+  }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation, stopAudio, addBatchRecords, updateStreak]);
 
   // 시간 초과 시 자동 제출
   useEffect(() => {

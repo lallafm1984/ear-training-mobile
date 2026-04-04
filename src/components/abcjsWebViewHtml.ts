@@ -1,3 +1,5 @@
+import { ABCJS_SOURCE } from './abcjsSource';
+
 export const WEBVIEW_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -93,7 +95,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
   </button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/abcjs@6.4.2/dist/abcjs-basic-min.js"></script>
+<script>${ABCJS_SOURCE}</script>
 <script>
 (function() {
   'use strict';

@@ -163,17 +163,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   // ── 다운로드 소모 ────────────────────────────────────────
   const consumeDownload = useCallback(async (): Promise<boolean> => {
-    const limits = PLAN_LIMITS[subState.tier];
-    if (limits.monthlyDownloadLimit === null) return true;
-    if (limits.monthlyDownloadLimit === 0)    return false;
-    if (subState.monthlyDownloadCount >= limits.monthlyDownloadLimit) return false;
+    // 함수형 업데이트로 최신 상태 참조 (stale closure 방지)
+    return new Promise<boolean>((resolve) => {
+      setSubState(prev => {
+        const limits = PLAN_LIMITS[prev.tier];
+        if (limits.monthlyDownloadLimit === null) { resolve(true); return prev; }
+        if (limits.monthlyDownloadLimit === 0)    { resolve(false); return prev; }
+        if (prev.monthlyDownloadCount >= limits.monthlyDownloadLimit) { resolve(false); return prev; }
 
-    await persistToSupabase({
-      ...subState,
-      monthlyDownloadCount: subState.monthlyDownloadCount + 1,
+        const next = { ...prev, monthlyDownloadCount: prev.monthlyDownloadCount + 1 };
+        persistToSupabase(next);
+        resolve(true);
+        return next;
+      });
     });
-    return true;
-  }, [subState, persistToSupabase]);
+  }, [persistToSupabase]);
 
   // ── 파생값 ──────────────────────────────────────────────
   const isExpired = !!(subState.expiresAt && new Date(subState.expiresAt) < new Date());

@@ -46,5 +46,9 @@ export * from './contentConfig';
 export { generateChoiceQuestion, generateChoiceQuestions } from './questionGenerator';
 export type { ChoiceQuestion } from './questionGenerator';
 
+// 통계 계산
+export { computeStats } from './computeStats';
+export type { PracticeStats } from './computeStats';
+
 // 모의시험 프리셋
 export { EXAM_PRESETS } from './examPresets';
