@@ -173,6 +173,17 @@ const DURATION_SYMBOLS: Record<NoteDuration, string> = {
   '8.': '\u{1D15E}.',
 };
 
+/** 사용자 입력을 ABC 문자열로 변환 (답지 악보용) */
+function userInputToAbc(input: NoteDuration[], timeSignature: string): string {
+  if (input.length === 0) return '';
+  const durMap: Record<NoteDuration, string> = {
+    '16': 'B16', '8': 'B8', '8.': 'B8.', '4': 'B4', '4.': 'B4.',
+    '2': 'B2', '2.': 'B2.', '1': 'B1', '1.': 'B1.',
+  };
+  const notes = input.map(d => durMap[d] ?? 'B4').join(' ');
+  return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${notes} |]`;
+}
+
 /** 정답 음표 시퀀스 추출 (쉼표 제외) */
 function getAnswerSequence(notes: ScoreNote[]): NoteDuration[] {
   return notes.filter(n => n.pitch !== 'rest').map(n => n.duration);
@@ -469,41 +480,46 @@ export default function NotationPracticeScreen() {
               />
             </View>
 
-            {/* 리듬 모드: 내 입력 표시 + 채점 결과 */}
+            {/* 리듬 모드: 답지 악보 (사용자 입력 실시간 표시) */}
             {isRhythm && (
               <View style={styles.rhythmInputDisplay}>
                 <Text style={styles.rhythmInputLabel}>
-                  내 입력 ({userInput.length}/{rhythmAnswer.length})
+                  내 답 ({userInput.length}/{rhythmAnswer.length})
                 </Text>
-                <View style={styles.rhythmInputRow}>
-                  {rhythmAnswer.map((_, i) => {
-                    const userDur = userInput[i];
-                    const result = rhythmResults[i];
-                    const isFilled = !!userDur;
-                    const bgColor = result
-                      ? result.isCorrect ? '#dcfce7' : '#fee2e2'
-                      : isFilled ? colors.bg : COLORS.slate50;
-                    const textColor = result
-                      ? result.isCorrect ? '#166534' : '#991b1b'
-                      : isFilled ? colors.main : COLORS.slate300;
-                    return (
-                      <View key={i} style={[styles.rhythmSlot, { backgroundColor: bgColor, borderColor: result ? (result.isCorrect ? '#86efac' : '#fca5a5') : isFilled ? colors.main + '40' : COLORS.slate200 }]}>
-                        <Text style={[styles.rhythmSlotText, { color: textColor }]}>
-                          {userDur ? (DURATION_LABELS[userDur] ?? userDur) : '?'}
-                        </Text>
-                        {result && !result.isCorrect && (
-                          <Text style={styles.rhythmCorrectHint}>
-                            {DURATION_LABELS[result.correct] ?? result.correct}
-                          </Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
+                {userInput.length > 0 ? (
+                  <View style={[styles.scoreCard, {
+                    borderColor: submitted
+                      ? (rhythmResults.every(r => r.isCorrect) ? '#86efac' : '#fca5a5')
+                      : colors.main + '20',
+                  }]}>
+                    <AbcjsRenderer
+                      abcString={userInputToAbc(userInput, score?.timeSignature ?? '4/4')}
+                      hideNotes={false}
+                      tempo={90}
+                      barsPerStaff={4}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.rhythmEmptyAnswer}>
+                    <Text style={styles.rhythmEmptyText}>아래 음표를 탭하여 입력하세요</Text>
+                  </View>
+                )}
                 {submitted && (
-                  <Text style={[styles.rhythmResultText, { color: colors.main }]}>
-                    {rhythmResults.filter(r => r.isCorrect).length}/{rhythmResults.length} 정답
-                  </Text>
+                  <View style={styles.rhythmGradeRow}>
+                    {rhythmResults.map((r, i) => (
+                      <View key={i} style={[styles.rhythmGradeDot, {
+                        backgroundColor: r.isCorrect ? '#dcfce7' : '#fee2e2',
+                        borderColor: r.isCorrect ? '#86efac' : '#fca5a5',
+                      }]}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: r.isCorrect ? '#166534' : '#991b1b' }}>
+                          {r.isCorrect ? 'O' : 'X'}
+                        </Text>
+                      </View>
+                    ))}
+                    <Text style={[styles.rhythmResultText, { color: colors.main }]}>
+                      {rhythmResults.filter(r => r.isCorrect).length}/{rhythmResults.length}
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
@@ -519,19 +535,44 @@ export default function NotationPracticeScreen() {
             !submitted ? (
               <>
                 <View style={styles.rhythmBtnRow}>
-                  {rhythmButtons.map(dur => (
-                    <TouchableOpacity
-                      key={dur}
-                      style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
-                      onPress={() => handleRhythmInput(dur)}
-                      disabled={userInput.length >= rhythmAnswer.length}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.rhythmDurBtnText, { color: colors.main }]}>
-                        {DURATION_LABELS[dur] ?? dur}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {rhythmButtons.map(dur => {
+                    const isDotted = dur.endsWith('.');
+                    const baseDur = isDotted ? dur.slice(0, -1) : dur;
+                    // 음표 시각: 속이 빈 머리(○) = 2분 이상, 채운 머리(●) = 4분 이하
+                    const filled = Number(baseDur) <= 4;
+                    // 기둥 없음 = 온음표(16)
+                    const hasStem = baseDur !== '16';
+                    // 꼬리 수: 8분=1, 16분=2
+                    const flags = baseDur === '1' ? 2 : baseDur === '2' ? 1 : 0;
+                    return (
+                      <TouchableOpacity
+                        key={dur}
+                        style={[styles.rhythmDurBtn, { borderColor: colors.main + '40' }]}
+                        onPress={() => handleRhythmInput(dur)}
+                        disabled={userInput.length >= rhythmAnswer.length}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.noteVisual}>
+                          {hasStem && <View style={[styles.noteStem, { backgroundColor: colors.main }]} />}
+                          <View style={[
+                            styles.noteHead,
+                            filled ? { backgroundColor: colors.main } : { borderColor: colors.main, borderWidth: 2 },
+                          ]} />
+                          {flags > 0 && (
+                            <View style={styles.noteFlagArea}>
+                              {Array.from({ length: flags }).map((_, fi) => (
+                                <View key={fi} style={[styles.noteFlag, { backgroundColor: colors.main, top: fi * 5 }]} />
+                              ))}
+                            </View>
+                          )}
+                          {isDotted && <View style={[styles.noteDot, { backgroundColor: colors.main }]} />}
+                        </View>
+                        <Text style={[styles.rhythmDurLabel, { color: colors.main }]}>
+                          {DURATION_LABELS[dur] ?? dur}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
                 <View style={styles.rhythmActionRow}>
                   <TouchableOpacity
@@ -824,28 +865,38 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  rhythmSlot: {
-    minWidth: 52,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 10,
+  rhythmEmptyAnswer: {
+    height: 60,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.slate200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rhythmEmptyText: {
+    fontSize: 13,
+    color: COLORS.slate400,
+  },
+  rhythmGradeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  rhythmGradeDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1,
     alignItems: 'center',
-  },
-  rhythmSlotText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  rhythmCorrectHint: {
-    fontSize: 10,
-    color: '#991b1b',
-    marginTop: 2,
+    justifyContent: 'center',
   },
   rhythmResultText: {
     fontSize: 14,
     fontWeight: '800',
-    textAlign: 'center',
-    marginTop: 4,
+    marginLeft: 6,
   },
   rhythmBtnRow: {
     flexDirection: 'row',
@@ -855,15 +906,58 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   rhythmDurBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1.5,
     backgroundColor: '#fff',
+    minWidth: 56,
+    gap: 4,
   },
-  rhythmDurBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
+  rhythmDurLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  // 음표 시각 요소
+  noteVisual: {
+    width: 24,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  noteHead: {
+    width: 12,
+    height: 9,
+    borderRadius: 6,
+  },
+  noteStem: {
+    position: 'absolute',
+    right: 4,
+    bottom: 8,
+    width: 2,
+    height: 22,
+    borderRadius: 1,
+  },
+  noteFlagArea: {
+    position: 'absolute',
+    right: 4,
+    top: 2,
+  },
+  noteFlag: {
+    position: 'absolute',
+    width: 8,
+    height: 3,
+    borderRadius: 1,
+    left: 2,
+  },
+  noteDot: {
+    position: 'absolute',
+    right: -2,
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   rhythmActionRow: {
     flexDirection: 'row',
