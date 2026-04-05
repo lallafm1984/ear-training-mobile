@@ -899,7 +899,7 @@ export default function NotationPracticeScreen() {
                   selectedDuration={noteInput.selectedDuration}
                   isDotted={noteInput.isDotted}
                   accidentalMode={noteInput.accidentalMode}
-                  tieMode={noteInput.tieMode}
+                  tieMode={noteInput.selectedNoteIndex !== null ? noteInput.isSelectedNoteTied : noteInput.tieMode}
                   canAddDuration={(dur) => {
                     if (noteInput.selectedNoteIndex !== null) {
                       return noteInput.canEditDuration(dur);
@@ -915,7 +915,13 @@ export default function NotationPracticeScreen() {
                   }}
                   onToggleDot={noteInput.toggleDot}
                   onAccidentalMode={noteInput.setAccidentalMode}
-                  onToggleTie={noteInput.toggleTie}
+                  onToggleTie={() => {
+                    if (noteInput.selectedNoteIndex !== null) {
+                      noteInput.toggleSelectedTie();
+                    } else {
+                      noteInput.toggleTie();
+                    }
+                  }}
                   onAddRest={() => {
                     if (noteInput.selectedNoteIndex !== null) {
                       noteInput.replaceWithRest();

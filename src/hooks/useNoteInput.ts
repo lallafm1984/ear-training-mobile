@@ -359,6 +359,32 @@ export function useNoteInput(options: UseNoteInputOptions) {
     setState(prev => ({ ...prev, tieMode: !prev.tieMode }));
   }, []);
 
+  /** 선택된 음표의 붙임줄 토글 (편집 모드 전용) */
+  const toggleSelectedTie = useCallback(() => {
+    setState(prev => {
+      if (prev.selectedNoteIndex === null) return prev;
+      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+      const notes = [...prev[key] as ScoreNote[]];
+      const idx = prev.selectedNoteIndex;
+      if (idx < 0 || idx >= notes.length) return prev;
+
+      const note = notes[idx];
+      if (note.tie) {
+        // 붙임줄 제거
+        notes[idx] = { ...note, tie: false };
+      } else {
+        // 붙임줄 추가: 다음 음표가 같은 음높이일 때만
+        const next = notes[idx + 1];
+        if (next && next.pitch === note.pitch && next.octave === note.octave && next.pitch !== 'rest') {
+          notes[idx] = { ...note, tie: true };
+        } else {
+          return prev; // 다음 음표가 없거나 다른 음 → 무시
+        }
+      }
+      return { ...prev, [key]: notes };
+    });
+  }, []);
+
   const setActiveVoice = useCallback((voice: 'treble' | 'bass') => {
     if (!useGrandStaff) return;
     setState(prev => ({ ...prev, activeVoice: voice, selectedNoteIndex: null }));
@@ -823,6 +849,9 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const isTripletSelected = state.selectedNoteIndex !== null &&
     getActiveNotes()[state.selectedNoteIndex]?.tuplet === '3';
 
+  const isSelectedNoteTied = state.selectedNoteIndex !== null &&
+    !!getActiveNotes()[state.selectedNoteIndex]?.tie;
+
   return {
     // State
     ...state,
@@ -831,11 +860,13 @@ export function useNoteInput(options: UseNoteInputOptions) {
     getRemainingDuration,
     canAddDuration,
     isTripletSelected,
+    isSelectedNoteTied,
     // Actions
     setDuration,
     toggleDot,
     setAccidentalMode,
     toggleTie,
+    toggleSelectedTie,
     setActiveVoice,
     addNote,
     addRest,
