@@ -315,6 +315,7 @@ export default function NotationPracticeScreen() {
   const isMelodyInput = category === 'melody' || category === 'twoVoice';
   const [melodySubmitted, setMelodySubmitted] = useState(false);
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const firstHintNote = score?.trebleNotes[0] ?? null;
 
@@ -339,6 +340,7 @@ export default function NotationPracticeScreen() {
     setCorrectCounts([]);
     setMelodySubmitted(false);
     setGradingResult(null);
+    setEditMode(false);
 
     setTimeout(() => {
       const newScore = generatePracticeScore(category, difficulty);
@@ -688,7 +690,7 @@ export default function NotationPracticeScreen() {
               <View style={styles.rhythmInputDisplay}>
                 <Text style={styles.rhythmInputLabel}>내 답안</Text>
                 {noteInput.trebleNotes.length > 0 ? (
-                  <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
+                  <View style={[styles.scoreCard, { borderColor: editMode ? colors.main : colors.main + '20' }]}>
                     <AbcjsRenderer
                       abcString={noteInput.getUserAbcString()}
                       hideNotes={false}
@@ -696,11 +698,11 @@ export default function NotationPracticeScreen() {
                       barsPerStaff={score?.barsPerStaff}
                       timeSignature={score?.timeSignature ?? '4/4'}
                       stretchLast={false}
-                      onNoteClick={(index, voice) => {
+                      onNoteClick={editMode ? (index, voice) => {
                         noteInput.setActiveVoice(voice);
                         noteInput.selectNote(index);
-                      }}
-                      selectedNote={noteInput.selectedNoteIndex !== null ? {
+                      } : undefined}
+                      selectedNote={editMode && noteInput.selectedNoteIndex !== null ? {
                         index: noteInput.selectedNoteIndex,
                         voice: noteInput.activeVoice,
                       } : null}
@@ -910,7 +912,7 @@ export default function NotationPracticeScreen() {
                   initialOctave={noteInput.activeVoice === 'bass' ? 3 : 4}
                 />
                 <View style={styles.rhythmActionRow}>
-                  {noteInput.selectedNoteIndex !== null && (
+                  {editMode && noteInput.selectedNoteIndex !== null && (
                     <>
                       <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
                         건반을 눌러 교체
@@ -921,14 +923,23 @@ export default function NotationPracticeScreen() {
                       >
                         <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>삭제</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.rhythmActionBtn, { backgroundColor: COLORS.slate100 }]}
-                        onPress={() => noteInput.selectNote(null)}
-                      >
-                        <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>선택 해제</Text>
-                      </TouchableOpacity>
                     </>
                   )}
+                  <TouchableOpacity
+                    style={[styles.rhythmActionBtn, {
+                      backgroundColor: editMode ? colors.main : COLORS.slate100,
+                    }]}
+                    onPress={() => {
+                      setEditMode(prev => {
+                        if (prev) noteInput.selectNote(null); // 편집 모드 해제 시 선택도 해제
+                        return !prev;
+                      });
+                    }}
+                  >
+                    <Text style={[styles.rhythmActionBtnText, {
+                      color: editMode ? '#fff' : COLORS.slate600,
+                    }]}>{editMode ? '편집 중' : '편집'}</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {
                       backgroundColor: noteInput.trebleNotes.length > 1 ? colors.main : COLORS.slate200,
