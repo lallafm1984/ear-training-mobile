@@ -4,7 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import type { ScoreNote, NoteDuration, PitchName, Accidental } from '../lib/scoreUtils';
-import { uid, durationToSixteenths, getSixteenthsPerBar, generateAbc } from '../lib/scoreUtils';
+import { uid, durationToSixteenths, getSixteenthsPerBar, getKeySigAlteration } from '../lib/scoreUtils';
 
 // ── Types ──
 
@@ -25,6 +25,95 @@ interface UseNoteInputOptions {
   measures: number;
   useGrandStaff: boolean;
   firstNote?: ScoreNote | null;
+}
+
+// ── Simple ABC converter (no engraving transforms) ──
+
+/** 사용자 입력 음표를 ABC 문자열로 직접 변환 — engraving 변환 없이 그대로 출력 */
+function userNotesToAbc(
+  notes: ScoreNote[],
+  keySignature: string,
+  timeSignature: string,
+  bassNotes?: ScoreNote[],
+  useGrandStaff?: boolean,
+): string {
+  if (notes.length === 0 && (!bassNotes || bassNotes.length === 0)) return '';
+
+  const barSixteenths = getSixteenthsPerBar(timeSignature);
+
+  function noteToAbcStr(note: ScoreNote, keySig: string): string {
+    if (note.pitch === 'rest') {
+      const dur = durationToSixteenths(note.duration);
+      return `z${dur === 1 ? '' : dur}`;
+    }
+
+    // ABC pitch: C D E F G A B = octave 5, c d e f g a b = octave 5 in ABC
+    // Actually in ABC with L:1/16: C,, = C2, C, = C3, C = C4, c = C5, c' = C6
+    const pitchName = note.pitch;
+    const octave = note.octave;
+
+    let abcPitch: string;
+    if (octave <= 4) {
+      abcPitch = pitchName.toUpperCase();
+      for (let i = octave; i < 4; i++) abcPitch += ',';
+    } else {
+      abcPitch = pitchName.toLowerCase();
+      for (let i = 5; i < octave; i++) abcPitch += "'";
+    }
+
+    // 임시표 처리
+    const keySigAlt = getKeySigAlteration(keySig, pitchName);
+    if (note.accidental === '#' && keySigAlt !== '#') {
+      abcPitch = '^' + abcPitch;
+    } else if (note.accidental === 'b' && keySigAlt !== 'b') {
+      abcPitch = '_' + abcPitch;
+    } else if (note.accidental === 'n' || (note.accidental === '' && (keySigAlt === '#' || keySigAlt === 'b'))) {
+      // 내추럴이 필요한 경우 (조표에 의한 변화음을 취소)
+      if (keySigAlt) abcPitch = '=' + abcPitch;
+    }
+
+    const dur = durationToSixteenths(note.duration);
+    const durStr = dur === 1 ? '' : dur.toString();
+
+    let result = abcPitch + durStr;
+    if (note.tie) result += '-';
+    return result;
+  }
+
+  function notesBodyAbc(noteArr: ScoreNote[], keySig: string): string {
+    let abc = '';
+    let barPos = 0;
+    for (const note of noteArr) {
+      abc += noteToAbcStr(note, keySig) + ' ';
+      barPos += durationToSixteenths(note.duration);
+      if (barPos >= barSixteenths) {
+        abc += '| ';
+        barPos = 0;
+      }
+    }
+    abc = abc.trimEnd();
+    if (!abc.endsWith('|')) abc += ' |]';
+    else abc = abc.slice(0, -1) + ']';
+    return abc;
+  }
+
+  const header = [
+    'X: 1',
+    'T: ',
+    `M: ${timeSignature}`,
+    'L: 1/16',
+    'Q: 1/4=90',
+    useGrandStaff ? '%%staves {V1 V2}' : null,
+    `K: ${keySignature}`,
+  ].filter(Boolean).join('\n');
+
+  if (!useGrandStaff || !bassNotes) {
+    return header + '\n' + notesBodyAbc(notes, keySignature);
+  }
+
+  const trebleBody = notesBodyAbc(notes, keySignature);
+  const bassBody = bassNotes.length > 0 ? notesBodyAbc(bassNotes, keySignature) : 'z16 |]';
+  return header + '\nV:V1 clef=treble\n' + trebleBody + '\nV:V2 clef=bass\n' + bassBody;
 }
 
 // ── Helpers ──
@@ -331,15 +420,13 @@ export function useNoteInput(options: UseNoteInputOptions) {
   }, [firstNote]);
 
   const getUserAbcString = useCallback((): string => {
-    return generateAbc({
-      title: '',
+    return userNotesToAbc(
+      state.trebleNotes,
       keySignature,
       timeSignature,
-      tempo: 120,
-      notes: state.trebleNotes,
-      bassNotes: useGrandStaff ? state.bassNotes : undefined,
+      useGrandStaff ? state.bassNotes : undefined,
       useGrandStaff,
-    });
+    );
   }, [keySignature, timeSignature, useGrandStaff, state.trebleNotes, state.bassNotes]);
 
   const reset = useCallback((newFirstNote?: ScoreNote | null) => {
