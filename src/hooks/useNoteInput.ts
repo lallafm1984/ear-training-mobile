@@ -676,6 +676,49 @@ export function useNoteInput(options: UseNoteInputOptions) {
     return newDur16 <= barSixteenths - otherUsed;
   }, [getActiveNotes, state.selectedNoteIndex, state.activeVoice, firstNote, barSixteenths]);
 
+  /** 선택된 음표를 셋잇단음표로 변환 (4분음표 → 8분×3) */
+  const replaceWithTriplet = useCallback(() => {
+    setState(prev => {
+      if (prev.selectedNoteIndex === null) return prev;
+      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+      const notes = [...prev[key] as ScoreNote[]];
+      const idx = prev.selectedNoteIndex;
+      if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
+      if (idx < 0 || idx >= notes.length) return prev;
+
+      const note = notes[idx];
+      // 이미 셋잇단이면 무시
+      if (note.tuplet === '3') return prev;
+      // 4분음표(4 sixteenths) 이상이어야 셋잇단 변환 가능
+      const dur16 = durationToSixteenths(note.duration);
+      if (dur16 < 4) return prev;
+
+      // 원래 음표를 3개의 셋잇단으로 교체
+      const tripletNotes: ScoreNote[] = [];
+      for (let i = 0; i < 3; i++) {
+        tripletNotes.push({
+          id: uid(),
+          pitch: note.pitch,
+          octave: note.octave,
+          accidental: note.accidental,
+          duration: '8' as NoteDuration,
+          ...(i === 0
+            ? { tuplet: '3' as any, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
+            : { tupletNoteDur: 1 }),
+        });
+      }
+
+      // 원래 음표가 4분음표보다 길면 나머지를 쉼표로 채움
+      const remainDur = dur16 - 4;
+      const restNotes = remainDur > 0 ? makeRests(remainDur) : [];
+
+      notes.splice(idx, 1, ...tripletNotes, ...restNotes);
+      const merged = mergeAdjacentRests(notes, barSixteenths);
+
+      return { ...prev, [key]: merged, selectedNoteIndex: null, tripletEditStep: 0 };
+    });
+  }, [firstNote, barSixteenths]);
+
   /** 선택된 음표를 같은 길이의 쉼표로 변환 (편집 모드 전용) */
   const replaceWithRest = useCallback(() => {
     setState(prev => {
@@ -802,6 +845,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     updateSelectedNoteDuration,
     canEditDuration,
     replaceWithRest,
+    replaceWithTriplet,
     deleteSelectedNote,
     cancelEdit,
     toggleTriplet,

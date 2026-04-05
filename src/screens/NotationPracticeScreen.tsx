@@ -928,7 +928,13 @@ export default function NotationPracticeScreen() {
                   onClear={noteInput.clear}
                   accentColor={colors.main}
                   tripletMode={noteInput.tripletMode}
-                  onToggleTriplet={noteInput.toggleTriplet}
+                  onToggleTriplet={() => {
+                    if (noteInput.selectedNoteIndex !== null) {
+                      noteInput.replaceWithTriplet();
+                    } else {
+                      noteInput.toggleTriplet();
+                    }
+                  }}
                 />
                 <PianoKeyboard
                   onKeyPress={(pitch, octave, acc) => {
