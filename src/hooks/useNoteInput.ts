@@ -91,24 +91,30 @@ function userNotesToAbc(
     for (let i = 0; i < noteArr.length; i++) {
       const note = noteArr[i];
 
-      // 셋잇단음표 시작 마커
+      // 셋잇단음표 시작 마커 (앞에 공백으로 beam 분리)
       if (note.tuplet === '3' && tupletRemaining === 0) {
+        if (abc.length > 0 && !abc.endsWith(' ') && !abc.endsWith('|')) {
+          abc += ' ';
+        }
         abc += '(3:2:3';
         tupletRemaining = 3;
       }
 
-      // 셋잇단음표 내부: tupletNoteDur 사용
+      // 셋잇단음표 내부: tupletNoteDur 사용, beam 연결 (공백 없음)
       if (tupletRemaining > 0) {
         const noteDur = note.tupletNoteDur ?? 2;
-        const abcNote = noteToAbcStr({ ...note, duration: '8' } as ScoreNote, keySig);
-        // duration 부분을 tupletNoteDur로 교체
-        const pitchPart = abcNote.replace(/\d+$/, '');
-        abc += pitchPart + (noteDur === 1 ? '' : noteDur) + ' ';
+        // pitch 부분만 생성 (duration 제외)
+        const dummyAbc = noteToAbcStr({ ...note, duration: '16' } as ScoreNote, keySig);
+        // '16' → durationToSixteenths = 1 → durStr = '' 이므로 pitch만 남음
+        const pitchPart = dummyAbc.replace(/-$/, ''); // tie 마커 제거
+        abc += pitchPart + (noteDur === 1 ? '' : noteDur);
         tupletRemaining--;
-        // 셋잇단 전체가 4 sixteenths 차지
         if (tupletRemaining === 0) {
+          // 셋잇단 전체가 tupletSpan 만큼 차지
           barPos += durationToSixteenths(note.tupletSpan ?? '4');
+          abc += ' '; // 그룹 끝난 후에만 공백
         }
+        // 그룹 내부: 공백 없음 (beam 연결)
       } else {
         abc += noteToAbcStr(note, keySig) + ' ';
         barPos += durationToSixteenths(note.duration);
