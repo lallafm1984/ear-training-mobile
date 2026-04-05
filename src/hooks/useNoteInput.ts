@@ -16,7 +16,9 @@ export interface NoteInputState {
   isDotted: boolean;
   accidentalMode: '#' | 'b' | null;
   tieMode: boolean;
+  tripletMode: boolean;
   selectedNoteIndex: number | null;
+  editSnapshot: { trebleNotes: ScoreNote[]; bassNotes: ScoreNote[] } | null;
 }
 
 interface UseNoteInputOptions {
@@ -257,7 +259,9 @@ function makeInitialState(firstNote?: ScoreNote | null): NoteInputState {
     isDotted: false,
     accidentalMode: null,
     tieMode: false,
+    tripletMode: false,
     selectedNoteIndex: null,
+    editSnapshot: null,
   };
 }
 
@@ -316,14 +320,44 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const addNote = useCallback(
     (pitch: PitchName, octave: number, accidental?: Accidental) => {
       setState(prev => {
-        const notes =
-          prev.activeVoice === 'treble' ? [...prev.trebleNotes] : [...prev.bassNotes];
+        const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+        const notes = [...prev[key] as ScoreNote[]];
 
         // 임시표 결정: accidentalMode 우선, 그 다음 인자
         const resolvedAccidental: Accidental =
           prev.accidentalMode === '#' ? '#' :
           prev.accidentalMode === 'b' ? 'b' :
           accidental ?? '';
+
+        // ── 셋잇단음표 모드 ──
+        if (prev.tripletMode && prev.selectedNoteIndex === null) {
+          const spanDur = prev.selectedDuration;
+          const spanSixteenths = durationToSixteenths(spanDur);
+          const remaining = totalSixteenths - sumSixteenths(notes);
+          if (spanSixteenths > remaining) return prev;
+
+          const noteDur = Math.max(1, Math.floor(spanSixteenths / 2));
+
+          for (let i = 0; i < 3; i++) {
+            notes.push({
+              id: uid(),
+              pitch,
+              octave,
+              accidental: resolvedAccidental,
+              duration: spanDur,
+              ...(i === 0 ? { tuplet: '3' as any, tupletSpan: spanDur, tupletNoteDur: noteDur } : {}),
+            });
+          }
+
+          return {
+            ...prev,
+            [key]: notes,
+            accidentalMode: null,
+            isDotted: false,
+            tripletMode: false,
+            selectedNoteIndex: null,
+          };
+        }
 
         // ── 선택된 음표가 있으면 교체 모드 ──
         if (prev.selectedNoteIndex !== null && prev.selectedNoteIndex >= 0 && prev.selectedNoteIndex < notes.length) {
@@ -344,8 +378,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
           return {
             ...prev,
-            trebleNotes: prev.activeVoice === 'treble' ? notes : prev.trebleNotes,
-            bassNotes: prev.activeVoice === 'bass' ? notes : prev.bassNotes,
+            [key]: notes,
             accidentalMode: null,
             isDotted: false,
             selectedNoteIndex: null,
@@ -382,8 +415,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
         return {
           ...prev,
-          trebleNotes: prev.activeVoice === 'treble' ? notes : prev.trebleNotes,
-          bassNotes: prev.activeVoice === 'bass' ? notes : prev.bassNotes,
+          [key]: notes,
           // 입력 후 모드 초기화
           accidentalMode: null,
           isDotted: false,
@@ -475,16 +507,22 @@ export function useNoteInput(options: UseNoteInputOptions) {
         const notes = prev.activeVoice === 'treble' ? prev.trebleNotes : prev.bassNotes;
         if (newIndex >= 0 && newIndex < notes.length) {
           const note = notes[newIndex];
-          // 점음표면 기�� 음길이 + isDotted로 분리
+          // 스냅샷 저장 (최초 선택 시에만)
+          const snapshot = prev.editSnapshot ?? {
+            trebleNotes: [...prev.trebleNotes],
+            bassNotes: [...prev.bassNotes],
+          };
+          // 점음표면 기본 음길이 + isDotted로 분리
           const durStr = note.duration as string;
           if (durStr.endsWith('.')) {
             const baseDur = durStr.slice(0, -1) as NoteDuration;
-            return { ...prev, selectedNoteIndex: newIndex, selectedDuration: baseDur, isDotted: true };
+            return { ...prev, selectedNoteIndex: newIndex, selectedDuration: baseDur, isDotted: true, editSnapshot: snapshot };
           }
-          return { ...prev, selectedNoteIndex: newIndex, selectedDuration: note.duration, isDotted: false };
+          return { ...prev, selectedNoteIndex: newIndex, selectedDuration: note.duration, isDotted: false, editSnapshot: snapshot };
         }
       }
-      return { ...prev, selectedNoteIndex: newIndex };
+      // 선택 해제 시 스냅샷도 클리어
+      return { ...prev, selectedNoteIndex: newIndex, editSnapshot: null };
     });
   }, []);
 
@@ -592,6 +630,25 @@ export function useNoteInput(options: UseNoteInputOptions) {
     });
   }, [firstNote]);
 
+  /** 수정 취소: 스냅샷으로 복원 */
+  const cancelEdit = useCallback(() => {
+    setState(prev => {
+      if (!prev.editSnapshot) return { ...prev, selectedNoteIndex: null };
+      return {
+        ...prev,
+        trebleNotes: prev.editSnapshot.trebleNotes,
+        bassNotes: prev.editSnapshot.bassNotes,
+        selectedNoteIndex: null,
+        editSnapshot: null,
+      };
+    });
+  }, []);
+
+  /** 셋잇단음표 모드 토글 */
+  const toggleTriplet = useCallback(() => {
+    setState(prev => ({ ...prev, tripletMode: !prev.tripletMode }));
+  }, []);
+
   const getUserAbcString = useCallback((): string => {
     return userNotesToAbc(
       state.trebleNotes,
@@ -628,6 +685,8 @@ export function useNoteInput(options: UseNoteInputOptions) {
     canEditDuration,
     replaceWithRest,
     deleteSelectedNote,
+    cancelEdit,
+    toggleTriplet,
     getUserAbcString,
     reset,
   };

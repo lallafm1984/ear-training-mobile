@@ -18,6 +18,8 @@ interface DurationToolbarProps {
   onUndo: () => void;
   onClear: () => void;
   accentColor: string;
+  tripletMode?: boolean;
+  onToggleTriplet?: () => void;
 }
 
 const DURATION_BUTTONS: { dur: NoteDuration; icon: string; label: string }[] = [
@@ -42,6 +44,8 @@ export default function DurationToolbar({
   onUndo,
   onClear,
   accentColor,
+  tripletMode,
+  onToggleTriplet,
 }: DurationToolbarProps) {
   const isSelected = (dur: NoteDuration) => selectedDuration === dur;
 
@@ -168,6 +172,22 @@ export default function DurationToolbar({
           />
           <Text style={[styles.toolBtnText, { marginLeft: 2 }]}>쉼표</Text>
         </TouchableOpacity>
+
+        {/* Triplet */}
+        {onToggleTriplet && (
+          <TouchableOpacity
+            style={[styles.toolBtn, tripletMode && styles.toolBtnActive]}
+            onPress={onToggleTriplet}
+            accessibilityLabel="셋잇단음표"
+          >
+            <MaterialCommunityIcons
+              name="numeric-3-circle-outline"
+              size={16}
+              color={tripletMode ? '#fff' : COLORS.slate600}
+            />
+            <Text style={[styles.toolBtnText, tripletMode && styles.toolBtnTextActive, { marginLeft: 2 }]}>셋잇단</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Undo */}
         <TouchableOpacity

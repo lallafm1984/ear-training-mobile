@@ -315,7 +315,7 @@ export default function NotationPracticeScreen() {
   const isMelodyInput = category === 'melody' || category === 'twoVoice';
   const [melodySubmitted, setMelodySubmitted] = useState(false);
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  const lastAddTimeRef = useRef(0);
 
   const firstHintNote = score?.trebleNotes[0] ?? null;
 
@@ -340,7 +340,7 @@ export default function NotationPracticeScreen() {
     setCorrectCounts([]);
     setMelodySubmitted(false);
     setGradingResult(null);
-    setEditMode(false);
+    noteInput.selectNote(null);
 
     setTimeout(() => {
       const newScore = generatePracticeScore(category, difficulty);
@@ -690,7 +690,7 @@ export default function NotationPracticeScreen() {
               <View style={styles.rhythmInputDisplay}>
                 <Text style={styles.rhythmInputLabel}>내 답안</Text>
                 {noteInput.trebleNotes.length > 0 ? (
-                  <View style={[styles.scoreCard, { borderColor: editMode ? colors.main : colors.main + '20' }]}>
+                  <View style={[styles.scoreCard, { borderColor: noteInput.selectedNoteIndex !== null ? colors.main : colors.main + '20' }]}>
                     <AbcjsRenderer
                       abcString={noteInput.getUserAbcString()}
                       hideNotes={false}
@@ -698,11 +698,13 @@ export default function NotationPracticeScreen() {
                       barsPerStaff={score?.barsPerStaff}
                       timeSignature={score?.timeSignature ?? '4/4'}
                       stretchLast={false}
-                      onNoteClick={editMode ? (index, voice) => {
+                      onNoteClick={(index, voice) => {
+                        // addNote 직후 자동 선택 방지 (WebView 재렌더링 시 발생할 수 있음)
+                        if (Date.now() - lastAddTimeRef.current < 300) return;
                         noteInput.setActiveVoice(voice);
                         noteInput.selectNote(index);
-                      } : undefined}
-                      selectedNote={editMode && noteInput.selectedNoteIndex !== null ? {
+                      }}
+                      selectedNote={noteInput.selectedNoteIndex !== null ? {
                         index: noteInput.selectedNoteIndex,
                         voice: noteInput.activeVoice,
                       } : null}
@@ -897,13 +899,13 @@ export default function NotationPracticeScreen() {
                   accidentalMode={noteInput.accidentalMode}
                   tieMode={noteInput.tieMode}
                   canAddDuration={(dur) => {
-                    if (editMode && noteInput.selectedNoteIndex !== null) {
+                    if (noteInput.selectedNoteIndex !== null) {
                       return noteInput.canEditDuration(dur);
                     }
                     return noteInput.canAddDuration(dur);
                   }}
                   onDurationSelect={(dur) => {
-                    if (editMode && noteInput.selectedNoteIndex !== null) {
+                    if (noteInput.selectedNoteIndex !== null) {
                       noteInput.updateSelectedNoteDuration(dur);
                     } else {
                       noteInput.setDuration(dur);
@@ -913,23 +915,29 @@ export default function NotationPracticeScreen() {
                   onAccidentalMode={noteInput.setAccidentalMode}
                   onToggleTie={noteInput.toggleTie}
                   onAddRest={() => {
-                    if (editMode && noteInput.selectedNoteIndex !== null) {
+                    if (noteInput.selectedNoteIndex !== null) {
                       noteInput.replaceWithRest();
                     } else {
                       noteInput.addRest();
+                      lastAddTimeRef.current = Date.now();
                     }
                   }}
                   onUndo={noteInput.undo}
                   onClear={noteInput.clear}
                   accentColor={colors.main}
+                  tripletMode={noteInput.tripletMode}
+                  onToggleTriplet={noteInput.toggleTriplet}
                 />
                 <PianoKeyboard
-                  onKeyPress={noteInput.addNote}
+                  onKeyPress={(pitch, octave, acc) => {
+                    noteInput.addNote(pitch, octave, acc);
+                    lastAddTimeRef.current = Date.now();
+                  }}
                   accentColor={colors.main}
                   initialOctave={noteInput.activeVoice === 'bass' ? 3 : 4}
                 />
                 <View style={styles.rhythmActionRow}>
-                  {editMode && noteInput.selectedNoteIndex !== null && (
+                  {noteInput.selectedNoteIndex !== null && (
                     <>
                       <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
                         건반을 눌러 교체
@@ -940,23 +948,14 @@ export default function NotationPracticeScreen() {
                       >
                         <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>삭제</Text>
                       </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.rhythmActionBtn, { backgroundColor: COLORS.slate200 }]}
+                        onPress={noteInput.cancelEdit}
+                      >
+                        <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>수정취소</Text>
+                      </TouchableOpacity>
                     </>
                   )}
-                  <TouchableOpacity
-                    style={[styles.rhythmActionBtn, {
-                      backgroundColor: editMode ? colors.main : COLORS.slate100,
-                    }]}
-                    onPress={() => {
-                      setEditMode(prev => {
-                        if (prev) noteInput.selectNote(null); // 편집 모드 해제 시 선택도 해제
-                        return !prev;
-                      });
-                    }}
-                  >
-                    <Text style={[styles.rhythmActionBtnText, {
-                      color: editMode ? '#fff' : COLORS.slate600,
-                    }]}>{editMode ? '편집 중' : '편집'}</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {
                       backgroundColor: noteInput.trebleNotes.length > 1 ? colors.main : COLORS.slate200,
