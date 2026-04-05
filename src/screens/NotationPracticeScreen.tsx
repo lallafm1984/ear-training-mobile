@@ -701,7 +701,7 @@ export default function NotationPracticeScreen() {
                     tempo={90}
                     barsPerStaff={2}
                     timeSignature={score?.timeSignature ?? '4/4'}
-                    stretchLast={false}
+                    stretchLast={true}
                     onNoteClick={(index, voice) => {
                       if (Date.now() - lastAddTimeRef.current < 300) return;
                       noteInput.setActiveVoice(voice);
