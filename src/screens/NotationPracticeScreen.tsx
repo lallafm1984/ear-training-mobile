@@ -897,7 +897,13 @@ export default function NotationPracticeScreen() {
                   accidentalMode={noteInput.accidentalMode}
                   tieMode={noteInput.tieMode}
                   canAddDuration={noteInput.canAddDuration}
-                  onDurationSelect={noteInput.setDuration}
+                  onDurationSelect={(dur) => {
+                    if (editMode && noteInput.selectedNoteIndex !== null) {
+                      noteInput.updateSelectedNoteDuration(dur);
+                    } else {
+                      noteInput.setDuration(dur);
+                    }
+                  }}
                   onToggleDot={noteInput.toggleDot}
                   onAccidentalMode={noteInput.setAccidentalMode}
                   onToggleTie={noteInput.toggleTie}

@@ -282,6 +282,29 @@ export function useNoteInput(options: UseNoteInputOptions) {
     }));
   }, []);
 
+  /** 선택된 음표의 음길이만 변경 (편집 모드 전용) */
+  const updateSelectedNoteDuration = useCallback((dur: NoteDuration) => {
+    setState(prev => {
+      if (prev.selectedNoteIndex === null) return prev;
+      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+      const notes = [...prev[key] as ScoreNote[]];
+      const idx = prev.selectedNoteIndex;
+      if (idx < 0 || idx >= notes.length) return prev;
+
+      // firstNote 보호
+      if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
+
+      // 음가 차이 확인
+      const oldDur = durationToSixteenths(notes[idx].duration);
+      const newDur = durationToSixteenths(dur);
+      const remaining = totalSixteenths - sumSixteenths(notes);
+      if (newDur - oldDur > remaining) return prev; // 공간 부족
+
+      notes[idx] = { ...notes[idx], duration: dur };
+      return { ...prev, [key]: notes };
+    });
+  }, [totalSixteenths, firstNote]);
+
   const deleteSelectedNote = useCallback(() => {
     setState(prev => {
       if (prev.selectedNoteIndex === null) return prev;
@@ -341,6 +364,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     undo,
     clear,
     selectNote,
+    updateSelectedNoteDuration,
     deleteSelectedNote,
     getUserAbcString,
     reset,
