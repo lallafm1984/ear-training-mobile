@@ -685,36 +685,80 @@ export default function NotationPracticeScreen() {
               />
             </View>
 
-            {/* 선율/2성부 모드: 답안 악보 */}
+            {/* 선율/2성부 모드: 마디별 입력 UI */}
             {isMelodyInput && !melodySubmitted && (
               <View style={styles.rhythmInputDisplay}>
-                <Text style={styles.rhythmInputLabel}>내 답안</Text>
-                {noteInput.trebleNotes.length > 0 ? (
-                  <View style={[styles.scoreCard, { borderColor: noteInput.selectedNoteIndex !== null ? colors.main : colors.main + '20' }]}>
-                    <AbcjsRenderer
-                      abcString={noteInput.getUserAbcString()}
-                      hideNotes={false}
-                      tempo={90}
-                      barsPerStaff={2}
-                      timeSignature={score?.timeSignature ?? '4/4'}
-                      stretchLast={false}
-                      onNoteClick={(index, voice) => {
-                        // addNote 직후 자동 선택 방지 (WebView 재렌더링 시 발생할 수 있음)
-                        if (Date.now() - lastAddTimeRef.current < 300) return;
-                        noteInput.setActiveVoice(voice);
-                        noteInput.selectNote(index);
-                      }}
-                      selectedNote={noteInput.selectedNoteIndex !== null ? {
-                        index: noteInput.isTripletSelected
-                          ? noteInput.selectedNoteIndex + noteInput.tripletEditStep
-                          : noteInput.selectedNoteIndex,
-                        voice: noteInput.activeVoice,
-                      } : null}
-                    />
+                {/* 마디 진행 표시 */}
+                <View style={styles.measureProgress}>
+                  {noteInput.measureStatuses.map((status, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.measureDot,
+                        status === 'complete' && { backgroundColor: '#22dd44', borderColor: '#22dd44' },
+                        status === 'current' && { backgroundColor: colors.main, borderColor: colors.main },
+                        status === 'partial' && { backgroundColor: '#f7dc6f', borderColor: '#f7dc6f' },
+                      ]}
+                      onPress={() => noteInput.setCurrentMeasure(i)}
+                    >
+                      <Text style={[styles.measureDotText, (status === 'complete' || status === 'current') && { color: '#fff' }]}>
+                        {status === 'complete' ? '\u2713' : i + 1}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 현재 마디 악보 */}
+                <View style={[styles.scoreCard, { borderColor: noteInput.selectedNoteIndex !== null ? colors.main : colors.main + '20' }]}>
+                  <View style={styles.scoreHeader}>
+                    <Text style={styles.scoreLabel}>마디 {noteInput.currentMeasure + 1}</Text>
+                    <Text style={[styles.scoreLabel, { color: colors.main }]}>
+                      남은 박: {(() => {
+                        const [, tsBottom] = (score?.timeSignature ?? '4/4').split('/').map(Number);
+                        const beatUnit = 16 / tsBottom;
+                        const remainingBeats = noteInput.getRemainingDuration() / beatUnit;
+                        return remainingBeats % 1 === 0 ? remainingBeats : remainingBeats.toFixed(1);
+                      })()}
+                    </Text>
                   </View>
-                ) : (
-                  <View style={styles.rhythmEmptyAnswer}>
-                    <Text style={styles.rhythmEmptyText}>아래 건반을 탭하여 입력하세요</Text>
+                  <AbcjsRenderer
+                    abcString={noteInput.getCurrentMeasureAbcString()}
+                    hideNotes={false}
+                    tempo={90}
+                    barsPerStaff={1}
+                    timeSignature={score?.timeSignature ?? '4/4'}
+                    stretchLast={false}
+                    onNoteClick={(index, voice) => {
+                      if (Date.now() - lastAddTimeRef.current < 300) return;
+                      const globalIdx = noteInput.measureToGlobalIndex(index);
+                      noteInput.setActiveVoice(voice);
+                      noteInput.selectNote(globalIdx);
+                    }}
+                    selectedNote={noteInput.selectedNoteIndex !== null ? {
+                      index: noteInput.globalToMeasureIndex(
+                        noteInput.isTripletSelected
+                          ? noteInput.selectedNoteIndex + noteInput.tripletEditStep
+                          : noteInput.selectedNoteIndex
+                      ),
+                      voice: noteInput.activeVoice,
+                    } : null}
+                  />
+                </View>
+
+                {/* 입력 완료된 악보 미리보기 */}
+                {noteInput.measureStatuses.some((s, i) => s === 'complete' && i !== noteInput.currentMeasure) && (
+                  <View style={styles.completedPreview}>
+                    <Text style={styles.completedPreviewLabel}>입력 완료된 악보</Text>
+                    <View style={[styles.scoreCard, { borderColor: COLORS.slate200 }]}>
+                      <AbcjsRenderer
+                        abcString={noteInput.getUserAbcString()}
+                        hideNotes={false}
+                        tempo={90}
+                        barsPerStaff={2}
+                        timeSignature={score?.timeSignature ?? '4/4'}
+                        stretchLast={false}
+                      />
+                    </View>
                   </View>
                 )}
               </View>
@@ -974,13 +1018,13 @@ export default function NotationPracticeScreen() {
                   )}
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {
-                      backgroundColor: noteInput.trebleNotes.length > 1 ? colors.main : COLORS.slate200,
+                      backgroundColor: noteInput.allMeasuresComplete ? colors.main : COLORS.slate200,
                     }]}
                     onPress={handleMelodySubmit}
-                    disabled={noteInput.trebleNotes.length <= 1}
+                    disabled={!noteInput.allMeasuresComplete}
                   >
                     <Text style={[styles.rhythmActionBtnText, {
-                      color: noteInput.trebleNotes.length > 1 ? '#fff' : COLORS.slate400,
+                      color: noteInput.allMeasuresComplete ? '#fff' : COLORS.slate400,
                     }]}>제출</Text>
                   </TouchableOpacity>
                 </View>
@@ -1357,5 +1401,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.slate500,
+  },
+  // 마디별 입력 UI
+  measureProgress: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  measureDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.slate200,
+    backgroundColor: COLORS.slate50,
+  },
+  measureDotText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate500,
+  },
+  completedPreview: {
+    marginTop: 4,
+  },
+  completedPreviewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.slate400,
+    marginBottom: 4,
   },
 });
