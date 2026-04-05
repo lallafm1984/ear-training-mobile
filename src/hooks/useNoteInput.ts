@@ -468,10 +468,24 @@ export function useNoteInput(options: UseNoteInputOptions) {
   }, [firstNote]);
 
   const selectNote = useCallback((index: number | null) => {
-    setState(prev => ({
-      ...prev,
-      selectedNoteIndex: prev.selectedNoteIndex === index ? null : index,
-    }));
+    setState(prev => {
+      const newIndex = prev.selectedNoteIndex === index ? null : index;
+      // 선택한 음표의 음길이를 selectedDuration에 반영
+      if (newIndex !== null) {
+        const notes = prev.activeVoice === 'treble' ? prev.trebleNotes : prev.bassNotes;
+        if (newIndex >= 0 && newIndex < notes.length) {
+          const note = notes[newIndex];
+          // 점음표면 기�� 음길이 + isDotted로 분리
+          const durStr = note.duration as string;
+          if (durStr.endsWith('.')) {
+            const baseDur = durStr.slice(0, -1) as NoteDuration;
+            return { ...prev, selectedNoteIndex: newIndex, selectedDuration: baseDur, isDotted: true };
+          }
+          return { ...prev, selectedNoteIndex: newIndex, selectedDuration: note.duration, isDotted: false };
+        }
+      }
+      return { ...prev, selectedNoteIndex: newIndex };
+    });
   }, []);
 
   /** 선택된 음표의 음길이만 변경 (편집 모드 전용)
@@ -545,9 +559,10 @@ export function useNoteInput(options: UseNoteInputOptions) {
       if (notes[idx].pitch === 'rest') return prev;
 
       notes[idx] = makeRestNote(notes[idx].duration);
-      return { ...prev, [key]: notes, selectedNoteIndex: null };
+      const merged = mergeAdjacentRests(notes, barSixteenths);
+      return { ...prev, [key]: merged, selectedNoteIndex: null };
     });
-  }, [firstNote]);
+  }, [firstNote, barSixteenths]);
 
   /** 선택된 음표를 같은 길이의 쉼표로 대체 (삭제 = 쉼표 대체, 마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
@@ -566,9 +581,12 @@ export function useNoteInput(options: UseNoteInputOptions) {
       const deletedDur = notes[idx].duration;
       notes[idx] = makeRestNote(deletedDur);
 
+      // 연속 쉼표 합치기
+      const merged = mergeAdjacentRests(notes, barSixteenths);
+
       return {
         ...prev,
-        [key]: notes,
+        [key]: merged,
         selectedNoteIndex: null,
       };
     });
