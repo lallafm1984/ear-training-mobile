@@ -832,15 +832,23 @@ export function useNoteInput(options: UseNoteInputOptions) {
     setState(prev => ({ ...prev, tripletMode: !prev.tripletMode }));
   }, []);
 
+  /** 음표 배열에 남은 마디를 쉼표로 패딩 (표시용) */
+  const padWithRests = useCallback((notes: ScoreNote[]): ScoreNote[] => {
+    const used = sumSixteenths(notes);
+    const remaining = totalSixteenths - used;
+    if (remaining <= 0) return notes;
+    return [...notes, ...makeRests(remaining)];
+  }, [totalSixteenths]);
+
   const getUserAbcString = useCallback((): string => {
     return userNotesToAbc(
-      state.trebleNotes,
+      padWithRests(state.trebleNotes),
       keySignature,
       timeSignature,
-      useGrandStaff ? state.bassNotes : undefined,
+      useGrandStaff ? padWithRests(state.bassNotes) : undefined,
       useGrandStaff,
     );
-  }, [keySignature, timeSignature, useGrandStaff, state.trebleNotes, state.bassNotes]);
+  }, [keySignature, timeSignature, useGrandStaff, state.trebleNotes, state.bassNotes, padWithRests]);
 
   const reset = useCallback((newFirstNote?: ScoreNote | null) => {
     setState(makeInitialState(newFirstNote ?? firstNote));
