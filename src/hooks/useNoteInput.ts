@@ -85,9 +85,34 @@ function userNotesToAbc(
   function notesBodyAbc(noteArr: ScoreNote[], keySig: string): string {
     let abc = '';
     let barPos = 0;
-    for (const note of noteArr) {
-      abc += noteToAbcStr(note, keySig) + ' ';
-      barPos += durationToSixteenths(note.duration);
+    let tupletRemaining = 0;
+
+    for (let i = 0; i < noteArr.length; i++) {
+      const note = noteArr[i];
+
+      // 셋잇단음표 시작 마커
+      if (note.tuplet === '3' && tupletRemaining === 0) {
+        abc += '(3:2:3';
+        tupletRemaining = 3;
+      }
+
+      // 셋잇단음표 내부: tupletNoteDur 사용
+      if (tupletRemaining > 0) {
+        const noteDur = note.tupletNoteDur ?? 2;
+        const abcNote = noteToAbcStr({ ...note, duration: '8' } as ScoreNote, keySig);
+        // duration 부분을 tupletNoteDur로 교체
+        const pitchPart = abcNote.replace(/\d+$/, '');
+        abc += pitchPart + (noteDur === 1 ? '' : noteDur) + ' ';
+        tupletRemaining--;
+        // 셋잇단 전체가 4 sixteenths 차지
+        if (tupletRemaining === 0) {
+          barPos += durationToSixteenths(note.tupletSpan ?? '4');
+        }
+      } else {
+        abc += noteToAbcStr(note, keySig) + ' ';
+        barPos += durationToSixteenths(note.duration);
+      }
+
       if (barPos >= barSixteenths) {
         abc += '| ';
         barPos = 0;
@@ -331,12 +356,11 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
         // ── 셋잇단음표 모드 ──
         if (prev.tripletMode && prev.selectedNoteIndex === null) {
-          const spanDur = prev.selectedDuration;
-          const spanSixteenths = durationToSixteenths(spanDur);
+          // 셋잇단음표: 4분음표(4 sixteenths) 공간에 3개 음표
+          // 기존 생성기와 동일: duration='8', tupletSpan='4', tupletNoteDur=2 (첫음), 1 (나머지)
+          const spanSixteenths = 4; // 항상 4분음표 공간
           const remaining = totalSixteenths - sumSixteenths(notes);
           if (spanSixteenths > remaining) return prev;
-
-          const noteDur = Math.max(1, Math.floor(spanSixteenths / 2));
 
           for (let i = 0; i < 3; i++) {
             notes.push({
@@ -344,8 +368,10 @@ export function useNoteInput(options: UseNoteInputOptions) {
               pitch,
               octave,
               accidental: resolvedAccidental,
-              duration: spanDur,
-              ...(i === 0 ? { tuplet: '3' as any, tupletSpan: spanDur, tupletNoteDur: noteDur } : {}),
+              duration: '8' as NoteDuration,
+              ...(i === 0
+                ? { tuplet: '3' as any, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
+                : { tupletNoteDur: 1 }),
             });
           }
 
