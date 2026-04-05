@@ -912,7 +912,13 @@ export default function NotationPracticeScreen() {
                   onToggleDot={noteInput.toggleDot}
                   onAccidentalMode={noteInput.setAccidentalMode}
                   onToggleTie={noteInput.toggleTie}
-                  onAddRest={noteInput.addRest}
+                  onAddRest={() => {
+                    if (editMode && noteInput.selectedNoteIndex !== null) {
+                      noteInput.replaceWithRest();
+                    } else {
+                      noteInput.addRest();
+                    }
+                  }}
                   onUndo={noteInput.undo}
                   onClear={noteInput.clear}
                   accentColor={colors.main}

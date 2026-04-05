@@ -497,7 +497,25 @@ export function useNoteInput(options: UseNoteInputOptions) {
     return newDur16 <= barSixteenths - otherUsed;
   }, [getActiveNotes, state.selectedNoteIndex, state.activeVoice, firstNote, barSixteenths]);
 
-  /** 선택된 음표를 같은 길이의 쉼표로 대체 (마디 구조 유지) */
+  /** 선택된 음표를 같은 길이의 쉼표로 변환 (편집 모드 전용) */
+  const replaceWithRest = useCallback(() => {
+    setState(prev => {
+      if (prev.selectedNoteIndex === null) return prev;
+      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+      const notes = [...prev[key] as ScoreNote[]];
+      const idx = prev.selectedNoteIndex;
+      if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
+      if (idx < 0 || idx >= notes.length) return prev;
+
+      // 이미 쉼표면 무시
+      if (notes[idx].pitch === 'rest') return prev;
+
+      notes[idx] = makeRestNote(notes[idx].duration);
+      return { ...prev, [key]: notes, selectedNoteIndex: null };
+    });
+  }, [firstNote]);
+
+  /** 선택된 음표를 같은 길이의 쉼표로 대체 (삭제 = 쉼표 대체, 마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
     setState(prev => {
       if (prev.selectedNoteIndex === null) return prev;
@@ -556,6 +574,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     selectNote,
     updateSelectedNoteDuration,
     canEditDuration,
+    replaceWithRest,
     deleteSelectedNote,
     getUserAbcString,
     reset,
