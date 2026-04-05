@@ -290,23 +290,12 @@ export function useNoteInput(options: UseNoteInputOptions) {
           }
 
           const oldNote = notes[prev.selectedNoteIndex];
-          // 유효 듀레이션: 현재 선택된 음길이 또는 기존 음표의 음길이 유지
-          let effectiveDur: NoteDuration = prev.selectedDuration;
-          if (prev.isDotted) {
-            effectiveDur = applyDot(effectiveDur);
-          }
-
-          // 교체 시 음가 차이 확인
-          const durDiff = durationToSixteenths(effectiveDur) - durationToSixteenths(oldNote.duration);
-          const remaining = totalSixteenths - sumSixteenths(notes);
-          if (durDiff > remaining) return prev; // 공간 부족
-
+          // 교체 모드: 음높이만 변경, 음길이는 원래 것 유지
           notes[prev.selectedNoteIndex] = {
             ...oldNote,
             pitch,
             octave,
             accidental: resolvedAccidental,
-            duration: effectiveDur,
             id: uid(),
           };
 
