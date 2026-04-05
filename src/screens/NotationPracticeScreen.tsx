@@ -27,6 +27,11 @@ import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import PianoKeyboard from '../components/PianoKeyboard';
+import DurationToolbar from '../components/DurationToolbar';
+import GradingResultView from '../components/GradingResult';
+import { useNoteInput } from '../hooks/useNoteInput';
+import { gradeNotes, type GradingResult } from '../lib/grading';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -306,6 +311,21 @@ export default function NotationPracticeScreen() {
   const [rhythmResults, setRhythmResults] = useState<{ correct: RhythmInput; user: RhythmInput | null; isCorrect: boolean }[]>([]);
   const [correctCounts, setCorrectCounts] = useState<number[]>([]);
 
+  // ── 선율/2성부 입력 모드 상태 ──
+  const isMelodyInput = category === 'melody' || category === 'twoVoice';
+  const [melodySubmitted, setMelodySubmitted] = useState(false);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+
+  const firstHintNote = score?.trebleNotes[0] ?? null;
+
+  const noteInput = useNoteInput({
+    keySignature: score?.keySignature ?? 'C',
+    timeSignature: score?.timeSignature ?? '4/4',
+    measures: 4,
+    useGrandStaff: score?.useGrandStaff ?? false,
+    firstNote: isMelodyInput ? firstHintNote : null,
+  });
+
   // ── 악보 생성 ──
   const generate = useCallback(() => {
     setIsGenerating(true);
@@ -317,10 +337,15 @@ export default function NotationPracticeScreen() {
     setSubmitted(false);
     setRhythmResults([]);
     setCorrectCounts([]);
+    setMelodySubmitted(false);
+    setGradingResult(null);
 
     setTimeout(() => {
       const newScore = generatePracticeScore(category, difficulty);
       setScore(newScore);
+      if (category === 'melody' || category === 'twoVoice') {
+        noteInput.reset(newScore.trebleNotes[0] ?? null);
+      }
       setIsGenerating(false);
     }, 500);
   }, [category, difficulty]);
@@ -466,6 +491,52 @@ export default function NotationPracticeScreen() {
     await applyEvaluation('partPractice', level, evalRating);
   }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
+  // ── 선율/2성부: 제출 + 채점 ──
+  const handleMelodySubmit = useCallback(async () => {
+    if (!score || melodySubmitted) return;
+
+    const result = gradeNotes(score.trebleNotes, noteInput.trebleNotes);
+
+    if (score.useGrandStaff && score.bassNotes.length > 0) {
+      const bassResult = gradeNotes(score.bassNotes, noteInput.bassNotes);
+      const totalGrades = [...result.grades, ...bassResult.grades];
+      const answerLen = result.grades.length + bassResult.grades.length;
+      const correctCount = totalGrades.filter(g => g.grade === 'correct').length;
+      const partialCount = totalGrades.filter(g => g.grade === 'partial').length;
+      const combinedAcc = answerLen > 0 ? Math.round(((correctCount + partialCount * 0.5) / answerLen) * 100) / 100 : 0;
+      result.accuracy = combinedAcc;
+      result.selfRating = combinedAcc >= 0.9 ? 5 : combinedAcc >= 0.7 ? 4 : combinedAcc >= 0.5 ? 3 : combinedAcc >= 0.3 ? 2 : 1;
+      result.correctCount = correctCount;
+      result.partialCount = partialCount;
+      result.wrongCount = totalGrades.filter(g => g.grade === 'wrong').length;
+      result.missingCount = totalGrades.filter(g => g.grade === 'missing').length;
+      result.extraCount = totalGrades.filter(g => g.grade === 'extra').length;
+    }
+
+    setGradingResult(result);
+    setMelodySubmitted(true);
+    setHideNotes(false);
+    setPracticeCount(prev => prev + 1);
+    setRatings(prev => [...prev, result.selfRating]);
+
+    const record: PracticeRecord = {
+      id: `pr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      contentType: category,
+      difficulty,
+      selfRating: result.selfRating,
+      practicedAt: new Date().toISOString(),
+    };
+    await addRecord(record);
+    await updateStreak();
+
+    const evalRating = result.selfRating >= 4 ? 'easy' : result.selfRating >= 3 ? 'normal' : 'hard' as const;
+    const track = category === 'twoVoice' ? 'comprehensive' : 'partPractice' as const;
+    const levelMatch = difficulty.match(/\d+/);
+    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+    await applyEvaluation(track, level, evalRating);
+  }, [score, melodySubmitted, noteInput.trebleNotes, noteInput.bassNotes,
+      category, difficulty, addRecord, updateStreak, applyEvaluation]);
+
   const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
   const noteButtons = NOTE_BUTTONS;
   const restButtons = REST_BUTTONS;
@@ -570,7 +641,7 @@ export default function NotationPracticeScreen() {
                 <Text style={styles.scoreLabel}>
                   {hideNotes ? (isRhythm ? '리듬을 듣고 맞춰보세요' : '악보가 숨겨져 있습니다') : '정답 악보'}
                 </Text>
-                {!isRhythm && (
+                {!isRhythm && !isMelodyInput && (
                   <TouchableOpacity
                     onPress={() => rated && setHideNotes(h => !h)}
                     disabled={!rated}
@@ -594,6 +665,52 @@ export default function NotationPracticeScreen() {
                 timeSignature={score?.timeSignature ?? '4/4'}
               />
             </View>
+
+            {/* 선율/2성부 모드: 답안 악보 */}
+            {isMelodyInput && !melodySubmitted && (
+              <View style={styles.rhythmInputDisplay}>
+                <Text style={styles.rhythmInputLabel}>내 답안</Text>
+                {noteInput.trebleNotes.length > 0 ? (
+                  <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
+                    <AbcjsRenderer
+                      abcString={noteInput.getUserAbcString()}
+                      hideNotes={false}
+                      tempo={90}
+                      barsPerStaff={score?.barsPerStaff}
+                      timeSignature={score?.timeSignature ?? '4/4'}
+                      stretchLast={false}
+                      onNoteClick={(index, voice) => {
+                        noteInput.setActiveVoice(voice);
+                        noteInput.selectNote(index);
+                      }}
+                      selectedNote={noteInput.selectedNoteIndex !== null ? {
+                        index: noteInput.selectedNoteIndex,
+                        voice: noteInput.activeVoice,
+                      } : null}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.rhythmEmptyAnswer}>
+                    <Text style={styles.rhythmEmptyText}>아래 건반을 탭하여 입력하세요</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* 선율/2성부 모드: 채점 결과 */}
+            {isMelodyInput && melodySubmitted && gradingResult && (
+              <GradingResultView
+                answerAbcString={abcString}
+                userAbcString={noteInput.getUserAbcString()}
+                gradingResult={gradingResult}
+                timeSignature={score?.timeSignature ?? '4/4'}
+                accentColor={colors.main}
+                barsPerStaff={score?.barsPerStaff}
+                onNext={handleNext}
+                onFinish={handleFinish}
+                showFinish={practiceCount >= 1}
+              />
+            )}
 
             {/* 리듬 모드: 답지 악보 (사용자 입력 실시간 표시) */}
             {isRhythm && (
@@ -735,8 +852,71 @@ export default function NotationPracticeScreen() {
                 )}
               </View>
             )
+          ) : isMelodyInput ? (
+            // ── 선율/2성부 모드: 피아노 입력 ──
+            !melodySubmitted ? (
+              <>
+                {score?.useGrandStaff && (
+                  <View style={styles.voiceRow}>
+                    <TouchableOpacity
+                      style={[styles.voiceTab, noteInput.activeVoice === 'treble' && { backgroundColor: colors.main }]}
+                      onPress={() => noteInput.setActiveVoice('treble')}
+                    >
+                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'treble' && { color: '#fff' }]}>높은음자리</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.voiceTab, noteInput.activeVoice === 'bass' && { backgroundColor: colors.main }]}
+                      onPress={() => noteInput.setActiveVoice('bass')}
+                    >
+                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'bass' && { color: '#fff' }]}>낮은음자리</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <DurationToolbar
+                  selectedDuration={noteInput.selectedDuration}
+                  isDotted={noteInput.isDotted}
+                  accidentalMode={noteInput.accidentalMode}
+                  tieMode={noteInput.tieMode}
+                  canAddDuration={noteInput.canAddDuration}
+                  onDurationSelect={noteInput.setDuration}
+                  onToggleDot={noteInput.toggleDot}
+                  onAccidentalMode={noteInput.setAccidentalMode}
+                  onToggleTie={noteInput.toggleTie}
+                  onAddRest={noteInput.addRest}
+                  onUndo={noteInput.undo}
+                  onClear={noteInput.clear}
+                  accentColor={colors.main}
+                />
+                <PianoKeyboard
+                  onKeyPress={noteInput.addNote}
+                  accentColor={colors.main}
+                  initialOctave={noteInput.activeVoice === 'bass' ? 3 : 4}
+                />
+                <View style={styles.rhythmActionRow}>
+                  {noteInput.selectedNoteIndex !== null && (
+                    <TouchableOpacity
+                      style={[styles.rhythmActionBtn, { backgroundColor: '#fee2e2' }]}
+                      onPress={noteInput.deleteSelectedNote}
+                    >
+                      <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>선택 삭제</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.rhythmActionBtn, {
+                      backgroundColor: noteInput.trebleNotes.length > 1 ? colors.main : COLORS.slate200,
+                    }]}
+                    onPress={handleMelodySubmit}
+                    disabled={noteInput.trebleNotes.length <= 1}
+                  >
+                    <Text style={[styles.rhythmActionBtnText, {
+                      color: noteInput.trebleNotes.length > 1 ? '#fff' : COLORS.slate400,
+                    }]}>제출</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null
           ) : (
-            // ── 선율/2성부 모드: 자기 평가 ──
+            // ── 폴백: 자기 평가 ──
             !rated ? (
               <>
                 <Text style={styles.rateLabel}>자기 평가</Text>
@@ -1072,5 +1252,22 @@ const styles = StyleSheet.create({
   rhythmActionBtnText: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  voiceTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.slate100,
+  },
+  voiceTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate500,
   },
 });
