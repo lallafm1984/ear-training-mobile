@@ -132,6 +132,63 @@ function sumSixteenths(notes: ScoreNote[]): number {
   return notes.reduce((sum, n) => sum + durationToSixteenths(n.duration), 0);
 }
 
+/** 음표 인덱스가 속한 마디 정보를 반환 */
+function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
+  let pos = 0;
+  let measureStart = 0;    // 현재 마디 시작 인덱스
+  let measurePos = 0;      // 마디 내 누적 16ths
+
+  for (let i = 0; i < notes.length; i++) {
+    const dur = durationToSixteenths(notes[i].duration);
+    if (i === noteIndex) {
+      const measureTotal = measurePos + dur;
+      // 이 마디의 나머지 음표들도 합산
+      let restOfMeasure = 0;
+      for (let j = i + 1; j < notes.length; j++) {
+        const d = durationToSixteenths(notes[j].duration);
+        if (measureTotal + restOfMeasure + d > barLen) break;
+        restOfMeasure += d;
+      }
+      return {
+        measureStartIdx: measureStart,
+        posInMeasure: measurePos,
+        measureTotal: measurePos + dur + restOfMeasure,
+        isMeasureFull: measurePos + dur + restOfMeasure >= barLen,
+      };
+    }
+    measurePos += dur;
+    if (measurePos >= barLen) {
+      measurePos = 0;
+      measureStart = i + 1;
+    }
+  }
+  return { measureStartIdx: 0, posInMeasure: 0, measureTotal: 0, isMeasureFull: false };
+}
+
+/** duration에 해당하는 쉼표 ScoreNote 생성 */
+function makeRestNote(dur: NoteDuration): ScoreNote {
+  return { id: uid(), pitch: 'rest' as PitchName, octave: 0, accidental: '' as Accidental, duration: dur };
+}
+
+/** 16분음표 수를 NoteDuration으로 변환 (가능한 경우) */
+const SIXTEENTHS_TO_NOEDUR: Record<number, NoteDuration> = {
+  16: '1', 12: '2.', 8: '2', 6: '4.', 4: '4', 3: '8.', 2: '8', 1: '16',
+};
+
+/** 주어진 16ths를 쉼표 ScoreNote 배열로 분해 */
+function makeRests(sixteenths: number): ScoreNote[] {
+  const rests: ScoreNote[] = [];
+  let remain = sixteenths;
+  const sizes: number[] = [16, 8, 4, 2, 1];
+  for (const s of sizes) {
+    while (remain >= s && SIXTEENTHS_TO_NOEDUR[s]) {
+      rests.push(makeRestNote(SIXTEENTHS_TO_NOEDUR[s]));
+      remain -= s;
+    }
+  }
+  return rests;
+}
+
 // ── Initial state factory ──
 
 function makeInitialState(firstNote?: ScoreNote | null): NoteInputState {
@@ -371,7 +428,10 @@ export function useNoteInput(options: UseNoteInputOptions) {
     }));
   }, []);
 
-  /** 선택된 음표의 음길이만 변경 (편집 모드 전용) */
+  /** 선택된 음표의 음길이만 변경 (편집 모드 전용)
+   *  - 짧아지면: 마디가 꽉 찬 경우에만 차이만큼 쉼표 삽입
+   *  - 길어지면: 마디 내 공간 부족 시 거부
+   */
   const updateSelectedNoteDuration = useCallback((dur: NoteDuration) => {
     setState(prev => {
       if (prev.selectedNoteIndex === null) return prev;
@@ -383,37 +443,51 @@ export function useNoteInput(options: UseNoteInputOptions) {
       // firstNote 보호
       if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
 
-      // 음가 차이 확인
-      const oldDur = durationToSixteenths(notes[idx].duration);
-      const newDur = durationToSixteenths(dur);
-      const remaining = totalSixteenths - sumSixteenths(notes);
-      if (newDur - oldDur > remaining) return prev; // 공간 부족
+      const oldDur16 = durationToSixteenths(notes[idx].duration);
+      const newDur16 = durationToSixteenths(dur);
+      if (oldDur16 === newDur16) return prev;
+
+      const info = getMeasureInfo(notes, idx, barSixteenths);
+
+      if (newDur16 > oldDur16) {
+        // 길어지는 경우: 마디 내 남은 공간 확인
+        const measureSpaceWithout = barSixteenths - (info.measureTotal - oldDur16);
+        if (newDur16 > measureSpaceWithout) return prev; // 마디 초과 → 거부
+      }
 
       notes[idx] = { ...notes[idx], duration: dur };
+
+      if (newDur16 < oldDur16 && info.isMeasureFull) {
+        // 짧아지고 마디가 꽉 찼었을 때 ��� 차이만큼 쉼표 삽입
+        const gap = oldDur16 - newDur16;
+        const rests = makeRests(gap);
+        notes.splice(idx + 1, 0, ...rests);
+      }
+
       return { ...prev, [key]: notes };
     });
-  }, [totalSixteenths, firstNote]);
+  }, [barSixteenths, firstNote]);
 
+  /** 선택된 음표를 같은 길이의 쉼표로 대체 (마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
     setState(prev => {
       if (prev.selectedNoteIndex === null) return prev;
 
-      const notes =
-        prev.activeVoice === 'treble' ? [...prev.trebleNotes] : [...prev.bassNotes];
+      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+      const notes = [...prev[key] as ScoreNote[]];
+      const idx = prev.selectedNoteIndex;
 
       // firstNote 보호
-      if (prev.activeVoice === 'treble' && firstNote && prev.selectedNoteIndex === 0) {
-        return prev;
-      }
+      if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
+      if (idx < 0 || idx >= notes.length) return prev;
 
-      if (prev.selectedNoteIndex < 0 || prev.selectedNoteIndex >= notes.length) return prev;
-
-      notes.splice(prev.selectedNoteIndex, 1);
+      // 삭제 대신 같은 길이의 쉼표로 대체
+      const deletedDur = notes[idx].duration;
+      notes[idx] = makeRestNote(deletedDur);
 
       return {
         ...prev,
-        trebleNotes: prev.activeVoice === 'treble' ? notes : prev.trebleNotes,
-        bassNotes: prev.activeVoice === 'bass' ? notes : prev.bassNotes,
+        [key]: notes,
         selectedNoteIndex: null,
       };
     });
