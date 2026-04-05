@@ -291,7 +291,23 @@ export default function NotationPracticeScreen() {
   const { applyEvaluation, updateStreak } = useSkillProfile();
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const scrollYRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const dragBaseOffsetRef = useRef(0);
+  const isDragScrollingRef = useRef(false);
+
+  const handleScrollDelta = useCallback((adjustedDy: number) => {
+    if (isNaN(adjustedDy)) {
+      isDragScrollingRef.current = false;
+      return;
+    }
+    if (!isDragScrollingRef.current) {
+      isDragScrollingRef.current = true;
+      dragBaseOffsetRef.current = scrollOffsetRef.current;
+    }
+    const newOffset = Math.max(0, dragBaseOffsetRef.current - adjustedDy);
+    scrollOffsetRef.current = newOffset;
+    scrollRef.current?.scrollTo({ y: newOffset, animated: false });
+  }, []);
 
   // ── 상태 ──
   const [score, setScore] = useState<PracticeScore | null>(null);
@@ -616,7 +632,11 @@ export default function NotationPracticeScreen() {
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
-        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onScroll={(e) => {
+          if (!isDragScrollingRef.current) {
+            scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+          }
+        }}
         scrollEventThrottle={16}
       >
         {isGenerating ? (
@@ -682,6 +702,7 @@ export default function NotationPracticeScreen() {
                 abcString={abcString}
                 hideNotes={hideNotes}
                 tempo={90}
+                onScrollDelta={handleScrollDelta}
                 isPlaying={isPlaying}
                 onPlayStateChange={handlePlayStateChange}
                 barsPerStaff={isMelodyInput ? 2 : score?.barsPerStaff}
@@ -707,10 +728,7 @@ export default function NotationPracticeScreen() {
                     barsPerStaff={2}
                     timeSignature={score?.timeSignature ?? '4/4'}
                     stretchLast={true}
-                    onScrollDelta={(deltaY) => {
-                      if (isNaN(deltaY)) return; // 드래그 종료 신호
-                      scrollRef.current?.scrollTo({ y: scrollYRef.current - deltaY, animated: false });
-                    }}
+                    onScrollDelta={handleScrollDelta}
                     onNoteClick={(index, voice) => {
                       if (Date.now() - lastAddTimeRef.current < 300) return;
                       noteInput.setActiveVoice(voice);
