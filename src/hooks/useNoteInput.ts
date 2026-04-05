@@ -189,6 +189,49 @@ const SIXTEENTHS_TO_NOEDUR: Record<number, NoteDuration> = {
   16: '1', 12: '2.', 8: '2', 6: '4.', 4: '4', 3: '8.', 2: '8', 1: '16',
 };
 
+/** 배열 내 연속된 쉼표를 합쳐서 하나의 쉼표로 만듦 (마디 경계 내에서만) */
+function mergeAdjacentRests(notes: ScoreNote[], barLen: number): ScoreNote[] {
+  const result: ScoreNote[] = [];
+  let barPos = 0;
+
+  for (let i = 0; i < notes.length; i++) {
+    const note = notes[i];
+    const dur = durationToSixteenths(note.duration);
+
+    if (note.pitch === 'rest') {
+      // 연속 쉼표 합산 (마디 경계 넘지 않게)
+      let totalRestDur = dur;
+      const barRemain = barLen - barPos;
+      let j = i + 1;
+      while (j < notes.length && notes[j].pitch === 'rest') {
+        const nextDur = durationToSixteenths(notes[j].duration);
+        if (totalRestDur + nextDur > barRemain) break; // 마디 경계 넘으면 중단
+        totalRestDur += nextDur;
+        j++;
+      }
+
+      // 합산된 음가에 맞는 단일 쉼표가 있으면 사용
+      const merged = SIXTEENTHS_TO_NOEDUR[totalRestDur];
+      if (merged) {
+        result.push(makeRestNote(merged));
+      } else {
+        // 단일 쉼표로 표현 불가 → 가능한 큰 쉼표들로 분해
+        const rests = makeRests(totalRestDur);
+        result.push(...rests);
+      }
+
+      barPos += totalRestDur;
+      i = j - 1; // for 루프에서 i++ 하므로
+    } else {
+      result.push(note);
+      barPos += dur;
+    }
+
+    if (barPos >= barLen) barPos = 0;
+  }
+  return result;
+}
+
 /** 주어진 16ths를 쉼표 ScoreNote 배열로 분해 */
 function makeRests(sixteenths: number): ScoreNote[] {
   const rests: ScoreNote[] = [];
@@ -466,7 +509,9 @@ export function useNoteInput(options: UseNoteInputOptions) {
         notes.splice(idx + 1, 0, ...rests);
       }
 
-      return { ...prev, [key]: notes };
+      // 연속 쉼표 합치기
+      const merged = mergeAdjacentRests(notes, barSixteenths);
+      return { ...prev, [key]: merged };
     });
   }, [barSixteenths, firstNote]);
 
