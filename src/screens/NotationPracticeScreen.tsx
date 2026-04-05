@@ -290,6 +290,8 @@ export default function NotationPracticeScreen() {
   const { addRecord } = usePracticeHistory();
   const { applyEvaluation, updateStreak } = useSkillProfile();
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
 
   // ── 상태 ──
   const [score, setScore] = useState<PracticeScore | null>(null);
@@ -611,8 +613,11 @@ export default function NotationPracticeScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
       >
         {isGenerating ? (
           <View style={styles.loadingContainer}>
@@ -702,6 +707,10 @@ export default function NotationPracticeScreen() {
                     barsPerStaff={2}
                     timeSignature={score?.timeSignature ?? '4/4'}
                     stretchLast={true}
+                    onScrollDelta={(deltaY) => {
+                      if (isNaN(deltaY)) return; // 드래그 종료 신호
+                      scrollRef.current?.scrollTo({ y: scrollYRef.current - deltaY, animated: false });
+                    }}
                     onNoteClick={(index, voice) => {
                       if (Date.now() - lastAddTimeRef.current < 300) return;
                       noteInput.setActiveVoice(voice);
