@@ -20,3 +20,5 @@ export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as SplashScreen } from './SplashScreen';
 export { default as QuickStartCard } from './QuickStartCard';
 export { default as RecentActivityList } from './RecentActivityList';
+
+export { default as GradingResultView } from './GradingResult';
