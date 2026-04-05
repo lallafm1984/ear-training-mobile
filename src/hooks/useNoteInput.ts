@@ -87,6 +87,7 @@ function userNotesToAbc(
     let abc = '';
     let barPos = 0;
     let tupletRemaining = 0;
+    let currentTupletNoteDur = 0; // 그룹 시작 시 설정, 전체 음표에 동일 적용
 
     for (let i = 0; i < noteArr.length; i++) {
       const note = noteArr[i];
@@ -98,11 +99,12 @@ function userNotesToAbc(
         }
         abc += '(3:2:3';
         tupletRemaining = 3;
+        currentTupletNoteDur = note.tupletNoteDur ?? 2; // 첫 음표에서 한번만 설정
       }
 
-      // 셋잇단음표 내부: tupletNoteDur 사용, beam 연결 (공백 없음)
+      // 셋잇단음표 내부: 그룹 전체 동일 duration, beam 연결 (공백 없음)
       if (tupletRemaining > 0) {
-        const noteDur = note.tupletNoteDur ?? 2;
+        const noteDur = currentTupletNoteDur;
         // pitch 부분만 생성 (duration 제외)
         const dummyAbc = noteToAbcStr({ ...note, duration: '16' } as ScoreNote, keySig);
         // '16' → durationToSixteenths = 1 → durStr = '' 이므로 pitch만 남음
