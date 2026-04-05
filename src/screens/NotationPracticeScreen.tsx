@@ -619,21 +619,38 @@ export default function NotationPracticeScreen() {
           </View>
         ) : (
           <>
-            {/* 재생 카드 */}
-            <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-              <TouchableOpacity
-                style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
-                onPress={handlePlay}
-                activeOpacity={0.7}
-              >
-                {isPlaying
-                  ? <VolumeX size={28} color="#fff" />
-                  : <Volume2 size={28} color="#fff" />}
-              </TouchableOpacity>
-              <Text style={[styles.playHint, { color: colors.text }]}>
-                {isPlaying ? '재생 중...' : '탭하여 재생'}
-              </Text>
-            </View>
+            {/* 재생 카드 — 선율/2성부 모드에서는 컴팩트 */}
+            {isMelodyInput ? (
+              <View style={[styles.playCardCompact, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+                <TouchableOpacity
+                  style={[styles.playBtnSmall, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                  onPress={handlePlay}
+                  activeOpacity={0.7}
+                >
+                  {isPlaying
+                    ? <VolumeX size={20} color="#fff" />
+                    : <Volume2 size={20} color="#fff" />}
+                </TouchableOpacity>
+                <Text style={[styles.playHint, { color: colors.text }]}>
+                  {isPlaying ? '재생 중...' : '탭하여 재생'}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+                <TouchableOpacity
+                  style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                  onPress={handlePlay}
+                  activeOpacity={0.7}
+                >
+                  {isPlaying
+                    ? <VolumeX size={28} color="#fff" />
+                    : <Volume2 size={28} color="#fff" />}
+                </TouchableOpacity>
+                <Text style={[styles.playHint, { color: colors.text }]}>
+                  {isPlaying ? '재생 중...' : '탭하여 재생'}
+                </Text>
+              </View>
+            )}
 
             {/* 악보 영역 */}
             <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
@@ -1013,6 +1030,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
   },
+  playCardCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  playBtnSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   playBtn: {
     width: 56,
     height: 56,
@@ -1049,9 +1083,9 @@ const styles = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate100,
-    backgroundColor: COLORS.bgPrimary,
+    borderTopWidth: 1.5,
+    borderTopColor: COLORS.slate200,
+    backgroundColor: '#fff',
   },
   rateLabel: {
     fontSize: 14,
