@@ -679,7 +679,7 @@ export default function NotationPracticeScreen() {
                 tempo={90}
                 isPlaying={isPlaying}
                 onPlayStateChange={handlePlayStateChange}
-                barsPerStaff={score?.barsPerStaff}
+                barsPerStaff={isMelodyInput ? 2 : score?.barsPerStaff}
                 prependMetronome={isRhythm}
                 timeSignature={score?.timeSignature ?? '4/4'}
               />
@@ -695,7 +695,7 @@ export default function NotationPracticeScreen() {
                       abcString={noteInput.getUserAbcString()}
                       hideNotes={false}
                       tempo={90}
-                      barsPerStaff={score?.barsPerStaff}
+                      barsPerStaff={2}
                       timeSignature={score?.timeSignature ?? '4/4'}
                       stretchLast={false}
                       onNoteClick={(index, voice) => {
@@ -728,7 +728,7 @@ export default function NotationPracticeScreen() {
                 gradingResult={gradingResult}
                 timeSignature={score?.timeSignature ?? '4/4'}
                 accentColor={colors.main}
-                barsPerStaff={score?.barsPerStaff}
+                barsPerStaff={2}
                 onNext={handleNext}
                 onFinish={handleFinish}
                 showFinish={practiceCount >= 1}
