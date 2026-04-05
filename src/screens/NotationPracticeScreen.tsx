@@ -911,12 +911,23 @@ export default function NotationPracticeScreen() {
                 />
                 <View style={styles.rhythmActionRow}>
                   {noteInput.selectedNoteIndex !== null && (
-                    <TouchableOpacity
-                      style={[styles.rhythmActionBtn, { backgroundColor: '#fee2e2' }]}
-                      onPress={noteInput.deleteSelectedNote}
-                    >
-                      <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>선택 삭제</Text>
-                    </TouchableOpacity>
+                    <>
+                      <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
+                        건반을 눌러 교체
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.rhythmActionBtn, { backgroundColor: '#fee2e2' }]}
+                        onPress={noteInput.deleteSelectedNote}
+                      >
+                        <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>삭제</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.rhythmActionBtn, { backgroundColor: COLORS.slate100 }]}
+                        onPress={() => noteInput.selectNote(null)}
+                      >
+                        <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>선택 해제</Text>
+                      </TouchableOpacity>
+                    </>
                   )}
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {

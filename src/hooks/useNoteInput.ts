@@ -116,7 +116,51 @@ export function useNoteInput(options: UseNoteInputOptions) {
         const notes =
           prev.activeVoice === 'treble' ? [...prev.trebleNotes] : [...prev.bassNotes];
 
-        // 유효 듀레이션 계산
+        // 임시표 결정: accidentalMode 우선, 그 다음 인자
+        const resolvedAccidental: Accidental =
+          prev.accidentalMode === '#' ? '#' :
+          prev.accidentalMode === 'b' ? 'b' :
+          accidental ?? '';
+
+        // ── 선택된 음표가 있으면 교체 모드 ──
+        if (prev.selectedNoteIndex !== null && prev.selectedNoteIndex >= 0 && prev.selectedNoteIndex < notes.length) {
+          // firstNote(인덱스 0) 보호
+          if (prev.activeVoice === 'treble' && firstNote && prev.selectedNoteIndex === 0) {
+            return { ...prev, selectedNoteIndex: null, accidentalMode: null };
+          }
+
+          const oldNote = notes[prev.selectedNoteIndex];
+          // 유효 듀레이션: 현재 선택된 음길이 또는 기존 음표의 음길이 유지
+          let effectiveDur: NoteDuration = prev.selectedDuration;
+          if (prev.isDotted) {
+            effectiveDur = applyDot(effectiveDur);
+          }
+
+          // 교체 시 음가 차이 확인
+          const durDiff = durationToSixteenths(effectiveDur) - durationToSixteenths(oldNote.duration);
+          const remaining = totalSixteenths - sumSixteenths(notes);
+          if (durDiff > remaining) return prev; // 공간 부족
+
+          notes[prev.selectedNoteIndex] = {
+            ...oldNote,
+            pitch,
+            octave,
+            accidental: resolvedAccidental,
+            duration: effectiveDur,
+            id: uid(),
+          };
+
+          return {
+            ...prev,
+            trebleNotes: prev.activeVoice === 'treble' ? notes : prev.trebleNotes,
+            bassNotes: prev.activeVoice === 'bass' ? notes : prev.bassNotes,
+            accidentalMode: null,
+            isDotted: false,
+            selectedNoteIndex: null,
+          };
+        }
+
+        // ── 선택 없으면 기존 추가 모드 ──
         let effectiveDur: NoteDuration = prev.selectedDuration;
         if (prev.isDotted) {
           effectiveDur = applyDot(effectiveDur);
@@ -133,12 +177,6 @@ export function useNoteInput(options: UseNoteInputOptions) {
             notes[notes.length - 1] = { ...last, tie: true };
           }
         }
-
-        // 임시표 결정: accidentalMode 우선, 그 다음 인자
-        const resolvedAccidental: Accidental =
-          prev.accidentalMode === '#' ? '#' :
-          prev.accidentalMode === 'b' ? 'b' :
-          accidental ?? '';
 
         const newNote: ScoreNote = {
           id: uid(),
@@ -162,7 +200,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
         };
       });
     },
-    [totalSixteenths],
+    [totalSixteenths, firstNote],
   );
 
   const addRest = useCallback(() => {
