@@ -705,7 +705,9 @@ export default function NotationPracticeScreen() {
                         noteInput.selectNote(index);
                       }}
                       selectedNote={noteInput.selectedNoteIndex !== null ? {
-                        index: noteInput.selectedNoteIndex,
+                        index: noteInput.isTripletSelected
+                          ? noteInput.selectedNoteIndex + noteInput.tripletEditStep
+                          : noteInput.selectedNoteIndex,
                         voice: noteInput.activeVoice,
                       } : null}
                     />
@@ -940,7 +942,9 @@ export default function NotationPracticeScreen() {
                   {noteInput.selectedNoteIndex !== null && (
                     <>
                       <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
-                        건반을 눌러 교체
+                        {noteInput.isTripletSelected
+                          ? `셋잇단 ${noteInput.tripletEditStep + 1}/3 - 건반으로 교체`
+                          : '건반을 눌러 교체'}
                       </Text>
                       <TouchableOpacity
                         style={[styles.rhythmActionBtn, { backgroundColor: '#fee2e2' }]}
