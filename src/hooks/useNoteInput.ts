@@ -132,37 +132,51 @@ function sumSixteenths(notes: ScoreNote[]): number {
   return notes.reduce((sum, n) => sum + durationToSixteenths(n.duration), 0);
 }
 
-/** 음표 인덱스가 속한 마디 정보를 반환 */
+/** 음표 인덱스가 속한 마디의 시작/끝 인덱스와 마디 내 위치 반환 */
 function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
-  let pos = 0;
-  let measureStart = 0;    // 현재 마디 시작 인덱스
-  let measurePos = 0;      // 마디 내 누적 16ths
+  let cumulative = 0;
+  let measureStartIdx = 0;
+  let measureCum = 0; // 현재 마디 내 누적
 
   for (let i = 0; i < notes.length; i++) {
     const dur = durationToSixteenths(notes[i].duration);
+    if (measureCum + dur > barLen) {
+      // 새 마디 시작
+      measureStartIdx = i;
+      measureCum = 0;
+    }
     if (i === noteIndex) {
-      const measureTotal = measurePos + dur;
-      // 이 마디의 나머지 음표들도 합산
-      let restOfMeasure = 0;
-      for (let j = i + 1; j < notes.length; j++) {
+      // 이 마디의 총 음가 계산 (이 마디에 속하는 모든 음표)
+      let measureTotal = 0;
+      let measureEndIdx = i; // inclusive
+      let tempCum = 0;
+      for (let j = measureStartIdx; j < notes.length; j++) {
         const d = durationToSixteenths(notes[j].duration);
-        if (measureTotal + restOfMeasure + d > barLen) break;
-        restOfMeasure += d;
+        if (tempCum + d > barLen) break;
+        tempCum += d;
+        measureEndIdx = j;
       }
+      measureTotal = tempCum;
       return {
-        measureStartIdx: measureStart,
-        posInMeasure: measurePos,
-        measureTotal: measurePos + dur + restOfMeasure,
-        isMeasureFull: measurePos + dur + restOfMeasure >= barLen,
+        measureStartIdx,
+        measureEndIdx,
+        posInMeasure: measureCum,
+        measureTotal,
+        isMeasureFull: measureTotal >= barLen,
+        spaceBeforeNote: measureCum,                          // 이 음표 전까지 사용된 공간
+        spaceAfterNote: measureTotal - measureCum - dur,      // 이 음표 뒤 남은 공간
       };
     }
-    measurePos += dur;
-    if (measurePos >= barLen) {
-      measurePos = 0;
-      measureStart = i + 1;
+    measureCum += dur;
+    if (measureCum >= barLen) {
+      measureCum = 0;
+      measureStartIdx = i + 1;
     }
   }
-  return { measureStartIdx: 0, posInMeasure: 0, measureTotal: 0, isMeasureFull: false };
+  return {
+    measureStartIdx: 0, measureEndIdx: 0, posInMeasure: 0,
+    measureTotal: 0, isMeasureFull: false, spaceBeforeNote: 0, spaceAfterNote: 0,
+  };
 }
 
 /** duration에 해당하는 쉼표 ScoreNote 생성 */
@@ -448,12 +462,11 @@ export function useNoteInput(options: UseNoteInputOptions) {
       if (oldDur16 === newDur16) return prev;
 
       const info = getMeasureInfo(notes, idx, barSixteenths);
+      // 마디 내에서 이 음표를 제외한 사용 공간
+      const otherUsed = info.measureTotal - oldDur16;
+      const maxForNote = barSixteenths - otherUsed;
 
-      if (newDur16 > oldDur16) {
-        // 길어지는 경우: 마디 내 남은 공간 확인
-        const measureSpaceWithout = barSixteenths - (info.measureTotal - oldDur16);
-        if (newDur16 > measureSpaceWithout) return prev; // 마디 초과 → 거부
-      }
+      if (newDur16 > maxForNote) return prev; // 마디 초과 → 거부
 
       notes[idx] = { ...notes[idx], duration: dur };
 
@@ -467,6 +480,22 @@ export function useNoteInput(options: UseNoteInputOptions) {
       return { ...prev, [key]: notes };
     });
   }, [barSixteenths, firstNote]);
+
+  /** 편집 모드에서 특정 음길이로 변경 가능한지 확인 */
+  const canEditDuration = useCallback((dur: NoteDuration): boolean => {
+    const notes = getActiveNotes();
+    if (state.selectedNoteIndex === null || state.selectedNoteIndex >= notes.length) return false;
+    const idx = state.selectedNoteIndex;
+    if (state.activeVoice === 'treble' && firstNote && idx === 0) return false;
+
+    const oldDur16 = durationToSixteenths(notes[idx].duration);
+    const newDur16 = durationToSixteenths(dur);
+    if (newDur16 <= oldDur16) return true; // 줄이거나 같으면 항상 허용
+
+    const info = getMeasureInfo(notes, idx, barSixteenths);
+    const otherUsed = info.measureTotal - oldDur16;
+    return newDur16 <= barSixteenths - otherUsed;
+  }, [getActiveNotes, state.selectedNoteIndex, state.activeVoice, firstNote, barSixteenths]);
 
   /** 선택된 음표를 같은 길이의 쉼표로 대체 (마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
@@ -526,6 +555,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     clear,
     selectNote,
     updateSelectedNoteDuration,
+    canEditDuration,
     deleteSelectedNote,
     getUserAbcString,
     reset,
