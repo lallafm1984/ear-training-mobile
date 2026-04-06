@@ -1,0 +1,97 @@
+<h2>구현 접근 방식 비교</h2>
+<p class="subtitle">악보 입력 + 자동 채점 시스템의 아키텍처 선택</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>WebView 통합 에디터 (ABCJS 확장)</h3>
+      <p><strong>기존 AbcjsRenderer WebView를 확장</strong>하여 입력 기능 추가</p>
+      <ul>
+        <li>ABCJS가 이미 악보 렌더링 + 재생을 담당 → 입력도 같은 WebView에서 처리</li>
+        <li>피아노 건반 UI를 WebView 내부에 HTML/CSS로 구현</li>
+        <li>음표 추가/삭제 시 ABC 문자열을 실시간 업데이트 → 즉시 렌더링</li>
+        <li>React Native ↔ WebView 메시지로 상태 동기화</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4>
+          <ul>
+            <li>기존 렌더링/재생 인프라 100% 재활용</li>
+            <li>악보와 입력이 하나의 뷰에서 통합</li>
+            <li>ABC notation 기반이라 채점 로직이 간단 (문자열 비교)</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>단점</h4>
+          <ul>
+            <li>WebView 내부 터치 이벤트 처리 복잡</li>
+            <li>React Native 네이티브 UX와 이질감 가능</li>
+            <li>WebView ↔ RN 통신 오버헤드</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>네이티브 입력 + WebView 렌더링 (하이브리드)</h3>
+      <p><strong>건반/버튼은 React Native 네이티브</strong>, 악보 표시만 WebView</p>
+      <ul>
+        <li>피아노 건반, 음길이 버튼, 편집 버튼 → React Native 컴포넌트</li>
+        <li>ScoreNote[] 배열을 RN에서 관리 → ABC 변환 → WebView에 전달하여 렌더링</li>
+        <li>악보 탭 이벤트는 WebView → RN 메시지로 전달 (성부 전환, 음표 선택)</li>
+        <li>채점은 ScoreNote[] 배열 비교로 처리</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4>
+          <ul>
+            <li>건반/버튼이 네이티브라 터치 반응이 빠르고 자연스러움</li>
+            <li>기존 리듬 입력 UI 패턴 재활용 가능</li>
+            <li>상태 관리가 RN 측에 집중되어 디버깅 용이</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>단점</h4>
+          <ul>
+            <li>WebView 악보 ↔ 네이티브 건반 간 동기화 필요</li>
+            <li>악보 탭(성부전환/음표선택)은 여전히 WebView 이벤트 처리 필요</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>완전 네이티브 (React Native Canvas/SVG)</h3>
+      <p><strong>악보 렌더링까지 React Native에서</strong> 직접 구현</p>
+      <ul>
+        <li>VexFlow React Native 또는 커스텀 SVG로 악보 렌더링</li>
+        <li>모든 UI가 네이티브 → 일관된 UX</li>
+        <li>WebView 의존성 제거</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4>
+          <ul>
+            <li>완전히 일관된 네이티브 UX</li>
+            <li>WebView 통신 오버헤드 없음</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>단점</h4>
+          <ul>
+            <li>기존 ABCJS 렌더링/재생 인프라를 버려야 함</li>
+            <li>악보 렌더링을 처음부터 구현 → 막대한 작업량</li>
+            <li>음악 재생도 별도 구현 필요</li>
+            <li>현실적으로 비추천</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px; padding: 16px; background: #1a1a2e; border-radius: 8px; border-left: 4px solid #4ecdc4;">
+  <h3 style="color: #4ecdc4; margin-top: 0;">💡 추천: B (네이티브 입력 + WebView 렌더링)</h3>
+  <p>기존 ABCJS 렌더링/재생 인프라를 유지하면서, 사용자 입력은 네이티브로 처리하여 터치 반응성과 UX 일관성을 확보합니다. 리듬 받아쓰기에서 이미 검증된 네이티브 입력 패턴(음길이 버튼, undo 등)을 확장하는 방식이라 가장 현실적입니다.</p>
+</div>
