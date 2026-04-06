@@ -1,0 +1,145 @@
+<h2>섹션 2: 피아노 건반 & 입력 시스템</h2>
+<p class="subtitle">사용자가 음표를 입력하는 핵심 인터페이스</p>
+
+<div class="section">
+  <h3>피아노 건반 컴포넌트</h3>
+  <div class="mockup">
+    <div class="mockup-header">PianoKeyboard 컴포넌트 상세</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <!-- 옥타브 표시 -->
+      <div style="display: flex; justify-content: center; gap: 4px; margin-bottom: 8px;">
+        <span style="background: #333; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #666;">C3</span>
+        <span style="background: #333; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #4ecdc4; border: 1px solid #4ecdc4;">C4</span>
+        <span style="background: #333; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #666;">C5</span>
+        <span style="background: #333; padding: 2px 8px; border-radius: 4px; font-size: 10px; color: #666;">C6</span>
+      </div>
+      <!-- 건반 (2옥타브 보이는 부분) -->
+      <div style="position: relative; height: 110px; display: flex; justify-content: center; overflow: hidden;">
+        <div style="display: flex; gap: 2px; position: relative;">
+          <!-- C4 옥타브 -->
+          <div style="position: relative; display: flex; gap: 2px;">
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">C4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">D4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">E4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">F4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">G4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">A4</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">B4</span></div>
+          </div>
+          <!-- C5 시작 -->
+          <div style="display: flex; gap: 2px;">
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #e8e8e8, #fff); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">C5</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #ddd, #f5f5f5); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">D5</span></div>
+            <div style="width: 36px; height: 100px; background: linear-gradient(180deg, #ddd, #f5f5f5); border-radius: 0 0 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;"><span style="font-size: 10px; color: #888;">E5</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #666; margin-top: 8px;">
+        ◀ 좌우 스크롤 (ScrollView horizontal) ▶
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>건반 스펙</h3>
+  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #4ecdc4; width: 140px;">전체 범위</td>
+      <td style="padding: 8px;">C3 ~ C6 (3옥타브, 흰건 22개 + 검은건 15개)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #4ecdc4;">화면 표시</td>
+      <td style="padding: 8px;">약 10~12건이 화면에 보임, 나머지는 스크롤</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #4ecdc4;">초기 위치</td>
+      <td style="padding: 8px;">선율: C4 중심 / 2성부 베이스: C3 중심 (성부 전환 시 자동 이동)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #4ecdc4;">검은 건반</td>
+      <td style="padding: 8px;">흰건 사이 위쪽에 짧은 검은 건반 배치 (실제 피아노 비율)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #4ecdc4;">탭 동작</td>
+      <td style="padding: 8px;">건반 탭 → 선택된 음길이로 ScoreNote 생성 → userNotes[]에 push → ABC 변환 → 악보 업데이트</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; color: #4ecdc4;">탭 피드백</td>
+      <td style="padding: 8px;">건반 누를 때 색상 변화(하이라이트) + 해당 음 짧게 재생 (MIDI preview)</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>음길이 & 도구 버튼 바</h3>
+  <div class="mockup">
+    <div class="mockup-header">DurationToolbar 컴포넌트</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="margin-bottom: 12px;">
+        <div style="font-size: 11px; color: #888; margin-bottom: 6px;">음길이 (하나만 선택, 유지됨)</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="width: 44px; height: 44px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">𝅝</div>
+          <div style="width: 44px; height: 44px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">𝅗𝅥</div>
+          <div style="width: 44px; height: 44px; background: #1a3a3a; border: 2px solid #4ecdc4; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">♩</div>
+          <div style="width: 44px; height: 44px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">♪</div>
+          <div style="width: 44px; height: 44px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">𝅘𝅥𝅯</div>
+          <div style="width: 44px; height: 44px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px;">점</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; color: #888; margin-bottom: 6px;">도구 (토글)</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="height: 36px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">♯ 올림</div>
+          <div style="height: 36px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">♭ 내림</div>
+          <div style="height: 36px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">⌒ 붙임줄</div>
+          <div style="height: 36px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">𝄾 쉼표</div>
+          <div style="height: 36px; background: #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">↩ Undo</div>
+          <div style="height: 36px; background: #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 12px;">🗑 Clear</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>입력 동작 규칙</h3>
+  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f; width: 160px;">기본 음표 입력</td>
+      <td style="padding: 8px;">음길이 선택 상태에서 건반 탭 → ScoreNote 추가</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">점음표</td>
+      <td style="padding: 8px;">"점" 버튼 토글 ON → 다음 건반 탭 시 점음표로 입력 → 자동 OFF</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">임시표 (버튼)</td>
+      <td style="padding: 8px;">♯/♭ 토글 ON → 흰건반 탭 시 반음 올림/내림 적용 → 자동 OFF</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">임시표 (검은건)</td>
+      <td style="padding: 8px;">검은 건반 직접 탭 → ♯/♭은 조표 컨텍스트에 따라 자동 결정</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">쉼표</td>
+      <td style="padding: 8px;">"쉼표" 버튼 탭 → 선택된 음길이의 쉼표가 즉시 추가 (건반 탭 불필요)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">붙임줄</td>
+      <td style="padding: 8px;">"붙임줄" 토글 ON → 다음 건반 탭 시 이전 음표와 tie 연결 (같은 음높이여야 함)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">Undo</td>
+      <td style="padding: 8px;">마지막 입력 음표 제거</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #333;">
+      <td style="padding: 8px; color: #f7dc6f;">음표 탭 삭제</td>
+      <td style="padding: 8px;">악보에서 음표 탭 → 선택 상태 → 삭제/교체 옵션</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; color: #f7dc6f;">마디 초과 방지</td>
+      <td style="padding: 8px;">현재 마디의 남은 박자보다 큰 음길이 선택 시 버튼 비활성화</td>
+    </tr>
+  </table>
+</div>
