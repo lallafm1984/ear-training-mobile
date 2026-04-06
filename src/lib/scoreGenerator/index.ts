@@ -26,11 +26,12 @@ import { applyMelodyAccidentals } from '../twoVoice/chromaticAccidental';
 import { fillRhythm } from '../trebleRhythmFill';
 
 import type { Difficulty, BassDifficulty, GeneratorOptions, GeneratedScore } from './types';
-import { difficultyLevel, DURATION_POOL, BASS_LEVEL_PARAMS } from './types';
+import { difficultyLevel, DURATION_POOL, BASS_LEVEL_PARAMS, LEVEL_PARAMS } from './types';
+import type { LevelParams } from './types';
 
 // Import internal helpers from sub-modules
 import { isMinorKey, getMinorLeadingToneAccidental, mapBassDifficultyToLevel, buildBassAttackMidiMap } from './melodyEngine';
-import { LevelParams, LEVEL_PARAMS, rand, lastNonRestMelody, samePitchHeight, tryInsertTriplet, cleanupBrokenAccidentals, fixTritoneleaps, fixConsecutiveRepeats, fixMinorCrossRelation, generateCadenceMeasure, forceGrandStaffFinalTonic, applyInternalRests, fixForbiddenInterval, applyGapFill, isTriadSubset, checkConsecutiveLeapTriad, applyTendencyResolution, enforcePeakNote } from './melodyEngine';
+import { rand, lastNonRestMelody, samePitchHeight, tryInsertTriplet, cleanupBrokenAccidentals, fixTritoneleaps, fixConsecutiveRepeats, fixMinorCrossRelation, generateCadenceMeasure, forceGrandStaffFinalTonic, applyInternalRests, fixForbiddenInterval, applyGapFill, isTriadSubset, checkConsecutiveLeapTriad, applyTendencyResolution, enforcePeakNote } from './melodyEngine';
 import { reviewAndFixScore } from './postProcessing';
 import { generateBassForBar } from './bassEngine';
 

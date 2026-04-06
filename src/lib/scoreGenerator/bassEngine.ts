@@ -16,7 +16,7 @@ import {
 } from '../scoreUtils';
 import type { BassDifficulty } from './types';
 import { BASS_LEVEL_PARAMS } from './types';
-import type { LevelParams } from './melodyEngine';
+import type { LevelParams } from './types';
 import { rand } from './melodyEngine';
 import { resolveBassClash, smoothBassMelodicContinuity, ensureConsonance, fixParallelPerfect, applyImperfectConsonanceRatio } from './postProcessing';
 import { fillRhythm } from '../trebleRhythmFill';
