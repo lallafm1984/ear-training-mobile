@@ -96,6 +96,8 @@ src/
 | `usePracticeHistory()` | 연습 통계/기록 |
 | `useDownloadQuota()` | 다운로드 권한/소모 |
 | `useNoteInput()` | 음표 입력 핸들링 |
+| `usePlaybackConfig()` | ScoreEditor 재생 설정 상태 (15개) |
+| `useGenerationState()` | ScoreEditor 생성 파라미터 상태 (8개) |
 
 ---
 
@@ -120,6 +122,14 @@ Onboarding → Home
 
 ---
 
+## 코드 품질 도구
+
+- **ESLint**: `eslint.config.mjs` (flat config, typescript-eslint + react-hooks)
+- **Prettier**: `.prettierrc` (singleQuote, trailingComma, printWidth 100)
+- 실행: `npm run lint` / `npm run format` / `npm run format:check`
+
+---
+
 ## 테스트
 
 | 테스트 파일 | 대상 |
@@ -129,5 +139,10 @@ Onboarding → Home
 | `scoreGenerator.test.ts` | 악보 생성 엔진 |
 | `computeStats.test.ts` | 통계 집계 |
 | `skillProfile.test.ts` | 스킬 레벨 계산 |
+| `contentConfig.test.ts` | 카테고리 설정/난이도 라벨 |
+| `duration.test.ts` | 음가 변환/박자 계산 |
+| `keySignature.test.ts` | 조성/음계/임시표 |
+| `melodyRhythmLevel.test.ts` | 레벨별 리듬 파라미터 |
+| `examPresets.test.ts` | 시험 프리셋 구조 검증 |
 
-실행: `npm test` (90개 테스트)
+실행: `npm test` (179개 테스트)
