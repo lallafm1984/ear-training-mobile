@@ -22,7 +22,7 @@ interface CategoryCardProps {
   practiceCount?: number;
 }
 
-export default function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
+function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
   return (
@@ -56,6 +56,8 @@ export default function CategoryCard({ config, onPress, locked, practiceCount }:
     </TouchableOpacity>
   );
 }
+
+export default React.memo(CategoryCard);
 
 const styles = StyleSheet.create({
   card: {

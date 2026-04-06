@@ -21,7 +21,7 @@ const BLACK_NOTE_NAMES: PitchName[] = ['C', 'D', 'F', 'G', 'A'];
 
 const OCTAVES = [3, 4, 5];
 
-export default function PianoKeyboard({
+function PianoKeyboard({
   onKeyPress,
   accentColor,
   initialOctave = 4,
@@ -102,6 +102,8 @@ export default function PianoKeyboard({
     </View>
   );
 }
+
+export default React.memo(PianoKeyboard);
 
 const styles = StyleSheet.create({
   container: {

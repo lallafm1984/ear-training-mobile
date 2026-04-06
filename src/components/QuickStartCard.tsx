@@ -17,7 +17,7 @@ interface QuickStartCardProps {
   onPress: () => void;
 }
 
-export default function QuickStartCard({
+function QuickStartCard({
   category,
   difficulty,
   streakDays,
@@ -56,6 +56,8 @@ export default function QuickStartCard({
     </View>
   );
 }
+
+export default React.memo(QuickStartCard);
 
 const styles = StyleSheet.create({
   container: {
