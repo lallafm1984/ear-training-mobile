@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  SafeAreaView, StatusBar, Platform, Dimensions, ActivityIndicator,
+  Dimensions, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Crown, Check, X, Sparkles, Music2, Download, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
 import { useAlert, useSubscription } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
@@ -187,12 +188,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.root,
-        { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
-      ]}
-    >
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>

@@ -3,13 +3,13 @@
 // (melodyGenerator가 scoreGenerator를 import하지 않도록 분리)
 // ────────────────────────────────────────────────────────────────
 
-/** 16분음표 단위 풀 — scoreGenerator DURATION_POOL 과 동일 */
+/** 16분음표 단위 풀 — scoreGenerator DURATION_POOL 과 동일 (L2+ 2분음표 제외) */
 const DURATION_POOL_BY_LEVEL: Record<number, number[]> = {
-  1: [16, 8],
-  2: [12, 8, 4],
-  3: [12, 8, 4, 2],
-  4: [8, 6, 4, 4, 2, 2],
-  5: [8, 6, 4, 4, 2, 2],
+  1: [8, 4],
+  2: [4, 4, 2],
+  3: [6, 4, 4],
+  4: [4, 4, 4, 2],
+  5: [6, 4, 4, 2],
   6: [6, 6, 4, 4, 4, 4, 2, 2, 1],
   7: [6, 6, 4, 4, 4, 3, 3, 2, 1],
   8: [6, 6, 4, 4, 4, 3, 3, 2, 1],
@@ -25,14 +25,14 @@ const RHYTHM_PARAMS_BY_LEVEL: Record<number, {
   tripletBudget: [number, number];
 }> = {
   1: { syncopationProb: 0, dottedProb: 0, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
-  2: { syncopationProb: 0, dottedProb: 0.35, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
-  3: { syncopationProb: 0, dottedProb: 0.25, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
-  4: { syncopationProb: 0, dottedProb: 0.80, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
-  5: { syncopationProb: 0.30, dottedProb: 0.22, tieProb: 0.30, tripletProb: 0, tripletBudget: [0, 0] },
+  2: { syncopationProb: 0, dottedProb: 0, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
+  3: { syncopationProb: 0, dottedProb: 0.80, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
+  4: { syncopationProb: 0, dottedProb: 0.22, tieProb: 0, tripletProb: 0, tripletBudget: [0, 0] },
+  5: { syncopationProb: 0.22, dottedProb: 0.22, tieProb: 0.50, tripletProb: 0, tripletBudget: [0, 0] },
   6: { syncopationProb: 0.26, dottedProb: 0.22, tieProb: 0.20, tripletProb: 0, tripletBudget: [0, 0] },
   7: { syncopationProb: 0.22, dottedProb: 0.38, tieProb: 0.25, tripletProb: 0, tripletBudget: [0, 0] },
-  8: { syncopationProb: 0.22, dottedProb: 0.30, tieProb: 0.25, tripletProb: 0, tripletBudget: [0, 0] },
-  9: { syncopationProb: 0.26, dottedProb: 0.30, tieProb: 0.25, tripletProb: 0.50, tripletBudget: [1, 3] },
+  8: { syncopationProb: 0.26, dottedProb: 0.30, tieProb: 0.25, tripletProb: 0.50, tripletBudget: [1, 3] },
+  9: { syncopationProb: 0.22, dottedProb: 0.30, tieProb: 0.25, tripletProb: 0, tripletBudget: [0, 0] },
 };
 
 export function getDurationPoolForMelodyLevel(level: number): number[] {
@@ -57,17 +57,17 @@ export function getTrebleRhythmParamsForMelodyLevel(level: number): TrebleRhythm
 // 부분연습 전용 — 해당 레벨 고유 요소 + 기본(2분/4분)만 사용
 // ────────────────────────────────────────────────────────────────
 
-/** 부분연습 Duration Pool (16분음표 단위) */
+/** 부분연습 Duration Pool (16분음표 단위, L2+ 2분음표 제외) */
 const PART_PRACTICE_DURATION_POOL: Record<number, number[]> = {
   1: [8, 4],           // 2분 + 4분 (기본)
-  2: [8, 4, 2],        // + 8분음표
-  3: [8, 6, 4],        // + 점4분음표
-  4: [8, 4],           // 붙임줄 (tieProb로 제어)
-  5: [8, 4],           // 당김음 (syncopationProb로 제어)
-  6: [8, 4, 1],        // + 16분음표
-  7: [8, 4, 3],        // + 점8분음표
-  8: [8, 4],           // 임시표 (chromaticProb로 제어)
-  9: [8, 4],           // 셋잇단음표 (tripletProb로 제어)
+  2: [4, 4, 2],        // 4분 + 8분음표
+  3: [6, 4, 4],        // 점4분 + 4분
+  4: [4, 4, 4, 2],     // 당김음 (후처리로 패턴 생성)
+  5: [6, 4, 4],        // 붙임줄 (tieProb로 제어, 점4분 포함)
+  6: [4, 4, 2, 1, 1],  // + 16분음표 (비중 확보)
+  7: [4, 4, 3],        // + 점8분음표
+  8: [4, 4, 4],        // 셋잇단음표 (tripletProb로 제어)
+  9: [4, 4, 2],        // 임시표 (chromaticProb로 제어)
 };
 
 /** 부분연습 리듬 파라미터 — 해당 레벨 고유 요소만 활성화 */
@@ -75,12 +75,12 @@ const PART_PRACTICE_RHYTHM_PARAMS: Record<number, TrebleRhythmParams> = {
   1: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   2: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   3: { syncopationProb: 0, dottedProb: 0.80, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
-  4: { syncopationProb: 0, dottedProb: 0,    tieProb: 0.40, tripletProb: 0,    tripletBudget: [0, 0] },
-  5: { syncopationProb: 0.40, dottedProb: 0, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  4: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  5: { syncopationProb: 0, dottedProb: 0.50, tieProb: 0.60, tripletProb: 0,    tripletBudget: [0, 0] },
   6: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   7: { syncopationProb: 0, dottedProb: 0.45, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
-  8: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
-  9: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0.60, tripletBudget: [2, 4] },
+  8: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0.60, tripletBudget: [3, 5] },
+  9: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
 };
 
 export function getDurationPoolForPartPractice(level: number): number[] {

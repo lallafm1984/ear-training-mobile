@@ -24,6 +24,7 @@ import {
   SIXTEENTHS_TO_DUR,
   sixteenthsToDuration,
   getTupletNoteDuration,
+  uid,
 } from '../scoreUtils';
 import type { TimeSignature } from './types';
 import { strongBeatOffsetsSixteenths0 } from './meter';
@@ -807,6 +808,35 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
   const tieProbEff = rhythmParams.tieProb * (/^[57]\/8$/.test(timeSig) ? 0.5 : 1.0);
   const oddMeterFactor = /^[57]\/8$/.test(timeSig) ? 0.55 : 1.0;
 
+  // ── 특성 요소 최소 2마디, 최대 3마디 보장 ──
+  const MIN_CHAR_BARS = 2;
+  const MAX_CHAR_BARS = 3;
+  type CharType = 'dur' | 'tie' | 'syncopation' | 'triplet' | 'none';
+  let charType: CharType = 'none';
+  let charDur16 = 0;
+  if (opts.partPracticeLevel) {
+    switch (opts.partPracticeLevel) {
+      case 2: charType = 'dur'; charDur16 = 2; break;  // 8분
+      case 3: charType = 'dur'; charDur16 = 6; break;  // 점4분
+      case 4: charType = 'syncopation'; break;          // 당김음
+      case 5: charType = 'tie'; break;                  // 붙임줄
+      case 6: charType = 'dur'; charDur16 = 1; break;  // 16분
+      case 7: charType = 'dur'; charDur16 = 3; break;  // 점8분
+      case 8: charType = 'triplet'; break;              // 셋잇단
+    }
+  } else {
+    switch (melodyLevel) {
+      case 2: charType = 'dur'; charDur16 = 2; break;  // 8분
+      case 3: charType = 'dur'; charDur16 = 6; break;  // 점4분
+      case 4: charType = 'syncopation'; break;          // 당김음
+      case 5: charType = 'tie'; break;                  // 붙임줄
+      case 6: charType = 'dur'; charDur16 = 1; break;  // 16분
+      case 7: charType = 'dur'; charDur16 = 3; break;  // 점8분
+      case 8: charType = 'triplet'; break;              // 셋잇단
+    }
+  }
+  let charBarCount = 0;
+
   let prevNN = 0;
   let stepwiseCount = 0;
   let totalMoves = 0;
@@ -841,17 +871,70 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
     const maxNotesForBar = melodyLevel >= 6
       ? Math.max(4, Math.floor(sixteenthsPerBar * 0.44))
       : undefined;
-    const rhythm = fillRhythm(sixteenthsPerBar, pool, {
+
+    // ── 특성 요소 강제/억제 판단 ──
+    const barsRemaining = barCount - bar; // 현재 마디 포함
+    const charsNeeded = MIN_CHAR_BARS - charBarCount;
+    const mustForce = charType !== 'none' && charsNeeded > 0 && charsNeeded >= barsRemaining;
+    const mustSuppress = charType !== 'none' && charBarCount >= MAX_CHAR_BARS;
+
+    // 강제 시 확률 부스트 & 풀 가중치 조정, 억제 시 확률 0
+    let effectivePool = pool;
+    let effectiveSyncProb = rhythmParams.syncopationProb;
+    let effectiveDottedProb = rhythmParams.dottedProb;
+
+    if (mustSuppress) {
+      if (charType === 'dur') {
+        effectivePool = pool.filter(d => d !== charDur16);
+        if (effectivePool.length === 0) effectivePool = pool;
+        if (charDur16 === 6 || charDur16 === 3) effectiveDottedProb = 0;
+      } else if (charType === 'syncopation') {
+        effectiveSyncProb = 0;
+      }
+    } else if (mustForce) {
+      if (charType === 'dur') {
+        effectivePool = [...pool, charDur16, charDur16, charDur16, charDur16];
+        if (charDur16 === 6 || charDur16 === 3) {
+          effectiveDottedProb = Math.max(rhythmParams.dottedProb, 0.95);
+        }
+      }
+      // syncopation/tie: 후처리에서 mustForce로 보장하므로 fillRhythm 부스트 불필요
+    }
+
+    let rhythm = fillRhythm(sixteenthsPerBar, effectivePool, {
       timeSignature: timeSig,
       lastDur: lastTrebleDur,
-      syncopationProb: rhythmParams.syncopationProb,
-      dottedProb: rhythmParams.dottedProb,
+      syncopationProb: effectiveSyncProb,
+      dottedProb: effectiveDottedProb,
       allowTies: melodyLevel >= 5,
       maxNotes: maxNotesForBar,
     });
+
+    // 강제 모드에서 duration 기반 요소가 아직 없으면 재시도
+    if (mustForce && charType === 'dur' && !rhythm.includes(charDur16)) {
+      for (let retry = 0; retry < 10; retry++) {
+        rhythm = fillRhythm(sixteenthsPerBar, effectivePool, {
+          timeSignature: timeSig,
+          lastDur: lastTrebleDur,
+          syncopationProb: effectiveSyncProb,
+          dottedProb: 1.0,
+          allowTies: melodyLevel >= 5,
+          maxNotes: maxNotesForBar,
+        });
+        if (rhythm.includes(charDur16)) break;
+      }
+    }
+
     if (rhythm.length > 0) {
       lastTrebleDur = rhythm[rhythm.length - 1];
     }
+
+    // ── 이 마디에 특성 요소가 있는지 추적 ──
+    let barHasChar = false;
+    if (charType === 'dur') {
+      barHasChar = rhythm.includes(charDur16);
+    }
+    // syncopation은 후처리에서 패턴 A/B로 생성하므로 여기서는 감지하지 않음
 
     const barCells: BarRhythmCell[] = [];
     let barPos = 0;
@@ -994,18 +1077,25 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
         if (nn <= ctx.nnLow) prevDir = 1;
       }
 
-      // 셋잇단
+      // 셋잇단 (charType=triplet 시 마디당 1개 제한 → budget 분배)
+      const forceTriplet = mustForce && charType === 'triplet' && !barHasChar;
+      const suppressTriplet = mustSuppress && charType === 'triplet';
+      const barTripletLimit = charType === 'triplet' && barHasChar; // 이미 이 마디에 셋잇단 있음
       const useTriplet =
+        !suppressTriplet &&
+        !barTripletLimit &&
+        !isFirstNote &&
         tripletBudget > 0 &&
         dur === 4 &&
-        melodyLevel >= 4 &&
+        melodyLevel >= 8 &&
         barPos % (beatSize * 2) === 0 &&
-        Math.random() < rhythmParams.tripletProb;
+        (forceTriplet || Math.random() < rhythmParams.tripletProb);
 
       if (useTriplet) {
         const tripNNs = generateTripletNotes(nn, prevNN, ctx);
         barCells.push({ dur16: 4, nns: [...tripNNs] });
         tripletBudget--;
+        if (charType === 'triplet') barHasChar = true;
         prevNN = tripNNs[2];
         prevFinalNn = tripNNs[2];
         for (let t = 0; t < 2; t++) {
@@ -1066,21 +1156,164 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
 
         // 타이 삽입
         const prevMel = lastNonRestMelody(allNotes);
+        const forceTie = mustForce && charType === 'tie' && !barHasChar;
+        const suppressTie = mustSuppress && charType === 'tie';
         if (
+          !suppressTie &&
           prevMel &&
           samePitchHeightForTie(prevMel, pitch, octave, '' as Accidental) &&
-          Math.random() < tieProbEff &&
+          (forceTie || Math.random() < tieProbEff) &&
           cellIdx > 0 &&
           cellIdx < barCells.length - 1 &&
           emitBarPos > 0
         ) {
           prevMel.tie = true;
+          if (charType === 'tie') barHasChar = true;
         }
         allNotes.push(nnToScoreNote(nn, durLabel, ctx));
       }
       emitBarPos += cell.dur16;
       cellIdx++;
     }
+
+    // ── 당김음: 강박 8분쉼표(A) 또는 약박→강박 타이(B) 패턴 ──
+    const SYNC_PROB = 0.45; // 당김음 후처리 확률 (fillRhythm 대신 직접 생성)
+    if (charType === 'syncopation' && !barHasChar && !mustSuppress &&
+        (mustForce || Math.random() < SYNC_PROB)) {
+      const barNoteCount = barCells.reduce((s, c) => s + (c.nns.length === 3 ? 3 : 1), 0);
+      const barStartIdx = allNotes.length - barNoteCount;
+      // 마디 내 음표 위치 매핑
+      type NoteWithPos = { idx: number; pos: number; dur16: number };
+      const barNotePositions: NoteWithPos[] = [];
+      let nPos = 0;
+      for (let si = barStartIdx; si < allNotes.length; si++) {
+        const n = allNotes[si];
+        const d16 = n.tupletNoteDur ?? durationToSixteenths(n.duration);
+        barNotePositions.push({ idx: si, pos: nPos, dur16: d16 });
+        nPos += d16;
+      }
+      // 패턴 A 후보: 강박(beat 2+)에 있는 4분음표(dur=4), 쉼표/셋잇단 제외
+      let patternACandidates = barNotePositions.filter(p =>
+        p.pos > 0 && p.pos % beatSize === 0 && p.dur16 === 4 &&
+        allNotes[p.idx].pitch !== 'rest' && !allNotes[p.idx].tuplet
+      );
+      // 패턴 B 후보: 약박(강박 직전 halfBeat)에 있는 4분음표(dur=4)
+      const halfBeat = Math.max(1, Math.floor(beatSize / 2));
+      let patternBCandidates = barNotePositions.filter(p =>
+        p.pos > 0 && (p.pos + halfBeat) % beatSize === 0 && p.dur16 === 4 &&
+        allNotes[p.idx].pitch !== 'rest' && !allNotes[p.idx].tuplet &&
+        p.idx > 0 // 첫 음 제외
+      );
+      // mustForce fallback: 후보 없으면 pos 0 포함 + 8분음표(dur=2)도 Pattern A 허용
+      if (mustForce && patternACandidates.length === 0 && patternBCandidates.length === 0) {
+        patternACandidates = barNotePositions.filter(p =>
+          p.pos > 0 && p.pos % beatSize === 0 && p.dur16 >= 2 &&
+          allNotes[p.idx].pitch !== 'rest' && !allNotes[p.idx].tuplet
+        );
+        // 여전히 없으면 pos 0도 허용
+        if (patternACandidates.length === 0) {
+          patternACandidates = barNotePositions.filter(p =>
+            p.pos % beatSize === 0 && p.dur16 >= 2 &&
+            allNotes[p.idx].pitch !== 'rest' && !allNotes[p.idx].tuplet
+          );
+        }
+      }
+      // 패턴 C 후보: 강박에서 시작하는 연속 4분음표 2개 → 8분+4분+8분
+      const patternCCandidates: { idx1: number; idx2: number; pos: number }[] = [];
+      for (let pi = 0; pi < barNotePositions.length - 1; pi++) {
+        const p1 = barNotePositions[pi];
+        const p2 = barNotePositions[pi + 1];
+        if (p1.pos % beatSize === 0 && p1.dur16 === 4 && p2.dur16 === 4 &&
+            allNotes[p1.idx].pitch !== 'rest' && allNotes[p2.idx].pitch !== 'rest' &&
+            !allNotes[p1.idx].tuplet && !allNotes[p2.idx].tuplet) {
+          patternCCandidates.push({ idx1: p1.idx, idx2: p2.idx, pos: p1.pos });
+        }
+      }
+
+      const canA = patternACandidates.length > 0;
+      const canB = patternBCandidates.length > 0;
+      const canC = patternCCandidates.length > 0;
+      if (canA || canB || canC) {
+        // 가능한 패턴 중 랜덤 선택
+        const available: string[] = [];
+        if (canA) available.push('A');
+        if (canB) available.push('B');
+        if (canC) available.push('C');
+        const chosen = available[Math.floor(Math.random() * available.length)];
+
+        if (chosen === 'A') {
+          // 패턴 A: 강박 음표 → 8분쉼표 + 나머지 (4분→8분쉼표+8분, 8분→8분쉼표)
+          const pick = patternACandidates[Math.floor(Math.random() * patternACandidates.length)];
+          const orig = allNotes[pick.idx];
+          if (pick.dur16 >= 4) {
+            allNotes[pick.idx] = makeRest('8' as NoteDuration);
+            allNotes.splice(pick.idx + 1, 0, { ...orig, duration: '8' as NoteDuration, tie: false });
+          } else {
+            allNotes[pick.idx] = makeRest(orig.duration);
+          }
+          barHasChar = true;
+        } else if (chosen === 'B') {
+          // 패턴 B: 약박 4분 → 8분 + 8분(타이, 강박으로 넘어감)
+          const pick = patternBCandidates[Math.floor(Math.random() * patternBCandidates.length)];
+          const orig = allNotes[pick.idx];
+          allNotes[pick.idx] = { ...orig, duration: '8' as NoteDuration };
+          allNotes.splice(pick.idx + 1, 0, { ...orig, id: uid(), duration: '8' as NoteDuration, tie: false });
+          allNotes[pick.idx].tie = true;
+          barHasChar = true;
+        } else {
+          // 패턴 C: 연속 4분 2개 → 8분 + 4분 + 8분 (정박-엇박-정박)
+          const pick = patternCCandidates[Math.floor(Math.random() * patternCCandidates.length)];
+          const orig1 = allNotes[pick.idx1];
+          const orig2 = allNotes[pick.idx2];
+          // [4분, 4분] → [8분, 4분, 8분] (총 8 = 2+4+2)
+          allNotes[pick.idx1] = { ...orig1, duration: '8' as NoteDuration };
+          allNotes[pick.idx2] = { ...orig2, duration: '8' as NoteDuration };
+          // 가운데 4분음표 삽입 (첫 음표 피치 사용)
+          allNotes.splice(pick.idx1 + 1, 0, { ...orig1, id: uid(), duration: '4' as NoteDuration });
+          barHasChar = true;
+        }
+      }
+    }
+
+    // ── 타이: 음표 분할로 생성 (최소 미달 시 항상, 그 외 tieProb 확률) ──
+    const tieAlways = charBarCount < MIN_CHAR_BARS; // 최소 2마디 미달이면 항상 시도
+    if (charType === 'tie' && !barHasChar && !mustSuppress &&
+        (tieAlways || Math.random() < rhythmParams.tieProb)) {
+      const barNoteCount = barCells.reduce((s, c) => s + (c.nns.length === 3 ? 3 : 1), 0);
+      const barStartIdx = allNotes.length - barNoteCount;
+      const barEndIdx = allNotes.length;
+      // 분할 가능한 후보: 4분(dur=4) 이상, 쉼표/셋잇단 제외, 첫 음표 제외
+      const splitCandidates: number[] = [];
+      for (let si = barStartIdx; si < barEndIdx; si++) {
+        const n = allNotes[si];
+        if (n.pitch === 'rest' || n.tuplet) continue;
+        if (si === 0) continue; // 첫 음표는 분할 금지 (답안 초기 상태 오염 방지)
+        const dur16 = durationToSixteenths(n.duration);
+        if (dur16 >= 4) splitCandidates.push(si);
+      }
+      if (splitCandidates.length > 0) {
+        const pickIdx = splitCandidates[Math.floor(Math.random() * splitCandidates.length)];
+        const orig = allNotes[pickIdx];
+        const origDur16 = durationToSixteenths(orig.duration);
+        // 박 단위 분할: 점4분(6)→4분+8분, 4분(4)→8분+8분
+        const firstDur16 = origDur16 === 6 ? 4 : Math.floor(origDur16 / 2);
+        const halfDur16 = firstDur16;
+        const remainDur16 = origDur16 - firstDur16;
+        const halfDurLabel = SIXTEENTHS_TO_DUR[halfDur16];
+        const remainDurLabel = SIXTEENTHS_TO_DUR[remainDur16];
+        if (halfDurLabel && remainDurLabel) {
+          const origTie = orig.tie;
+          allNotes[pickIdx] = { ...orig, duration: halfDurLabel, tie: true };
+          const secondNote: ScoreNote = {
+            ...orig, id: uid(), duration: remainDurLabel, tie: origTie,
+          };
+          allNotes.splice(pickIdx + 1, 0, secondNote);
+          barHasChar = true;
+        }
+      }
+    }
+
+    if (barHasChar) charBarCount++;
   }
 
   // ── 전체 후처리 ──
@@ -1094,17 +1327,37 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
     writePitchedNNsBack(allNotes, allPitchedNNs, ctx);
   }
 
-  // ── 임시표 삽입 (고급 2단계 이상: 알고리즘 기반) ──
-  // 부분연습: 임시표 레벨(8단계)에서만 임시표 삽입
+  // ── 임시표 삽입 (고급 3단계 · 임시표)에서만 삽입 ──
   const applyAccidentals = opts.partPracticeLevel
-    ? opts.partPracticeLevel === 8
-    : ctx.level >= 8;
+    ? opts.partPracticeLevel === 9
+    : ctx.level >= 9;
   if (applyAccidentals) {
     const bassMapsForAccidentals = bassMaps ?? [];
     applyMelodyAccidentals(
       allNotes, bassMapsForAccidentals, ctx.keySignature, ctx.mode,
       ctx.level, sixteenthsPerBar, strong16,
     );
+  }
+
+  // ── L5(붙임줄) 이상: 점4분(4.)→4분+8분 타이, 2분(2)→4분+4분 타이로 분할 ──
+  const splitLevel = opts.partPracticeLevel ?? melodyLevel;
+  if (splitLevel >= 5) {
+    for (let i = allNotes.length - 1; i >= 0; i--) {
+      const n = allNotes[i];
+      if (n.pitch === 'rest' || n.tuplet) continue;
+      const dur16 = durationToSixteenths(n.duration);
+      let firstDur = 0;
+      let secondDur = 0;
+      if (dur16 === 6) { firstDur = 4; secondDur = 2; }      // 점4분 → 4분+8분
+      else if (dur16 === 8) { firstDur = 4; secondDur = 4; }  // 2분 → 4분+4분
+      else continue;
+      const firstLabel = SIXTEENTHS_TO_DUR[firstDur];
+      const secondLabel = SIXTEENTHS_TO_DUR[secondDur];
+      if (!firstLabel || !secondLabel) continue;
+      const origTie = n.tie;
+      allNotes[i] = { ...n, duration: firstLabel, tie: true };
+      allNotes.splice(i + 1, 0, { ...n, id: uid(), duration: secondLabel, tie: origTie });
+    }
   }
 
   return allNotes;

@@ -2,7 +2,7 @@
 // useNoteInput — 음표 입력 상태 관리 훅
 // ─────────────────────────────────────────────────────────────
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { ScoreNote, NoteDuration, PitchName, Accidental } from '../lib/scoreUtils';
 import { uid, durationToSixteenths, getSixteenthsPerBar, getKeySigAlteration } from '../lib/scoreUtils';
 
@@ -369,6 +369,23 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   const [state, setState] = useState<NoteInputState>(() => makeInitialState(firstNote));
 
+  // ── Undo history stack ──
+  const undoHistoryRef = useRef<{ trebleNotes: ScoreNote[]; bassNotes: ScoreNote[] }[]>([]);
+
+  /** setState wrapper that saves undo snapshot before mutation */
+  function setStateWithUndo(updater: (prev: NoteInputState) => NoteInputState) {
+    setState(prev => {
+      const next = updater(prev);
+      if (next === prev) return prev; // no change → no undo entry
+      undoHistoryRef.current.push({
+        trebleNotes: prev.trebleNotes,
+        bassNotes: prev.bassNotes,
+      });
+      if (undoHistoryRef.current.length > 50) undoHistoryRef.current.shift();
+      return next;
+    });
+  }
+
   const barSixteenths = getSixteenthsPerBar(timeSignature);
   const totalSixteenths = measures * barSixteenths;
 
@@ -411,7 +428,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 선택된 음표의 붙임줄 토글 (편집 모드 전용) */
   const toggleSelectedTie = useCallback(() => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
       const notes = [...prev[key] as ScoreNote[]];
@@ -442,7 +459,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   const addNote = useCallback(
     (pitch: PitchName, octave: number, accidental?: Accidental) => {
-      setState(prev => {
+      setStateWithUndo(prev => {
         const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
         const notes = [...prev[key] as ScoreNote[]];
 
@@ -585,7 +602,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
   );
 
   const addRest = useCallback(() => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       const notes =
         prev.activeVoice === 'treble' ? [...prev.trebleNotes] : [...prev.bassNotes];
 
@@ -620,34 +637,20 @@ export function useNoteInput(options: UseNoteInputOptions) {
   }, [totalSixteenths]);
 
   const undo = useCallback(() => {
-    setState(prev => {
-      const notes =
-        prev.activeVoice === 'treble' ? [...prev.trebleNotes] : [...prev.bassNotes];
-
-      // firstNote 보호: 트레블에서 인덱스 0은 삭제 불가
-      const minIndex = prev.activeVoice === 'treble' && firstNote ? 1 : 0;
-      if (notes.length <= minIndex) return prev;
-
-      notes.pop();
-
-      // 새 마지막 음의 tie 제거
-      if (notes.length > 0) {
-        const last = notes[notes.length - 1];
-        if (last.tie) {
-          notes[notes.length - 1] = { ...last, tie: false };
-        }
-      }
-
-      return {
-        ...prev,
-        trebleNotes: prev.activeVoice === 'treble' ? notes : prev.trebleNotes,
-        bassNotes: prev.activeVoice === 'bass' ? notes : prev.bassNotes,
-        selectedNoteIndex: null,
-      };
-    });
-  }, [firstNote]);
+    const snapshot = undoHistoryRef.current.pop();
+    if (!snapshot) return;
+    setState(prev => ({
+      ...prev,
+      trebleNotes: snapshot.trebleNotes,
+      bassNotes: snapshot.bassNotes,
+      selectedNoteIndex: null,
+      editSnapshot: null,
+      tripletEditStep: 0,
+    }));
+  }, []);
 
   const clear = useCallback(() => {
+    undoHistoryRef.current = [];
     setState(prev => ({
       ...prev,
       trebleNotes: firstNote ? [firstNote] : [],
@@ -696,7 +699,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
    *  - 길어지면: 마디 내 공간 부족 시 거부
    */
   const updateSelectedNoteDuration = useCallback((dur: NoteDuration) => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
       const notes = [...prev[key] as ScoreNote[]];
@@ -753,7 +756,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 선택된 음표를 셋잇단음표로 변환 (4분음표 → 8분×3) */
   const replaceWithTriplet = useCallback(() => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
       const notes = [...prev[key] as ScoreNote[]];
@@ -796,7 +799,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 선택된 음표를 같은 길이의 쉼표로 변환 (편집 모드 전용) */
   const replaceWithRest = useCallback(() => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
       const notes = [...prev[key] as ScoreNote[]];
@@ -825,7 +828,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 선택된 음표를 같은 길이의 쉼표로 대체 (삭제 = 쉼표 대체, 마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
-    setState(prev => {
+    setStateWithUndo(prev => {
       if (prev.selectedNoteIndex === null) return prev;
 
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
@@ -918,6 +921,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const isComplete = sumSixteenths(getActiveNotes()) >= totalSixteenths;
 
   const reset = useCallback((newFirstNote?: ScoreNote | null) => {
+    undoHistoryRef.current = [];
     setState(makeInitialState(newFirstNote ?? firstNote));
   }, [firstNote]);
 
@@ -948,6 +952,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     addNote,
     addRest,
     undo,
+    canUndo: undoHistoryRef.current.length > 0,
     clear,
     selectNote,
     updateSelectedNoteDuration,

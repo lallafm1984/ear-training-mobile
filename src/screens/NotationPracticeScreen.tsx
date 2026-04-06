@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Volume2, VolumeX, Eye, EyeOff, RotateCcw, ChevronRight, Delete,
+  ArrowLeft, Volume2, VolumeX, Eye, EyeOff, RotateCcw, ChevronRight, Delete, Music,
 } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -19,6 +19,7 @@ import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import {
   generateScore, generateAbc, Difficulty, BassDifficulty,
   ScoreNote, PitchName, Accidental, durationToSixteenths,
+  generateAbcScaleNotes,
 } from '../lib';
 import type { NoteDuration } from '../lib/scoreUtils';
 import { buildGeneratorOptions } from '../lib/trackConfig';
@@ -52,7 +53,7 @@ function melodyDifficultyToLevel(difficulty: ContentDifficulty): number {
 function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
   const map: Record<string, number> = {
     rhythm_1: 1, rhythm_2: 2, rhythm_3: 4,
-    rhythm_4: 6, rhythm_5: 9, rhythm_6: 9,
+    rhythm_4: 6, rhythm_5: 8, rhythm_6: 8,
   };
   return map[difficulty] ?? 1;
 }
@@ -64,6 +65,7 @@ interface PracticeScore {
   timeSignature: string;
   useGrandStaff: boolean;
   barsPerStaff?: number;
+  disableTies?: boolean;
 }
 
 function generatePracticeScore(category: ContentCategory, difficulty: ContentDifficulty): PracticeScore {
@@ -86,6 +88,7 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
       timeSignature: trackOpts.timeSignature,
       useGrandStaff: false,
       barsPerStaff: level <= 2 ? 4 : level >= 4 ? 2 : undefined,
+      disableTies: level <= 5,
     };
   }
 
@@ -113,6 +116,7 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
       timeSignature: trackOpts.timeSignature,
       useGrandStaff: false,
       barsPerStaff: 4,
+      disableTies: level < 5,
     };
   }
 
@@ -290,6 +294,7 @@ export default function NotationPracticeScreen() {
   const { addRecord } = usePracticeHistory();
   const { applyEvaluation, updateStreak } = useSkillProfile();
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
+  const scaleAbcjsRef = useRef<AbcjsRendererHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
   const scrollOffsetRef = useRef(0);
   const dragBaseOffsetRef = useRef(0);
@@ -364,7 +369,8 @@ export default function NotationPracticeScreen() {
       const newScore = generatePracticeScore(category, difficulty);
       setScore(newScore);
       if (category === 'melody' || category === 'twoVoice') {
-        noteInput.reset(newScore.trebleNotes[0] ?? null);
+        const first = newScore.trebleNotes[0] ?? null;
+        noteInput.reset(first ? { ...first, tie: false } : null);
       }
       setIsGenerating(false);
     }, 500);
@@ -382,6 +388,7 @@ export default function NotationPracticeScreen() {
           playingRef.current = false;
           setIsPlaying(false);
         }
+        scaleAbcjsRef.current?.stopPlay();
       };
     }, []),
   );
@@ -395,7 +402,29 @@ export default function NotationPracticeScreen() {
     notes: score.trebleNotes,
     bassNotes: score.useGrandStaff ? score.bassNotes : undefined,
     useGrandStaff: score.useGrandStaff,
+    disableTies: score.disableTies,
   }) : '';
+
+  // ── 스케일 ABC 문자열 ──
+  const scaleAbcString = score ? (() => {
+    const scaleNotes = generateAbcScaleNotes(score.keySignature);
+    return `X:1\nT: \nM:4/4\nL:1/4\nQ:1/4=90\nK:${score.keySignature}\n${scaleNotes.join(' ')} |]`;
+  })() : '';
+
+  const [isPlayingScale, setIsPlayingScale] = useState(false);
+
+  const handlePlayScale = useCallback(() => {
+    if (playingRef.current) {
+      abcjsRef.current?.stopPlay();
+      playingRef.current = false;
+      setIsPlaying(false);
+    }
+    scaleAbcjsRef.current?.togglePlay();
+  }, []);
+
+  const handleScalePlayStateChange = useCallback((playing: boolean) => {
+    setIsPlayingScale(playing);
+  }, []);
 
   // ── 재생 상태 콜백 (WebView → React, 자연 종료 포함) ──
   const handlePlayStateChange = useCallback((playing: boolean) => {
@@ -405,6 +434,10 @@ export default function NotationPracticeScreen() {
 
   // ── 재생/정지 (ref 기반, 클로저 이슈 없음) ──
   const handlePlay = useCallback(() => {
+    // 스케일 재생 중이면 정지
+    scaleAbcjsRef.current?.stopPlay();
+    setIsPlayingScale(false);
+
     if (playingRef.current) {
       abcjsRef.current?.stopPlay();
       playingRef.current = false;
@@ -515,19 +548,23 @@ export default function NotationPracticeScreen() {
   const handleMelodySubmit = useCallback(async () => {
     if (!score || melodySubmitted) return;
 
-    const result = gradeNotes(score.trebleNotes, noteInput.trebleNotes);
+    // 첫 음표는 힌트로 제공되므로 채점에서 제외
+    const result = gradeNotes(score.trebleNotes.slice(1), noteInput.trebleNotes.slice(1));
+    // userSourceIndices를 +1 오프셋 (원본 배열 기준 색상 표시용)
+    result.grades = result.grades.map(g => ({
+      ...g,
+      userSourceIndices: g.userSourceIndices.map(i => i + 1),
+    }));
 
     if (score.useGrandStaff && score.bassNotes.length > 0) {
       const bassResult = gradeNotes(score.bassNotes, noteInput.bassNotes);
       const totalGrades = [...result.grades, ...bassResult.grades];
       const answerLen = result.grades.length + bassResult.grades.length;
       const correctCount = totalGrades.filter(g => g.grade === 'correct').length;
-      const partialCount = totalGrades.filter(g => g.grade === 'partial').length;
-      const combinedAcc = answerLen > 0 ? Math.round(((correctCount + partialCount * 0.5) / answerLen) * 100) / 100 : 0;
+      const combinedAcc = answerLen > 0 ? Math.round((correctCount / answerLen) * 100) / 100 : 0;
       result.accuracy = combinedAcc;
       result.selfRating = combinedAcc >= 0.9 ? 5 : combinedAcc >= 0.7 ? 4 : combinedAcc >= 0.5 ? 3 : combinedAcc >= 0.3 ? 2 : 1;
       result.correctCount = correctCount;
-      result.partialCount = partialCount;
       result.wrongCount = totalGrades.filter(g => g.grade === 'wrong').length;
       result.missingCount = totalGrades.filter(g => g.grade === 'missing').length;
       result.extraCount = totalGrades.filter(g => g.grade === 'extra').length;
@@ -614,24 +651,38 @@ export default function NotationPracticeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-          <ArrowLeft size={24} color={colors.main} />
-        </TouchableOpacity>
+        {!melodySubmitted && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+            <ArrowLeft size={24} color={colors.main} />
+          </TouchableOpacity>
+        )}
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.main }]}>{config.name}</Text>
           <Text style={styles.headerSub}>{diffLabel} · {practiceCount + 1}문제</Text>
         </View>
-        {practiceCount > 0 && (
-          <TouchableOpacity onPress={handleFinish} hitSlop={8}>
-            <Text style={[styles.finishText, { color: colors.main }]}>종료</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {isMelodyInput && !melodySubmitted && (
+            <TouchableOpacity onPress={noteInput.clear} hitSlop={8}>
+              <Text style={[styles.finishText, { color: COLORS.slate500, fontSize: 13 }]}>초기화</Text>
+            </TouchableOpacity>
+          )}
+          {practiceCount > 0 && (
+            <TouchableOpacity onPress={handleFinish} hitSlop={8}>
+              <Text style={[styles.finishText, { color: colors.main }]}>종료</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[
+          styles.content,
+          melodySubmitted
+            ? { paddingBottom: insets.bottom + 24, flexGrow: 1 }
+            : { paddingBottom: insets.bottom + 120 },
+        ]}
         onScroll={(e) => {
           if (!isDragScrollingRef.current) {
             scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
@@ -646,23 +697,52 @@ export default function NotationPracticeScreen() {
           </View>
         ) : (
           <>
-            {/* 재생 카드 — 선율/2성부 모드에서는 컴팩트 */}
-            {isMelodyInput ? (
+            {/* 숨겨진 스케일 렌더러 (오디오 전용) */}
+            {isMelodyInput && scaleAbcString ? (
+              <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+                <AbcjsRenderer
+                  ref={scaleAbcjsRef}
+                  abcString={scaleAbcString}
+                  hideNotes={true}
+                  tempo={90}
+                  onPlayStateChange={handleScalePlayStateChange}
+                  timeSignature={score?.timeSignature ?? '4/4'}
+                />
+              </View>
+            ) : null}
+
+            {/* 재생 카드 — 선율/2성부 모드에서는 컴팩트 + 스케일 듣기 (제출 전만 표시) */}
+            {isMelodyInput && !melodySubmitted ? (
               <View style={[styles.playCardCompact, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
                 <TouchableOpacity
-                  style={[styles.playBtnSmall, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                  style={styles.playGroupCompact}
+                  onPress={handlePlayScale}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.playBtnSmall, { backgroundColor: isPlayingScale ? COLORS.slate400 : colors.main + '18' }]}>
+                    <Music size={18} color={isPlayingScale ? '#fff' : colors.main} />
+                  </View>
+                  <Text style={[styles.playHint, { color: COLORS.slate500, fontSize: 11 }]}>
+                    {isPlayingScale ? '스케일...' : '스케일'}
+                  </Text>
+                </TouchableOpacity>
+                <View style={{ width: 1, height: 20, backgroundColor: COLORS.slate200, marginHorizontal: 4 }} />
+                <TouchableOpacity
+                  style={styles.playGroupCompact}
                   onPress={handlePlay}
                   activeOpacity={0.7}
                 >
-                  {isPlaying
-                    ? <VolumeX size={20} color="#fff" />
-                    : <Volume2 size={20} color="#fff" />}
+                  <View style={[styles.playBtnSmall, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}>
+                    {isPlaying
+                      ? <VolumeX size={20} color="#fff" />
+                      : <Volume2 size={20} color="#fff" />}
+                  </View>
+                  <Text style={[styles.playHint, { color: colors.text }]}>
+                    {isPlaying ? '재생 중...' : '탭하여 재생'}
+                  </Text>
                 </TouchableOpacity>
-                <Text style={[styles.playHint, { color: colors.text }]}>
-                  {isPlaying ? '재생 중...' : '탭하여 재생'}
-                </Text>
               </View>
-            ) : (
+            ) : !isMelodyInput ? (
               <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
                 <TouchableOpacity
                   style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
@@ -677,39 +757,55 @@ export default function NotationPracticeScreen() {
                   {isPlaying ? '재생 중...' : '탭하여 재생'}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {/* 악보 영역 */}
-            <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
-              <View style={styles.scoreHeader}>
-                <Text style={styles.scoreLabel}>
-                  {hideNotes ? (isRhythm ? '리듬을 듣고 맞춰보세요' : '악보가 숨겨져 있습니다') : '정답 악보'}
-                </Text>
-                {!isRhythm && !isMelodyInput && (
-                  <TouchableOpacity
-                    onPress={() => rated && setHideNotes(h => !h)}
-                    disabled={!rated}
-                    style={{ opacity: rated ? 1 : 0.3 }}
-                  >
-                    {hideNotes
-                      ? <EyeOff size={18} color={COLORS.slate400} />
-                      : <Eye size={18} color={colors.main} />}
-                  </TouchableOpacity>
-                )}
+            {/* 악보 영역 — 선율/2성부에서는 숨김 (오디오 재생용 렌더러만 유지) */}
+            {isMelodyInput ? (
+              <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+                <AbcjsRenderer
+                  ref={abcjsRef}
+                  abcString={abcString}
+                  hideNotes={true}
+                  tempo={90}
+                  isPlaying={isPlaying}
+                  onPlayStateChange={handlePlayStateChange}
+                  barsPerStaff={2}
+                  prependMetronome={true}
+                  timeSignature={score?.timeSignature ?? '4/4'}
+                />
               </View>
-              <AbcjsRenderer
-                ref={abcjsRef}
-                abcString={abcString}
-                hideNotes={hideNotes}
-                tempo={90}
-                onScrollDelta={handleScrollDelta}
-                isPlaying={isPlaying}
-                onPlayStateChange={handlePlayStateChange}
-                barsPerStaff={isMelodyInput ? 2 : score?.barsPerStaff}
-                prependMetronome={isRhythm}
-                timeSignature={score?.timeSignature ?? '4/4'}
-              />
-            </View>
+            ) : (
+              <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
+                <View style={styles.scoreHeader}>
+                  <Text style={styles.scoreLabel}>
+                    {hideNotes ? (isRhythm ? '리듬을 듣고 맞춰보세요' : '악보가 숨겨져 있습니다') : '정답 악보'}
+                  </Text>
+                  {!isRhythm && (
+                    <TouchableOpacity
+                      onPress={() => rated && setHideNotes(h => !h)}
+                      disabled={!rated}
+                      style={{ opacity: rated ? 1 : 0.3 }}
+                    >
+                      {hideNotes
+                        ? <EyeOff size={18} color={COLORS.slate400} />
+                        : <Eye size={18} color={colors.main} />}
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <AbcjsRenderer
+                  ref={abcjsRef}
+                  abcString={abcString}
+                  hideNotes={hideNotes}
+                  tempo={90}
+                  onScrollDelta={handleScrollDelta}
+                  isPlaying={isPlaying}
+                  onPlayStateChange={handlePlayStateChange}
+                  barsPerStaff={score?.barsPerStaff}
+                  prependMetronome={isRhythm}
+                  timeSignature={score?.timeSignature ?? '4/4'}
+                />
+              </View>
+            )}
 
             {/* 선율/2성부 모드: 답안 악보 */}
             {isMelodyInput && !melodySubmitted && (
@@ -754,9 +850,7 @@ export default function NotationPracticeScreen() {
                 timeSignature={score?.timeSignature ?? '4/4'}
                 accentColor={colors.main}
                 barsPerStaff={2}
-                onNext={handleNext}
-                onFinish={handleFinish}
-                showFinish={practiceCount >= 1}
+                onScrollDelta={handleScrollDelta}
               />
             )}
 
@@ -808,9 +902,43 @@ export default function NotationPracticeScreen() {
         )}
       </ScrollView>
 
-      {/* 하단 고정 */}
-      {!isGenerating && (
+      {/* 하단 고정 — 선율 채점 결과: 다음 문제 버튼 */}
+      {!isGenerating && isMelodyInput && melodySubmitted && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.nextRow}>
+            <TouchableOpacity
+              style={[styles.nextBtn, { backgroundColor: colors.main }]}
+              onPress={handleNext}
+            >
+              <Text style={styles.nextBtnText}>다음 문제</Text>
+              <ChevronRight size={18} color="#fff" />
+            </TouchableOpacity>
+            {practiceCount >= 1 && (
+              <TouchableOpacity
+                style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
+                onPress={handleFinish}
+              >
+                <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* 하단 고정 — 입력/리듬 모드 */}
+      {!isGenerating && !(isMelodyInput && melodySubmitted) && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {/* 되돌리기 — 경계선 우측 상단 */}
+          {isMelodyInput && !melodySubmitted && (
+            <TouchableOpacity
+              style={styles.undoFloating}
+              onPress={noteInput.undo}
+              accessibilityLabel="되돌리기"
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons name="undo" size={14} color={COLORS.slate400} />
+            </TouchableOpacity>
+          )}
           {isRhythm ? (
             // ── 리듬 모드: 음표 버튼 팔레트 ──
             !submitted ? (
@@ -956,7 +1084,6 @@ export default function NotationPracticeScreen() {
                     }
                   }}
                   onUndo={noteInput.undo}
-                  onClear={noteInput.clear}
                   accentColor={colors.main}
                   tripletMode={noteInput.tripletMode}
                   onToggleTriplet={() => {
@@ -967,15 +1094,17 @@ export default function NotationPracticeScreen() {
                     }
                   }}
                 />
-                <PianoKeyboard
-                  onKeyPress={(pitch, octave, acc) => {
-                    noteInput.addNote(pitch, octave, acc);
-                    lastAddTimeRef.current = Date.now();
-                  }}
-                  accentColor={colors.main}
-                  initialOctave={noteInput.activeVoice === 'bass' ? 3 : 4}
-                />
-                <View style={styles.rhythmActionRow}>
+                <View style={{ marginTop: 2 }}>
+                  <PianoKeyboard
+                    onKeyPress={(pitch, octave, acc) => {
+                      noteInput.addNote(pitch, octave, acc);
+                      lastAddTimeRef.current = Date.now();
+                    }}
+                    accentColor={colors.main}
+                    initialOctave={noteInput.activeVoice === 'bass' ? 3 : 4}
+                  />
+                </View>
+                <View style={[styles.rhythmActionRow, { marginTop: 3 }]}>
                   {noteInput.selectedNoteIndex !== null && (
                     <>
                       <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
@@ -1074,20 +1203,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
   backBtn: { padding: 4 },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '900' },
-  headerSub: { fontSize: 12, color: COLORS.slate500, marginTop: 2 },
-  finishText: { fontSize: 14, fontWeight: '700' },
+  headerTitle: { fontSize: 16, fontWeight: '900' },
+  headerSub: { fontSize: 11, color: COLORS.slate500, marginTop: 1 },
+  finishText: { fontSize: 13, fontWeight: '700' },
   scroll: { flex: 1 },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 16,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    gap: 10,
   },
   // 로딩
   loadingContainer: {
@@ -1104,43 +1233,48 @@ const styles = StyleSheet.create({
   // 재생 카드
   playCard: {
     alignItems: 'center',
-    paddingVertical: 24,
-    borderRadius: 20,
+    paddingVertical: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 10,
+    gap: 8,
   },
   playCardCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    gap: 10,
+    gap: 6,
+  },
+  playGroupCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   playBtnSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playHint: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   // 악보 카드
   scoreCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -1148,23 +1282,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.slate100,
   },
   scoreLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: COLORS.slate500,
   },
   // 하단
   bottomBar: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    position: 'relative',
+    paddingHorizontal: 12,
+    paddingTop: 8,
     borderTopWidth: 1.5,
     borderTopColor: COLORS.slate200,
     backgroundColor: '#fff',
+  },
+  undoFloating: {
+    position: 'absolute',
+    top: -35,
+    right: 12,
+    zIndex: 1,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rateLabel: {
     fontSize: 14,
@@ -1179,9 +1328,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   rateBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -1189,7 +1338,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   rateBtnText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: COLORS.slate600,
   },
@@ -1333,20 +1482,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 6,
-    marginBottom: 8,
-    height: 116,
+    gap: 4,
+    marginBottom: 6,
+    height: 104,
     alignContent: 'flex-start',
   },
   rhythmDurBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 10,
     borderWidth: 1.5,
     backgroundColor: '#fff',
-    gap: 2,
+    gap: 1,
   },
   rhythmDurLabel: {
     fontSize: 8,
@@ -1354,16 +1503,16 @@ const styles = StyleSheet.create({
   },
   rhythmActionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   rhythmActionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   rhythmActionBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   voiceRow: {

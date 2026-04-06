@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../theme/colors';
 import AbcjsRenderer, { type AbcjsRendererHandle } from './AbcjsRenderer';
@@ -15,9 +15,7 @@ interface GradingResultProps {
   timeSignature: string;
   accentColor: string;
   barsPerStaff?: number;
-  onNext: () => void;
-  onFinish: () => void;
-  showFinish: boolean;
+  onScrollDelta?: (dy: number) => void;
 }
 
 // ──────────────────────────────────────────────
@@ -31,13 +29,26 @@ function GradingResultView({
   timeSignature,
   accentColor,
   barsPerStaff,
-  onNext,
-  onFinish,
-  showFinish,
+  onScrollDelta,
 }: GradingResultProps) {
   const answerRef = useRef<AbcjsRendererHandle>(null);
 
   const percentage = Math.round(gradingResult.accuracy * 100);
+
+  // 사용자 음표별 색상 빌드 (userSourceIndices 기반)
+  const userNoteColors = useMemo(() => {
+    const result: (string | null)[] = [];
+    gradingResult.grades.forEach(g => {
+      const color =
+        g.grade === 'correct' ? 'correct' :
+        g.grade === 'missing' ? null :
+        'wrong'; // wrong / extra
+      g.userSourceIndices.forEach(idx => {
+        result[idx] = color;
+      });
+    });
+    return result;
+  }, [gradingResult]);
   const wrongTotal = gradingResult.wrongCount + gradingResult.missingCount;
 
   return (
@@ -53,12 +64,6 @@ function GradingResultView({
               {gradingResult.correctCount}
             </Text>
             <Text style={styles.countLabel}>정답</Text>
-          </View>
-          <View style={styles.countItem}>
-            <Text style={[styles.countNumber, { color: '#e67e22' }]}>
-              {gradingResult.partialCount}
-            </Text>
-            <Text style={styles.countLabel}>부분</Text>
           </View>
           <View style={styles.countItem}>
             <Text style={[styles.countNumber, { color: '#e74c3c' }]}>
@@ -86,6 +91,7 @@ function GradingResultView({
             abcString={answerAbcString}
             timeSignature={timeSignature}
             barsPerStaff={barsPerStaff}
+            onScrollDelta={onScrollDelta}
           />
         </View>
       </View>
@@ -99,29 +105,14 @@ function GradingResultView({
           <AbcjsRenderer
             abcString={userAbcString}
             timeSignature={timeSignature}
-            stretchLast={false}
+            stretchLast={true}
             barsPerStaff={barsPerStaff}
+            noteColors={userNoteColors}
+            onScrollDelta={onScrollDelta}
           />
         </View>
       </View>
 
-      {/* ── Button row ── */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: accentColor }]}
-          onPress={onNext}
-        >
-          <Text style={styles.nextButtonText}>다음 문제</Text>
-        </TouchableOpacity>
-        {showFinish && (
-          <TouchableOpacity
-            style={[styles.button, styles.finishButton]}
-            onPress={onFinish}
-          >
-            <Text style={styles.finishButtonText}>연습 종료</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   );
 }
@@ -198,32 +189,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 
-  // Buttons
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  button: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  finishButton: {
-    backgroundColor: COLORS.slate200,
-  },
-  finishButtonText: {
-    color: COLORS.slate700,
-    fontSize: 15,
-    fontWeight: '600',
-  },
 });
 
 export default GradingResultView;

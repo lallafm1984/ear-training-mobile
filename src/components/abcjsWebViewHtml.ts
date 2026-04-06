@@ -223,9 +223,29 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     displayVisualObj = renderResult && renderResult[0];
 
     // 렌더링 완료 후 여러 타이밍에 높이 측정 (abcjs SVG 렌더링이 비동기이므로)
-    setTimeout(function() { applyHighlight(selectedNote); reportHeight(); }, 100);
+    setTimeout(function() {
+      applyHighlight(selectedNote);
+      applyNoteColors(currentParams.noteColors);
+      reportHeight();
+    }, 100);
     setTimeout(reportHeight, 300);
     setTimeout(reportHeight, 600);
+  }
+
+  function applyNoteColors(colors) {
+    if (!colors || !colors.length) return;
+    var ct = document.getElementById('score-container'); if (!ct) return;
+    var all = Array.from(ct.querySelectorAll('.abcjs-v0.abcjs-note, .abcjs-v0.abcjs-rest'));
+    all.forEach(function(el, i) {
+      var color = colors[i];
+      var fill = color === 'correct' ? '#16a34a'
+               : color === 'wrong'   ? '#dc2626'
+               : null;
+      if (!fill) return;
+      el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) {
+        c.style.fill = fill;
+      });
+    });
   }
 
   function applyHighlight(sel) {
@@ -236,10 +256,11 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     ct.querySelectorAll('.abcjs-note-highlight').forEach(function(el) {
       el.parentNode && el.parentNode.removeChild(el);
     });
-    // 음표 색상 초기화
+    // 음표 색상 초기화 후 noteColors 재적용
     ct.querySelectorAll('.abcjs-note,.abcjs-rest').forEach(function(el) {
       el.querySelectorAll('path,ellipse,polygon,polyline,rect,use').forEach(function(c) { c.style.fill=''; });
     });
+    applyNoteColors(currentParams.noteColors);
 
     if (!sel || sel.index < 0 || !svg) return;
     var vc  = sel.voice === 'bass' ? 'abcjs-v1' : 'abcjs-v0';
@@ -1195,6 +1216,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
           echoSettings:     msg.echoSettings    || null,
           customPlaySettings: msg.customPlaySettings || null,
           barsPerStaff:     msg.barsPerStaff    || null,
+          noteColors:       msg.noteColors      || null,
         };
         renderScore(msg.abc, msg.selectedNote);
         if (msg.hideNotes) setTimeout(function(){ applyHideNotes(true); }, 200);

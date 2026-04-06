@@ -1300,16 +1300,20 @@ function generateNotesAbc(
   const spelledNotes = applyEnharmonicSpelling(notes, keySignature);
 
   // 1단계: 박 가시성 규칙 — 필수 경계에서 음표 분할
-  // disableTies(중급 2단계 미만)이면 분할 없이 그대로 사용
+  // disableTies이면 분할/병합 없이 그대로 사용 (생성기가 만든 타이 보존)
   const splitNotes = disableTies
     ? spelledNotes
     : splitAtBeatBoundaries(spelledNotes, timeSignature, pickupSixteenths);
 
   // 1.5단계: 엇박 아닌 붙임줄 합산 — 점음표 복원, 박 내 동일 음 병합 (엇박 타이 보존)
-  const mergedAdjacentNotes = mergeAdjacentTiedNotes(splitNotes, timeSignature, pickupSixteenths);
+  const mergedAdjacentNotes = disableTies
+    ? splitNotes
+    : mergeAdjacentTiedNotes(splitNotes, timeSignature, pickupSixteenths);
 
   // 2단계: 마지막 마디 붙임줄 음표 합산 (박 분할 조각 → 원본 음가 복원)
-  const mergedNotes = mergeTiedNotesInLastMeasure(mergedAdjacentNotes, timeSignature, pickupSixteenths);
+  const mergedNotes = disableTies
+    ? mergedAdjacentNotes
+    : mergeTiedNotesInLastMeasure(mergedAdjacentNotes, timeSignature, pickupSixteenths);
 
   // 3단계: 끊어진 붙임줄 정리 — tie 뒤에 쉼표·다른 음이 오면 tie 제거
   const processedNotes = mergedNotes.map((note, idx) => {
@@ -1573,7 +1577,7 @@ export function generateAbc(state: ScoreState): string {
 
   const header = [
     `X: 1`,
-    `T: ${state.title || 'Score'}`,
+    `T: ${state.title ?? 'Score'}`,
     `M: ${state.timeSignature}`,
     `L: 1/16`,
     `Q: 1/4=${state.tempo}`,

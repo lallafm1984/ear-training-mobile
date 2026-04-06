@@ -48,6 +48,8 @@ interface AbcjsRendererProps {
   showMeasureHighlight?: boolean;
   /** 한 줄에 표시할 마디 수. 미지정 시 총 마디 수 기반 자동 결정 */
   barsPerStaff?: number;
+  /** 음표별 색상 — 인덱스 = 음표 소스 순서, 값 = 'correct'|'partial'|'wrong'|null */
+  noteColors?: (string | null)[];
 }
 
 const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(function AbcjsRenderer({
@@ -78,6 +80,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
   showNoteCursor = true,
   showMeasureHighlight = true,
   barsPerStaff,
+  noteColors,
 }: AbcjsRendererProps, ref: React.ForwardedRef<AbcjsRendererHandle>) {
   const { showAlert } = useAlert();
   const webViewRef = useRef<WebView>(null);
@@ -228,12 +231,13 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
       echoSettings: echoSettings || null,
       customPlaySettings: customPlaySettings || null,
       barsPerStaff: barsPerStaff || null,
+      noteColors: noteColors || null,
     }));
   }, [abcString, combinedAbc, selectedNote, webViewReady,
       examMode, examWaitSeconds, prependMetronome, prependBasePitch,
       metronomeFreq, timeSignature, tempo, scaleTempo, keySignature, stretchLast,
       playbackMode, hideNotes, showNoteCursor, showMeasureHighlight,
-      apExamSettings, koreanExamSettings, echoSettings, customPlaySettings, barsPerStaff]);
+      apExamSettings, koreanExamSettings, echoSettings, customPlaySettings, barsPerStaff, noteColors]);
 
   // ── RN 파일 저장: 기기에 직접 저장 + 공유 시트 제공 ──
   const saveToDevice = useCallback(async (base64: string, ext: string, mime: string) => {

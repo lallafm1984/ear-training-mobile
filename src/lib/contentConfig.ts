@@ -91,15 +91,15 @@ export const ALL_CONTENT_CATEGORIES: ContentCategory[] =
 // ─────────────────────────────────────────────────────────────
 
 export const MELODY_DIFF_LABELS: Record<string, string> = {
-  beginner_1: '초급 1 · 온음표/2분음표',
-  beginner_2: '초급 2 · 4분음표/쉼표',
-  beginner_3: '초급 3 · 8분음표',
-  intermediate_1: '중급 1 · 점4분음표',
-  intermediate_2: '중급 2 · 붙임줄/당김음',
+  beginner_1: '초급 1 · 2분음표/4분음표',
+  beginner_2: '초급 2 · 8분음표',
+  beginner_3: '초급 3 · 점4분음표',
+  intermediate_1: '중급 1 · 당김음',
+  intermediate_2: '중급 2 · 붙임줄',
   intermediate_3: '중급 3 · 16분음표',
   advanced_1: '고급 1 · 점8분음표',
-  advanced_2: '고급 2 · 임시표',
-  advanced_3: '고급 3 · 셋잇단음표',
+  advanced_2: '고급 2 · 셋잇단음표',
+  advanced_3: '고급 3 · 임시표',
 };
 
 export const RHYTHM_DIFF_LABELS: Record<string, string> = {

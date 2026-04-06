@@ -16,7 +16,7 @@ interface DurationToolbarProps {
   onToggleTie: () => void;
   onAddRest: () => void;
   onUndo: () => void;
-  onClear: () => void;
+  onClear?: () => void;
   accentColor: string;
   tripletMode?: boolean;
   onToggleTriplet?: () => void;
@@ -29,6 +29,17 @@ const DURATION_BUTTONS: { dur: NoteDuration; icon: string; label: string }[] = [
   { dur: '8', icon: 'music-note-eighth', label: '8분음표' },
   { dur: '16', icon: 'music-note-sixteenth', label: '16분음표' },
 ];
+
+const REST_ICON_MAP: Record<string, string> = {
+  '1':   'music-rest-whole',
+  '2':   'music-rest-half',
+  '2.':  'music-rest-half',       // 점2분쉼표 (전용 아이콘 없어 기본 사용)
+  '4':   'music-rest-quarter',
+  '4.':  'music-rest-quarter',    // 점4분쉼표
+  '8':   'music-rest-eighth',
+  '8.':  'music-rest-eighth',     // 점8분쉼표
+  '16':  'music-rest-sixteenth',
+};
 
 export default function DurationToolbar({
   selectedDuration,
@@ -49,9 +60,12 @@ export default function DurationToolbar({
 }: DurationToolbarProps) {
   const isSelected = (dur: NoteDuration) => selectedDuration === dur;
 
+  const effectiveDurKey = isDotted ? `${selectedDuration}.` : selectedDuration;
+  const restIcon = REST_ICON_MAP[effectiveDurKey] ?? REST_ICON_MAP[selectedDuration] ?? 'music-rest-quarter';
+
   return (
     <View style={styles.container}>
-      {/* Row 1 — Duration buttons */}
+      {/* Row 1 — 음표 버튼 + 점 + 쉼표 (중앙정렬) */}
       <View style={styles.row}>
         {DURATION_BUTTONS.map(({ dur, icon, label }) => {
           const selected = isSelected(dur);
@@ -73,7 +87,7 @@ export default function DurationToolbar({
             >
               <MaterialCommunityIcons
                 name={icon as any}
-                size={22}
+                size={20}
                 color={selected ? accentColor : COLORS.slate600}
               />
             </TouchableOpacity>
@@ -101,9 +115,31 @@ export default function DurationToolbar({
             점
           </Text>
         </TouchableOpacity>
+
+        {/* Rest — 선택된 음표 길이+점 기준 쉼표, 차별 색상 */}
+        <TouchableOpacity
+          style={[
+            styles.durationBtn,
+            {
+              borderColor: isDotted ? '#f59e0b80' : '#f59e0b40',
+              backgroundColor: isDotted ? '#fef3c7' : '#fffbeb',
+            },
+          ]}
+          onPress={onAddRest}
+          accessibilityLabel="쉼표"
+        >
+          <MaterialCommunityIcons
+            name={restIcon as any}
+            size={20}
+            color="#d97706"
+          />
+          {isDotted && (
+            <Text style={{ position: 'absolute', top: '25%', right: 3, fontSize: 16, fontWeight: '900', color: '#d97706', lineHeight: 16 }}>•</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Row 2 — Tool buttons */}
+      {/* Row 2 — 도구 버튼 (중앙정렬) */}
       <View style={styles.row}>
         {/* Sharp */}
         <TouchableOpacity
@@ -159,20 +195,6 @@ export default function DurationToolbar({
           </Text>
         </TouchableOpacity>
 
-        {/* Rest */}
-        <TouchableOpacity
-          style={styles.toolBtn}
-          onPress={onAddRest}
-          accessibilityLabel="쉼표"
-        >
-          <MaterialCommunityIcons
-            name="music-rest-quarter"
-            size={16}
-            color={COLORS.slate600}
-          />
-          <Text style={[styles.toolBtnText, { marginLeft: 2 }]}>쉼표</Text>
-        </TouchableOpacity>
-
         {/* Triplet */}
         {onToggleTriplet && (
           <TouchableOpacity
@@ -182,38 +204,27 @@ export default function DurationToolbar({
           >
             <MaterialCommunityIcons
               name="numeric-3-circle-outline"
-              size={16}
+              size={14}
               color={tripletMode ? '#fff' : COLORS.slate600}
             />
             <Text style={[styles.toolBtnText, tripletMode && styles.toolBtnTextActive, { marginLeft: 2 }]}>셋잇단</Text>
           </TouchableOpacity>
         )}
 
-        {/* Undo */}
-        <TouchableOpacity
-          style={styles.toolBtn}
-          onPress={onUndo}
-          accessibilityLabel="되돌리기"
-        >
-          <MaterialCommunityIcons
-            name="undo"
-            size={16}
-            color={COLORS.slate600}
-          />
-        </TouchableOpacity>
-
-        {/* Clear */}
-        <TouchableOpacity
-          style={styles.toolBtn}
-          onPress={onClear}
-          accessibilityLabel="전체 지우기"
-        >
-          <MaterialCommunityIcons
-            name="delete-outline"
-            size={16}
-            color={COLORS.slate600}
-          />
-        </TouchableOpacity>
+        {/* Clear — only when provided */}
+        {onClear && (
+          <TouchableOpacity
+            style={styles.toolBtn}
+            onPress={onClear}
+            accessibilityLabel="전체 지우기"
+          >
+            <MaterialCommunityIcons
+              name="delete-outline"
+              size={14}
+              color={COLORS.slate600}
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -221,18 +232,19 @@ export default function DurationToolbar({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 6,
+    gap: 4,
   },
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
+    gap: 4,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   durationBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     borderWidth: 1.5,
     borderColor: COLORS.slate200,
     backgroundColor: '#fff',
@@ -240,7 +252,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   durationBtnText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.slate600,
   },
@@ -248,9 +260,9 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   toolBtn: {
-    height: 36,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    height: 30,
+    paddingHorizontal: 8,
+    borderRadius: 7,
     backgroundColor: COLORS.slate100,
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate700,
   },
   toolBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.slate600,
   },

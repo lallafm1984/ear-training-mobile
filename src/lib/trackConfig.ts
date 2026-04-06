@@ -120,23 +120,23 @@ const PART_PRACTICE_CONFIGS: Record<PartPracticeLevel, TrackLevelConfig> = {
       tripletProb: 0, chromaticProb: 0,
     },
   },
-  // 4단계: 붙임줄
+  // 4단계: 당김음
   4: {
-    difficulty: 'intermediate_2', keySignature: 'C', timeSignature: '4/4',
+    difficulty: 'intermediate_1', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
       stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
-      syncopationProb: 0, dottedProb: 0, tieProb: 0.40,
+      syncopationProb: 0.40, dottedProb: 0, tieProb: 0,
       tripletProb: 0, chromaticProb: 0,
     },
   },
-  // 5단계: 당김음
+  // 5단계: 붙임줄
   5: {
     difficulty: 'intermediate_2', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
       stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
-      syncopationProb: 0.40, dottedProb: 0, tieProb: 0,
+      syncopationProb: 0, dottedProb: 0, tieProb: 0.40,
       tripletProb: 0, chromaticProb: 0,
     },
   },
@@ -160,24 +160,24 @@ const PART_PRACTICE_CONFIGS: Record<PartPracticeLevel, TrackLevelConfig> = {
       tripletProb: 0, chromaticProb: 0,
     },
   },
-  // 8단계: 임시표
+  // 8단계: 셋잇단음표
   8: {
     difficulty: 'advanced_2', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
       stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
       syncopationProb: 0, dottedProb: 0, tieProb: 0,
-      tripletProb: 0, chromaticBudget: [2, 4], chromaticProb: 0.20,
+      tripletProb: 0.60, tripletBudget: [2, 4], chromaticProb: 0,
     },
   },
-  // 9단계: 셋잇단음표
+  // 9단계: 임시표
   9: {
     difficulty: 'advanced_3', keySignature: 'C', timeSignature: '4/4',
     measures: 4, useGrandStaff: false,
     levelOverrides: {
       stepwiseProb: 0.80, maxInterval: 4, maxLeap: 4,
       syncopationProb: 0, dottedProb: 0, tieProb: 0,
-      tripletProb: 0.60, tripletBudget: [2, 4], chromaticProb: 0,
+      tripletProb: 0, chromaticBudget: [2, 4], chromaticProb: 0.20,
     },
   },
 };
@@ -247,12 +247,12 @@ export const TRACK_META: Record<TrackType, TrackMeta> = {
       { level: 1, name: '1단계', description: '2분음표·4분음표',         requiresPro: false },
       { level: 2, name: '2단계', description: '8분음표',                 requiresPro: false },
       { level: 3, name: '3단계', description: '점4분음표',               requiresPro: false },
-      { level: 4, name: '4단계', description: '붙임줄',                  requiresPro: false },
-      { level: 5, name: '5단계', description: '당김음',                  requiresPro: false },
+      { level: 4, name: '4단계', description: '당김음',                  requiresPro: false },
+      { level: 5, name: '5단계', description: '붙임줄',                  requiresPro: false },
       { level: 6, name: '6단계', description: '16분음표',                requiresPro: true },
       { level: 7, name: '7단계', description: '점8분음표',               requiresPro: true },
-      { level: 8, name: '8단계', description: '임시표',                  requiresPro: true },
-      { level: 9, name: '9단계', description: '셋잇단음표',              requiresPro: true },
+      { level: 8, name: '8단계', description: '셋잇단음표',              requiresPro: true },
+      { level: 9, name: '9단계', description: '임시표',                  requiresPro: true },
     ],
   },
   comprehensive: {

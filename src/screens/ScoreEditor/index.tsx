@@ -55,12 +55,12 @@ function melodyDifficultyToLevel(difficulty: ContentDifficulty): number {
 /** 리듬 난이도 → partPractice level 매핑 (리듬 요소 기준) */
 function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
   const map: Record<string, number> = {
-    rhythm_1: 1,  // 기본 음가 (온/2분/4분)
+    rhythm_1: 1,  // 기본 음가 (2분/4분)
     rhythm_2: 2,  // 8분음표
-    rhythm_3: 4,  // 점음표 + 붙임줄
+    rhythm_3: 4,  // 당김음
     rhythm_4: 6,  // 16분음표
-    rhythm_5: 9,  // 셋잇단음표
-    rhythm_6: 9,  // 복합 리듬
+    rhythm_5: 8,  // 셋잇단음표
+    rhythm_6: 8,  // 복합 리듬
   };
   return map[difficulty] ?? 1;
 }

@@ -43,11 +43,9 @@ const KEY_ROOT_PC: Record<string, number> = {
 
 /**
  * 난이도별 허용 임시표 유형 (문서 제8장 §8.4 기반)
- * L8: 부속화음 + 동주조 차용 + 구조적(♮6, b7) — 기본 유형
- * L9: + 반음계 경과음 + 반음계 보조음 — 전체 유형
+ * L9: 임시표 — 전체 유형 허용 (부속화음, 동주조 차용, 구조적, 반음계 경과/보조)
  */
 const LEVEL_TYPES: Record<number, Set<AccidentalType>> = {
-  8: new Set<AccidentalType>(['SEC_DOM', 'MODAL_MIX', 'STR_M6', 'STR_b7']),
   9: new Set<AccidentalType>(['SEC_DOM', 'MODAL_MIX', 'STR_M6', 'STR_b7', 'CHR_PASS', 'CHR_NEIGH']),
 };
 
@@ -459,7 +457,7 @@ function computeSoftScore(
 
 /**
  * 2성부 멜로디에 음악적으로 타당한 임시표를 삽입한다.
- * melodyLevel >= 8 (고급 2단계 이상)에서 호출.
+ * melodyLevel >= 9 (고급 3단계 · 임시표)에서 호출.
  *
  * 알고리즘 흐름 (문서 §5.2):
  * 1. 후보 생성 (SEC_DOM, MODAL_MIX, CHR_PASS, CHR_NEIGH, STR_M6, STR_b7)
@@ -476,14 +474,14 @@ export function applyMelodyAccidentals(
   sixteenthsPerBar: number,
   strongBeats: Set<number>,
 ): void {
-  if (level < 8 || notes.length < 4) return;
+  if (level < 9 || notes.length < 4) return;
 
   const scale = getScaleDegrees(keySignature);
   const scalePCs = getScalePCSet(keySignature, mode);
-  const allowed = LEVEL_TYPES[Math.min(level, 9)] ?? LEVEL_TYPES[9];
+  const allowed = LEVEL_TYPES[9];
 
-  // ── 예산 계산 ──
-  const budgetRange: [number, number] = [2, 4];
+  // ── 예산 계산 (최소 3 → 2마디 분포 보장) ──
+  const budgetRange: [number, number] = [3, 5];
   let budget = budgetRange[0] +
     Math.floor(Math.random() * (budgetRange[1] - budgetRange[0] + 1));
 
@@ -498,7 +496,7 @@ export function applyMelodyAccidentals(
   }
 
   // ── 삽입 적격 인덱스 수집 ──
-  // 제외: 첫 음, 마디 첫/마지막 음, 쉼표, 기존 임시표 음
+  // 제외: 곡 첫 음, 첫 마디 첫 음, 쉼표, 기존 임시표 음
   const eligible: number[] = [];
   for (let i = 1; i < notes.length - 1; i++) {
     const n = notes[i];
@@ -506,7 +504,8 @@ export function applyMelodyAccidentals(
     if (n.accidental) continue;
     const p = positions[i];
     if (!p) continue;
-    if (p.pos === 0) continue; // 마디 첫 음 제외 (강박 협화 보정 충돌 방지)
+    // 첫 마디의 마디 첫 음만 제외 (2마디 이후는 허용 → 부분연습 적격 음 확보)
+    if (p.pos === 0 && p.bar === 0) continue;
     // 마디 마지막 음 제외
     const pNext = positions[i + 1];
     if (pNext && pNext.bar !== p.bar) continue;
@@ -594,6 +593,162 @@ export function applyMelodyAccidentals(
       notes[idx] = { ...notes[idx], accidental: bestCand.accidental };
       budget--;
       measureAccCount.set(p.bar, mAccCnt + 1);
+    }
+  }
+
+  // ── 최소 2마디 분포 보장: 임시표가 있는 마디가 2개 미만이면 보충 패스 ──
+  const MIN_ACC_BARS = 2;
+  const coveredBars = new Set(measureAccCount.keys());
+  if (coveredBars.size < MIN_ACC_BARS && budget > 0) {
+    const RELAXED_THRESHOLD = Math.floor(SCORE_THRESHOLD * 0.3);
+    // 아직 임시표가 없는 마디의 적격 음만 대상
+    const uncoveredEligible = eligible.filter(idx => {
+      const pp = positions[idx];
+      if (!pp || coveredBars.has(pp.bar)) return false;
+      if (notes[idx].accidental) return false;
+      // 인접 임시표 검사 재수행
+      if (idx > 0 && notes[idx - 1].accidental) return false;
+      if (idx < notes.length - 1 && notes[idx + 1].accidental) return false;
+      return true;
+    });
+
+    for (const idx of uncoveredEligible) {
+      if (budget <= 0 || coveredBars.size >= MIN_ACC_BARS) break;
+
+      const note = notes[idx];
+      const p = positions[idx];
+      if (!p) continue;
+
+      const bassMap = bassMaps ? bassMaps[p.bar] : undefined;
+      const bassMidi = bassMap?.get(p.pos) ?? bassMap?.get(0) ?? 0;
+      if (bassMidi > 0 && !scalePCs.has(bassMidi % 12)) continue;
+
+      const isStrong = strongBeats.has(p.pos);
+      const prev = findPitched(notes, idx, -1);
+      const next = findPitched(notes, idx, 1);
+      const prevMidi = prev ? soundingMidi(prev, keySignature, mode, scale) : null;
+      const nextMidi = next ? soundingMidi(next, keySignature, mode, scale) : null;
+      const mAccCnt = measureAccCount.get(p.bar) ?? 0;
+      const dur16 = durationToSixteenths(note.duration);
+      const prevDur16 = prev ? durationToSixteenths(prev.duration) : 0;
+
+      let bestCand2: Candidate | null = null;
+      let bestScore2 = -Infinity;
+
+      for (const acc of ['#', 'b', 'n'] as Accidental[]) {
+        if (!isValidAlteration(note.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
+        const candidates = classifyCandidates(
+          note.pitch, note.octave, acc,
+          prevMidi, nextMidi, keySignature, mode, scalePCs,
+        );
+        for (const c of candidates) {
+          if (!allowed.has(c.type)) continue;
+          if (c.type !== 'SEC_DOM') {
+            if (acc === '#' && c.direction === 'down') continue;
+            if (acc === 'b' && c.direction === 'up') continue;
+          }
+          if (failsHardConstraint(c.altMidi, bassMidi, prevMidi, nextMidi, c.type)) continue;
+          const resolved = nextMidi !== null && nextMidi > 0 && Math.abs(c.altMidi - nextMidi) <= 2;
+          const score = computeSoftScore(c, bassMidi, isStrong, dur16, prevDur16, mAccCnt, resolved);
+          if (score > bestScore2) {
+            bestScore2 = score;
+            bestCand2 = c;
+          }
+        }
+      }
+
+      if (bestCand2 && bestScore2 >= RELAXED_THRESHOLD) {
+        notes[idx] = { ...notes[idx], accidental: bestCand2.accidental };
+        budget--;
+        measureAccCount.set(p.bar, mAccCnt + 1);
+        coveredBars.add(p.bar);
+      }
+    }
+  }
+
+  // 최종 강제 패스는 cleanupBrokenAccidentals 이후 별도 호출 (ensureMinAccidentalBars)
+}
+
+// ────────────────────────────────────────────────────────────────
+// 최소 마디 보장 — cleanupBrokenAccidentals 이후 호출
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * cleanup 후 임시표가 있는 마디가 MIN_BARS 미만이면 강제 삽입.
+ * cleanup이 이미 완료된 상태이므로 cleanup-safe 조건을 직접 체크.
+ */
+export function ensureMinAccidentalBars(
+  notes: ScoreNote[],
+  keySignature: string,
+  mode: 'major' | 'harmonic_minor',
+  sixteenthsPerBar: number,
+  minBars = 2,
+): void {
+  const scale = getScaleDegrees(keySignature);
+  const scalePCs = getScalePCSet(keySignature, mode);
+
+  // 마디별 임시표 마디 집합
+  const coveredBars = new Set<number>();
+  let pos = 0;
+  for (const n of notes) {
+    const bar = Math.floor(pos / sixteenthsPerBar);
+    if (n.accidental === '#' || n.accidental === 'b' || n.accidental === 'n') {
+      coveredBars.add(bar);
+    }
+    pos += n.tupletNoteDur ?? durationToSixteenths(n.duration);
+  }
+  if (coveredBars.size >= minBars) return;
+
+  // 위치 매핑
+  const positions: { bar: number; pos: number }[] = [];
+  let tPos = 0;
+  for (const n of notes) {
+    positions.push({ bar: Math.floor(tPos / sixteenthsPerBar), pos: tPos % sixteenthsPerBar });
+    tPos += n.tupletNoteDur ?? durationToSixteenths(n.duration);
+  }
+
+  let budget = minBars - coveredBars.size;
+  for (let i = 1; i < notes.length - 1 && budget > 0; i++) {
+    if (coveredBars.size >= minBars) break;
+    const n = notes[i];
+    if (n.pitch === 'rest' || n.accidental) continue;
+    const p = positions[i];
+    if (!p || coveredBars.has(p.bar)) continue;
+
+    // 전후 음 MIDI
+    let prevMidi = -1;
+    for (let j = i - 1; j >= 0; j--) {
+      if (notes[j].pitch !== 'rest') {
+        prevMidi = noteToMidiWithKey(notes[j], keySignature);
+        break;
+      }
+    }
+    let nextMidi = -1;
+    for (let j = i + 1; j < notes.length; j++) {
+      if (notes[j].pitch !== 'rest') {
+        nextMidi = noteToMidiWithKey(notes[j], keySignature);
+        break;
+      }
+    }
+
+    for (const acc of ['#', 'b'] as Accidental[]) {
+      if (!isValidAlteration(n.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
+      const altMidi = getAlteredMidi(n.pitch, n.octave, acc);
+      // cleanup-safe 조건: 삽입 후 cleanup에서 제거되지 않을 것
+      let safe = true;
+      if (prevMidi > 0) {
+        const ed = Math.abs(altMidi - prevMidi);
+        if (ed === 1 || ed === 6 || ed > 7) safe = false;
+      }
+      if (safe && nextMidi > 0) {
+        const xd = Math.abs(altMidi - nextMidi);
+        if (xd > 3 || xd === 6) safe = false;
+      }
+      if (!safe) continue;
+      notes[i] = { ...notes[i], accidental: acc };
+      budget--;
+      coveredBars.add(p.bar);
+      break;
     }
   }
 }

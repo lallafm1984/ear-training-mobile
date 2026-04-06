@@ -33,7 +33,7 @@ import {
 
 import type { BassLevel, TimeSignature as TVTimeSignature } from './twoVoice';
 import { applyCounterpointCorrections, generateTwoVoiceStack } from './twoVoice';
-import { applyMelodyAccidentals } from './twoVoice/chromaticAccidental';
+import { applyMelodyAccidentals, ensureMinAccidentalBars } from './twoVoice/chromaticAccidental';
 import { fillRhythm } from './trebleRhythmFill';
 
 // ────────────────────────────────────────────────────────────────
@@ -107,21 +107,23 @@ export interface GeneratedScore {
  *   L7–L9: 점4·4·점8·8·16 균형 (고급은 중급보다 긴 음가 비중 유지)
  */
 const DURATION_POOL: Record<Difficulty, number[]> = {
-  // L1: 온·2분
-  beginner_1:     [16, 8],
-  // L2: 4분·점2분 (쉼표 포함)
-  beginner_2:     [12, 8, 4],
-  // L3: + 8분 (온음표 제외)
-  beginner_3:     [12, 8, 4, 2],
-  // L4: 점4분 중심 + 4·8 조금 더
-  intermediate_1: [8, 6, 4, 4, 2, 2],
-  // L5: L4와 동일 계열 (당김음·타이로 난이도 상승)
-  intermediate_2: [8, 6, 4, 4, 2, 2],
-  // L6: 16분 등장, 점4분·4분 비중으로 과밀 방지
+  // L1: 2분·4분
+  beginner_1:     [8, 4],
+  // L2: 4분 + 8분 (2분음표 제외)
+  beginner_2:     [4, 4, 2],
+  // L3: 점4분 + 4분 (2분음표 제외)
+  beginner_3:     [6, 4, 4],
+  // L4: 당김음 (후처리로 패턴 생성)
+  intermediate_1: [4, 4, 4, 2],
+  // L5: 붙임줄 (tieProb로 제어)
+  intermediate_2: [6, 4, 4, 2],
+  // L6: + 16분, 점4분·4분 비중으로 과밀 방지
   intermediate_3: [6, 6, 4, 4, 4, 4, 2, 2, 1],
-  // L7–L9: 점4분·4분 중심, 점8·8·16 유지
+  // L7: + 점8분
   advanced_1:     [6, 6, 4, 4, 4, 3, 3, 2, 1],
+  // L8: + 셋잇단 (tripletProb로 제어)
   advanced_2:     [6, 6, 4, 4, 4, 3, 3, 2, 1],
+  // L9: + 임시표 (chromaticProb로 제어)
   advanced_3:     [6, 6, 4, 4, 4, 3, 3, 2, 1],
 };
 
@@ -241,7 +243,7 @@ interface LevelParams {
 }
 
 const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
-  // ── L1: 온·2분·4분 ──
+  // ── L1: 2분·4분 ──
   beginner_1: {
     maxInterval: 3, stepwiseProb: 0.95, maxLeap: 3,
     chromaticBudget: [0, 0], chromaticProb: 0,
@@ -252,51 +254,51 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
-  // ── L2: 점2분·쉼표 ──
+  // ── L2: 8분음표 ──
   beginner_2: {
     maxInterval: 4, stepwiseProb: 0.88, maxLeap: 4,
     chromaticBudget: [0, 0], chromaticProb: 0,
     syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.20, dottedProb: 0.35,
+    tieProb: 0, restProb: 0.15, dottedProb: 0,
     contraryMotionRatio: 0.30, bassIndependence: 0,
     voiceCrossingMax: 0, consonanceRatio: 1.0,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
-  // ── L3: 8분·8분쉼표 ──
+  // ── L3: 점4분음표 ──
   beginner_3: {
     maxInterval: 5, stepwiseProb: 0.82, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
     syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.20, dottedProb: 0.25,
+    tieProb: 0, restProb: 0.15, dottedProb: 0.80,
     contraryMotionRatio: 0.40, bassIndependence: 0.2,
     voiceCrossingMax: 0, consonanceRatio: 0.95,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
-  // ── L4: 점4분 ──
+  // ── L4: 당김음 (후처리로 패턴 생성, fillRhythm syncopation 비활성) ──
   intermediate_1: {
     maxInterval: 5, stepwiseProb: 0.75, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
     syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.15, dottedProb: 0.80,
+    tieProb: 0, restProb: 0.15, dottedProb: 0.22,
     contraryMotionRatio: 0.50, bassIndependence: 0.3,
     voiceCrossingMax: 0, consonanceRatio: 0.92,
     cadenceType: ['perfect', 'half'],
     maxTraps: 0,
   },
-  // ── L5: 붙임줄 당김음 ──
+  // ── L5: 붙임줄 ──
   intermediate_2: {
     maxInterval: 5, stepwiseProb: 0.70, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0.30, tripletBudget: [0, 0], tripletProb: 0,
+    syncopationProb: 0.22, tripletBudget: [0, 0], tripletProb: 0,
     tieProb: 0.30, restProb: 0.15, dottedProb: 0.22,
     contraryMotionRatio: 0.50, bassIndependence: 0.45,
     voiceCrossingMax: 0, consonanceRatio: 0.88,
     cadenceType: ['perfect', 'half', 'plagal'],
     maxTraps: 1,
   },
-  // ── L6: 16분·16분쉼표 ──
+  // ── L6: 16분음표 ──
   intermediate_3: {
     maxInterval: 5, stepwiseProb: 0.65, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
@@ -307,7 +309,7 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
     cadenceType: ['perfect', 'half', 'plagal'],
     maxTraps: 1,
   },
-  // ── L7: 점8분 ──
+  // ── L7: 점8분음표 ──
   advanced_1: {
     maxInterval: 5, stepwiseProb: 0.60, maxLeap: 5,
     chromaticBudget: [0, 0], chromaticProb: 0,
@@ -318,18 +320,18 @@ const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
-  // ── L8: 임시표 ──
+  // ── L8: 셋잇단음표 ──
   advanced_2: {
     maxInterval: 5, stepwiseProb: 0.55, maxLeap: 5,
-    chromaticBudget: [2, 4], chromaticProb: 0.15,
-    syncopationProb: 0.22, tripletBudget: [0, 0], tripletProb: 0,
+    chromaticBudget: [0, 0], chromaticProb: 0,
+    syncopationProb: 0.26, tripletBudget: [1, 3], tripletProb: 0.50,
     tieProb: 0.25, restProb: 0.20, dottedProb: 0.30,
     contraryMotionRatio: 0.65, bassIndependence: 0.75,
     voiceCrossingMax: 2, consonanceRatio: 0.80,
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
-  // ── L9: 셋잇단 ──
+  // ── L9: 임시표 ──
   advanced_3: {
     maxInterval: 5, stepwiseProb: 0.50, maxLeap: 5,
     chromaticBudget: [2, 4], chromaticProb: 0.15,
@@ -873,11 +875,12 @@ function applyInternalRests(
   }
 
   const isRest = (idx: number) => treble[idx]?.pitch === 'rest';
+  const isTied = (idx: number) => !!(treble[idx]?.tie) || !!(idx > 0 && treble[idx - 1]?.tie);
 
   let candidates: NotePos[] = [];
 
-  if (lvl <= 2) {
-    // L2: 4분음표만, 약박 위치
+  if (lvl <= 3) {
+    // L1~L3: 4분음표만, 약박 위치 (정박 8분쉼표=당김음 효과 방지)
     candidates = timeline.filter((p, idx) =>
       p.dur === 4 &&
       (p.offset === 4 || p.offset === 12) &&
@@ -887,7 +890,7 @@ function applyInternalRests(
       !isRest(timeline[idx + 1]?.noteIdx ?? -1)
     );
   } else {
-    // 중급·고급: 4분 쉼표 + 8분 쉼표 (정박만)
+    // L4(당김음) 이상: 4분 쉼표 + 8분 쉼표 (정박만)
     const quarterCandidates = timeline.filter((p, idx) =>
       p.dur === 4 &&
       (p.offset === 4 || p.offset === 12) &&
@@ -911,7 +914,8 @@ function applyInternalRests(
 
   candidates = candidates.filter(p =>
     p.bar < measures - 1 &&
-    !bassRestAt.has(`${p.bar}_${p.offset}`)
+    !bassRestAt.has(`${p.bar}_${p.offset}`) &&
+    !isTied(p.noteIdx) // 타이 음표 보호 (붙임줄 파괴 방지)
   );
 
   if (candidates.length === 0) return;
@@ -1274,12 +1278,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   // ── 후처리: 내부 쉼표 ──
   applyInternalRests(trebleNotes, bassNotes, difficulty, measures, sixteenthsPerBar, useGrandStaff, timeSignature);
 
-  // ── 후처리: 박자 경계 분할 (중급 2단계 이상에서만) ──
-  const finalTreble = lvl >= 5
+  // ── 후처리: 박자 경계 분할 (중급 3단계 이상에서만, L5 붙임줄은 생성기가 직접 처리) ──
+  const finalTreble = lvl >= 6
     ? splitAtBeatBoundaries(trebleNotes, timeSignature)
     : trebleNotes;
   const finalBass = useGrandStaff
-    ? (lvl >= 5 ? splitAtBeatBoundaries(bassNotes, timeSignature) : bassNotes)
+    ? (lvl >= 6 ? splitAtBeatBoundaries(bassNotes, timeSignature) : bassNotes)
     : bassNotes;
 
   // ── 후처리: 연속 붙임줄 2회 제한 — 연속된 2개의 tie 중 마지막 제거 ──
@@ -1320,6 +1324,15 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
   // ── 최종 임시표 안전망: 모든 후처리(쉼표·분할·반복음·대사관계) 완료 후 ──
   cleanupBrokenAccidentals(finalTreble, keySignature, finalBass);
+
+  // ── 임시표 최소 2마디 보장 (cleanup 이후 부족분 보충) ──
+  if (lvl >= 9) {
+    ensureMinAccidentalBars(
+      finalTreble, keySignature,
+      isMinor ? 'harmonic_minor' : 'major',
+      sixteenthsPerBar,
+    );
+  }
 
   return { trebleNotes: finalTreble, bassNotes: finalBass };
 }
