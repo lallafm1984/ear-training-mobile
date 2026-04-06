@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        console.warn('[AuthContext] 프로필 로드 실패:', error.message);
+        if (__DEV__) console.warn('[AuthContext] 프로필 로드 실패:', error.message);
       } else {
         setProfile(data as Profile);
       }
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error || !data.url) {
-      console.warn('[Google OAuth] URL 생성 실패:', error?.message);
+      if (__DEV__) console.warn('[Google OAuth] URL 생성 실패:', error?.message);
       return;
     }
 

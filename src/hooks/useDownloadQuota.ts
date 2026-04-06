@@ -68,7 +68,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         return false;
       }
     } catch (error) {
-      console.warn('권한 체크 에러(오디오):', error);
+      if (__DEV__) console.warn('권한 체크 에러(오디오):', error);
       const ok = await consumeDownload();
       return ok;
     }
@@ -117,7 +117,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         return false;
       }
     } catch (error) {
-      console.warn('권한 체크 에러(이미지):', error);
+      if (__DEV__) console.warn('권한 체크 에러(이미지):', error);
       return true;
     }
 
