@@ -17,6 +17,7 @@ import type { TrackType } from '../../theme/colors';
 import { BASS_DIFF_DESC } from '../../lib';
 import type { BassDifficulty } from '../../lib';
 import type { UpgradeReason } from '../../components';
+import type { PlanLimits } from '../../types';
 import { ALL_BASS_DIFFICULTIES } from './constants';
 
 export interface GenerateSheetProps {
@@ -42,7 +43,7 @@ export interface GenerateSheetProps {
   onGenerate: () => void;
   isGenerating: boolean;
   // Subscription
-  limits: any;
+  limits: PlanLimits;
   openUpgrade: (reason: UpgradeReason) => void;
 }
 
