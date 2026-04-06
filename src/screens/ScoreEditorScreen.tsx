@@ -26,7 +26,7 @@ import {
   Eye, EyeOff, FileCode, Copy, Crown,
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-import { PLAN_NAME, PLAN_COLOR } from '../types';
+import { PLAN_NAME, PLAN_COLOR, MAJOR_KEY_SIGNATURES, MINOR_KEY_SIGNATURES, ALL_TIME_SIGNATURES } from '../types';
 import { useDownloadQuota } from '../hooks';
 import PaywallScreen from './PaywallScreen';
 import ProfileScreen from './ProfileScreen';
@@ -125,9 +125,6 @@ const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
 ];
 
 // ── 조성 데이터 ──
-// 5도권 순서 (♭ → 중립 → ♯)
-const MAJOR_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'F', 'Bb', 'Eb', 'Ab', 'Db'];
-const MINOR_KEYS = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm'];
 // 조성별 샤프/플랫 수 (표시용)
 const KEY_ACCIDENTAL: Record<string, string> = {
   'C': '', 'G': '♯', 'D': '♯♯', 'A': '♯♯♯', 'E': '4♯', 'B': '5♯', 'F#': '6♯',
@@ -135,8 +132,6 @@ const KEY_ACCIDENTAL: Record<string, string> = {
   'Am': '', 'Em': '♯', 'Bm': '♯♯', 'F#m': '♯♯♯', 'C#m': '4♯', 'G#m': '5♯',
   'Dm': '♭', 'Gm': '♭♭', 'Cm': '♭♭♭', 'Fm': '4♭', 'Bbm': '5♭', 'Ebm': '6♭',
 };
-// 박자 옵션 (자주 쓰이는 것만)
-const TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '9/8', '5/4', '7/8'];
 
 // ── 바텀시트 모달 ──
 function BottomSheet({ open, onClose, title, children }: {
@@ -945,7 +940,7 @@ export default function ScoreEditorScreen() {
         <View style={styles.bsGroup}>
           <Text style={styles.bsLabel}>박자</Text>
           <View style={styles.settingsChipRow}>
-            {TIME_SIGNATURES.map(t => {
+            {ALL_TIME_SIGNATURES.map(t => {
               const allowed = limits.allowedTimeSignatures.includes(t);
               return (
                 <TouchableOpacity
@@ -1014,7 +1009,7 @@ export default function ScoreEditorScreen() {
           </View>
           {/* 조성 그리드 */}
           <View style={styles.keyGrid}>
-            {(keyMode === 'major' ? MAJOR_KEYS : MINOR_KEYS).map(k => {
+            {(keyMode === 'major' ? MAJOR_KEY_SIGNATURES : MINOR_KEY_SIGNATURES).map(k => {
               const isActive = state.keySignature === k;
               const acc = KEY_ACCIDENTAL[k] ?? '';
               const allowed = limits.allowedKeySignatures.includes(k);
