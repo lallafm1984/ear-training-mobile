@@ -105,10 +105,10 @@ export default function PianoKeyboard({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#111',
+    backgroundColor: COLORS.slate900,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: COLORS.slate700,
   },
   scrollContent: {
     paddingHorizontal: 4,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   whiteKey: {
     width: WHITE_KEY_WIDTH,
     height: WHITE_KEY_HEIGHT,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.slate100,
     marginHorizontal: WHITE_KEY_GAP,
     borderBottomLeftRadius: 6,
     borderBottomRightRadius: 6,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   whiteKeyLabel: {
     fontSize: 9,
-    color: '#666',
+    color: COLORS.slate500,
     fontWeight: '500',
   },
   blackKey: {
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: BLACK_KEY_WIDTH,
     height: BLACK_KEY_HEIGHT,
-    backgroundColor: '#222',
+    backgroundColor: COLORS.slate800,
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
     justifyContent: 'flex-end',
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   blackKeyLabel: {
     fontSize: 7,
-    color: '#aaa',
+    color: COLORS.slate400,
     fontWeight: '500',
   },
 });

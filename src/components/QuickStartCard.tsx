@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   streakBanner: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: COLORS.amber100,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   streakText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#92400e',
+    color: COLORS.amber800,
   },
   card: {
     flexDirection: 'row',

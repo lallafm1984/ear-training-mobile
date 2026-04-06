@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
   Music, Drum, ArrowUpDown, Layers, Key, FileMusic, Lock,
 } from 'lucide-react-native';
+import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -41,7 +42,7 @@ export default function CategoryCard({ config, onPress, locked, practiceCount }:
       </Text>
       {locked && (
         <View style={styles.lockBadge}>
-          <Lock size={10} color="#94a3b8" />
+          <Lock size={10} color={COLORS.slate400} />
           <Text style={styles.lockText}>Pro</Text>
         </View>
       )}
@@ -81,14 +82,14 @@ const styles = StyleSheet.create({
   },
   desc: {
     fontSize: 10,
-    color: '#64748b',
+    color: COLORS.slate500,
     textAlign: 'center',
   },
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: COLORS.slate100,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   lockText: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: COLORS.slate400,
   },
   countBadge: {
     marginTop: 6,
