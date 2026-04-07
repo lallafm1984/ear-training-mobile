@@ -27,7 +27,7 @@ import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRend
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
-import type { MainStackParamList } from '../navigation/MainStack';
+import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
 import PianoKeyboard from '../components/PianoKeyboard';
 import DurationToolbar from '../components/DurationToolbar';
 import GradingResultView from '../components/GradingResult';
@@ -68,13 +68,15 @@ interface PracticeScore {
   disableTies?: boolean;
 }
 
-function generatePracticeScore(category: ContentCategory, difficulty: ContentDifficulty): PracticeScore {
+function generatePracticeScore(category: ContentCategory, difficulty: ContentDifficulty, practiceSettings?: PracticeSettings): PracticeScore {
   if (category === 'melody') {
     const level = melodyDifficultyToLevel(difficulty);
     const trackOpts = buildGeneratorOptions('partPractice', level);
+    const keySignature = practiceSettings?.keySignature ?? trackOpts.keySignature;
+    const timeSignature = practiceSettings?.timeSignature ?? trackOpts.timeSignature;
     const result = generateScore({
-      keySignature: trackOpts.keySignature,
-      timeSignature: trackOpts.timeSignature,
+      keySignature,
+      timeSignature,
       difficulty: trackOpts.difficulty,
       measures: trackOpts.measures,
       useGrandStaff: false,
@@ -84,8 +86,8 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
     return {
       trebleNotes: result.trebleNotes,
       bassNotes: [],
-      keySignature: trackOpts.keySignature,
-      timeSignature: trackOpts.timeSignature,
+      keySignature,
+      timeSignature,
       useGrandStaff: false,
       barsPerStaff: level <= 2 ? 4 : level >= 4 ? 2 : undefined,
       disableTies: level <= 5,
@@ -128,9 +130,11 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
   const bassDiffMap: Record<string, BassDifficulty> = {
     bass_1: 'bass_1', bass_2: 'bass_2', bass_3: 'bass_3', bass_4: 'bass_4',
   };
+  const keySignature = practiceSettings?.keySignature ?? 'C';
+  const timeSignature = practiceSettings?.timeSignature ?? '4/4';
   const result = generateScore({
-    keySignature: 'C',
-    timeSignature: '4/4',
+    keySignature,
+    timeSignature,
     difficulty: diffMap[difficulty] ?? 'beginner_3',
     bassDifficulty: bassDiffMap[difficulty] ?? 'bass_1',
     measures: 4,
@@ -139,8 +143,8 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
   return {
     trebleNotes: result.trebleNotes,
     bassNotes: result.bassNotes,
-    keySignature: 'C',
-    timeSignature: '4/4',
+    keySignature,
+    timeSignature,
     useGrandStaff: true,
     barsPerStaff: 2,
   };
@@ -285,7 +289,7 @@ export default function NotationPracticeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
-  const { category, difficulty } = route.params;
+  const { category, difficulty, practiceSettings } = route.params;
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -366,7 +370,7 @@ export default function NotationPracticeScreen() {
     noteInput.selectNote(null);
 
     setTimeout(() => {
-      const newScore = generatePracticeScore(category, difficulty);
+      const newScore = generatePracticeScore(category, difficulty, practiceSettings);
       setScore(newScore);
       if (category === 'melody' || category === 'twoVoice') {
         const first = newScore.trebleNotes[0] ?? null;
@@ -374,7 +378,7 @@ export default function NotationPracticeScreen() {
       }
       setIsGenerating(false);
     }, 500);
-  }, [category, difficulty]);
+  }, [category, difficulty, practiceSettings]);
 
   // 마운트 시 첫 악보 생성
   useEffect(() => { generate(); }, [generate]);
@@ -398,7 +402,7 @@ export default function NotationPracticeScreen() {
     title: '',
     keySignature: score.keySignature,
     timeSignature: score.timeSignature,
-    tempo: 90,
+    tempo: practiceSettings?.tempo ?? 90,
     notes: score.trebleNotes,
     bassNotes: score.useGrandStaff ? score.bassNotes : undefined,
     useGrandStaff: score.useGrandStaff,
@@ -408,7 +412,7 @@ export default function NotationPracticeScreen() {
   // ── 스케일 ABC 문자열 ──
   const scaleAbcString = score ? (() => {
     const scaleNotes = generateAbcScaleNotes(score.keySignature);
-    return `X:1\nT: \nM:4/4\nL:1/4\nQ:1/4=90\nK:${score.keySignature}\n${scaleNotes.join(' ')} |]`;
+    return `X:1\nT: \nM:4/4\nL:1/4\nQ:1/4=${practiceSettings?.tempo ?? 90}\nK:${score.keySignature}\n${scaleNotes.join(' ')} |]`;
   })() : '';
 
   const [isPlayingScale, setIsPlayingScale] = useState(false);
@@ -666,7 +670,7 @@ export default function NotationPracticeScreen() {
               <Text style={[styles.finishText, { color: COLORS.slate500, fontSize: 13 }]}>초기화</Text>
             </TouchableOpacity>
           )}
-          {practiceCount > 0 && (
+          {practiceCount > 0 && (submitted || melodySubmitted || rated) && (
             <TouchableOpacity onPress={handleFinish} hitSlop={8}>
               <Text style={[styles.finishText, { color: colors.main }]}>종료</Text>
             </TouchableOpacity>
