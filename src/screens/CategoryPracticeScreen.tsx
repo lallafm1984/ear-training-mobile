@@ -151,15 +151,30 @@ export default function CategoryPracticeScreen() {
                       {index + 1}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.diffLabel,
-                      active && { color: '#fff' },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {getDifficultyLabel(category, diff)}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.diffLabel,
+                        active && { color: '#fff' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {getDifficultyLabel(category, diff)}
+                    </Text>
+                    {showSettings && (
+                      practiceSettings.timeSignature !== '4/4' ||
+                      practiceSettings.keySignature !== 'C' ||
+                      practiceSettings.tempo !== 80
+                    ) && (
+                      <Text style={[styles.diffSettingsHint, active && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
+                        {[
+                          practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
+                          practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
+                          practiceSettings.tempo !== 80 && `♩=${practiceSettings.tempo}`,
+                        ].filter(Boolean).join(' · ')}
+                      </Text>
+                    )}
+                  </View>
                 </View>
                 {locked && <Lock size={14} color={active ? '#fff' : '#94a3b8'} />}
               </TouchableOpacity>
@@ -313,7 +328,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.slate700,
-    flex: 1,
+  },
+  diffSettingsHint: {
+    fontSize: 10,
+    color: COLORS.slate400,
+    marginTop: 2,
   },
   bottomBar: {
     paddingHorizontal: 20,
