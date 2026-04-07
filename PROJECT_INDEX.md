@@ -107,9 +107,11 @@ src/
 
 ```
 Onboarding → Home
+              ├── 일일 목표 → CategoryPractice → ChoicePractice (객관식)
+              │                               → NotationPractice (기보형)
               ├── CategoryPractice → ChoicePractice (객관식)
               │                    → NotationPractice (기보형)
-              ├── ScoreEditor (악보 에디터)
+              ├── ScoreEditor (악보 에디터, 홈에서 직접 진입 경로 없음)
               ├── MockExamSetup → MockExam → ExamResult
               ├── Stats
               ├── Paywall (모달)
