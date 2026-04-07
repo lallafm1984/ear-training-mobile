@@ -7,7 +7,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { UserCircle, BookOpen, Target, Crown, BarChart3 } from 'lucide-react-native';
+import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
@@ -25,6 +25,8 @@ import QuickStartCard from '../components/QuickStartCard';
 import RecentActivityList from '../components/RecentActivityList';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
+
+const DAILY_GOAL = 3;
 
 /** 연습 기록 기반 가장 약한 카테고리 추천 */
 function getSmartRecommendation(
@@ -93,9 +95,11 @@ export default function HomeScreen() {
     navigation.navigate('CategoryPractice', { category: recommendation.category });
   };
 
-  const handlePractice = () => {
-    navigation.navigate('ScoreEditor', undefined);
+  const handleDailyGoal = () => {
+    navigation.navigate('CategoryPractice', { category: recommendation.category });
   };
+
+  const dailyDone = stats.dailyCount >= DAILY_GOAL;
 
   if (!loaded) {
     return (
@@ -147,13 +151,24 @@ export default function HomeScreen() {
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}
-            onPress={handlePractice}
+            style={[
+              styles.actionCard,
+              dailyDone
+                ? { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
+                : { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+            ]}
+            onPress={handleDailyGoal}
             activeOpacity={0.7}
           >
-            <BookOpen size={24} color={COLORS.primary500} />
-            <Text style={[styles.actionTitle, { color: COLORS.primary700 }]}>연습하기</Text>
-            <Text style={styles.actionDesc}>자유롭게 연습</Text>
+            {dailyDone
+              ? <CheckCircle size={24} color={COLORS.success} />
+              : <Flame size={24} color="#ea580c" />}
+            <Text style={[styles.actionTitle, { color: dailyDone ? '#065f46' : '#9a3412' }]}>
+              일일 목표
+            </Text>
+            <Text style={styles.actionDesc}>
+              {stats.dailyCount}/{DAILY_GOAL} 완료
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

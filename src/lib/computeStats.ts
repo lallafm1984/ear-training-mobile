@@ -9,6 +9,7 @@ export interface PracticeStats {
   totalByCategory: Record<ContentCategory, number>;
   avgRatingByCategory: Record<ContentCategory, number>;
   recentRecords: PracticeRecord[];
+  dailyCount: number;
   weeklyCount: number;
   monthlyCount: number;
 }
@@ -27,6 +28,7 @@ function emptyStats(): PracticeStats {
     totalByCategory,
     avgRatingByCategory,
     recentRecords: [],
+    dailyCount: 0,
     weeklyCount: 0,
     monthlyCount: 0,
   };
@@ -38,6 +40,7 @@ export function computeStats(records: PracticeRecord[]): PracticeStats {
   stats.recentRecords = records.slice(0, 20);
 
   const now = Date.now();
+  const todayStr = new Date(now).toDateString();
   const weekAgo = now - 7 * 86400_000;
   const monthAgo = now - 30 * 86400_000;
 
@@ -51,7 +54,9 @@ export function computeStats(records: PracticeRecord[]): PracticeStats {
     ratingSum[cat] = (ratingSum[cat] || 0) + r.selfRating;
     ratingCount[cat] = (ratingCount[cat] || 0) + 1;
 
-    const ts = new Date(r.practicedAt).getTime();
+    const practiceDate = new Date(r.practicedAt);
+    if (practiceDate.toDateString() === todayStr) stats.dailyCount++;
+    const ts = practiceDate.getTime();
     if (ts >= weekAgo) stats.weeklyCount++;
     if (ts >= monthAgo) stats.monthlyCount++;
   });
