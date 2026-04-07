@@ -7,7 +7,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Lock, Play } from 'lucide-react-native';
+import { ArrowLeft, Lock, Play, Settings2 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
@@ -18,7 +18,8 @@ import {
   getContentConfig, getDifficultyList, getDifficultyLabel,
 } from '../lib/contentConfig';
 import type { ContentCategory, ContentDifficulty } from '../types/content';
-import type { MainStackParamList } from '../navigation/MainStack';
+import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
+import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'CategoryPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -35,6 +36,13 @@ export default function CategoryPracticeScreen() {
   const difficulties = getDifficultyList(category);
 
   const [selectedDiff, setSelectedDiff] = useState<ContentDifficulty>(difficulties[0]);
+  const showSettings = category === 'melody' || category === 'twoVoice';
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [practiceSettings, setPracticeSettings] = useState<PracticeSettings>({
+    timeSignature: '4/4',
+    keySignature: 'C',
+    tempo: 80,
+  });
 
   const selectedIndex = difficulties.indexOf(selectedDiff);
   const isLocked = tier === 'free' && selectedIndex >= config.freeMaxLevel;
@@ -50,6 +58,7 @@ export default function CategoryPracticeScreen() {
       navigation.navigate('NotationPractice', {
         category,
         difficulty: selectedDiff,
+        ...(showSettings && { practiceSettings }),
       });
     } else {
       navigation.navigate('ChoicePractice', {
@@ -76,14 +85,42 @@ export default function CategoryPracticeScreen() {
         </View>
       </View>
 
-      {/* 스크롤 영역: 난이도 목록 + 카테고리 정보 */}
+      {/* 스크롤 영역: 난이도 목록 */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* 난이도 선택 */}
-        <Text style={styles.sectionTitle}>난이도 선택</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>난이도 선택</Text>
+          {showSettings && (
+            <TouchableOpacity
+              onPress={() => setSettingsOpen(true)}
+              style={[styles.settingsBtn, { backgroundColor: colors.bg }]}
+              hitSlop={8}
+            >
+              <Settings2 size={16} color={colors.main} />
+              <Text style={[styles.settingsBtnText, { color: colors.main }]}>설정</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {showSettings && (
+          practiceSettings.timeSignature !== '4/4' ||
+          practiceSettings.keySignature !== 'C' ||
+          practiceSettings.tempo !== 80
+        ) && (
+          <View style={[styles.settingsSummary, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+            <Text style={[styles.settingsSummaryText, { color: colors.main }]}>
+              {[
+                practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
+                practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
+                practiceSettings.tempo !== 80 && `♩=${practiceSettings.tempo}`,
+              ].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.diffList}>
           {difficulties.map((diff, index) => {
@@ -130,26 +167,6 @@ export default function CategoryPracticeScreen() {
           })}
         </View>
 
-        {/* 카테고리 정보 */}
-        <View style={[styles.infoCard, { backgroundColor: colors.bg, borderColor: colors.main + '25' }]}>
-          <Text style={[styles.infoTitle, { color: colors.main }]}>카테고리 정보</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>답안 형태</Text>
-            <Text style={styles.infoValue}>
-              {config.answerType === 'notation' ? '악보 기보' : '객관식'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>전체 난이도</Text>
-            <Text style={styles.infoValue}>{config.maxLevel}단계</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Free 이용</Text>
-            <Text style={styles.infoValue}>
-              {config.freeMaxLevel === 0 ? 'Pro 전용' : `${config.freeMaxLevel}단계까지`}
-            </Text>
-          </View>
-        </View>
       </ScrollView>
 
       {/* 하단 고정 시작 버튼 (MockExamSetupScreen과 동일 패턴) */}
@@ -175,6 +192,17 @@ export default function CategoryPracticeScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {showSettings && (
+        <PracticeSettingsSheet
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          settings={practiceSettings}
+          onChangeSettings={setPracticeSettings}
+          accentColor={colors.main}
+          accentBg={colors.bg}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -215,10 +243,37 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.slate800,
+  },
+  settingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  settingsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  settingsSummary: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  settingsSummaryText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   diffList: {
     gap: 8,
@@ -279,29 +334,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#fff',
-  },
-  infoCard: {
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: COLORS.slate500,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.slate700,
   },
 });
