@@ -54,12 +54,16 @@ export default function ChoicePracticeScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const stopAudio = useCallback(() => {
-    if (isPlaying) abcjsRef.current?.togglePlay();
-  }, [isPlaying]);
+    abcjsRef.current?.stopPlay();
+  }, []);
 
   const handlePlay = useCallback(() => {
-    abcjsRef.current?.togglePlay();
-  }, []);
+    if (isPlaying) {
+      abcjsRef.current?.stopPlay();
+    } else {
+      abcjsRef.current?.togglePlay();
+    }
+  }, [isPlaying]);
 
   // 화면 벗어날 때 오디오 정지
   useFocusEffect(

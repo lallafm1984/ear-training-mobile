@@ -584,12 +584,37 @@ export function generateCadenceMeasure(
   const canUsePatternB = sixteenthsPerBar >= 16 && !!SIXTEENTHS_TO_DUR[12] && !!SIXTEENTHS_TO_DUR[4];
   const usePatternB    = canUsePatternB && Math.random() < 0.5;
 
-  const noteSixteenths = usePatternB ? 12 : Math.min(8, sixteenthsPerBar);
+  // 종지 음가 선택: 음표+쉼표 모두 SIXTEENTHS_TO_DUR에 매핑 가능해야 함
+  let noteSixteenths: number;
+  if (usePatternB) {
+    noteSixteenths = 12;
+  } else {
+    // 8 이하에서 나머지도 매핑 가능한 최대값 선택
+    noteSixteenths = Math.min(8, sixteenthsPerBar);
+    const candidateNotes = [8, 6, 4, 12];
+    for (const c of candidateNotes) {
+      if (c <= sixteenthsPerBar && SIXTEENTHS_TO_DUR[c] && SIXTEENTHS_TO_DUR[sixteenthsPerBar - c]) {
+        noteSixteenths = c;
+        break;
+      }
+    }
+  }
   const restSixteenths = sixteenthsPerBar - noteSixteenths;
 
   const noteDur = SIXTEENTHS_TO_DUR[noteSixteenths] || '2';
 
-  const trebleMelody = makeNote(tonicPitch, trebleBase, noteDur);
+  // 2성부: 트레블 옥타브를 베이스 실효 최고음+12반음 이상으로 보정
+  // 종지마디 베이스뿐 아니라 본체 베이스 최고음(MIDI 55)도 고려
+  let trebleOctave = trebleBase;
+  if (useGrandStaff) {
+    const bassMaxMidi = 55; // BASS_RANGE high (모든 레벨 공통)
+    let trebleMidi = noteToMidiWithKey(makeNote(tonicPitch, trebleOctave, noteDur), keySignature);
+    while (trebleMidi - bassMaxMidi < 12 && trebleOctave < 6) {
+      trebleOctave++;
+      trebleMidi = noteToMidiWithKey(makeNote(tonicPitch, trebleOctave, noteDur), keySignature);
+    }
+  }
+  const trebleMelody = makeNote(tonicPitch, trebleOctave, noteDur);
   let bassMelody = makeNote(bassDeg.pitch, bassOctave, noteDur);
   while (
     useGrandStaff &&
@@ -600,15 +625,33 @@ export function generateCadenceMeasure(
     bassMelody = makeNote(bassDeg.pitch, bassOctave, noteDur);
   }
 
-  // 트레블: 강박(pos 0)에서 tonic 시작 → 종결감 유지
-  const treble: ScoreNote[] = [makeNote(tonicPitch, trebleBase, noteDur)];
-  if (restSixteenths > 0) {
-    treble.push(makeRest(SIXTEENTHS_TO_DUR[restSixteenths] || '4'));
+  // 쉼표 분할 헬퍼: SIXTEENTHS_TO_DUR에 없는 길이를 여러 쉼표로 분할
+  const SPLIT_RESTS: [number, string][] = [
+    [16, '1'], [12, '2.'], [8, '2'], [6, '4.'], [4, '4'], [3, '8.'], [2, '8'], [1, '16'],
+  ];
+  function makeRests(totalSixteenths: number): ScoreNote[] {
+    if (totalSixteenths <= 0) return [];
+    const mapped = SIXTEENTHS_TO_DUR[totalSixteenths];
+    if (mapped) return [makeRest(mapped)];
+    // greedy 분할
+    const rests: ScoreNote[] = [];
+    let rem = totalSixteenths;
+    while (rem > 0) {
+      const entry = SPLIT_RESTS.find(([s]) => s <= rem);
+      if (!entry) break;
+      rests.push(makeRest(entry[1] as any));
+      rem -= entry[0];
+    }
+    return rests;
   }
 
+  // 트레블: 강박(pos 0)에서 tonic 시작 → 종결감 유지
+  const treble: ScoreNote[] = [makeNote(tonicPitch, trebleOctave, noteDur)];
+  treble.push(...makeRests(restSixteenths));
+
   const bass: ScoreNote[] = useGrandStaff ? [bassMelody] : [];
-  if (useGrandStaff && restSixteenths > 0) {
-    bass.push(makeRest(SIXTEENTHS_TO_DUR[restSixteenths] || '4'));
+  if (useGrandStaff) {
+    bass.push(...makeRests(restSixteenths));
   }
 
   return { treble, bass };
@@ -624,14 +667,27 @@ export function forceGrandStaffFinalTonic(
   scale: PitchName[],
   trebleBase: number,
   bassBase: number,
+  keySignature?: string,
 ): void {
   const tTonic = noteNumToNote(0, scale, trebleBase);
+  let trebleOctave = tTonic.octave;
+
+  // 2성부: 베이스 실효 최고음(MIDI 55) + 12반음 이상 보장
+  if (keySignature && bass.length > 0) {
+    const bassMaxMidi = 55; // BASS_RANGE high
+    let trebleMidi = noteToMidiWithKey(makeNote(tTonic.pitch, trebleOctave, '4'), keySignature);
+    while (trebleMidi - bassMaxMidi < 12 && trebleOctave < 6) {
+      trebleOctave++;
+      trebleMidi = noteToMidiWithKey(makeNote(tTonic.pitch, trebleOctave, '4'), keySignature);
+    }
+  }
+
   for (let i = treble.length - 1; i >= 0; i--) {
     if (treble[i].pitch === 'rest') continue;
     treble[i] = {
       ...treble[i],
       pitch: tTonic.pitch,
-      octave: tTonic.octave,
+      octave: trebleOctave,
       accidental: '' as Accidental,
     };
     break;

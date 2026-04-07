@@ -25,6 +25,7 @@ export interface PracticeSettings {
   timeSignature: string;
   keySignature: string;
   tempo: number;
+  rhythmPitch?: string;   // 리듬 받아쓰기 음이름 (기본 'B' = 시)
 }
 
 // ─────────────────────────────────────────────────────────────

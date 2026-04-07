@@ -25,6 +25,7 @@ import {
   sixteenthsToDuration,
   getTupletNoteDuration,
   uid,
+  MIN_TREBLE_BASS_SEMITONES,
 } from '../scoreUtils';
 import type { TimeSignature } from './types';
 import { strongBeatOffsetsSixteenths0 } from './meter';
@@ -318,6 +319,8 @@ function selectConsonantPitch(
   ctx: MelodyGenContext,
 ): number {
   const tones = CHORD_TONES[((chordDegree % 7) + 7) % 7] || [0, 2, 4];
+  // 2성부 최소 간격: MIN_TREBLE_BASS_SEMITONES(15) 선호, 12(옥타브) 최소 보장
+  const minSpacing = ctx.hasBass ? 12 : 0;
 
   // Build candidate NNs from chord tones in multiple octaves
   const candidates: { nn: number; midi: number; score: number }[] = [];
@@ -328,7 +331,7 @@ function selectConsonantPitch(
       const nn = tone + octOff * 7;
       if (!isInRange(nn, ctx)) continue;
       const midi = nnToMidiCtx(nn, ctx);
-      if (midi <= bassMidi) continue; // treble must be above bass
+      if (midi - bassMidi < minSpacing) continue; // 최소 간격 보장
 
       const imperfect = isImperfectConsonant(midi, bassMidi);
       const consonant = isConsonant(midi, bassMidi);
@@ -340,13 +343,26 @@ function selectConsonantPitch(
       score += imperfect ? 20 : 5;                          // prefer imperfect consonance
       score -= stepDist * 2;                                 // prefer proximity to prev
       score -= Math.abs(nn) * 0.5;                           // prefer central range
+      // 간격이 넓을수록 보너스 (MIN_TREBLE_BASS_SEMITONES 이상 선호)
+      if (ctx.hasBass && midi - bassMidi >= MIN_TREBLE_BASS_SEMITONES) score += 5;
 
       candidates.push({ nn, midi, score });
     }
   }
 
   if (candidates.length === 0) {
-    // Fallback: try all scale degrees
+    // Fallback: try all scale degrees (간격 체크 유지)
+    for (let nn = ctx.nnLow; nn <= ctx.nnHigh; nn++) {
+      const midi = nnToMidiCtx(nn, ctx);
+      if (midi - bassMidi < minSpacing) continue;
+      if (isConsonant(midi, bassMidi)) {
+        candidates.push({ nn, midi, score: -Math.abs(nn - prevNN) });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    // Relaxed fallback: 간격 완화 (최소 1반음만 위)
     for (let nn = ctx.nnLow; nn <= ctx.nnHigh; nn++) {
       const midi = nnToMidiCtx(nn, ctx);
       if (midi <= bassMidi) continue;
@@ -385,6 +401,7 @@ function snapNnTowardChordTones(
   prevNN: number,
   chordDegree: number,
   ctx: MelodyGenContext,
+  bassMidi?: number,
 ): number {
   const tones = CHORD_TONES[((chordDegree % 7) + 7) % 7] || [0, 2, 4];
   let best = nn;
@@ -393,6 +410,11 @@ function snapNnTowardChordTones(
   for (const t of tones) {
     for (const base of [block * 7 + t, (block - 1) * 7 + t, (block + 1) * 7 + t]) {
       if (!isInRange(base, ctx)) continue;
+      // 베이스와 불협화인 후보 제외
+      if (bassMidi !== undefined) {
+        const candMidi = nnToMidiCtx(base, ctx);
+        if (!isConsonant(candMidi, bassMidi)) continue;
+      }
       const d = Math.abs(base - nn);
       const repeats = base === prevNN ? 4.5 : 0;
       const interval = nn - prevNN;
@@ -422,6 +444,7 @@ function selectWeakBeatPitch(
   const currentRatio = totalCount > 0 ? stepwiseCount / totalCount : 1;
   const needMoreSteps = currentRatio < ctx.constraints.stepwiseRatio;
   const shouldStep = needMoreSteps || Math.random() < ctx.constraints.stepwiseRatio;
+  const minSpacing = ctx.hasBass ? 12 : 0;
 
   let nn: number;
 
@@ -450,11 +473,27 @@ function selectWeakBeatPitch(
     }
   }
 
+  // 2성부: 최소 간격 보정 — 베이스 너무 가까우면 옥타브 위로 이동
+  if (ctx.hasBass && bassMidi > 0) {
+    const midi = nnToMidiCtx(nn, ctx);
+    if (midi - bassMidi < minSpacing) {
+      // 한 옥타브 위로 시도, 실패 시 nnLow로 clamp
+      const nnUp = nn + 7;
+      if (isInRange(nnUp, ctx) && nnToMidiCtx(nnUp, ctx) - bassMidi >= minSpacing) {
+        nn = nnUp;
+      } else {
+        nn = clampNN(nn, ctx);
+      }
+    }
+  }
+  // nnLow 미만 강제 방지
+  nn = clampNN(nn, ctx);
+
   const rangeSpan = ctx.nnHigh - ctx.nnLow;
   const rangeFactor = rangeSpan <= 8 ? 0.6 : 1.0;
   const snapChance = ctx.constraints.chordSnapWeak * rangeFactor;
   if (Math.random() < snapChance) {
-    nn = snapNnTowardChordTones(nn, prevNN, chordDegree, ctx);
+    nn = snapNnTowardChordTones(nn, prevNN, chordDegree, ctx, ctx.hasBass ? bassMidi : undefined);
   }
 
   return nn;
@@ -977,7 +1016,7 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
           nn = selectConsonantPitch(bassMidi, prevNN, chordDegree, ctx);
           const oddWeak = timeSig === '9/8' || timeSig === '12/8' ? 0.92 : 1;
           if (Math.random() < ctx.constraints.chordSnapStrong * 0.35 * oddWeak) {
-            nn = snapNnTowardChordTones(nn, prevNN, chordDegree, ctx);
+            nn = snapNnTowardChordTones(nn, prevNN, chordDegree, ctx, bassMidi);
             if (!isConsonant(nnToMidiCtx(nn, ctx), bassMidi)) {
               nn = selectConsonantPitch(bassMidi, prevNN, chordDegree, ctx);
             }

@@ -19,7 +19,7 @@ import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import {
   generateScore, generateAbc, Difficulty, BassDifficulty,
   ScoreNote, PitchName, Accidental, durationToSixteenths,
-  generateAbcScaleNotes,
+  generateAbcScaleNotes, generateRhythmDictation
 } from '../lib';
 import type { NoteDuration } from '../lib/scoreUtils';
 import { buildGeneratorOptions } from '../lib/trackConfig';
@@ -95,27 +95,19 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
   }
 
   if (category === 'rhythm') {
-    const level = rhythmDifficultyToLevel(difficulty);
-    const trackOpts = buildGeneratorOptions('partPractice', level);
-    const result = generateScore({
-      keySignature: 'C',
-      timeSignature: trackOpts.timeSignature,
-      difficulty: trackOpts.difficulty,
-      measures: 4,
-      useGrandStaff: false,
-      practiceMode: 'part',
-      partPracticeLevel: level,
-    });
-    const rhythmNotes: ScoreNote[] = result.trebleNotes.map(n =>
-      n.pitch === 'rest'
-        ? { ...n, tie: false }
-        : { ...n, pitch: 'B' as PitchName, octave: 4, accidental: '' as Accidental, tie: false }
-    );
+    const levelMatch = difficulty.match(/\d+/);
+    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+    const timeSig = practiceSettings?.timeSignature ?? '4/4';
+    const rhythmPitch = practiceSettings?.rhythmPitch ?? 'B';
+
+    // Custom rhythm engine which enforces the requirement of target element >= 2 measures
+    const rhythmNotes = generateRhythmDictation(level, 4, timeSig, rhythmPitch);
+
     return {
       trebleNotes: rhythmNotes,
       bassNotes: [],
       keySignature: 'C',
-      timeSignature: trackOpts.timeSignature,
+      timeSignature: timeSig,
       useGrandStaff: false,
       barsPerStaff: 4,
       disableTies: true,
@@ -299,12 +291,13 @@ function gradeRhythmNoteByNote(
   return { grades, accuracy, correctCount, wrongCount };
 }
 
-function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
+function userInputToAbc(input: RhythmInput[], timeSignature: string, pitch: string = 'B'): string {
   if (input.length === 0) return '';
+  const p = pitch;
   const durToAbc: Record<string, string> = {
-    '1':  'B16', '1.': 'B24', '2':  'B8', '2.': 'B12',
-    '4':  'B4',  '4.': 'B6',  '8':  'B2', '8.': 'B3',
-    '16': 'B1',  'triplet': '(3:2:3B2B2B2',
+    '1':  `${p}16`, '1.': `${p}24`, '2':  `${p}8`, '2.': `${p}12`,
+    '4':  `${p}4`,  '4.': `${p}6`,  '8':  `${p}2`, '8.': `${p}3`,
+    '16': `${p}1`,  'triplet': `(3:2:3${p}2${p}2${p}2`,
     'r_1':  'z16', 'r_2':  'z8', 'r_2.': 'z12',
     'r_4':  'z4',  'r_4.': 'z6', 'r_8':  'z2',
     'r_8.': 'z3',  'r_16': 'z1',
@@ -314,7 +307,7 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
   let abc = '';
   let barPos = 0;
   for (const d of input) {
-    abc += (durToAbc[d] ?? 'B4') + ' ';
+    abc += (durToAbc[d] ?? `${p}4`) + ' ';
     barPos += SIXTEENTHS_MAP[d] ?? 4;
     if (barPos >= barSixteenths) {
       abc += '| ';
@@ -847,7 +840,7 @@ export default function NotationPracticeScreen() {
                   ref={abcjsRef}
                   abcString={abcString}
                   hideNotes={true}
-                  tempo={90}
+                  tempo={practiceSettings?.tempo ?? 80}
                   isPlaying={isPlaying}
                   onPlayStateChange={handlePlayStateChange}
                   barsPerStaff={2}
@@ -862,7 +855,7 @@ export default function NotationPracticeScreen() {
                   ref={abcjsRef}
                   abcString={abcString}
                   hideNotes={true}
-                  tempo={90}
+                  tempo={practiceSettings?.tempo ?? 80}
                   isPlaying={isPlaying}
                   onPlayStateChange={handlePlayStateChange}
                   timeSignature={score?.timeSignature ?? '4/4'}
@@ -890,7 +883,7 @@ export default function NotationPracticeScreen() {
                   ref={abcjsRef}
                   abcString={abcString}
                   hideNotes={hideNotes}
-                  tempo={90}
+                  tempo={practiceSettings?.tempo ?? 80}
                   onScrollDelta={handleScrollDelta}
                   isPlaying={isPlaying}
                   onPlayStateChange={handlePlayStateChange}
@@ -915,7 +908,7 @@ export default function NotationPracticeScreen() {
                   <AbcjsRenderer
                     abcString={noteInput.getUserAbcString()}
                     hideNotes={false}
-                    tempo={90}
+                    tempo={practiceSettings?.tempo ?? 80}
                     barsPerStaff={2}
                     timeSignature={score?.timeSignature ?? '4/4'}
                     stretchLast={true}
@@ -958,9 +951,9 @@ export default function NotationPracticeScreen() {
                 {userInput.length > 0 ? (
                   <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
                     <AbcjsRenderer
-                      abcString={userInputToAbc(userInput, timeSignature)}
+                      abcString={userInputToAbc(userInput, timeSignature, practiceSettings?.rhythmPitch ?? 'B')}
                       hideNotes={false}
-                      tempo={90}
+                      tempo={practiceSettings?.tempo ?? 80}
                       barsPerStaff={4}
                       stretchLast={false}
                     />
@@ -977,7 +970,7 @@ export default function NotationPracticeScreen() {
             {isRhythm && submitted && gradingResult && (
               <GradingResultView
                 answerAbcString={abcString}
-                userAbcString={userInputToAbc(userInput, timeSignature)}
+                userAbcString={userInputToAbc(userInput, timeSignature, practiceSettings?.rhythmPitch ?? 'B')}
                 gradingResult={gradingResult}
                 timeSignature={timeSignature}
                 accentColor={colors.main}

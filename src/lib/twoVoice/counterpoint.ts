@@ -24,7 +24,7 @@ import {
   MIN_TREBLE_BASS_SEMITONES,
 } from '../scoreUtils';
 import type { TimeSignature, Violation } from './types';
-import { strongBeatOffsetsSixteenths0 } from './meter';
+import { strongBeatOffsetsSixteenths0, allBeatOffsetsSixteenths0 } from './meter';
 
 // ────────────────────────────────────────────────────────────────
 // Pitch-class interval constants
@@ -740,9 +740,11 @@ function fixParallelPerfectAtStrongBeats(
   timeSig: TimeSignature,
   keySignature: string,
   scale: PitchName[],
+  /** 검사할 beat 오프셋 (미지정 시 강박+중강박만) */
+  beatOverride?: Set<number>,
 ): number {
   const barLength = getSixteenthsPerBar(timeSig);
-  const strongBeats = getStrongBeatSixteenthOffsets(timeSig);
+  const strongBeats = beatOverride ?? getStrongBeatSixteenthOffsets(timeSig);
   const trebleEvents = buildTimeline(treble, keySignature);
   const bassEvents = buildTimeline(bass, keySignature);
 
@@ -927,7 +929,7 @@ export function applyCounterpointCorrections(
   const barLength = getSixteenthsPerBar(timeSig);
   const allowWrittenAccidentals = false;
 
-  const MAX_PASSES = 3;
+  const MAX_PASSES = 5;
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     let fixCount = 0;
 
@@ -952,6 +954,10 @@ export function applyCounterpointCorrections(
 
     // Step 2: Fix parallel perfect intervals (strong-beat sounding pairs)
     fixCount += fixParallelPerfectAtStrongBeats(treble, bass, timeSig, keySignature, scale);
+
+    // Step 2b: Fix parallel perfect intervals at ALL beats (약박 포함)
+    const allBeats = allBeatOffsetsSixteenths0(timeSig);
+    fixCount += fixParallelPerfectAtStrongBeats(treble, bass, timeSig, keySignature, scale, allBeats);
 
     // Step 3: Fix parallel perfect intervals (simultaneous onsets — legacy)
     fixCount += fixParallelPerfectCorrection(treble, bass, keySignature, scale);

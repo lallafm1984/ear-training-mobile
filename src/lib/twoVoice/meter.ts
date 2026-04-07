@@ -44,3 +44,16 @@ export function strongBeatOffsetsSixteenths0(timeSig: TimeSignature): Set<number
   }
   return out;
 }
+
+/**
+ * 모든 beat(강박+중강박+약박) 위치를 0-based 16분음표 오프셋으로 반환.
+ * 평행5/8도 검출 시 약박 포함 전체 beat 검사용.
+ */
+export function allBeatOffsetsSixteenths0(timeSig: TimeSignature): Set<number> {
+  const b = STRONG_BEAT_MAP[timeSig];
+  const out = new Set<number>();
+  for (const p of b.strong) out.add((p - 1) * 2);
+  for (const p of b.mid) out.add((p - 1) * 2);
+  for (const p of b.weak) out.add((p - 1) * 2);
+  return out;
+}

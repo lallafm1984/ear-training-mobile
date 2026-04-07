@@ -17,6 +17,10 @@ import { CATEGORY_COLORS } from '../theme/colors';
 import {
   getContentConfig, getDifficultyList, getDifficultyLabel,
 } from '../lib/contentConfig';
+
+const RHYTHM_PITCH_LABELS: Record<string, string> = {
+  C: '도', D: '레', E: '미', F: '파', G: '솔', A: '라', B: '시',
+};
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
 import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
@@ -36,7 +40,7 @@ export default function CategoryPracticeScreen() {
   const difficulties = getDifficultyList(category);
 
   const [selectedDiff, setSelectedDiff] = useState<ContentDifficulty>(difficulties[0]);
-  const showSettings = category === 'melody' || category === 'twoVoice';
+  const showSettings = category === 'melody' || category === 'twoVoice' || category === 'rhythm';
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [practiceSettings, setPracticeSettings] = useState<PracticeSettings>({
     timeSignature: '4/4',
@@ -109,13 +113,16 @@ export default function CategoryPracticeScreen() {
         {showSettings && (
           practiceSettings.timeSignature !== '4/4' ||
           practiceSettings.keySignature !== 'C' ||
-          practiceSettings.tempo !== 80
+          practiceSettings.tempo !== 80 ||
+          (category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B')
         ) && (
           <View style={[styles.settingsSummary, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
             <Text style={[styles.settingsSummaryText, { color: colors.main }]}>
               {[
                 practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
-                practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
+                category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
+                category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B' &&
+                  `음: ${RHYTHM_PITCH_LABELS[practiceSettings.rhythmPitch] ?? practiceSettings.rhythmPitch}`,
                 practiceSettings.tempo !== 80 && `♩=${practiceSettings.tempo}`,
               ].filter(Boolean).join(' · ')}
             </Text>
@@ -168,7 +175,7 @@ export default function CategoryPracticeScreen() {
                     ) && (
                       <Text style={[styles.diffSettingsHint, active && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
                         {[
-                          practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
+                          category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
                           practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
                           practiceSettings.tempo !== 80 && `♩=${practiceSettings.tempo}`,
                         ].filter(Boolean).join(' · ')}
@@ -218,6 +225,7 @@ export default function CategoryPracticeScreen() {
           accentBg={colors.bg}
           tier={tier}
           onUpgrade={() => { setSettingsOpen(false); navigation.navigate('Paywall'); }}
+          category={category}
         />
       )}
     </SafeAreaView>

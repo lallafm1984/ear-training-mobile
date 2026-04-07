@@ -14,6 +14,17 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '9/8'];
 
+// 리듬 받아쓰기 음이름 옵션
+const RHYTHM_PITCHES: { pitch: string; label: string }[] = [
+  { pitch: 'C', label: '도' },
+  { pitch: 'D', label: '레' },
+  { pitch: 'E', label: '미' },
+  { pitch: 'F', label: '파' },
+  { pitch: 'G', label: '솔' },
+  { pitch: 'A', label: '라' },
+  { pitch: 'B', label: '시' },
+];
+
 // 올림표/내림표 분리: 5도권 순서
 const SHARP_MAJOR = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#'];
 const FLAT_MAJOR = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'];
@@ -48,6 +59,8 @@ const KEY_ACC_COUNT: Record<string, string> = {
 const FREE_TIME_SIGS = ['4/4'];
 const FREE_KEY_SIGS = ['C', 'Am'];
 
+import type { ContentCategory } from '../types/content';
+
 interface PracticeSettingsSheetProps {
   open: boolean;
   onClose: () => void;
@@ -57,10 +70,11 @@ interface PracticeSettingsSheetProps {
   accentBg: string;
   tier: PlanTier;
   onUpgrade: () => void;
+  category?: ContentCategory;
 }
 
 export default function PracticeSettingsSheet({
-  open, onClose, settings, onChangeSettings, accentColor, accentBg, tier, onUpgrade,
+  open, onClose, settings, onChangeSettings, accentColor, accentBg, tier, onUpgrade, category,
 }: PracticeSettingsSheetProps) {
   const isFree = tier === 'free';
   const [keyMode, setKeyMode] = useState<'major' | 'minor'>(
@@ -114,9 +128,41 @@ export default function PracticeSettingsSheet({
         </View>
       </View>
 
-      {/* ── 조성 ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>조성</Text>
+      {/* ── 리듬 음이름 (리듬 전용) ── */}
+      {category === 'rhythm' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>악보 음이름</Text>
+          <View style={styles.chipRow}>
+            {RHYTHM_PITCHES.map(({ pitch, label }) => {
+              const current = settings.rhythmPitch ?? 'B';
+              const active = current === pitch;
+              const isDef = pitch === 'B';
+              return (
+                <TouchableOpacity
+                  key={pitch}
+                  onPress={() => update({ rhythmPitch: pitch })}
+                  style={[
+                    styles.timeChip,
+                    active && { backgroundColor: accentColor, borderColor: accentColor },
+                  ]}
+                >
+                  <Text style={[styles.timeChipText, active && { color: '#fff' }]}>
+                    {label}
+                  </Text>
+                  {isDef && !active && (
+                    <View style={[styles.defaultDot, { backgroundColor: accentColor + '40' }]} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* ── 조성 (리듬 제외) ── */}
+      {category !== 'rhythm' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>조성</Text>
         {/* 장조/단조 탭 */}
         <View style={styles.keyModeTabRow}>
           <TouchableOpacity
@@ -193,8 +239,9 @@ export default function PracticeSettingsSheet({
               </TouchableOpacity>
             );
           })}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* ── 빠르기 ── */}
       <View style={[styles.section, { marginBottom: 0 }]}>

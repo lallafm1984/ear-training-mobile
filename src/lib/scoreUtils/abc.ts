@@ -292,11 +292,17 @@ function mergeTiedNotesInLastMeasure(
   // 마지막 마디에서 연속된 동일 음 합산 (붙임줄 여부 무관)
   const merged: ScoreNote[] = [];
   let i = 0;
+  let mergeTupletRemaining = 0;
   while (i < lastMeasure.length) {
     const note = lastMeasure[i];
 
-    if (note.tuplet) {
+    if (note.tuplet && mergeTupletRemaining === 0) {
+      mergeTupletRemaining = parseInt(note.tuplet, 10);
+    }
+
+    if (mergeTupletRemaining > 0) {
       merged.push(note);
+      mergeTupletRemaining--;
       i++;
       continue;
     }
@@ -319,11 +325,12 @@ function mergeTiedNotesInLastMeasure(
       continue;
     }
 
-    // 연속된 동일 음 탐색 (pitch + octave + accidental 일치)
+    // 연속된 동일 음 탐색 (pitch + octave + accidental 일치 + 앞 음이 tie인 경우)
     let totalDur = durationToSixteenths(note.duration);
+    let lastTie: boolean = note.tie ?? false;
     let j = i + 1;
 
-    while (j < lastMeasure.length) {
+    while (j < lastMeasure.length && lastTie) {
       const next = lastMeasure[j];
       if (
         !next.tuplet &&
@@ -332,6 +339,7 @@ function mergeTiedNotesInLastMeasure(
         next.accidental === note.accidental
       ) {
         totalDur += durationToSixteenths(next.duration);
+        lastTie = next.tie ?? false;
         j++;
       } else {
         break;
@@ -340,7 +348,6 @@ function mergeTiedNotesInLastMeasure(
 
     if (j > i + 1) {
       const mergedDur = findExactDuration(totalDur) ?? sixteenthsToDuration(totalDur);
-      const lastTie = lastMeasure[j - 1].tie ?? false;
       merged.push({ ...note, duration: mergedDur, tie: lastTie });
       i = j;
     } else {
@@ -484,17 +491,21 @@ function generateRestAbc(
   let pos = barPosition;
 
   if (isCompoundMeter(timeSignature)) {
-    // 겹박자: 점4분쉼표(6)만 허용, 점8분쉼표(3) 금지 → 8분+16분으로 분할 (§4)
-    const units = [12, 6, 2, 1];
+    // 겹박자: 점4분쉼표(6), 4분쉼표(4) 허용. 박 경계를 넘지 않도록 분할
+    const units = [12, 6, 4, 2, 1];
+    const beatSize = 6;
     while (remaining > 0) {
+      const posInBeat = pos % beatSize;
       let fitted = false;
       for (const u of units) {
-        if (u <= remaining) {
-          result.push(u === 1 ? 'z' : `z${u}`);
-          remaining -= u;
-          fitted = true;
-          break;
-        }
+        if (u > remaining) continue;
+        // 박 경계가 아니면 현재 박(6단위) 내에 들어맞아야 함
+        if (posInBeat !== 0 && u > beatSize - posInBeat) continue;
+        result.push(u === 1 ? 'z' : `z${u}`);
+        remaining -= u;
+        pos += u;
+        fitted = true;
+        break;
       }
       if (!fitted) break;
     }

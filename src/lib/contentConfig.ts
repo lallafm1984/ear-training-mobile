@@ -103,7 +103,7 @@ export const MELODY_DIFF_LABELS: Record<string, string> = {
 };
 
 export const RHYTHM_DIFF_LABELS: Record<string, string> = {
-  rhythm_1: '1단계 · 온/2분/4분음표',
+  rhythm_1: '1단계 · 2분/4분음표 + 4분쉼표',
   rhythm_2: '2단계 · 8분음표 + 쉼표',
   rhythm_3: '3단계 · 점음표 + 당김음',
   rhythm_4: '4단계 · 16분음표',
@@ -112,17 +112,17 @@ export const RHYTHM_DIFF_LABELS: Record<string, string> = {
 };
 
 export const INTERVAL_DIFF_LABELS: Record<string, string> = {
-  interval_1: '1단계 · 완전음정 (1·4·5·8도)',
-  interval_2: '2단계 · 장/단 3도, 6도',
-  interval_3: '3단계 · 장/단 2도, 7도',
-  interval_4: '4단계 · 증/감 + 복음정',
+  interval_1: '1단계 · 3도·4도·5도·8도',
+  interval_2: '2단계 · + 2도·6도',
+  interval_3: '3단계 · + 반음·7도',
+  interval_4: '4단계 · 전체 (동음·증4도 포함)',
 };
 
 export const CHORD_DIFF_LABELS: Record<string, string> = {
-  chord_1: '1단계 · 장/단 3화음',
-  chord_2: '2단계 · 증/감 3화음',
-  chord_3: '3단계 · 7화음 (M7·m7·dom7)',
-  chord_4: '4단계 · 전위형 + 복합화음',
+  chord_1: '1단계 · 장/단3화음, 속7화음',
+  chord_2: '2단계 · + 증/감3화음, 아르페지오',
+  chord_3: '3단계 · + 장7·단7화음',
+  chord_4: '4단계 · + 감7·전위형, 개방배치',
 };
 
 export const KEY_DIFF_LABELS: Record<string, string> = {

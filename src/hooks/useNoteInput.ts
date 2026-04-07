@@ -925,8 +925,11 @@ export function useNoteInput(options: UseNoteInputOptions) {
     return { measure: Math.min(currentMeasure + 1, measures), beat: currentBeat, totalMeasures: measures };
   }, [getActiveNotes, timeSignature, barSixteenths, measures]);
 
-  /** 모든 공간이 채워졌는지 확인 */
-  const isComplete = sumSixteenths(getActiveNotes()) >= totalSixteenths;
+  /** 모든 공간이 채워졌는지 확인 (2성부일 때는 두 성부 모두 체크) */
+  const isComplete = useGrandStaff
+    ? sumSixteenths(state.trebleNotes) >= totalSixteenths &&
+      sumSixteenths(state.bassNotes) >= totalSixteenths
+    : sumSixteenths(getActiveNotes()) >= totalSixteenths;
 
   const reset = useCallback((newFirstNote?: ScoreNote | null) => {
     undoHistoryRef.current = [];

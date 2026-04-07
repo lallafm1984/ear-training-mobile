@@ -59,22 +59,37 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const bassNotes:   ScoreNote[] = [];
 
   // 루트가 높은 조(G,A,B 등)에서 wrap 편향으로 옥타브5에 음이 몰리는 현상 보정
-  // wrapCount >= 4이면 TREBLE_BASE를 3으로 낮춰 한 옥타브 아래에서 시작
+  // 1성부: wrapCount >= 4이면 TREBLE_BASE를 3으로 낮춰 한 옥타브 아래에서 시작
+  // 2성부: 항상 TREBLE_BASE=4로 고정 (베이스와 충분한 간격 확보)
   const rootIdx = PITCH_ORDER.indexOf(scale[0]);
-  const wrapCount = rootIdx; // wrap이 발생하는 음계도 수 = rootIdx
-  const TREBLE_BASE = wrapCount >= 4 ? 3 : 4;
+  const wrapCount = rootIdx;
+  const TREBLE_BASE = useGrandStaff ? 4 : (wrapCount >= 4 ? 3 : 4);
   const BASS_BASE   = getBassBaseOctave(scale);
 
   // 조표의 wrap 보정을 반영한 트레블 실효 최대 nn 계산
-  const rawTrebleMax = lvl <= 2 ? 8 : 12;
+  // 2성부: trebleRangeMin이 높아지므로 rawTrebleMax를 확장하여 충분한 음역 확보
+  const rawTrebleMax = useGrandStaff
+    ? (lvl <= 2 ? 11 : 14)
+    : (lvl <= 2 ? 8 : 12);
   let effectiveTrebleMax = rawTrebleMax;
   while (effectiveTrebleMax > 0 && noteNumToNote(effectiveTrebleMax, scale, TREBLE_BASE).octave > 5) {
     effectiveTrebleMax--;
   }
 
-  // 2성부 + TREBLE_BASE=3 인 조: 트레블이 옥타브3에 내려가면 베이스와 겹침
-  // → octave 4 이상만 사용하도록 최소 nn 설정 (Am:2→C4, Gm:3→C4, Bm:1→C#4)
-  const trebleRangeMin = (useGrandStaff && TREBLE_BASE <= 3) ? (7 - rootIdx) : 0;
+  // 2성부: 트레블 최저음이 베이스 최고음 + 12반음(1옥타브) 이상이 되도록 보장
+  // 조성별로 동적 계산하여 모든 조에서 적절한 간격 확보
+  let trebleRangeMin = 0;
+  if (useGrandStaff) {
+    const bassMaxMidi = 55; // BASS_RANGE high (모든 레벨 공통)
+    const minTrebleMidi = bassMaxMidi + 12;
+    for (let nn = 0; nn <= effectiveTrebleMax; nn++) {
+      const midi = nnToMidi(nn, scale, TREBLE_BASE, keySignature);
+      if (midi >= minTrebleMidi) {
+        trebleRangeMin = nn;
+        break;
+      }
+    }
+  }
 
   // ── Step A: 베이스 선생성 + 멜로디 생성 (1성부/2성부 공통) ──
   // 1성부도 2성부와 동일하게 베이스를 내부 생성하여 멜로디 품질 향상 후 베이스 제거
@@ -189,12 +204,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         let bestDist = Infinity;
         let bestIsImperfect = false;
 
-        for (let oct = tn.octave - 1; oct <= tn.octave + 1; oct++) {
+        for (let oct = tn.octave - 1; oct <= tn.octave + 2; oct++) {
           for (const sp of scale) {
             if (sp === 'rest') continue;
             const cNote = makeNote(sp, oct, tn.duration);
             const cMidi = noteToMidiWithKey(cNote, keySignature);
-            if (cMidi <= be.midi) continue;
+            if (cMidi - be.midi < MIN_TREBLE_BASS_SEMITONES) continue;
             const cPc = ((cMidi - be.midi) % 12 + 12) % 12;
             if (DISSONANT_PC.has(cPc)) continue;
 
@@ -272,7 +287,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   }
 
   if (useGrandStaff) {
-    forceGrandStaffFinalTonic(finalTreble, finalBass, scale, TREBLE_BASE, BASS_BASE);
+    forceGrandStaffFinalTonic(finalTreble, finalBass, scale, TREBLE_BASE, BASS_BASE, keySignature);
   }
 
   // ── ★ 최종 검토: 비활성화 (reviewAndFixScore 연쇄 보정이 선율 품질 저하 유발) ──

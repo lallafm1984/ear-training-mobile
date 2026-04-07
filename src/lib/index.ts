@@ -36,6 +36,9 @@ export type { TrebleRhythmParams } from './melodyRhythmLevel';
 // 트레블 리듬 채우기
 export { fillRhythm, variateSixteenthNoteRuns } from './trebleRhythmFill';
 
+// 리듬 받아쓰기 전용 엔진
+export { generateRhythmDictation } from './rhythmEngine';
+
 // 2성부 생성 모듈
 export * from './twoVoice';
 
