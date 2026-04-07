@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - 답안 악보 두 번째 줄 렌더링 (stretchLast=true로 전체 너비 표시)
 - 연속 쉼표 자동 병합 및 마디 무결성 유지
-- 셋잇단음표 beam 연결 및 정확한 duration 렌더링
+- 셋잇단음표 beam 연결 및 정확한 duration 렌더링.
 
 ---
 
