@@ -11,6 +11,7 @@ import type { UserSkillProfile } from '../lib/trackConfig';
 import type { TrackType } from '../theme';
 
 const STORAGE_KEY = '@melodygen_skill_profile';
+const MS_PER_DAY = 86_400_000;
 
 export function useSkillProfile() {
   const [profile, setProfile] = useState<UserSkillProfile>(DEFAULT_SKILL_PROFILE);
@@ -121,7 +122,7 @@ export function useSkillProfile() {
     if (lastDate === today) return;
 
     const updated = { ...profile };
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const yesterday = new Date(Date.now() - MS_PER_DAY).toDateString();
     if (lastDate === yesterday) {
       updated.streakDays += 1;
     } else if (lastDate !== today) {

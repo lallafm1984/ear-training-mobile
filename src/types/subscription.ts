@@ -70,12 +70,17 @@ export interface PlanLimits {
   allowedTimeSignatures: string[];
 }
 
-const ALL_KEY_SIGNATURES = [
+export const ALL_KEY_SIGNATURES = [
   'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'F', 'Bb', 'Eb', 'Ab', 'Db',
   'Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm',
 ];
 
-const ALL_TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '9/8', '5/4', '7/8'];
+export const ALL_TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '9/8', '5/4', '7/8'];
+
+/** 장조 조성 목록 (5도권 순서) */
+export const MAJOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter(k => !k.includes('m'));
+/** 단조 조성 목록 (5도권 순서) */
+export const MINOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter(k => k.includes('m'));
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {

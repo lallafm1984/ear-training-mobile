@@ -78,9 +78,8 @@ export const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
   'bass_1', 'bass_2', 'bass_3', 'bass_4',
 ];
 
-// ── 조성 데이터 ──
-export const MAJOR_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'F', 'Bb', 'Eb', 'Ab', 'Db'];
-export const MINOR_KEYS = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm'];
+// ── 조성 데이터 (types에서 재공급) ──
+export { MAJOR_KEY_SIGNATURES as MAJOR_KEYS, MINOR_KEY_SIGNATURES as MINOR_KEYS, ALL_TIME_SIGNATURES as TIME_SIGNATURES } from '../../types';
 
 export const KEY_ACCIDENTAL: Record<string, string> = {
   'C': '', 'G': '♯', 'D': '♯♯', 'A': '♯♯♯', 'E': '4♯', 'B': '5♯', 'F#': '6♯',
@@ -89,5 +88,3 @@ export const KEY_ACCIDENTAL: Record<string, string> = {
   'Dm': '♭', 'Gm': '♭♭', 'Cm': '♭♭♭', 'Fm': '4♭', 'Bbm': '5♭', 'Ebm': '6♭',
 };
 
-// ── 박자 ──
-export const TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '9/8', '5/4', '7/8'];

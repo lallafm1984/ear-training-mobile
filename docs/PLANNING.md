@@ -393,6 +393,30 @@ WITH CHECK (
 
 ---
 
+## 14. 코드 아키텍처 상세
+
+### 14.1 scoreUtils 모듈 구조
+
+`src/lib/scoreUtils/` 디렉토리는 악보 유틸리티를 기능별로 분할한 8개 모듈로 구성:
+
+| 모듈 | 역할 | 주요 export |
+|------|------|------------|
+| `types.ts` | 타입 정의 | `ScoreNote`, `ScoreState`, `NoteDuration`, `PitchName`, `Accidental`, `TupletType` |
+| `duration.ts` | 음가/박자/잇단음표 유틸 | `durationToSixteenths`, `getSixteenthsPerBar`, `getTupletNoteDuration`, `getBeamGroupSixteenths` |
+| `keySignature.ts` | 조성/음계/임시표 엔진 | `getScaleDegrees`, `generateAbcScaleNotes`, `getKeySigAlteration`, `resolveAbcAccidental` |
+| `midi.ts` | MIDI 변환/이명동음 | `nnToMidi`, `getMidiInterval`, `noteToMidiWithKey`, `isForbiddenMelodicInterval` |
+| `noteFactory.ts` | 음표 생성 헬퍼 | `uid`, `makeNote`, `makeRest`, `noteNumToNote`, `scaleNoteToNn` |
+| `bassUtils.ts` | 베이스 성부 유틸 | `getBassBaseOctave`, `CHORD_TONES`, `buildTrebleAttackMidiMap`, `passesBassSpacing` |
+| `harmony.ts` | 화성 진행 생성 | `generateProgression`, `getStrongBeatOffsets` |
+| `abc.ts` | ABC 표기법 파이프라인 | `splitAtBeatBoundaries`, `getMeasureCount`, `generateAbc` |
+
+**의존성 방향**: `types` ← `duration` ← `keySignature` ← `midi` ← `abc`  
+**독립 모듈**: `noteFactory`, `bassUtils`, `harmony`
+
+`index.ts` barrel export로 기존 import 경로(`../lib/scoreUtils`) 호환성 유지.
+
+---
+
 <!-- AUTONOMOUS DECISION LOG -->
 ## Decision Audit Trail
 

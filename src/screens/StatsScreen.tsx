@@ -56,7 +56,7 @@ export default function StatsScreen() {
       .limit(10)
       .then(({ data, error }) => {
         if (error) {
-          console.warn('[StatsScreen] 시험 기록 로드 실패:', error.message);
+          if (__DEV__) console.warn('[StatsScreen] 시험 기록 로드 실패:', error.message);
           setExamError(true);
         } else if (data) {
           setExamRecords(data as ExamRecord[]);

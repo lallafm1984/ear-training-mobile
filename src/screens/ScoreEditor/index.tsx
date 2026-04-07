@@ -30,15 +30,9 @@ import { PLAN_NAME, PLAN_COLOR } from '../../types';
 import { useDownloadQuota } from '../../hooks';
 import PaywallScreen from '../PaywallScreen';
 import ProfileScreen from '../ProfileScreen';
-import type {
-  PlaybackMode, APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings,
-} from '../../types';
 import type { ContentCategory, ContentDifficulty } from '../../types/content';
-import {
-  DEFAULT_AP_SETTINGS, DEFAULT_KOREAN_SETTINGS,
-  DEFAULT_ECHO_SETTINGS, DEFAULT_CUSTOM_SETTINGS,
-  DEFAULT_PRACTICE_WAIT_SECONDS,
-} from '../../types';
+import { usePlaybackConfig } from './usePlaybackConfig';
+import { useGenerationState } from './useGenerationState';
 
 type ScoreEditorRouteProp = StackScreenProps<MainStackParamList, 'ScoreEditor'>['route'];
 
@@ -136,33 +130,30 @@ export default function ScoreEditorScreen() {
   const [selectedNote, setSelectedNote] = useState<{ id: string; staff: 'treble' | 'bass' } | null>(null);
 
   // 재생 옵션
-  const [prependBasePitch, setPrependBasePitch] = useState(false);
-  const [prependMetronome, setPrependMetronome] = useState(false);
-  const [scaleTempo, setScaleTempo] = useState(80);
-  const [metronomeFreq, setMetronomeFreq] = useState(1000);
-  const [examMode, setExamMode] = useState(false);
-  const [examWaitSeconds, setExamWaitSeconds] = useState(DEFAULT_PRACTICE_WAIT_SECONDS);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const {
+    isPlaying, setIsPlaying,
+    playbackMode, setPlaybackMode,
+    prependBasePitch, setPrependBasePitch,
+    prependMetronome, setPrependMetronome,
+    scaleTempo, setScaleTempo,
+    metronomeFreq, setMetronomeFreq,
+    examMode, setExamMode,
+    examWaitSeconds, setExamWaitSeconds,
+    showNoteCursor, setShowNoteCursor,
+    showMeasureHighlight, setShowMeasureHighlight,
+    hideNotes, setHideNotes,
+    apExamSettings, setApExamSettings,
+    koreanExamSettings, setKoreanExamSettings,
+    echoSettings, setEchoSettings,
+    customPlaySettings, setCustomPlaySettings,
+  } = usePlaybackConfig();
   const [showAbcNotationModal, setShowAbcNotationModal] = useState(false);
-  const [showNoteCursor, setShowNoteCursor] = useState(true);
-  const [showMeasureHighlight, setShowMeasureHighlight] = useState(true);
-  const [hideNotes, setHideNotes] = useState(false);
-  const [genHideNotes, setGenHideNotes] = useState(false);
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode | null>(null);
-  const [apExamSettings, setApExamSettings] = useState<APExamSettings>({ ...DEFAULT_AP_SETTINGS });
-  const [koreanExamSettings, setKoreanExamSettings] = useState<KoreanExamSettings>({ ...DEFAULT_KOREAN_SETTINGS });
-  const [echoSettings, setEchoSettings] = useState<EchoSettings>({ ...DEFAULT_ECHO_SETTINGS });
-  const [customPlaySettings, setCustomPlaySettings] = useState<CustomPlaySettings>({ ...DEFAULT_CUSTOM_SETTINGS });
 
   // 패널
   const [mobileSheet, setMobileSheet] = useState<'settings' | 'playback' | 'generate' | 'saved' | null>(null);
   const [mobileSubMenu, setMobileSubMenu] = useState<'duration' | 'accidental' | 'octave' | 'tie' | 'tuplet' | null>(null);
 
   // 자동생성
-  const [genDifficulty, setGenDifficulty] = useState<Difficulty>('beginner_1');
-  const [genBassDifficulty, setGenBassDifficulty] = useState<BassDifficulty>('bass_1');
-  const [genMeasures, setGenMeasures] = useState(4);
-  const [genTab, setGenTab] = useState<'melody' | 'grand'>('melody');
   // params 기반 초기값 설정
   const initialGenConfig = (() => {
     if (routeParams?.category && routeParams?.difficulty) {
@@ -174,9 +165,16 @@ export default function ScoreEditorScreen() {
     return { mode: 'partPractice' as const, level: 1 };
   })();
 
-  const [genPracticeMode, setGenPracticeMode] = useState<'partPractice' | 'comprehensive'>(initialGenConfig.mode);
-  const [genPartLevel, setGenPartLevel] = useState(initialGenConfig.mode === 'partPractice' ? initialGenConfig.level : 1);
-  const [genCompLevel, setGenCompLevel] = useState(initialGenConfig.mode === 'comprehensive' ? initialGenConfig.level : 1);
+  const {
+    genDifficulty, setGenDifficulty,
+    genBassDifficulty, setGenBassDifficulty,
+    genMeasures, setGenMeasures,
+    genTab, setGenTab,
+    genPracticeMode, setGenPracticeMode,
+    genPartLevel, setGenPartLevel,
+    genCompLevel, setGenCompLevel,
+    genHideNotes, setGenHideNotes,
+  } = useGenerationState(initialGenConfig);
   const [savedScores, setSavedScores] = useState<SavedScore[]>([]);
 
   const rendererRef = useRef<any>(null);

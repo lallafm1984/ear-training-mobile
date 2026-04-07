@@ -12,6 +12,7 @@ import {
   CustomPlaySettings,
   PLAYBACK_MODE_LABELS,
 } from '../../types';
+import type { PlanLimits } from '../../types';
 import { styles } from './styles';
 
 // ────────────────────────────────────────────
@@ -51,7 +52,7 @@ interface PlaybackSheetProps {
   customPlaySettings: CustomPlaySettings;
   setCustomPlaySettings: React.Dispatch<React.SetStateAction<CustomPlaySettings>>;
   // Subscription
-  limits: any;
+  limits: PlanLimits;
   openUpgrade: (reason: UpgradeReason) => void;
 }
 

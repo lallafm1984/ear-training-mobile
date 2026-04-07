@@ -9,6 +9,7 @@ import type { UpgradeReason } from '../../components';
 import {
   TIME_SIGNATURES, MAJOR_KEYS, MINOR_KEYS, KEY_ACCIDENTAL,
 } from './constants';
+import type { PlanLimits } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -17,7 +18,7 @@ interface SettingsSheetProps {
   onClose: () => void;
   state: ScoreState;
   setState: React.Dispatch<React.SetStateAction<ScoreState>>;
-  limits: any;
+  limits: PlanLimits;
   openUpgrade: (reason: UpgradeReason) => void;
 }
 
