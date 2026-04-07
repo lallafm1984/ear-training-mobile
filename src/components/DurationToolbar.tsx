@@ -94,22 +94,24 @@ export default function DurationToolbar({
           );
         })}
 
-        {/* Dot toggle */}
+        {/* Dot toggle — 16분음표는 점음표 불가(1.5/16 비표현) */}
         <TouchableOpacity
           style={[
             styles.durationBtn,
-            isDotted && {
+            isDotted && selectedDuration !== '16' && {
               backgroundColor: accentColor + '20',
               borderColor: accentColor,
             },
+            selectedDuration === '16' && styles.disabled,
           ]}
+          disabled={selectedDuration === '16'}
           onPress={onToggleDot}
           accessibilityLabel="점음표 토글"
         >
           <Text
             style={[
               styles.durationBtnText,
-              { color: isDotted ? accentColor : COLORS.slate600 },
+              { color: selectedDuration === '16' ? COLORS.slate300 : isDotted ? accentColor : COLORS.slate600 },
             ]}
           >
             점

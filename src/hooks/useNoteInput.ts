@@ -72,8 +72,8 @@ function userNotesToAbc(
       abcPitch = '^' + abcPitch;
     } else if (note.accidental === 'b' && keySigAlt !== 'b') {
       abcPitch = '_' + abcPitch;
-    } else if (note.accidental === 'n' || (note.accidental === '' && (keySigAlt === '#' || keySigAlt === 'b'))) {
-      // 내추럴이 필요한 경우 (조표에 의한 변화음을 취소)
+    } else if (note.accidental === 'n') {
+      // 명시적 내추럴: 조표에 의한 변화음을 취소
       if (keySigAlt) abcPitch = '=' + abcPitch;
     }
 
@@ -163,9 +163,10 @@ function userNotesToAbc(
 
 // ── Helpers ──
 
-/** 점음표 적용 — 2., 4., 8. 만 허용 */
+/** 점음표 적용 — 1., 2., 4., 8. 허용 (16분음표는 점음표 불가) */
 function applyDot(dur: NoteDuration): NoteDuration {
   switch (dur) {
+    case '1': return '1.';
     case '2': return '2.';
     case '4': return '4.';
     case '8': return '8.';
@@ -408,7 +409,8 @@ export function useNoteInput(options: UseNoteInputOptions) {
   // ── Actions ──
 
   const setDuration = useCallback((dur: NoteDuration) => {
-    setState(prev => ({ ...prev, selectedDuration: dur, isDotted: false }));
+    // 16분음표 선택 시 점 모드 해제 (점16분 불가), 나머지는 점 모드 유지
+    setState(prev => ({ ...prev, selectedDuration: dur, isDotted: dur === '16' ? false : prev.isDotted }));
   }, []);
 
   const toggleDot = useCallback(() => {
@@ -653,7 +655,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
     undoHistoryRef.current = [];
     setState(prev => ({
       ...prev,
-      trebleNotes: firstNote ? [firstNote] : [],
+      trebleNotes: firstNote ? [{ ...firstNote, tie: false }] : [],
       bassNotes: [],
       selectedNoteIndex: null,
     }));
@@ -709,8 +711,11 @@ export function useNoteInput(options: UseNoteInputOptions) {
       // firstNote 보호
       if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
 
+      // 점 모드 적용 (편집 모드에서도 isDotted 반영)
+      const effectiveDur = prev.isDotted ? applyDot(dur) : dur;
+
       const oldDur16 = durationToSixteenths(notes[idx].duration);
-      const newDur16 = durationToSixteenths(dur);
+      const newDur16 = durationToSixteenths(effectiveDur);
       if (oldDur16 === newDur16) return prev;
 
       const info = getMeasureInfo(notes, idx, barSixteenths);
@@ -720,7 +725,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
       if (newDur16 > maxForNote) return prev; // 마디 초과 → 거부
 
-      notes[idx] = { ...notes[idx], duration: dur };
+      notes[idx] = { ...notes[idx], duration: effectiveDur };
 
       if (newDur16 < oldDur16 && info.isMeasureFull) {
         // 짧아지고 마디가 꽉 찼었을 때 ��� 차이만큼 쉼표 삽입
@@ -745,14 +750,17 @@ export function useNoteInput(options: UseNoteInputOptions) {
     // 셋잇단음표는 음길이 변경 불가
     if (notes[idx].tuplet === '3') return false;
 
+    // 점 모드 반영: 실제 적용될 음길이로 검사
+    const effectiveDur = state.isDotted ? applyDot(dur) : dur;
+
     const oldDur16 = durationToSixteenths(notes[idx].duration);
-    const newDur16 = durationToSixteenths(dur);
+    const newDur16 = durationToSixteenths(effectiveDur);
     if (newDur16 <= oldDur16) return true; // 줄이거나 같으면 항상 허용
 
     const info = getMeasureInfo(notes, idx, barSixteenths);
     const otherUsed = info.measureTotal - oldDur16;
     return newDur16 <= barSixteenths - otherUsed;
-  }, [getActiveNotes, state.selectedNoteIndex, state.activeVoice, firstNote, barSixteenths]);
+  }, [getActiveNotes, state.selectedNoteIndex, state.activeVoice, state.isDotted, firstNote, barSixteenths]);
 
   /** 선택된 음표를 셋잇단음표로 변환 (4분음표 → 8분×3) */
   const replaceWithTriplet = useCallback(() => {

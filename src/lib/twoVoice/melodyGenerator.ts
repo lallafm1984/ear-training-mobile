@@ -1084,7 +1084,7 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       const useTriplet =
         !suppressTriplet &&
         !barTripletLimit &&
-        !isFirstNote &&
+        !(bar === 0 && barPos === 0) &&
         tripletBudget > 0 &&
         dur === 4 &&
         melodyLevel >= 8 &&

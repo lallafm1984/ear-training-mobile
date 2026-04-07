@@ -22,7 +22,7 @@ import {
 
 import type { BassLevel, TimeSignature as TVTimeSignature } from '../twoVoice';
 import { applyCounterpointCorrections, generateTwoVoiceStack } from '../twoVoice';
-import { applyMelodyAccidentals } from '../twoVoice/chromaticAccidental';
+import { applyMelodyAccidentals, ensureMinAccidentalBars } from '../twoVoice/chromaticAccidental';
 import { fillRhythm } from '../trebleRhythmFill';
 
 import type { Difficulty, BassDifficulty, GeneratorOptions, GeneratedScore } from './types';
@@ -284,6 +284,11 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
   // ── 최종 임시표 안전망: 모든 후처리(쉼표·분할·반복음·대사관계) 완료 후 ──
   cleanupBrokenAccidentals(finalTreble, keySignature, finalBass);
+
+  // ── 임시표 난이도(L9): cleanup 이후 최소 2마디 보장 ──
+  if (opts.partPracticeLevel === 9 || lvl >= 9) {
+    ensureMinAccidentalBars(finalTreble, keySignature, isMinor ? 'harmonic_minor' : 'major', sixteenthsPerBar);
+  }
 
   return { trebleNotes: finalTreble, bassNotes: finalBass };
 }

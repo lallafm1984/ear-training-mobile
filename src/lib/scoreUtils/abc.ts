@@ -826,7 +826,7 @@ export function generateAbc(state: ScoreState): string {
 
   const header = [
     `X: 1`,
-    `T: ${state.title || 'Score'}`,
+    `T: ${state.title || ''}`,
     `M: ${state.timeSignature}`,
     `L: 1/16`,
     `Q: 1/4=${state.tempo}`,

@@ -216,6 +216,8 @@ export default function CategoryPracticeScreen() {
           onChangeSettings={setPracticeSettings}
           accentColor={colors.main}
           accentBg={colors.bg}
+          tier={tier}
+          onUpgrade={() => { setSettingsOpen(false); navigation.navigate('Paywall'); }}
         />
       )}
     </SafeAreaView>
