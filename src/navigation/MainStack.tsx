@@ -21,6 +21,12 @@ import ProfileScreen from '../screens/ProfileScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
+export interface PracticeSettings {
+  timeSignature: string;
+  keySignature: string;
+  tempo: number;
+}
+
 // ─────────────────────────────────────────────────────────────
 // 네비게이션 파라미터 타입
 // ─────────────────────────────────────────────────────────────
@@ -30,7 +36,7 @@ export type MainStackParamList = {
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
-  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty };
+  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty; practiceSettings?: PracticeSettings };
   ScoreEditor: {
     category?: ContentCategory;
     difficulty?: ContentDifficulty;
