@@ -572,9 +572,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     stopTimingCallbacks();
     if (synthInstance) { try { synthInstance.stop(); } catch(e) {} synthInstance = null; }
     if (playTimeout)   { clearTimeout(playTimeout); playTimeout = null; }
-    // AudioContext suspend로 스케줄된 메트로놈 클릭도 즉시 중단
-    if (audioCtx && audioCtx.state === 'running') {
-      try { audioCtx.suspend(); } catch(e) {}
+    // AudioContext close로 스케줄된 메트로놈 클릭 완전 제거 (suspend는 노드가 살아남아 겹침 발생)
+    if (audioCtx) {
+      try { audioCtx.close(); } catch(e) {}
+      audioCtx = null;
     }
     isPlayingState = false; setPlayBtnUI(false);
     postMsg({ type:'PLAY_STATE', isPlaying:false });
@@ -591,8 +592,12 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     synth.init({
       audioContext: audioCtx, visualObj: vo,
       options: { soundFontVolumeMultiplier: 2.0 }
-    }).then(function() { return synth.prime(); })
+    }).then(function() {
+        if (cancelFlag) return;
+        return synth.prime();
+      })
       .then(function(res) {
+        if (cancelFlag) return;
         var ts   = (p.timeSignature || '4/4').split('/');
         var top  = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
         var beat = (60 / (p.tempo || 120)) * (4 / btm);
@@ -631,8 +636,12 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
       synthInstance = synth;
       synth.init({ audioContext: audioCtx, visualObj: vo,
                    options:{ soundFontVolumeMultiplier:2.0 } })
-        .then(function(){ return synth.prime(); })
+        .then(function(){
+          if (cancelFlag) { resolve(); return; }
+          return synth.prime();
+        })
         .then(function(res){
+          if (cancelFlag) { resolve(); return; }
           synth.start();
           /* voOverride(displayVisualObj) 사용 시 res.duration이 정확, 아니면 계산값 fallback */
           var dur = (voOverride && res && res.duration) ? res.duration : durationSec;
@@ -1019,6 +1028,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     } catch(e) { stopAudio(); return; }
     var resume = audioCtx.state === 'suspended' ? audioCtx.resume() : Promise.resolve();
     resume.then(function() {
+      if (cancelFlag) return;
       if (currentParams.examMode) { examPlay(); }
       else { doSynth(currentCombinedAbc); }
     });
@@ -1219,7 +1229,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
           noteColors:       msg.noteColors      || null,
         };
         renderScore(msg.abc, msg.selectedNote);
-        if (msg.hideNotes) setTimeout(function(){ applyHideNotes(true); }, 200);
+        if (msg.hideNotes) {
+          applyHideNotes(true);
+          requestAnimationFrame(function(){ applyHideNotes(true); });
+        }
       } else if (msg.type === 'SYNC_PLAY_STATE') {
         if (!msg.isPlaying && isPlayingState) stopAudio();
       } else if (msg.type === 'HIGHLIGHT') {

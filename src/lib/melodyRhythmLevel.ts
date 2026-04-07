@@ -62,7 +62,7 @@ const PART_PRACTICE_DURATION_POOL: Record<number, number[]> = {
   1: [8, 4],           // 2분 + 4분 (기본)
   2: [4, 4, 2],        // 4분 + 8분음표
   3: [6, 4, 4],        // 점4분 + 4분
-  4: [4, 4, 4, 2],     // 당김음 (후처리로 패턴 생성)
+  4: [6, 4, 4, 2],     // 점4분 + 당김음 (후처리로 패턴 생성)
   5: [6, 4, 4],        // 붙임줄 (tieProb로 제어, 점4분 포함)
   6: [4, 4, 2, 1, 1],  // + 16분음표 (비중 확보)
   7: [4, 4, 3],        // + 점8분음표
@@ -75,7 +75,7 @@ const PART_PRACTICE_RHYTHM_PARAMS: Record<number, TrebleRhythmParams> = {
   1: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   2: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   3: { syncopationProb: 0, dottedProb: 0.80, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
-  4: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
+  4: { syncopationProb: 0, dottedProb: 0.70, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   5: { syncopationProb: 0, dottedProb: 0.50, tieProb: 0.60, tripletProb: 0,    tripletBudget: [0, 0] },
   6: { syncopationProb: 0, dottedProb: 0,    tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },
   7: { syncopationProb: 0, dottedProb: 0.45, tieProb: 0,    tripletProb: 0,    tripletBudget: [0, 0] },

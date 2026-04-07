@@ -742,9 +742,9 @@ export function applyInternalRests(
   let candidates: NotePos[] = [];
 
   if (lvl <= 2) {
-    // L2: 4분음표만, 약박 위치
+    // L2: 4분음표 + 점4분음표, 약박 위치
     candidates = timeline.filter((p, idx) =>
-      p.dur === 4 &&
+      (p.dur === 4 || p.dur === 6) &&
       (p.offset === 4 || p.offset === 12) &&
       !isRest(p.noteIdx) &&
       !inTuplet.has(p.noteIdx) &&
@@ -752,9 +752,9 @@ export function applyInternalRests(
       !isRest(timeline[idx + 1]?.noteIdx ?? -1)
     );
   } else {
-    // 중급·고급: 4분 쉼표 + 8분 쉼표 (정박만)
+    // 중급·고급: 4분 쉼표 + 점4분 쉼표 + 8분 쉼표 (정박만)
     const quarterCandidates = timeline.filter((p, idx) =>
-      p.dur === 4 &&
+      (p.dur === 4 || p.dur === 6) &&
       (p.offset === 4 || p.offset === 12) &&
       !isRest(p.noteIdx) && !inTuplet.has(p.noteIdx) &&
       !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&

@@ -32,7 +32,7 @@ import PianoKeyboard from '../components/PianoKeyboard';
 import DurationToolbar from '../components/DurationToolbar';
 import GradingResultView from '../components/GradingResult';
 import { useNoteInput } from '../hooks/useNoteInput';
-import { gradeNotes, type GradingResult } from '../lib/grading';
+import { gradeNotes, type GradingResult, type NoteGrade } from '../lib/grading';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -108,8 +108,8 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
     });
     const rhythmNotes: ScoreNote[] = result.trebleNotes.map(n =>
       n.pitch === 'rest'
-        ? n
-        : { ...n, pitch: 'B' as PitchName, octave: 4, accidental: '' as Accidental }
+        ? { ...n, tie: false }
+        : { ...n, pitch: 'B' as PitchName, octave: 4, accidental: '' as Accidental, tie: false }
     );
     return {
       trebleNotes: rhythmNotes,
@@ -118,7 +118,7 @@ function generatePracticeScore(category: ContentCategory, difficulty: ContentDif
       timeSignature: trackOpts.timeSignature,
       useGrandStaff: false,
       barsPerStaff: 4,
-      disableTies: level < 5,
+      disableTies: true,
     };
   }
 
@@ -207,53 +207,120 @@ const DURATION_ICON: Record<string, string> = {
  *  NoteDuration '4' = 4분     = 4 sixteenths → ABC 'B4'
  *  NoteDuration '8' = 8분     = 2 sixteenths → ABC 'B2'
  */
+// ── 리듬 공통 상수 ──
+const SIXTEENTHS_MAP: Record<string, number> = {
+  '1': 16, '1.': 24, '2': 8, '2.': 12, '4': 4, '4.': 6,
+  '8': 2, '8.': 3, '16': 1, 'triplet': 4,
+  'r_1': 16, 'r_2': 8, 'r_2.': 12, 'r_4': 4, 'r_4.': 6,
+  'r_8': 2, 'r_8.': 3, 'r_16': 1,
+};
+
+function getBarSixteenths(timeSignature: string): number {
+  const [top, bottom] = timeSignature.split('/').map(Number);
+  return (top || 4) * (16 / (bottom || 4));
+}
+
+function getTotalSixteenths(input: RhythmInput[]): number {
+  return input.reduce((sum, d) => sum + (SIXTEENTHS_MAP[d] ?? 4), 0);
+}
+
+/** 리듬 입력을 마디 단위로 분할 */
+function splitRhythmIntoMeasures(input: RhythmInput[], barSixteenths: number): RhythmInput[][] {
+  const measures: RhythmInput[][] = [];
+  let current: RhythmInput[] = [];
+  let pos = 0;
+  for (const d of input) {
+    current.push(d);
+    pos += SIXTEENTHS_MAP[d] ?? 4;
+    if (pos >= barSixteenths) {
+      measures.push(current);
+      current = [];
+      pos = 0;
+    }
+  }
+  if (current.length > 0) measures.push(current);
+  return measures;
+}
+
+/** 채점용 정답 마디 배열 (마지막 마디 후행 쉼표 제거) */
+function getGradableMeasures(notes: ScoreNote[], barSixteenths: number): RhythmInput[][] {
+  const full = getAnswerSequence(notes);
+  const measures = splitRhythmIntoMeasures(full, barSixteenths);
+  if (measures.length === 0) return measures;
+
+  // 마지막 마디에서 후행 쉼표 제거
+  const last = [...measures[measures.length - 1]];
+  while (last.length > 0 && isRest(last[last.length - 1])) last.pop();
+
+  if (last.length > 0) {
+    return [...measures.slice(0, -1), last];
+  }
+  return measures.slice(0, -1);
+}
+
+/** 음표 순서 리듬 채점 (note-by-note) */
+function gradeRhythmNoteByNote(
+  answer: RhythmInput[],
+  userInput: RhythmInput[],
+): { grades: NoteGrade[]; accuracy: number; correctCount: number; wrongCount: number } {
+  const grades: NoteGrade[] = [];
+  let correctCount = 0;
+  const maxLen = Math.max(answer.length, userInput.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const ans = answer[i] ?? null;
+    const usr = userInput[i] ?? null;
+
+    if (ans && usr) {
+      const match = ans === usr;
+      if (match) correctCount++;
+      grades.push({
+        grade: match ? 'correct' : 'wrong',
+        answerSourceIndices: [i],
+        userSourceIndices: [i],
+      });
+    } else if (ans && !usr) {
+      grades.push({
+        grade: 'missing',
+        answerSourceIndices: [i],
+        userSourceIndices: [],
+      });
+    } else {
+      grades.push({
+        grade: 'extra',
+        answerSourceIndices: [],
+        userSourceIndices: [i],
+      });
+    }
+  }
+
+  const wrongCount = grades.filter(g => g.grade !== 'correct').length;
+  const accuracy = maxLen > 0 ? correctCount / answer.length : 0;
+  return { grades, accuracy, correctCount, wrongCount };
+}
+
 function userInputToAbc(input: RhythmInput[], timeSignature: string): string {
   if (input.length === 0) return '';
-  // NoteDuration → sixteenths count (ABC duration with L:1/16)
   const durToAbc: Record<string, string> = {
-    '1':  'B16',       // 온음표 = 16 sixteenths
-    '1.': 'B24',       // 점온음표 = 24 sixteenths
-    '2':  'B8',        // 2분 = 8 sixteenths
-    '2.': 'B12',       // 점2분 = 12 sixteenths
-    '4':  'B4',        // 4분 = 4 sixteenths
-    '4.': 'B6',        // 점4분 = 6 sixteenths
-    '8':  'B2',        // 8분 = 2 sixteenths
-    '8.': 'B3',        // 점8분 = 3 sixteenths
-    '16': 'B1',        // 16분 = 1 sixteenth
-    'triplet': '(3:2:3B2B2B2',
-    // 쉼표
-    'r_1':  'z16',     // 온쉼표
-    'r_2':  'z8',      // 2분쉼표
-    'r_2.': 'z12',
-    'r_4':  'z4',      // 4분쉼표
-    'r_4.': 'z6',
-    'r_8':  'z2',      // 8분쉼표
-    'r_8.': 'z3',
-    'r_16': 'z1',      // 16분쉼표
+    '1':  'B16', '1.': 'B24', '2':  'B8', '2.': 'B12',
+    '4':  'B4',  '4.': 'B6',  '8':  'B2', '8.': 'B3',
+    '16': 'B1',  'triplet': '(3:2:3B2B2B2',
+    'r_1':  'z16', 'r_2':  'z8', 'r_2.': 'z12',
+    'r_4':  'z4',  'r_4.': 'z6', 'r_8':  'z2',
+    'r_8.': 'z3',  'r_16': 'z1',
   };
-  // 박자표에서 마디 길이 (sixteenths) 계산
-  const [top, bottom] = timeSignature.split('/').map(Number);
-  const barSixteenths = (top || 4) * (16 / (bottom || 4));
-
-  // 각 입력의 sixteenths 수
-  const sixteenthsMap: Record<string, number> = {
-    '1': 16, '1.': 24, '2': 8, '2.': 12, '4': 4, '4.': 6,
-    '8': 2, '8.': 3, '16': 1, 'triplet': 4,
-    'r_1': 16, 'r_2': 8, 'r_2.': 12, 'r_4': 4, 'r_4.': 6,
-    'r_8': 2, 'r_8.': 3, 'r_16': 1,
-  };
+  const barSixteenths = getBarSixteenths(timeSignature);
 
   let abc = '';
   let barPos = 0;
   for (const d of input) {
     abc += (durToAbc[d] ?? 'B4') + ' ';
-    barPos += sixteenthsMap[d] ?? 4;
+    barPos += SIXTEENTHS_MAP[d] ?? 4;
     if (barPos >= barSixteenths) {
       abc += '| ';
       barPos = 0;
     }
   }
-  // 마지막 마디선 정리
   abc = abc.trimEnd();
   if (!abc.endsWith('|')) abc += ' |]';
   else abc = abc.slice(0, -1) + ']';
@@ -335,7 +402,6 @@ export default function NotationPracticeScreen() {
   const isRhythm = category === 'rhythm';
   const [userInput, setUserInput] = useState<RhythmInput[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [rhythmResults, setRhythmResults] = useState<{ correct: RhythmInput; user: RhythmInput | null; isCorrect: boolean }[]>([]);
   const [correctCounts, setCorrectCounts] = useState<number[]>([]);
 
   // ── 선율/2성부 입력 모드 상태 ──
@@ -363,7 +429,6 @@ export default function NotationPracticeScreen() {
     setIsPlaying(false);
     setUserInput([]);
     setSubmitted(false);
-    setRhythmResults([]);
     setCorrectCounts([]);
     setMelodySubmitted(false);
     setGradingResult(null);
@@ -499,54 +564,66 @@ export default function NotationPracticeScreen() {
     setShowResult(true);
   }, []);
 
-  // ── 리듬: 음표 입력 ──
+  // ── 리듬: 정답 시퀀스 ──
+  const timeSignature = score?.timeSignature ?? '4/4';
+  const barSix = getBarSixteenths(timeSignature);
+  const fullAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
+  const fullTotalSixteenths = getTotalSixteenths(fullAnswer);
+
+  // ── 리듬: 음표 입력 (전체 4마디 duration 기반 제한) ──
   const handleRhythmInput = useCallback((dur: RhythmInput) => {
     if (submitted || !score) return;
-    const answer = getAnswerSequence(score.trebleNotes);
-    if (userInput.length >= answer.length) return;
+    const currentTotal = getTotalSixteenths(userInput);
+    const adding = SIXTEENTHS_MAP[dur] ?? 4;
+    if (currentTotal + adding > fullTotalSixteenths) return;
     setUserInput(prev => [...prev, dur]);
-  }, [submitted, score, userInput.length]);
+  }, [submitted, score, userInput, fullTotalSixteenths]);
 
   const handleRhythmDelete = useCallback(() => {
     if (submitted) return;
     setUserInput(prev => prev.slice(0, -1));
   }, [submitted]);
 
-  // ── 리듬: 제출 + 채점 ──
+  // ── 리듬: 제출 + 마디 단위 채점 (마지막 마디 후행 쉼표는 채점 제외) ──
   const handleRhythmSubmit = useCallback(async () => {
     if (!score || submitted) return;
-    const answer = getAnswerSequence(score.trebleNotes);
-    const results = answer.map((dur, i) => ({
-      correct: dur,
-      user: userInput[i] ?? null,
-      isCorrect: dur === userInput[i],
-    }));
-    setRhythmResults(results);
+
+    const gradableAnswer = getGradableMeasures(score.trebleNotes, barSix).flat();
+    const { grades, accuracy, correctCount, wrongCount } = gradeRhythmNoteByNote(gradableAnswer, userInput);
+
+    const result: GradingResult = {
+      grades,
+      accuracy,
+      selfRating: accuracy >= 0.9 ? 5 : accuracy >= 0.7 ? 4 : accuracy >= 0.5 ? 3 : accuracy >= 0.3 ? 2 : 1,
+      correctCount,
+      wrongCount,
+      missingCount: 0,
+      extraCount: 0,
+    };
+
+    setGradingResult(result);
     setSubmitted(true);
     setHideNotes(false);
 
-    const correctCount = results.filter(r => r.isCorrect).length;
-    const rating = Math.max(1, Math.round((correctCount / answer.length) * 5));
     setPracticeCount(prev => prev + 1);
-    setRatings(prev => [...prev, rating]);
+    setRatings(prev => [...prev, result.selfRating]);
     setCorrectCounts(prev => [...prev, correctCount]);
 
     const record: PracticeRecord = {
       id: `pr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       contentType: category,
       difficulty,
-      selfRating: rating,
+      selfRating: result.selfRating,
       practicedAt: new Date().toISOString(),
     };
     await addRecord(record);
     await updateStreak();
 
-    // 스킬 프로필 반영
-    const evalRating = rating >= 4 ? 'easy' : rating >= 3 ? 'normal' : 'hard' as const;
+    const evalRating = result.selfRating >= 4 ? 'easy' : result.selfRating >= 3 ? 'normal' : 'hard' as const;
     const levelMatch = difficulty.match(/\d+/);
     const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
     await applyEvaluation('partPractice', level, evalRating);
-  }, [score, submitted, userInput, category, difficulty, addRecord, updateStreak, applyEvaluation]);
+  }, [score, submitted, userInput, barSix, category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
   // ── 선율/2성부: 제출 + 채점 ──
   const handleMelodySubmit = useCallback(async () => {
@@ -598,7 +675,8 @@ export default function NotationPracticeScreen() {
   }, [score, melodySubmitted, noteInput.trebleNotes, noteInput.bassNotes,
       category, difficulty, addRecord, updateStreak, applyEvaluation]);
 
-  const rhythmAnswer = score ? getAnswerSequence(score.trebleNotes) : [];
+  const userTotalSixteenths = getTotalSixteenths(userInput);
+  const rhythmFilled = userTotalSixteenths >= fullTotalSixteenths && fullTotalSixteenths > 0;
   const noteButtons = NOTE_BUTTONS;
   const restButtons = REST_BUTTONS;
 
@@ -608,7 +686,6 @@ export default function NotationPracticeScreen() {
       ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
       : 0;
     const totalCorrect = correctCounts.reduce((a, b) => a + b, 0);
-    const totalNotes = correctCounts.length > 0 ? correctCounts.length * (rhythmAnswer.length || 1) : 0;
 
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -746,7 +823,7 @@ export default function NotationPracticeScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-            ) : !isMelodyInput ? (
+            ) : (!isMelodyInput && !(isRhythm && submitted)) ? (
               <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
                 <TouchableOpacity
                   style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
@@ -778,6 +855,19 @@ export default function NotationPracticeScreen() {
                   timeSignature={score?.timeSignature ?? '4/4'}
                 />
               </View>
+            ) : (isRhythm && submitted) ? (
+              /* 리듬 제출 후: 정답 악보 숨김 — GradingResultView에서 표시 */
+              <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+                <AbcjsRenderer
+                  ref={abcjsRef}
+                  abcString={abcString}
+                  hideNotes={true}
+                  tempo={90}
+                  isPlaying={isPlaying}
+                  onPlayStateChange={handlePlayStateChange}
+                  timeSignature={score?.timeSignature ?? '4/4'}
+                />
+              </View>
             ) : (
               <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
                 <View style={styles.scoreHeader}>
@@ -804,8 +894,9 @@ export default function NotationPracticeScreen() {
                   onScrollDelta={handleScrollDelta}
                   isPlaying={isPlaying}
                   onPlayStateChange={handlePlayStateChange}
-                  barsPerStaff={score?.barsPerStaff}
+                  barsPerStaff={isRhythm ? 4 : score?.barsPerStaff}
                   prependMetronome={isRhythm}
+                  showNoteCursor={!isRhythm}
                   timeSignature={score?.timeSignature ?? '4/4'}
                 />
               </View>
@@ -858,20 +949,16 @@ export default function NotationPracticeScreen() {
               />
             )}
 
-            {/* 리듬 모드: 답지 악보 (사용자 입력 실시간 표시) */}
-            {isRhythm && (
+            {/* 리듬 모드: 제출 전 — 사용자 입력 실시간 표시 */}
+            {isRhythm && !submitted && (
               <View style={styles.rhythmInputDisplay}>
                 <Text style={styles.rhythmInputLabel}>
-                  내 답 ({userInput.length}/{rhythmAnswer.length})
+                  내 답 (마디 {splitRhythmIntoMeasures(userInput, barSix).filter(m => getTotalSixteenths(m) >= barSix).length}/{splitRhythmIntoMeasures(fullAnswer, barSix).length})
                 </Text>
                 {userInput.length > 0 ? (
-                  <View style={[styles.scoreCard, {
-                    borderColor: submitted
-                      ? (rhythmResults.every(r => r.isCorrect) ? '#86efac' : '#fca5a5')
-                      : colors.main + '20',
-                  }]}>
+                  <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
                     <AbcjsRenderer
-                      abcString={userInputToAbc(userInput, score?.timeSignature ?? '4/4')}
+                      abcString={userInputToAbc(userInput, timeSignature)}
                       hideNotes={false}
                       tempo={90}
                       barsPerStaff={4}
@@ -883,31 +970,27 @@ export default function NotationPracticeScreen() {
                     <Text style={styles.rhythmEmptyText}>아래 음표를 탭하여 입력하세요</Text>
                   </View>
                 )}
-                {submitted && (
-                  <View style={styles.rhythmGradeRow}>
-                    {rhythmResults.map((r, i) => (
-                      <View key={i} style={[styles.rhythmGradeDot, {
-                        backgroundColor: r.isCorrect ? '#dcfce7' : '#fee2e2',
-                        borderColor: r.isCorrect ? '#86efac' : '#fca5a5',
-                      }]}>
-                        <Text style={{ fontSize: 8, fontWeight: '800', color: r.isCorrect ? '#166534' : '#991b1b' }}>
-                          {r.isCorrect ? 'O' : 'X'}
-                        </Text>
-                      </View>
-                    ))}
-                    <Text style={[styles.rhythmResultText, { color: colors.main }]}>
-                      {rhythmResults.filter(r => r.isCorrect).length}/{rhythmResults.length}
-                    </Text>
-                  </View>
-                )}
               </View>
+            )}
+
+            {/* 리듬 모드: 제출 후 — 선율과 동일한 결과 화면 */}
+            {isRhythm && submitted && gradingResult && (
+              <GradingResultView
+                answerAbcString={abcString}
+                userAbcString={userInputToAbc(userInput, timeSignature)}
+                gradingResult={gradingResult}
+                timeSignature={timeSignature}
+                accentColor={colors.main}
+                barsPerStaff={2}
+                onScrollDelta={handleScrollDelta}
+              />
             )}
           </>
         )}
       </ScrollView>
 
-      {/* 하단 고정 — 선율 채점 결과: 다음 문제 버튼 */}
-      {!isGenerating && isMelodyInput && melodySubmitted && (
+      {/* 하단 고정 — 채점 결과: 다음 문제 버튼 (선율/리듬 제출 후) */}
+      {!isGenerating && ((isMelodyInput && melodySubmitted) || (isRhythm && submitted)) && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={styles.nextRow}>
             <TouchableOpacity
@@ -929,8 +1012,8 @@ export default function NotationPracticeScreen() {
         </View>
       )}
 
-      {/* 하단 고정 — 입력/리듬 모드 */}
-      {!isGenerating && !(isMelodyInput && melodySubmitted) && (
+      {/* 하단 고정 — 입력 모드 (제출 전만) */}
+      {!isGenerating && !(isMelodyInput && melodySubmitted) && !(isRhythm && submitted) && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {/* 되돌리기 — 경계선 우측 상단 */}
           {isMelodyInput && !melodySubmitted && (
@@ -973,7 +1056,7 @@ export default function NotationPracticeScreen() {
                         key={dur}
                         style={[styles.rhythmDurBtn, { borderColor: isNote ? colors.main + '40' : COLORS.slate300 }]}
                         onPress={() => handleRhythmInput(dur)}
-                        disabled={userInput.length >= rhythmAnswer.length}
+                        disabled={rhythmFilled}
                         activeOpacity={0.7}
                       >
                         <MaterialCommunityIcons
@@ -1000,13 +1083,13 @@ export default function NotationPracticeScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {
-                      backgroundColor: userInput.length === rhythmAnswer.length ? colors.main : COLORS.slate200,
+                      backgroundColor: rhythmFilled ? colors.main : COLORS.slate200,
                     }]}
                     onPress={handleRhythmSubmit}
-                    disabled={userInput.length !== rhythmAnswer.length}
+                    disabled={!rhythmFilled}
                   >
                     <Text style={[styles.rhythmActionBtnText, {
-                      color: userInput.length === rhythmAnswer.length ? '#fff' : COLORS.slate400,
+                      color: rhythmFilled ? '#fff' : COLORS.slate400,
                     }]}>
                       제출
                     </Text>
