@@ -26,7 +26,8 @@ import RecentActivityList from '../components/RecentActivityList';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const DAILY_GOAL = 3;
+const DAILY_GOAL_FREE = 2;
+const DAILY_GOAL_PRO = 5;
 
 /** 연습 기록 기반 가장 약한 카테고리 추천 */
 function getSmartRecommendation(
@@ -95,11 +96,13 @@ export default function HomeScreen() {
     navigation.navigate('CategoryPractice', { category: recommendation.category });
   };
 
+  const dailyGoal = tier === 'pro' ? DAILY_GOAL_PRO : DAILY_GOAL_FREE;
+
   const handleDailyGoal = () => {
     navigation.navigate('CategoryPractice', { category: recommendation.category });
   };
 
-  const dailyDone = stats.dailyCount >= DAILY_GOAL;
+  const dailyDone = stats.dailyCount >= dailyGoal;
 
   if (!loaded) {
     return (
@@ -167,7 +170,7 @@ export default function HomeScreen() {
               일일 목표
             </Text>
             <Text style={styles.actionDesc}>
-              {stats.dailyCount}/{DAILY_GOAL} 완료
+              {stats.dailyCount}/{dailyGoal} 완료
             </Text>
           </TouchableOpacity>
 
