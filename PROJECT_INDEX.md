@@ -6,7 +6,7 @@
 
 ```
 src/
-├── components/          # 재사용 가능 UI 컴포넌트 (16개)
+├── components/          # 재사용 가능 UI 컴포넌트 (17개)
 ├── context/             # React Context 프로바이더 (3개)
 ├── hooks/               # 커스텀 React 훅 (5개)
 ├── lib/                 # 비즈니스 로직 모듈
