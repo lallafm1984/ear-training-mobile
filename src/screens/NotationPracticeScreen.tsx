@@ -17,12 +17,16 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import {
-  generateScore, generateAbc, Difficulty, BassDifficulty,
+  generateAbc,
   ScoreNote, PitchName, Accidental, durationToSixteenths,
-  generateAbcScaleNotes, generateRhythmDictation
+  generateAbcScaleNotes,
 } from '../lib';
 import type { NoteDuration } from '../lib/scoreUtils';
-import { buildGeneratorOptions } from '../lib/trackConfig';
+import {
+  generatePracticeScore, melodyDifficultyToLevel,
+  type PracticeScore,
+} from '../lib/practiceScoreGenerator';
+import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
@@ -41,106 +45,8 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 // 카테고리별 악보 생성
 // ─────────────────────────────────────────────────────────────
 
-function melodyDifficultyToLevel(difficulty: ContentDifficulty): number {
-  const map: Record<string, number> = {
-    beginner_1: 1, beginner_2: 2, beginner_3: 3,
-    intermediate_1: 4, intermediate_2: 5, intermediate_3: 6,
-    advanced_1: 7, advanced_2: 8, advanced_3: 9,
-  };
-  return map[difficulty] ?? 1;
-}
-
-function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
-  const map: Record<string, number> = {
-    rhythm_1: 1, rhythm_2: 2, rhythm_3: 4,
-    rhythm_4: 6, rhythm_5: 8, rhythm_6: 8,
-  };
-  return map[difficulty] ?? 1;
-}
-
-interface PracticeScore {
-  trebleNotes: ScoreNote[];
-  bassNotes: ScoreNote[];
-  keySignature: string;
-  timeSignature: string;
-  useGrandStaff: boolean;
-  barsPerStaff?: number;
-  disableTies?: boolean;
-}
-
-function generatePracticeScore(category: ContentCategory, difficulty: ContentDifficulty, practiceSettings?: PracticeSettings): PracticeScore {
-  if (category === 'melody') {
-    const level = melodyDifficultyToLevel(difficulty);
-    const trackOpts = buildGeneratorOptions('partPractice', level);
-    const keySignature = practiceSettings?.keySignature ?? trackOpts.keySignature;
-    const timeSignature = practiceSettings?.timeSignature ?? trackOpts.timeSignature;
-    const result = generateScore({
-      keySignature,
-      timeSignature,
-      difficulty: trackOpts.difficulty,
-      measures: trackOpts.measures,
-      useGrandStaff: false,
-      practiceMode: 'part',
-      partPracticeLevel: level,
-    });
-    return {
-      trebleNotes: result.trebleNotes,
-      bassNotes: [],
-      keySignature,
-      timeSignature,
-      useGrandStaff: false,
-      barsPerStaff: level <= 2 ? 4 : level >= 4 ? 2 : undefined,
-      disableTies: level <= 5,
-    };
-  }
-
-  if (category === 'rhythm') {
-    const levelMatch = difficulty.match(/\d+/);
-    const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
-    const timeSig = practiceSettings?.timeSignature ?? '4/4';
-    const rhythmPitch = practiceSettings?.rhythmPitch ?? 'B';
-
-    // Custom rhythm engine which enforces the requirement of target element >= 2 measures
-    const rhythmNotes = generateRhythmDictation(level, 4, timeSig, rhythmPitch);
-
-    return {
-      trebleNotes: rhythmNotes,
-      bassNotes: [],
-      keySignature: 'C',
-      timeSignature: timeSig,
-      useGrandStaff: false,
-      barsPerStaff: 4,
-      disableTies: true,
-    };
-  }
-
-  // twoVoice
-  const diffMap: Record<string, Difficulty> = {
-    bass_1: 'beginner_3', bass_2: 'intermediate_1',
-    bass_3: 'intermediate_3', bass_4: 'advanced_1',
-  };
-  const bassDiffMap: Record<string, BassDifficulty> = {
-    bass_1: 'bass_1', bass_2: 'bass_2', bass_3: 'bass_3', bass_4: 'bass_4',
-  };
-  const keySignature = practiceSettings?.keySignature ?? 'C';
-  const timeSignature = practiceSettings?.timeSignature ?? '4/4';
-  const result = generateScore({
-    keySignature,
-    timeSignature,
-    difficulty: diffMap[difficulty] ?? 'beginner_3',
-    bassDifficulty: bassDiffMap[difficulty] ?? 'bass_1',
-    measures: 4,
-    useGrandStaff: true,
-  });
-  return {
-    trebleNotes: result.trebleNotes,
-    bassNotes: result.bassNotes,
-    keySignature,
-    timeSignature,
-    useGrandStaff: true,
-    barsPerStaff: 2,
-  };
-}
+// generatePracticeScore, melodyDifficultyToLevel, PracticeScore는
+// '../lib/practiceScoreGenerator'에서 import
 
 // ─────────────────────────────────────────────────────────────
 // 리듬 전용: 난이도별 버튼 풀 + 음표 라벨
@@ -349,7 +255,7 @@ export default function NotationPracticeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
-  const { category, difficulty, practiceSettings } = route.params;
+  const { category, difficulty, practiceSettings, examMode } = route.params;
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -428,7 +334,11 @@ export default function NotationPracticeScreen() {
     noteInput.selectNote(null);
 
     setTimeout(() => {
-      const newScore = generatePracticeScore(category, difficulty, practiceSettings);
+      // 시험 모드: 스토어에서 미리 생성된 score 사용
+      const newScore = examMode
+        ? examNotationStore.getScore()
+        : generatePracticeScore(category, difficulty, practiceSettings);
+      if (!newScore) return;
       setScore(newScore);
       if (category === 'melody' || category === 'twoVoice') {
         const first = newScore.trebleNotes[0] ?? null;
@@ -436,7 +346,7 @@ export default function NotationPracticeScreen() {
       }
       setIsGenerating(false);
     }, 500);
-  }, [category, difficulty, practiceSettings]);
+  }, [category, difficulty, practiceSettings, examMode]);
 
   // 마운트 시 첫 악보 생성
   useEffect(() => { generate(); }, [generate]);
@@ -594,6 +504,12 @@ export default function NotationPracticeScreen() {
       extraCount: 0,
     };
 
+    if (examMode) {
+      examNotationStore.setResult(result.selfRating);
+      navigation.goBack();
+      return;
+    }
+
     setGradingResult(result);
     setSubmitted(true);
     setHideNotes(false);
@@ -616,7 +532,7 @@ export default function NotationPracticeScreen() {
     const levelMatch = difficulty.match(/\d+/);
     const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
     await applyEvaluation('partPractice', level, evalRating);
-  }, [score, submitted, userInput, barSix, category, difficulty, addRecord, updateStreak, applyEvaluation]);
+  }, [score, submitted, userInput, barSix, category, difficulty, addRecord, updateStreak, applyEvaluation, examMode]);
 
   // ── 선율/2성부: 제출 + 채점 ──
   const handleMelodySubmit = useCallback(async () => {
@@ -644,9 +560,16 @@ export default function NotationPracticeScreen() {
       result.extraCount = totalGrades.filter(g => g.grade === 'extra').length;
     }
 
+    if (examMode) {
+      examNotationStore.setResult(result.selfRating);
+      navigation.goBack();
+      return;
+    }
+
     setGradingResult(result);
     setMelodySubmitted(true);
     setHideNotes(false);
+
     setPracticeCount(prev => prev + 1);
     setRatings(prev => [...prev, result.selfRating]);
 
@@ -666,7 +589,7 @@ export default function NotationPracticeScreen() {
     const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
     await applyEvaluation(track, level, evalRating);
   }, [score, melodySubmitted, noteInput.trebleNotes, noteInput.bassNotes,
-      category, difficulty, addRecord, updateStreak, applyEvaluation]);
+      category, difficulty, addRecord, updateStreak, applyEvaluation, examMode]);
 
   const userTotalSixteenths = getTotalSixteenths(userInput);
   const rhythmFilled = userTotalSixteenths >= fullTotalSixteenths && fullTotalSixteenths > 0;
@@ -985,6 +908,17 @@ export default function NotationPracticeScreen() {
       {/* 하단 고정 — 채점 결과: 다음 문제 버튼 (선율/리듬 제출 후) */}
       {!isGenerating && ((isMelodyInput && melodySubmitted) || (isRhythm && submitted)) && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {examMode ? (
+            <View style={styles.nextRow}>
+              <TouchableOpacity
+                style={[styles.nextBtn, { backgroundColor: COLORS.amber500 }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.nextBtnText}>시험으로 돌아가기</Text>
+                <ChevronRight size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
           <View style={styles.nextRow}>
             <TouchableOpacity
               style={[styles.nextBtn, { backgroundColor: colors.main }]}
@@ -1002,6 +936,7 @@ export default function NotationPracticeScreen() {
               </TouchableOpacity>
             )}
           </View>
+          )}
         </View>
       )}
 

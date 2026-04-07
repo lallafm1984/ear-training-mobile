@@ -37,7 +37,7 @@ export type MainStackParamList = {
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
-  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty; practiceSettings?: PracticeSettings };
+  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty; practiceSettings?: PracticeSettings; examMode?: boolean };
   ScoreEditor: {
     category?: ContentCategory;
     difficulty?: ContentDifficulty;

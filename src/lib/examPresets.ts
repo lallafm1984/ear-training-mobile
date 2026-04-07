@@ -16,7 +16,6 @@ export const EXAM_PRESETS: ExamPreset[] = [
       { contentType: 'chord', questionCount: 3, difficulty: 'chord_1' },
     ],
     playbackMode: 'korean_exam',
-    timeLimitMinutes: 20,
   },
   {
     id: 'intermediate',
@@ -31,7 +30,6 @@ export const EXAM_PRESETS: ExamPreset[] = [
       { contentType: 'key', questionCount: 2, difficulty: 'key_2' },
     ],
     playbackMode: 'korean_exam',
-    timeLimitMinutes: 30,
   },
   {
     id: 'advanced',
@@ -47,7 +45,6 @@ export const EXAM_PRESETS: ExamPreset[] = [
       { contentType: 'twoVoice', questionCount: 2, difficulty: 'bass_2' },
     ],
     playbackMode: 'korean_exam',
-    timeLimitMinutes: 45,
   },
   {
     id: 'interval_focus',

@@ -66,12 +66,6 @@ export default function ExamResultScreen() {
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}분 ${s}초`;
-  };
-
   const getGrade = (pct: number) => {
     if (pct >= 90) return { label: 'A+', color: '#10b981', message: '탁월한 실력입니다!' };
     if (pct >= 80) return { label: 'A', color: '#10b981', message: '훌륭해요!' };
@@ -113,10 +107,6 @@ export default function ExamResultScreen() {
             <Text style={styles.statLabel}>전체 문항</Text>
           </View>
           <View style={[styles.statItem, styles.statBorder]}>
-            <Text style={styles.statValue}>{formatTime(elapsedSeconds)}</Text>
-            <Text style={styles.statLabel}>소요 시간</Text>
-          </View>
-          <View style={styles.statItem}>
             <Text style={styles.statValue}>{percentage}%</Text>
             <Text style={styles.statLabel}>정답률</Text>
           </View>

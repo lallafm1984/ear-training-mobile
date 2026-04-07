@@ -9,8 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Volume2, VolumeX, ChevronRight, ChevronLeft, Check, X, Clock,
-  AlertTriangle,
+  Volume2, VolumeX, ChevronRight, Check, X,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -19,6 +18,9 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
+import { generateAbc } from '../lib';
+import { generatePracticeScore, type PracticeScore } from '../lib/practiceScoreGenerator';
+import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
@@ -32,6 +34,10 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 interface QuestionItem {
   examQuestion: ExamQuestion;
   choiceQuestion?: ChoiceQuestion;
+  /** 기보형 문항용 ABC notation (재생용) */
+  abcNotation?: string;
+  /** 기보형 문항용 PracticeScore (채점용) */
+  practiceScore?: PracticeScore;
   sectionIndex: number;
 }
 
@@ -70,21 +76,45 @@ export default function MockExamScreen() {
     preset.sections.forEach((section, sIdx) => {
       for (let i = 0; i < section.questionCount; i++) {
         const isChoice = ['interval', 'chord', 'key'].includes(section.contentType);
-        const cq = isChoice
-          ? generateChoiceQuestion(section.contentType, section.difficulty)
-          : undefined;
 
-        items.push({
-          examQuestion: {
-            id: `eq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            contentType: section.contentType,
-            difficulty: section.difficulty,
-            correctAnswer: cq?.correctAnswer ?? '',
-            choices: cq?.choices,
-          },
-          choiceQuestion: cq,
-          sectionIndex: sIdx,
-        });
+        if (isChoice) {
+          const cq = generateChoiceQuestion(section.contentType, section.difficulty);
+          items.push({
+            examQuestion: {
+              id: `eq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              contentType: section.contentType,
+              difficulty: section.difficulty,
+              correctAnswer: cq.correctAnswer,
+              choices: cq.choices,
+            },
+            choiceQuestion: cq,
+            sectionIndex: sIdx,
+          });
+        } else {
+          // 기보형 문항 (melody, rhythm, twoVoice) — ABC notation 생성
+          const score = generatePracticeScore(section.contentType, section.difficulty);
+          const abc = generateAbc({
+            title: '',
+            keySignature: score.keySignature,
+            timeSignature: score.timeSignature,
+            tempo: 90,
+            notes: score.trebleNotes,
+            bassNotes: score.useGrandStaff ? score.bassNotes : undefined,
+            useGrandStaff: score.useGrandStaff,
+            disableTies: score.disableTies,
+          });
+          items.push({
+            examQuestion: {
+              id: `eq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              contentType: section.contentType,
+              difficulty: section.difficulty,
+              correctAnswer: '',
+            },
+            abcNotation: abc,
+            practiceScore: score,
+            sectionIndex: sIdx,
+          });
+        }
       }
     });
     return items;
@@ -95,33 +125,13 @@ export default function MockExamScreen() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [selfRatings, setSelfRatings] = useState<Record<number, number>>({});
 
-  // 타이머
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
-    }, 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const timeLimit = preset.timeLimitMinutes
-    ? preset.timeLimitMinutes * 60
-    : undefined;
-  const isTimeUp = timeLimit ? elapsedSeconds >= timeLimit : false;
   const submittedRef = useRef(false);
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
 
   const currentQ = questions[currentIndex];
   const isChoiceType = !!currentQ.choiceQuestion;
+  const isCurrentAnswered = isChoiceType
+    ? !!answers[currentIndex]
+    : !!selfRatings[currentIndex];
   const catConfig = getContentConfig(currentQ.examQuestion.contentType);
   const colors = CATEGORY_COLORS[currentQ.examQuestion.contentType];
 
@@ -133,6 +143,38 @@ export default function MockExamScreen() {
     setSelfRatings(prev => ({ ...prev, [currentIndex]: rating }));
   }, [currentIndex]);
 
+  // 기보형 문항: NotationPractice 화면으로 이동
+  const pendingNotationIndexRef = useRef<number | null>(null);
+  const navigatingToNotationRef = useRef(false);
+
+  const handleOpenNotation = useCallback((questionIdx: number) => {
+    const q = questions[questionIdx];
+    if (!q.practiceScore) return;
+    stopAudio();
+    examNotationStore.setScore(q.practiceScore, questionIdx);
+    pendingNotationIndexRef.current = questionIdx;
+    navigatingToNotationRef.current = true;
+    navigation.navigate('NotationPractice', {
+      category: q.examQuestion.contentType,
+      difficulty: q.examQuestion.difficulty,
+      examMode: true,
+    });
+  }, [questions, navigation, stopAudio]);
+
+  // NotationPractice에서 돌아올 때 결과 수신
+  useFocusEffect(
+    useCallback(() => {
+      const idx = pendingNotationIndexRef.current;
+      if (idx === null) return;
+      const result = examNotationStore.getResult();
+      if (result !== null) {
+        setSelfRatings(prev => ({ ...prev, [idx]: result }));
+        examNotationStore.clear();
+      }
+      pendingNotationIndexRef.current = null;
+    }, []),
+  );
+
   const handleNext = () => {
     if (currentIndex < totalQuestions - 1) {
       stopAudio();
@@ -140,17 +182,10 @@ export default function MockExamScreen() {
     }
   };
 
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      stopAudio();
-      setCurrentIndex(prev => prev - 1);
-    }
-  };
 
   const handleSubmit = useCallback(async () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
-    if (timerRef.current) clearInterval(timerRef.current);
     stopAudio();
 
     // 결과 계산 + 문항별 연습 기록 수집
@@ -198,24 +233,19 @@ export default function MockExamScreen() {
       totalScore,
       maxScore,
       categoryScores: JSON.stringify(categoryScores),
-      elapsedSeconds,
+      elapsedSeconds: 0,
       totalQuestions,
     });
-  }, [answers, selfRatings, questions, preset, elapsedSeconds, totalQuestions, navigation, stopAudio, addBatchRecords, updateStreak]);
-
-  // 시간 초과 시 자동 제출
-  useEffect(() => {
-    if (isTimeUp && !submittedRef.current) {
-      submittedRef.current = true;
-      if (timerRef.current) clearInterval(timerRef.current);
-      handleSubmit();
-    }
-  }, [isTimeUp, handleSubmit]);
+  }, [answers, selfRatings, questions, preset, totalQuestions, navigation, stopAudio, addBatchRecords, updateStreak]);
 
   // 시험 진행 중 실수로 뒤로가기 방지
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       if (submittedRef.current) return;
+      if (navigatingToNotationRef.current) {
+        navigatingToNotationRef.current = false;
+        return;
+      }
       e.preventDefault();
       Alert.alert(
         '시험 종료',
@@ -230,23 +260,14 @@ export default function MockExamScreen() {
   }, [navigation]);
 
   const confirmSubmit = () => {
-    const unanswered = questions.filter((_, idx) => {
-      if (isChoiceQuestion(questions[idx])) return !answers[idx];
-      return !selfRatings[idx];
-    }).length;
-
-    if (unanswered > 0) {
-      Alert.alert(
-        '미답변 문항',
-        `${unanswered}문항이 미답변입니다. 제출하시겠습니까?`,
-        [
-          { text: '취소', style: 'cancel' },
-          { text: '제출', onPress: handleSubmit },
-        ],
-      );
-    } else {
-      handleSubmit();
-    }
+    Alert.alert(
+      '시험 제출',
+      '시험을 제출하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '제출', onPress: handleSubmit },
+      ],
+    );
   };
 
   // 진행도
@@ -265,10 +286,8 @@ export default function MockExamScreen() {
           </Text>
         </View>
         <View style={styles.topRight}>
-          <Clock size={14} color={isTimeUp ? COLORS.error : COLORS.slate500} />
-          <Text style={[styles.topTimer, isTimeUp && { color: COLORS.error }]}>
-            {formatTime(elapsedSeconds)}
-            {timeLimit && ` / ${formatTime(timeLimit)}`}
+          <Text style={styles.topProgress}>
+            {answeredCount}/{totalQuestions} 답변
           </Text>
         </View>
       </View>
@@ -365,62 +384,55 @@ export default function MockExamScreen() {
           </>
         ) : (
           <>
-            {/* 기보형 문항 — 자기 평가 */}
-            <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-              <TouchableOpacity
-                style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
-                onPress={handlePlay}
-                activeOpacity={0.7}
-              >
-                {isPlaying
-                  ? <VolumeX size={28} color="#fff" />
-                  : <Volume2 size={28} color="#fff" />}
-              </TouchableOpacity>
-              <Text style={[styles.playHint, { color: colors.text }]}>
-                {isPlaying ? '재생 중...' : '멜로디를 듣고 악보에 기보하세요'}
-              </Text>
-            </View>
-
-            <Text style={styles.ratingTitle}>자기 평가 (1~5점)</Text>
-            <View style={styles.ratingRow}>
-              {[1, 2, 3, 4, 5].map(r => {
-                const isActive = selfRatings[currentIndex] === r;
-                return (
-                  <TouchableOpacity
-                    key={r}
-                    style={[
-                      styles.ratingBtn,
-                      isActive && { backgroundColor: colors.main, borderColor: colors.main },
-                    ]}
-                    onPress={() => handleSelfRate(r)}
-                  >
-                    <Text style={[
-                      styles.ratingText,
-                      isActive && { color: '#fff' },
-                    ]}>
-                      {r}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* 기보형 문항 — 기보 입력 화면으로 이동 */}
+            {selfRatings[currentIndex] ? (
+              // 채점 완료된 문항
+              <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+                <View style={[styles.playBtn, { backgroundColor: colors.main }]}>
+                  <Check size={28} color="#fff" />
+                </View>
+                <Text style={[styles.playHint, { color: colors.text, fontWeight: '700' }]}>
+                  기보 완료
+                </Text>
+              </View>
+            ) : (
+              // 아직 미답변 문항
+              <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+                <TouchableOpacity
+                  style={[styles.playBtn, { backgroundColor: colors.main }]}
+                  onPress={() => handleOpenNotation(currentIndex)}
+                  activeOpacity={0.7}
+                >
+                  <Volume2 size={28} color="#fff" />
+                </TouchableOpacity>
+                <Text style={[styles.playHint, { color: colors.text }]}>
+                  탭하여 기보 시작
+                </Text>
+                <TouchableOpacity
+                  style={[styles.notationBtn, { backgroundColor: colors.main, borderColor: colors.main }]}
+                  onPress={() => handleOpenNotation(currentIndex)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.notationBtnText, { color: '#fff' }]}>기보하기</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
 
-        {/* 문항 네비게이션 (번호 도트) */}
+        {/* 문항 진행 표시 (이동 불가, 표시만) */}
         <View style={styles.dotsContainer}>
           {questions.map((_, idx) => {
             const answered = !!answers[idx] || !!selfRatings[idx];
             const isCurrent = idx === currentIndex;
             return (
-              <TouchableOpacity
+              <View
                 key={idx}
                 style={[
                   styles.dot,
                   answered && styles.dotAnswered,
                   isCurrent && styles.dotCurrent,
                 ]}
-                onPress={() => { stopAudio(); setCurrentIndex(idx); }}
               >
                 <Text style={[
                   styles.dotText,
@@ -429,7 +441,7 @@ export default function MockExamScreen() {
                 ]}>
                   {idx + 1}
                 </Text>
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
@@ -437,32 +449,26 @@ export default function MockExamScreen() {
 
       {/* 하단 네비게이션 */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <TouchableOpacity
-          style={[styles.navBtn, currentIndex === 0 && { opacity: 0.4 }]}
-          onPress={handlePrev}
-          disabled={currentIndex === 0}
-        >
-          <ChevronLeft size={20} color={COLORS.slate600} />
-          <Text style={styles.navBtnText}>이전</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.submitBtn, { backgroundColor: COLORS.amber500 }]}
-          onPress={confirmSubmit}
-        >
-          <Text style={styles.submitBtnText}>
-            제출 ({answeredCount}/{totalQuestions})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.navBtn, currentIndex === totalQuestions - 1 && { opacity: 0.4 }]}
-          onPress={handleNext}
-          disabled={currentIndex === totalQuestions - 1}
-        >
-          <Text style={styles.navBtnText}>다음</Text>
-          <ChevronRight size={20} color={COLORS.slate600} />
-        </TouchableOpacity>
+        {currentIndex < totalQuestions - 1 ? (
+          <TouchableOpacity
+            style={[styles.submitBtn, { backgroundColor: isCurrentAnswered ? colors.main : COLORS.slate300, flex: 1 }]}
+            onPress={handleNext}
+            disabled={!isCurrentAnswered}
+          >
+            <Text style={styles.submitBtnText}>
+              다음 ({currentIndex + 1}/{totalQuestions})
+            </Text>
+            <ChevronRight size={18} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.submitBtn, { backgroundColor: isCurrentAnswered ? COLORS.amber500 : COLORS.slate300, flex: 1 }]}
+            onPress={confirmSubmit}
+            disabled={!isCurrentAnswered}
+          >
+            <Text style={styles.submitBtnText}>제출하기</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -500,11 +506,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  topTimer: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.slate600,
   },
   progressBar: {
     height: 3,
@@ -593,33 +594,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.slate700,
   },
-  // 자기평가
-  ratingTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.slate700,
-    textAlign: 'center',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  ratingBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    backgroundColor: '#fff',
-  },
-  ratingText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.slate600,
-  },
   // 문항 도트
   dotsContainer: {
     flexDirection: 'row',
@@ -657,26 +631,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.slate100,
   },
-  navBtn: {
+  submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 4,
-  },
-  navBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.slate600,
-  },
-  submitBtn: {
-    paddingVertical: 10,
+    justifyContent: 'center',
+    paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
+    gap: 4,
   },
   submitBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#fff',
+  },
+  notationBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginTop: 4,
+  },
+  notationBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

@@ -252,7 +252,7 @@ const SIMILAR_CHORDS: Record<string, string[]> = {
 
 /** 누적 풀 */
 const CHORD_POOLS: Record<ChordDifficulty, string[]> = {
-  chord_1: ['major', 'minor', 'dom7'],
+  chord_1: ['major', 'minor', 'dom7', 'aug'],
   chord_2: ['major', 'minor', 'dom7', 'aug', 'dim'],
   chord_3: ['major', 'minor', 'dom7', 'aug', 'dim', 'maj7', 'min7'],
   chord_4: ['major', 'minor', 'dom7', 'aug', 'dim', 'maj7', 'min7', 'dim7', 'maj_inv1', 'min_inv1'],
@@ -356,9 +356,12 @@ function buildChordWrongChoices(correctKey: string, pool: string[]): string[] {
 function generateChordQuestion(difficulty: ChordDifficulty): ChoiceQuestion {
   const pool = CHORD_POOLS[difficulty];
 
-  // 연속 중복 방지 선택
-  const available = pool.filter(k => !recentChords.includes(k));
-  const pickPool = available.length >= 2 ? available : pool;
+  // 연속 중복 방지 선택 (직전 1개는 반드시 제외, 직전 2개까지 가능하면 제외)
+  const excludeLast1 = pool.filter(k => k !== recentChords[recentChords.length - 1]);
+  const excludeLast2 = pool.filter(k => !recentChords.includes(k));
+  const pickPool = excludeLast2.length >= 2 ? excludeLast2
+    : excludeLast1.length >= 1 ? excludeLast1
+    : pool;
   const chordKey = pickPool[Math.floor(Math.random() * pickPool.length)];
   recentChords.push(chordKey);
   if (recentChords.length > 2) recentChords.shift();

@@ -13,6 +13,8 @@ src/
 │   ├── scoreUtils/      # 악보 유틸리티 (8개 모듈)
 │   ├── scoreGenerator/  # 악보 생성 엔진 (6개 모듈)
 │   ├── twoVoice/        # 2성부 작곡 모듈 (12개)
+│   ├── practiceScoreGenerator.ts  # 기보형 악보 생성 (공유)
+│   ├── examNotationStore.ts      # 모의시험↔기보연습 데이터 전달
 │   └── ...              # 기타 라이브러리
 ├── navigation/          # 네비게이션 설정
 ├── screens/             # 화면 컴포넌트

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Clock, Play, GraduationCap, BookOpen, Trophy,
+  ArrowLeft, Play, GraduationCap, BookOpen, Trophy,
   ArrowUpDown, Layers, Crown,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +18,6 @@ import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
-import { PLAYBACK_MODE_LABELS } from '../types/playback';
 import type { ExamPreset } from '../types/exam';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -118,17 +117,6 @@ export default function MockExamSetupScreen() {
 
                 <View style={styles.presetMeta}>
                   <Text style={styles.presetMetaText}>{qCount}문항</Text>
-                  {preset.timeLimitMinutes && (
-                    <>
-                      <Text style={styles.presetMetaDot}>·</Text>
-                      <Clock size={12} color={COLORS.slate400} />
-                      <Text style={styles.presetMetaText}>{preset.timeLimitMinutes}분</Text>
-                    </>
-                  )}
-                  <Text style={styles.presetMetaDot}>·</Text>
-                  <Text style={styles.presetMetaText}>
-                    {PLAYBACK_MODE_LABELS[preset.playbackMode]}
-                  </Text>
                 </View>
               </TouchableOpacity>
             );
