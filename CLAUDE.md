@@ -1,6 +1,13 @@
 
 언어는 무조건 한국어를 사용한다.
 
+## 프로젝트 인덱싱
+
+- 파일이나 코드를 검색할 때 반드시 `PROJECT_INDEX.md`를 먼저 참조하여 해당 파일의 위치를 확인한다.
+- 프로젝트 구조가 변경되거나 (파일 추가/삭제/이동, 디렉토리 변경 등) 인덱싱이 바뀌면 반드시 `PROJECT_INDEX.md`도 함께 수정한다.
+- 새로운 화면, 컴포넌트, 훅, 라이브러리 모듈을 추가하면 해당 섹션에 항목을 추가한다.
+- 기능별 파일 매핑이 변경되면 "기능별 파일 매핑" 섹션도 업데이트한다.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
