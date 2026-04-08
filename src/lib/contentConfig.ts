@@ -119,10 +119,9 @@ export const INTERVAL_DIFF_LABELS: Record<string, string> = {
 };
 
 export const CHORD_DIFF_LABELS: Record<string, string> = {
-  chord_1: '1단계 · 장/단3화음, 속7화음',
-  chord_2: '2단계 · + 증/감3화음, 아르페지오',
-  chord_3: '3단계 · + 장7·단7화음',
-  chord_4: '4단계 · + 감7·전위형, 개방배치',
+  chord_2: '1단계 · 장/단/증/감3화음',
+  chord_3: '2단계 · + 장7·단7화음',
+  chord_4: '3단계 · + 감7화음',
 };
 
 export const KEY_DIFF_LABELS: Record<string, string> = {

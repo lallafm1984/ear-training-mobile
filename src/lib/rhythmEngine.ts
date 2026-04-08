@@ -79,7 +79,6 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
   // Convert to ScoreNote[]
   const notes: ScoreNote[] = [];
   const allowRestsL2Plus = level >= 2;
-  const allowQuarterRestsL1 = level === 1;
   // Decide if we should inject triplet for Level 5 or Level 6 Mix
   let hasInjectedTriplet = false;
   const shouldInjectTriplet = (level === 5 && forceElement) || (level >= 6 && Math.random() < 0.4);
@@ -88,11 +87,39 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
   const [, bottomStr] = timeSignature.split('/');
   const beatSize = 16 / (parseInt(bottomStr, 10) || 4);
 
+  // 정박 위치에 있는 4분음표 인덱스 중 하나를 강제 4분 쉼표로 지정
+  {
+    let tempPos = 0;
+    const eligible: number[] = [];
+    for (let i = 0; i < durList.length; i++) {
+      if (durList[i] === 4 && tempPos % beatSize === 0) eligible.push(i);
+      tempPos += durList[i];
+    }
+    // 트리플렛 주입 대상(첫 번째 dur=4)은 제외
+    const tripletTargetIdx = shouldInjectTriplet ? durList.indexOf(4) : -1;
+    const filtered = eligible.filter(i => i !== tripletTargetIdx);
+    if (filtered.length > 0) {
+      const forcedIdx = filtered[Math.floor(Math.random() * filtered.length)];
+      durList = durList.slice(); // 원본 보호
+      // 마커로 음수 사용: -4 = 강제 4분 쉼표
+      (durList as number[])[forcedIdx] = -4;
+    }
+  }
+
   let wasRest = initialWasRest;
   let pos = 0; // 마디 내 16분음표 위치 추적
 
   for (let i = 0; i < durList.length; i++) {
     const dur = durList[i];
+
+    // 강제 4분 쉼표 (직전이 쉼표면 음표로 대체하여 연속 쉼표 방지)
+    if (dur === -4) {
+      const forceAsRest = !wasRest;
+      notes.push(makeRhythmNote(4, forceAsRest, pitch));
+      wasRest = forceAsRest;
+      pos += 4;
+      continue;
+    }
 
     if (shouldInjectTriplet && !hasInjectedTriplet && dur === 4) {
       notes.push(...makeTriplets(pitch));
@@ -106,17 +133,11 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
     const posInBeat = pos % beatSize;
     const fitsInBeat = posInBeat === 0 || dur <= (beatSize - posInBeat);
 
-    // Introduce rests
+    // Introduce rests (8분 쉼표만 확률적으로 추가)
     let isRest = false;
-    if (!wasRest && fitsInBeat) {
-      if (allowRestsL2Plus && (dur === 4 || dur === 2)) {
-        if (Math.random() < 0.15) {
-          isRest = true;
-        }
-      } else if (allowQuarterRestsL1 && dur === 4) {
-        if (Math.random() < 0.15) {
-          isRest = true;
-        }
+    if (!wasRest && fitsInBeat && allowRestsL2Plus && dur === 2) {
+      if (Math.random() < 0.15) {
+        isRest = true;
       }
     }
 
@@ -149,6 +170,73 @@ function isSyncopated(durations: number[], timeSignature: string): boolean {
   return false;
 }
 
+/** duration 문자열 → 16분음표 수 역방향 맵 */
+const DUR_TO_SIXTEENTHS: Record<string, number> = {
+  '1.': 24, '1': 16, '2.': 12, '2': 8, '4.': 6, '4': 4, '8.': 3, '8': 2, '16': 1,
+};
+
+function noteToSixteenths(note: ScoreNote): number {
+  if (note.tupletNoteDur != null) return note.tupletNoteDur;
+  return DUR_TO_SIXTEENTHS[note.duration] ?? 4;
+}
+
+/**
+ * 후처리: 각 마디에 쉼표가 없으면 정박 위치의 4분음표 하나를 4분 쉼표로 교체.
+ * 앞뒤 쉼표가 없는 위치만 후보로 삼아 연속 쉼표를 방지한다.
+ */
+function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreNote[] {
+  const B = getSixteenthsPerBar(timeSignature);
+  const [, bottomStr] = timeSignature.split('/');
+  const beatSize = 16 / (parseInt(bottomStr, 10) || 4);
+
+  const result = notes.slice();
+
+  // 마디별 인덱스 범위 수집
+  const measures: Array<{ start: number; end: number }> = [];
+  let measureStart = 0;
+  let posInMeasure = 0;
+  for (let i = 0; i < result.length; i++) {
+    posInMeasure += noteToSixteenths(result[i]);
+    if (posInMeasure >= B) {
+      measures.push({ start: measureStart, end: i + 1 });
+      measureStart = i + 1;
+      posInMeasure = 0;
+    }
+  }
+  if (measureStart < result.length) {
+    measures.push({ start: measureStart, end: result.length });
+  }
+
+  for (const { start, end } of measures) {
+    const hasRest = result.slice(start, end).some(n => n.pitch === 'rest');
+    if (hasRest) continue;
+
+    // 후보: 정박 위치의 4분음표 중 앞뒤 음표가 쉼표가 아닌 것
+    let localPos = 0;
+    const candidates: number[] = [];
+    for (let j = start; j < end; j++) {
+      const n = result[j];
+      if (
+        n.pitch !== 'rest' &&
+        n.tuplet == null &&
+        localPos % beatSize === 0
+      ) {
+        const prevIsRest = j > 0 && result[j - 1].pitch === 'rest';
+        const nextIsRest = j < result.length - 1 && result[j + 1].pitch === 'rest';
+        if (!prevIsRest && !nextIsRest) candidates.push(j);
+      }
+      localPos += noteToSixteenths(n);
+    }
+
+    if (candidates.length > 0) {
+      const targetIdx = candidates[Math.floor(Math.random() * candidates.length)];
+      result[targetIdx] = { ...result[targetIdx], pitch: 'rest' as any };
+    }
+  }
+
+  return result;
+}
+
 /**
  * Main generator entry point for rhythm dictation tests.
  */
@@ -171,5 +259,5 @@ export function generateRhythmDictation(level: number, measures: number, timeSig
     result.push(...barNotes);
   }
 
-  return result;
+  return ensureRestPerMeasure(result, timeSignature);
 }

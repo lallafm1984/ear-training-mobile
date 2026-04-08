@@ -228,7 +228,6 @@ const CHORD_TEMPLATES: Record<string, ChordTemplate> = {
   minor:    { name: '단3화음 (minor)',    intervals: [0, 3, 7] },
   aug:      { name: '증3화음 (Aug)',      intervals: [0, 4, 8] },
   dim:      { name: '감3화음 (dim)',      intervals: [0, 3, 6] },
-  dom7:     { name: '속7화음 (dom7)',     intervals: [0, 4, 7, 10] },
   maj7:     { name: '장7화음 (M7)',       intervals: [0, 4, 7, 11] },
   min7:     { name: '단7화음 (m7)',       intervals: [0, 3, 7, 10] },
   dim7:     { name: '감7화음 (dim7)',     intervals: [0, 3, 6, 9] },
@@ -238,13 +237,12 @@ const CHORD_TEMPLATES: Record<string, ChordTemplate> = {
 
 /** 유사 화음 맵 — 오답 우선 배치 */
 const SIMILAR_CHORDS: Record<string, string[]> = {
-  major:    ['minor', 'aug', 'maj_inv1'],
-  minor:    ['major', 'dim', 'min_inv1'],
+  major:    ['minor', 'aug'],
+  minor:    ['major', 'dim'],
   aug:      ['major', 'maj7'],
   dim:      ['minor', 'dim7'],
-  dom7:     ['maj7', 'min7'],
-  maj7:     ['dom7', 'min7'],
-  min7:     ['dom7', 'dim7'],
+  maj7:     ['min7', 'aug'],
+  min7:     ['maj7', 'dim7'],
   dim7:     ['dim', 'min7'],
   maj_inv1: ['min_inv1', 'major'],
   min_inv1: ['maj_inv1', 'minor'],
@@ -252,29 +250,26 @@ const SIMILAR_CHORDS: Record<string, string[]> = {
 
 /** 누적 풀 */
 const CHORD_POOLS: Record<ChordDifficulty, string[]> = {
-  chord_1: ['major', 'minor', 'dom7', 'aug'],
-  chord_2: ['major', 'minor', 'dom7', 'aug', 'dim'],
-  chord_3: ['major', 'minor', 'dom7', 'aug', 'dim', 'maj7', 'min7'],
-  chord_4: ['major', 'minor', 'dom7', 'aug', 'dim', 'maj7', 'min7', 'dim7', 'maj_inv1', 'min_inv1'],
+  chord_2: ['major', 'minor', 'aug', 'dim'],
+  chord_3: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7'],
+  chord_4: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dim7'],
 };
 
 /** 제시 방식 */
 type ChordPresentation = 'block' | 'arpeggio_up' | 'arpeggio_down';
 
 const CHORD_PRESENTATIONS: Record<ChordDifficulty, ChordPresentation[]> = {
-  chord_1: ['block'],
-  chord_2: ['block', 'arpeggio_up'],
-  chord_3: ['block', 'arpeggio_up', 'arpeggio_down'],
-  chord_4: ['block', 'arpeggio_up', 'arpeggio_down'],
+  chord_2: ['block'],
+  chord_3: ['block'],
+  chord_4: ['block'],
 };
 
 /** 배치 */
 type ChordVoicing = 'close' | 'open';
 
 const CHORD_VOICINGS: Record<ChordDifficulty, ChordVoicing[]> = {
-  chord_1: ['close'],
   chord_2: ['close'],
-  chord_3: ['close'],
+  chord_3: ['close', 'open'],
   chord_4: ['close', 'open'],
 };
 
@@ -291,13 +286,12 @@ const CHORD_NOTE_TABLE = [
   'c', '^c', 'd', '^d', 'e', 'f', '^f', 'g', '^g', 'a', '^a', 'b',
 ];
 
-/** 온음계 근음 인덱스 (C4, D4, E4, F4, G4) */
-const CHORD_DIATONIC_ROOTS = [12, 14, 16, 17, 19];
+/** 온음계 근음 인덱스 (C4, D4, E4, F4, G4, A4, B4) */
+const CHORD_DIATONIC_ROOTS = [12, 14, 16, 17, 19, 21, 23];
 
 /** 근음 범위 */
 const CHORD_ROOT_RANGES: Record<ChordDifficulty, { min: number; max: number }> = {
-  chord_1: { min: 12, max: 19 },  // C4~G4
-  chord_2: { min: 12, max: 19 },  // C4~G4
+  chord_2: { min: 12, max: 23 },  // C4~B4
   chord_3: { min: 9, max: 21 },   // A3~A4
   chord_4: { min: 9, max: 21 },   // A3~A4
 };
@@ -381,7 +375,7 @@ function generateChordQuestion(difficulty: ChordDifficulty): ChoiceQuestion {
   const range = CHORD_ROOT_RANGES[difficulty];
   const maxInterval = Math.max(...intervals);
   const maxRoot = Math.min(range.max, CHORD_NOTE_TABLE.length - 1 - maxInterval);
-  const useDiatonic = difficulty === 'chord_1' || difficulty === 'chord_2';
+  const useDiatonic = difficulty === 'chord_2';
 
   let rootIdx: number;
   if (useDiatonic) {

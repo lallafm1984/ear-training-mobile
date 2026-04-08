@@ -26,7 +26,7 @@ describe('generateChoiceQuestion', () => {
   });
 
   describe('chord', () => {
-    const difficulties = ['chord_1', 'chord_2', 'chord_3', 'chord_4'] as const;
+    const difficulties = ['chord_2', 'chord_3', 'chord_4'] as const;
 
     difficulties.forEach(diff => {
       it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {

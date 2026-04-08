@@ -621,7 +621,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
             isPlayingState = false; synthInstance = null;
             setPlayBtnUI(false); postMsg({ type:'PLAY_STATE', isPlaying:false }); reportHeight();
           }
-        }, (dur + 2) * 1000);
+        }, dur * 1000 + 200);
       }).catch(function() { stopAudio(); });
   }
 

@@ -13,7 +13,7 @@ export const EXAM_PRESETS: ExamPreset[] = [
     sections: [
       { contentType: 'melody', questionCount: 3, difficulty: 'beginner_1' },
       { contentType: 'interval', questionCount: 4, difficulty: 'interval_1' },
-      { contentType: 'chord', questionCount: 3, difficulty: 'chord_1' },
+      { contentType: 'chord', questionCount: 3, difficulty: 'chord_2' },
     ],
     playbackMode: 'korean_exam',
   },
@@ -63,8 +63,8 @@ export const EXAM_PRESETS: ExamPreset[] = [
     description: '화음 듣기 집중 훈련',
     icon: 'Layers',
     sections: [
-      { contentType: 'chord', questionCount: 5, difficulty: 'chord_1' },
       { contentType: 'chord', questionCount: 5, difficulty: 'chord_2' },
+      { contentType: 'chord', questionCount: 5, difficulty: 'chord_3' },
     ],
     playbackMode: 'practice',
   },
