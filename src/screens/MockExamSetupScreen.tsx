@@ -11,13 +11,14 @@ import {
   ArrowLeft, Play, GraduationCap, BookOpen, Trophy,
   ArrowUpDown, Layers, Crown, Lock,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { EXAM_PRESETS } from '../lib/examPresets';
-import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
+import { getContentConfig } from '../lib/contentConfig';
 import type { ExamPreset } from '../types/exam';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -32,6 +33,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 };
 
 export default function MockExamSetupScreen() {
+  const { t } = useTranslation(['exam', 'content', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { tier } = useSubscription();
@@ -61,8 +63,8 @@ export default function MockExamSetupScreen() {
           <ArrowLeft size={24} color={COLORS.amber700} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>모의시험</Text>
-          <Text style={styles.headerDesc}>프리셋을 선택하여 시험을 시작하세요</Text>
+          <Text style={styles.headerTitle}>{t('exam:setup.title')}</Text>
+          <Text style={styles.headerDesc}>{t('exam:setup.headerDesc')}</Text>
         </View>
       </View>
 
@@ -72,7 +74,7 @@ export default function MockExamSetupScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* 프리셋 목록 */}
-        <Text style={styles.sectionTitle}>시험 유형</Text>
+        <Text style={styles.sectionTitle}>{t('exam:setup.examType')}</Text>
 
         <View style={styles.presetList}>
           {EXAM_PRESETS.map(preset => {
@@ -104,7 +106,7 @@ export default function MockExamSetupScreen() {
                   <View style={styles.presetInfo}>
                     <View style={styles.presetNameRow}>
                       <Text style={[styles.presetName, isLocked && styles.presetNameLocked, !isLocked && active && { color: COLORS.amber700 }]}>
-                        {preset.name}
+                        {t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}
                       </Text>
                       {isLocked && (
                         <View style={styles.lockBadge}>
@@ -113,12 +115,16 @@ export default function MockExamSetupScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.presetDesc, isLocked && { color: COLORS.slate400 }]}>{preset.description}</Text>
+                    <Text style={[styles.presetDesc, isLocked && { color: COLORS.slate400 }]}>
+                      {t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}Desc`)}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={styles.presetMeta}>
-                  <Text style={[styles.presetMetaText, isLocked && { color: COLORS.slate400 }]}>{qCount}문항</Text>
+                  <Text style={[styles.presetMetaText, isLocked && { color: COLORS.slate400 }]}>
+                    {t('exam:setup.questionCount', { count: qCount })}
+                  </Text>
                 </View>
               </TouchableOpacity>
             );
@@ -128,25 +134,25 @@ export default function MockExamSetupScreen() {
         {/* 선택된 프리셋 상세 */}
         {selectedPreset && (
           <View style={styles.detailCard}>
-            <Text style={styles.detailTitle}>시험 구성</Text>
+            <Text style={styles.detailTitle}>{t('exam:setup.examComposition')}</Text>
             {selectedPreset.sections.map((section, idx) => {
               const catConfig = getContentConfig(section.contentType);
               return (
                 <View key={idx} style={styles.detailRow}>
                   <View style={styles.detailLeft}>
-                    <Text style={styles.detailCat}>{catConfig.name}</Text>
+                    <Text style={styles.detailCat}>{t(`content:category.${section.contentType}.name`)}</Text>
                     <Text style={styles.detailDiff}>
-                      {getDifficultyLabel(section.contentType, section.difficulty)}
+                      {t('content:difficulty.' + section.contentType + '.' + section.difficulty)}
                     </Text>
                   </View>
-                  <Text style={styles.detailCount}>{section.questionCount}문항</Text>
+                  <Text style={styles.detailCount}>{t('exam:setup.questionCount', { count: section.questionCount })}</Text>
                 </View>
               );
             })}
 
             <View style={styles.detailSummary}>
               <Text style={styles.detailSummaryText}>
-                총 {totalQuestions}문항 · 만점 100점
+                {t('exam:setup.totalQuestions', { count: totalQuestions })} · {t('exam:setup.totalPoints', { points: 100 })}
               </Text>
             </View>
           </View>
@@ -166,7 +172,9 @@ export default function MockExamSetupScreen() {
         >
           <Play size={20} color="#fff" fill="#fff" />
           <Text style={styles.startText}>
-            {selectedPreset ? `시험 시작 (${totalQuestions}문항)` : '프리셋을 선택하세요'}
+            {selectedPreset
+              ? t('exam:setup.startExam', { count: totalQuestions })
+              : t('exam:setup.selectPreset')}
           </Text>
         </TouchableOpacity>
       </View>

@@ -7,6 +7,7 @@ import {
   Modal, View, Text, TouchableOpacity, StyleSheet, Pressable,
 } from 'react-native';
 import { SmilePlus, Meh, Frown } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export type EvalRating = 'easy' | 'normal' | 'hard';
 
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export default function SelfEvalModal({ visible, trackName, level, onRate, onSkip }: Props) {
+  const { t } = useTranslation(['practice', 'common']);
+
   return (
     <Modal
       visible={visible}
@@ -30,9 +33,9 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onSkip} />
         <View style={styles.card}>
-          <Text style={styles.title}>연습이 어떠셨나요?</Text>
+          <Text style={styles.title}>{t('practice:selfEval.title')}</Text>
           <Text style={styles.subtitle}>
-            {trackName} · {level}단계
+            {t('practice:selfEval.subtitle', { track: trackName, level })}
           </Text>
 
           <View style={styles.buttons}>
@@ -42,8 +45,8 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <SmilePlus size={28} color="#10b981" />
-              <Text style={[styles.btnLabel, { color: '#065f46' }]}>쉬웠어요</Text>
-              <Text style={[styles.btnHint, { color: '#6ee7b7' }]}>다음 레벨 도전!</Text>
+              <Text style={[styles.btnLabel, { color: '#065f46' }]}>{t('practice:selfEval.easy')}</Text>
+              <Text style={[styles.btnHint, { color: '#6ee7b7' }]}>{t('practice:selfEval.easyHint')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -52,8 +55,8 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <Meh size={28} color="#3b82f6" />
-              <Text style={[styles.btnLabel, { color: '#1e3a5f' }]}>보통이에요</Text>
-              <Text style={[styles.btnHint, { color: '#93c5fd' }]}>조금 더 연습!</Text>
+              <Text style={[styles.btnLabel, { color: '#1e3a5f' }]}>{t('practice:selfEval.normal')}</Text>
+              <Text style={[styles.btnHint, { color: '#93c5fd' }]}>{t('practice:selfEval.normalHint')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -62,13 +65,13 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <Frown size={28} color="#ef4444" />
-              <Text style={[styles.btnLabel, { color: '#7f1d1d' }]}>어려웠어요</Text>
-              <Text style={[styles.btnHint, { color: '#fca5a5' }]}>반복 연습 추천</Text>
+              <Text style={[styles.btnLabel, { color: '#7f1d1d' }]}>{t('practice:selfEval.hard')}</Text>
+              <Text style={[styles.btnHint, { color: '#fca5a5' }]}>{t('practice:selfEval.hardHint')}</Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.skipBtn} onPress={onSkip}>
-            <Text style={styles.skipText}>건너뛰기</Text>
+            <Text style={styles.skipText}>{t('common:button.skip')}</Text>
           </TouchableOpacity>
         </View>
       </View>

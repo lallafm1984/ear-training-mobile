@@ -1,0 +1,23 @@
+{
+  "stage": {
+    "0": "Newbie",
+    "1": "Beginner",
+    "2": "Student",
+    "3": "Trainee",
+    "4": "Performer",
+    "5": "Musician",
+    "6": "Expert",
+    "7": "Master",
+    "8": "Virtuoso",
+    "9": "Legend"
+  },
+  "gallery": {
+    "title": "Mascot Gallery",
+    "currentLevel": "Current Lv.{{level}}",
+    "locked": "Locked",
+    "unlockAt": "Unlocks at Lv.{{level}}"
+  },
+  "exp": {
+    "format": "{{current}} / {{needed}} EXP"
+  }
+}

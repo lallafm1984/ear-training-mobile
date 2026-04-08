@@ -1,0 +1,138 @@
+{
+  "category": {
+    "melody": {
+      "name": "旋律聴音",
+      "description": "メロディーを聴いて楽譜に記譜"
+    },
+    "rhythm": {
+      "name": "リズム聴音",
+      "description": "リズムパターンを聴いて記譜"
+    },
+    "interval": {
+      "name": "音程聴き取り",
+      "description": "二つの音の音程を識別"
+    },
+    "chord": {
+      "name": "和声聴き取り",
+      "description": "和音の種類を識別"
+    },
+    "key": {
+      "name": "調性判別",
+      "description": "旋律の調性と長/短調を判別"
+    },
+    "twoVoice": {
+      "name": "二声聴音",
+      "description": "旋律+バス 大譜表で記譜"
+    }
+  },
+  "difficulty": {
+    "melody": {
+      "beginner_1": "初級1 · 二分音符/四分音符",
+      "beginner_2": "初級2 · 八分音符",
+      "beginner_3": "初級3 · 付点四分音符",
+      "intermediate_1": "中級1 · シンコペーション",
+      "intermediate_2": "中級2 · タイ",
+      "intermediate_3": "中級3 · 十六分音符",
+      "advanced_1": "上級1 · 付点八分音符",
+      "advanced_2": "上級2 · 三連符",
+      "advanced_3": "上級3 · 臨時記号"
+    },
+    "rhythm": {
+      "rhythm_1": "レベル1 · 二分/四分音符 + 四分休符",
+      "rhythm_2": "レベル2 · 八分音符 + 休符",
+      "rhythm_3": "レベル3 · 付点音符 + シンコペーション",
+      "rhythm_4": "レベル4 · 十六分音符",
+      "rhythm_5": "レベル5 · 三連符",
+      "rhythm_6": "レベル6 · 複合リズム"
+    },
+    "interval": {
+      "interval_1": "レベル1 · 3度·4度·5度·8度",
+      "interval_2": "レベル2 · + 2度·6度",
+      "interval_3": "レベル3 · + 半音·7度",
+      "interval_4": "レベル4 · 全体（同音·増4度含む）"
+    },
+    "chord": {
+      "chord_2": "レベル1 · 長/短/増/減三和音",
+      "chord_3": "レベル2 · + 長七/短七の和音",
+      "chord_4": "レベル3 · + 減七の和音"
+    },
+    "key": {
+      "key_1": "レベル1 · 平行調（C/Am）",
+      "key_2": "レベル2 · ♯♭ 1～3個の調性",
+      "key_3": "レベル3 · 全24調"
+    },
+    "twoVoice": {
+      "bass_1": "レベル1 · 基本バス",
+      "bass_2": "レベル2 · リズム変化",
+      "bass_3": "レベル3 · 対位法要素",
+      "bass_4": "レベル4 · 複雑な声部"
+    }
+  },
+  "track": {
+    "part_1": "二分＋四分（基本）",
+    "part_2": "八分音符",
+    "part_3": "付点四分音符",
+    "part_4": "シンコペーション",
+    "part_5": "タイ",
+    "part_6": "十六分音符",
+    "part_7": "付点八分音符",
+    "part_8": "三連符",
+    "part_9": "臨時記号",
+    "comp_1": "基礎総合",
+    "comp_2": "標準総合",
+    "comp_3": "上級総合",
+    "comp_4": "最上級総合"
+  },
+  "interval": {
+    "0": "完全1度 (P1)",
+    "1": "短2度 (m2)",
+    "2": "長2度 (M2)",
+    "3": "短3度 (m3)",
+    "4": "長3度 (M3)",
+    "5": "完全4度 (P4)",
+    "6": "増4度 (A4)",
+    "7": "完全5度 (P5)",
+    "8": "短6度 (m6)",
+    "9": "長6度 (M6)",
+    "10": "短7度 (m7)",
+    "11": "長7度 (M7)",
+    "12": "完全8度 (P8)"
+  },
+  "chord": {
+    "major": "長三和音 (Major)",
+    "minor": "短三和音 (minor)",
+    "aug": "増三和音 (Aug)",
+    "dim": "減三和音 (dim)",
+    "maj7": "長七の和音 (M7)",
+    "min7": "短七の和音 (m7)",
+    "dim7": "減七の和音 (dim7)",
+    "maj_inv1": "長三和音 第1転回",
+    "min_inv1": "短三和音 第1転回"
+  },
+  "key": {
+    "C_major": "ハ長調 (C Major)",
+    "A_minor": "イ短調 (A minor)",
+    "G_major": "ト長調 (G Major)",
+    "E_minor": "ホ短調 (E minor)",
+    "F_major": "ヘ長調 (F Major)",
+    "D_minor": "ニ短調 (D minor)",
+    "D_major": "ニ長調 (D Major)",
+    "B_minor": "ロ短調 (B minor)",
+    "Bb_major": "変ロ長調 (B♭ Major)",
+    "G_minor": "ト短調 (G minor)",
+    "A_major": "イ長調 (A Major)",
+    "Fsh_minor": "嬰ヘ短調 (F♯ minor)",
+    "Eb_major": "変ホ長調 (E♭ Major)",
+    "C_minor": "ハ短調 (C minor)",
+    "E_major": "ホ長調 (E Major)",
+    "Csh_minor": "嬰ハ短調 (C♯ minor)",
+    "Ab_major": "変イ長調 (A♭ Major)",
+    "F_minor": "ヘ短調 (F minor)",
+    "B_major": "ロ長調 (B Major)",
+    "Gsh_minor": "嬰ト短調 (G♯ minor)",
+    "Db_major": "変ニ長調 (D♭ Major)",
+    "Bb_minor": "変ロ短調 (B♭ minor)",
+    "Gb_major": "変ト長調 (G♭ Major)",
+    "Eb_minor": "変ホ短調 (E♭ minor)"
+  }
+}

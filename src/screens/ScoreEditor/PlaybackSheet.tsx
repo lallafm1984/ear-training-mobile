@@ -1,6 +1,7 @@
 import React from 'react';
 import { Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import BottomSheet from '../../components/BottomSheet';
 import type { UpgradeReason } from '../../components';
@@ -92,14 +93,15 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
   limits,
   openUpgrade,
 }) => {
+  const { t } = useTranslation('editor');
   return (
-    <BottomSheet open={open} onClose={onClose} title="재생 옵션">
+    <BottomSheet open={open} onClose={onClose} title={t('playback.title')}>
 
       {/* ── 공통 설정값 (모든 모드에 적용) ── */}
-      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>공통 설정</Text>
+      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>{t('playback.commonSettings')}</Text>
       <View style={styles.commonSettingsRow}>
         <View style={styles.commonSettingsCard}>
-          <Text style={styles.commonSettingsLabel}>스케일 BPM</Text>
+          <Text style={styles.commonSettingsLabel}>{t('playback.scaleBpm')}</Text>
           <TextInput
             style={styles.commonSettingsInput}
             keyboardType="number-pad"
@@ -108,7 +110,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           />
         </View>
         <View style={styles.commonSettingsCard}>
-          <Text style={styles.commonSettingsLabel}>카운트인 (Hz)</Text>
+          <Text style={styles.commonSettingsLabel}>{t('playback.countIn')}</Text>
           <TextInput
             style={styles.commonSettingsInput}
             keyboardType="number-pad"
@@ -121,17 +123,17 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
       {/* 재생 시 표시 옵션 */}
       <View style={styles.commonSettingsRow}>
         <View style={[styles.commonSettingsCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <Text style={styles.commonSettingsLabel}>현재 음표 표시</Text>
+          <Text style={styles.commonSettingsLabel}>{t('playback.showNoteCursor')}</Text>
           <Switch value={showNoteCursor} onValueChange={setShowNoteCursor} />
         </View>
         <View style={[styles.commonSettingsCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <Text style={styles.commonSettingsLabel}>현재 마디 표시</Text>
+          <Text style={styles.commonSettingsLabel}>{t('playback.showMeasureHighlight')}</Text>
           <Switch value={showMeasureHighlight} onValueChange={setShowMeasureHighlight} />
         </View>
       </View>
 
       {/* ── 재생 모드 선택 (accordion) ── */}
-      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>재생 모드</Text>
+      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>{t('playback.modeSelect')}</Text>
 
       {/* ① 일반 재생 */}
       {(() => {
@@ -143,19 +145,19 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
               style={[styles.modeCard, isActive && styles.modeCardActive, isActive && styles.modeCardExpanded]}
               activeOpacity={0.75}
             >
-              <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive]}>일반 재생</Text>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive]}>전체를 한 번 재생합니다</Text>
+              <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive]}>{t('playback.normalPlay')}</Text>
+              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive]}>{t('playback.normalPlayDesc')}</Text>
             </TouchableOpacity>
 
             {/* 일반 재생 설정: 스케일·카운트인 ON/OFF */}
             {isActive && (
               <View style={styles.modeSettingsBox}>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>스케일 재생</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.scalePlay')}</Text>
                   <Switch value={prependBasePitch} onValueChange={setPrependBasePitch} />
                 </View>
                 <View style={[styles.modeOptRow, { marginBottom: 0 }]}>
-                  <Text style={styles.modeOptLabel}>카운트인</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.countInToggle')}</Text>
                   <Switch value={prependMetronome} onValueChange={setPrependMetronome} />
                 </View>
               </View>
@@ -186,7 +188,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
               <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                구간별 반복 훈련 · 슬라이딩 방식
+                {t('playback.practiceDesc')}
               </Text>
             </TouchableOpacity>
 
@@ -196,16 +198,16 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {/* 순서 표시 */}
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
-                    {'스케일 → 전체 재생 → '}
-                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}초</Text>
-                    {'\n→ 2마디씩 ×2회 + 4마디 누적 ('}
-                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}초</Text>
-                    {' 휴식)\n→ 다음 2마디로 이동, 반복\n→ 전체 재생'}
+                    {t('playback.practiceSeq1')}
+                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}{t('playback.seconds')}</Text>
+                    {t('playback.practiceSeq2')}
+                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}{t('playback.seconds')}</Text>
+                    {t('playback.practiceSeq3')}
                   </Text>
                 </View>
                 {/* 옵션 */}
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>구간 휴식 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.sectionRest')}</Text>
                   <TextInput
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
@@ -241,7 +243,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
               <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                4회 통재생 · 첫 휴식 {apExamSettings.firstRestSeconds}초 · 이후 {apExamSettings.restSeconds}초
+                {t('playback.apDesc', { firstRest: apExamSettings.firstRestSeconds, rest: apExamSettings.restSeconds })}
               </Text>
             </TouchableOpacity>
 
@@ -249,17 +251,17 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
               <View style={[styles.modeSettingsBox, { borderColor: '#bfdbfe' }]}>
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
-                    {'스케일 → 으뜸화음 → 전체 재생 →\n'}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.firstRestSeconds}초 휴식</Text>
-                    {' → 전체 재생 →\n'}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}초 휴식</Text>
-                    {' → 전체 재생 →\n'}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}초 휴식</Text>
-                    {' → 전체 재생'}
+                    {t('playback.apSeq1')}
+                    <Text style={styles.modeSeqHighlight}>{apExamSettings.firstRestSeconds}{t('playback.secondsRest')}</Text>
+                    {t('playback.apSeq2')}
+                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
+                    {t('playback.apSeq2')}
+                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
+                    {t('playback.apSeq3')}
                   </Text>
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>1회차 후 휴식 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.apFirstRest')}</Text>
                   <TextInput
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
@@ -268,7 +270,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                   />
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>2·3·4회차 후 휴식 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.apRest')}</Text>
                   <TextInput
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
@@ -304,7 +306,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
               <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                {koreanExamSettings.totalPlays}회 통재생 · {koreanExamSettings.restSeconds}초 휴식
+                {t('playback.koreanDesc', { plays: koreanExamSettings.totalPlays, rest: koreanExamSettings.restSeconds })}
               </Text>
             </TouchableOpacity>
 
@@ -312,22 +314,22 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
               <View style={[styles.modeSettingsBox, { borderColor: '#fde68a' }]}>
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
-                    {'스케일 → 으뜸화음 → 시작음 →\n'}
+                    {t('playback.koreanSeq1')}
                     {Array.from({ length: koreanExamSettings.totalPlays }, (_, i) => (
                       i < koreanExamSettings.totalPlays - 1 ? (
                         <Text key={i}>
-                          {'전체 재생 → '}
-                          <Text style={styles.modeSeqHighlight}>{koreanExamSettings.restSeconds}초 휴식</Text>
+                          {t('playback.fullPlay')}{' → '}
+                          <Text style={styles.modeSeqHighlight}>{koreanExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
                           {' → '}
                         </Text>
                       ) : (
-                        <Text key={i}>{'전체 재생'}</Text>
+                        <Text key={i}>{t('playback.fullPlay')}</Text>
                       )
                     ))}
                   </Text>
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>재생 횟수</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.playCount')}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {[3, 4, 5].map(n => (
                       <TouchableOpacity
@@ -335,13 +337,13 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                         onPress={() => setKoreanExamSettings(s => ({ ...s, totalPlays: n }))}
                         style={[styles.modeCountChip, koreanExamSettings.totalPlays === n && { backgroundColor: '#d97706', borderColor: '#d97706' }]}
                       >
-                        <Text style={[styles.modeCountChipText, koreanExamSettings.totalPlays === n && { color: '#fff' }]}>{n}회</Text>
+                        <Text style={[styles.modeCountChipText, koreanExamSettings.totalPlays === n && { color: '#fff' }]}>{t('playback.timesCount', { n })}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>재생 간 휴식 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.playRestTime')}</Text>
                   <TextInput
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
@@ -377,7 +379,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
               <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                {echoSettings.phraseMeasures}마디씩 · {echoSettings.responseSeconds}초 응답
+                {t('playback.echoDesc', { measures: echoSettings.phraseMeasures, seconds: echoSettings.responseSeconds })}
               </Text>
             </TouchableOpacity>
 
@@ -385,15 +387,15 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
               <View style={[styles.modeSettingsBox, { borderColor: '#bbf7d0' }]}>
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
-                    {'스케일 → 으뜸화음 →\n('}
-                    <Text style={styles.modeSeqHighlight}>{echoSettings.phraseMeasures}마디</Text>
-                    {' 재생 → '}
-                    <Text style={styles.modeSeqHighlight}>{echoSettings.responseSeconds}초</Text>
-                    {' 응답) × 마디 수 만큼 반복'}
+                    {t('playback.echoSeq1')}
+                    <Text style={styles.modeSeqHighlight}>{t('playback.measuresCount', { n: echoSettings.phraseMeasures })}</Text>
+                    {t('playback.echoSeq2')}
+                    <Text style={styles.modeSeqHighlight}>{echoSettings.responseSeconds}{t('playback.seconds')}</Text>
+                    {t('playback.echoSeq3')}
                   </Text>
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>구간 크기 (마디)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.sectionSize')}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {[1, 2, 4].map(n => (
                       <TouchableOpacity
@@ -401,13 +403,13 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                         onPress={() => setEchoSettings(s => ({ ...s, phraseMeasures: n }))}
                         style={[styles.modeCountChip, echoSettings.phraseMeasures === n && { backgroundColor: '#16a34a', borderColor: '#16a34a' }]}
                       >
-                        <Text style={[styles.modeCountChipText, echoSettings.phraseMeasures === n && { color: '#fff' }]}>{n}마디</Text>
+                        <Text style={[styles.modeCountChipText, echoSettings.phraseMeasures === n && { color: '#fff' }]}>{t('playback.measuresCount', { n })}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>응답 시간 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.responseTime')}</Text>
                   <TextInput
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
@@ -430,20 +432,20 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
 
         // 순서 텍스트 앞부분 (스케일·으뜸화음·카운트인)
         const prefixParts: string[] = [];
-        if (prependScale) prefixParts.push('스케일');
-        if (prependTonicChord) prefixParts.push('으뜸화음');
+        if (prependScale) prefixParts.push(t('playback.scale'));
+        if (prependTonicChord) prefixParts.push(t('playback.tonicChord'));
 
         // 본 재생 순서 텍스트
         let bodyText = '';
         if (useSegments) {
-          bodyText = `전체 재생 → ${restSeconds}초 휴식 → ` +
-            `${segmentMeasures}마디×${segmentRepeats}회 → ` +
-            `${restSeconds}초 휴식 (전 구간 반복) → 전체 재생`;
+          bodyText = `${t('playback.fullPlay')} → ${restSeconds}${t('playback.secondsRest')} → ` +
+            `${t('playback.measuresCount', { n: segmentMeasures })}×${t('playback.timesCount', { n: segmentRepeats })} → ` +
+            `${restSeconds}${t('playback.secondsRest')} (${t('playback.allSections')}) → ${t('playback.fullPlay')}`;
         } else {
           const playParts: string[] = [];
           for (let i = 0; i < totalPlays; i++) {
-            playParts.push('전체 재생');
-            if (i < totalPlays - 1) playParts.push(`${restSeconds}초 휴식`);
+            playParts.push(t('playback.fullPlay'));
+            if (i < totalPlays - 1) playParts.push(`${restSeconds}${t('playback.secondsRest')}`);
           }
           bodyText = playParts.join(' → ');
         }
@@ -466,7 +468,7 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
               <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                재생 횟수·구간·휴식 직접 설정
+                {t('playback.customDesc')}
               </Text>
             </TouchableOpacity>
 
@@ -482,9 +484,9 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                         {' → '}
                       </Text>
                     )}
-                    {/* 본 재생 부분: '초 휴식' 토큰만 굵게 */}
-                    {bodyText.split(/(\d+초 휴식)/g).map((seg, i) =>
-                      /^\d+초 휴식$/.test(seg)
+                    {/* 본 재생 부분: 'N초 휴식' 토큰만 굵게 */}
+                    {bodyText.split(/(\d+[^\d→]+)/).map((seg, i) =>
+                      /^\d+/.test(seg) && seg.includes(t('playback.secondsRest').trim())
                         ? <Text key={i} style={styles.modeSeqHighlight}>{seg}</Text>
                         : <Text key={i}>{seg}</Text>
                     )}
@@ -493,22 +495,22 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
 
                 {/* ── 준비 옵션 ── */}
                 <View style={[styles.modeOptRow, { marginBottom: 6 }]}>
-                  <Text style={styles.modeOptLabel}>스케일 재생</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.prependScale')}</Text>
                   <Switch value={prependScale} onValueChange={v => setCustomPlaySettings(s => ({ ...s, prependScale: v }))} trackColor={{ true: '#9333ea' }} />
                 </View>
                 <View style={[styles.modeOptRow, { marginBottom: 14 }]}>
-                  <Text style={styles.modeOptLabel}>으뜸화음 재생</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.prependTonicChord')}</Text>
                   <Switch value={prependTonicChord} onValueChange={v => setCustomPlaySettings(s => ({ ...s, prependTonicChord: v }))} trackColor={{ true: '#9333ea' }} />
                 </View>
 
                 {/* ── 구간 분할 ── */}
                 <View style={[styles.modeOptRow, { marginBottom: 10 }]}>
-                  <Text style={styles.modeOptLabel}>구간 분할</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.splitSection')}</Text>
                   <Switch value={useSegments} onValueChange={v => setCustomPlaySettings(s => ({ ...s, useSegments: v }))} trackColor={{ true: '#9333ea' }} />
                 </View>
                 {!useSegments && (
                   <View style={styles.modeOptRow}>
-                    <Text style={styles.modeOptLabel}>재생 횟수</Text>
+                    <Text style={styles.modeOptLabel}>{t('playback.playCount')}</Text>
                     <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(totalPlays)}
                       onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, totalPlays: n })); }} />
                   </View>
@@ -516,19 +518,19 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {useSegments && (
                   <>
                     <View style={styles.modeOptRow}>
-                      <Text style={styles.modeOptLabel}>구간 크기 (마디)</Text>
+                      <Text style={styles.modeOptLabel}>{t('playback.sectionSize')}</Text>
                       <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(segmentMeasures)}
                         onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, segmentMeasures: n })); }} />
                     </View>
                     <View style={styles.modeOptRow}>
-                      <Text style={styles.modeOptLabel}>구간 반복 횟수</Text>
+                      <Text style={styles.modeOptLabel}>{t('playback.sectionRepeat')}</Text>
                       <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(segmentRepeats)}
                         onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, segmentRepeats: n })); }} />
                     </View>
                   </>
                 )}
                 <View style={styles.modeOptRow}>
-                  <Text style={styles.modeOptLabel}>휴식 시간 (초)</Text>
+                  <Text style={styles.modeOptLabel}>{t('playback.restTime')}</Text>
                   <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(restSeconds)}
                     onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, restSeconds: n })); }} />
                 </View>

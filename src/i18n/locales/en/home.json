@@ -1,0 +1,37 @@
+{
+  "greeting": {
+    "hello": "Hello, {{name}}",
+    "defaultUser": "Student",
+    "allDone": "Great job today!",
+    "keepGoing": "Ready to practice today?",
+    "allDoneDesc": "You've reached all your goals. Amazing!",
+    "goalProgress": "Today's goal {{done}}/{{total}} in progress"
+  },
+  "section": {
+    "earTrainingTypes": "Ear Training Types",
+    "dailyGoal": "Daily Goal",
+    "quickStart": "Quick Start",
+    "recentActivity": "Recent Activity",
+    "recentPractice": "Recent Practice"
+  },
+  "action": {
+    "dailyDone": "Goal Achieved!",
+    "dailyGoal": "Daily Goal",
+    "dailyProgress": "{{done}}/{{total}} Complete",
+    "mockExam": "Mock Exam",
+    "mockExamDesc": "Real-world practice",
+    "stats": "Stats",
+    "statsDesc": "Learning progress"
+  },
+  "quickStart": {
+    "streak": "{{days}}-day streak!",
+    "label": "Quick Start",
+    "title": "Today's Recommended Practice"
+  },
+  "dailyGoalCard": {
+    "title": "Today's Goal",
+    "progress": "{{done}}/{{total}}",
+    "complete": "Complete!",
+    "goToGoal": "View Goals"
+  }
+}

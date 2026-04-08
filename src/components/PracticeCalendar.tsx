@@ -5,21 +5,22 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
 import type { PracticeRecord, ContentCategory } from '../types/content';
 
 interface Props {
   records: PracticeRecord[];
 }
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function PracticeCalendar({ records }: Props) {
+  const { t } = useTranslation(['stats', 'content', 'common']);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(toDateKey(new Date()));
 
@@ -100,7 +101,7 @@ export default function PracticeCalendar({ records }: Props) {
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month - 1, 1))} hitSlop={12}>
           <ChevronLeft size={20} color={COLORS.slate600} />
         </TouchableOpacity>
-        <Text style={styles.monthTitle}>{year}년 {month + 1}월</Text>
+        <Text style={styles.monthTitle}>{t('stats:month.format', { year, month: month + 1 })}</Text>
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month + 1, 1))} hitSlop={12}>
           <ChevronRight size={20} color={COLORS.slate600} />
         </TouchableOpacity>
@@ -108,13 +109,13 @@ export default function PracticeCalendar({ records }: Props) {
 
       {/* 요일 헤더 */}
       <View style={styles.weekRow}>
-        {WEEKDAYS.map((w, i) => (
-          <View key={w} style={styles.weekCell}>
+        {WEEKDAY_KEYS.map((key, i) => (
+          <View key={key} style={styles.weekCell}>
             <Text style={[
               styles.weekText,
               i === 0 && { color: '#ef4444' },
               i === 6 && { color: '#3b82f6' },
-            ]}>{w}</Text>
+            ]}>{t('stats:calendar.' + key)}</Text>
           </View>
         ))}
       </View>
@@ -161,7 +162,7 @@ export default function PracticeCalendar({ records }: Props) {
                   </View>
                 )}
                 {isSelected && hasPractice && (
-                  <Text style={styles.selectedCount}>{dayRecs!.length}회</Text>
+                  <Text style={styles.selectedCount}>{dayRecs!.length}{t('common:unit.count')}</Text>
                 )}
               </TouchableOpacity>
             );
@@ -173,21 +174,20 @@ export default function PracticeCalendar({ records }: Props) {
       {selectedDate && selectedSummary.length > 0 && (
         <View style={styles.detail}>
           <Text style={styles.detailTitle}>
-            {parseInt(selectedDate.split('-')[1])}월 {parseInt(selectedDate.split('-')[2])}일 연습 기록
+            {t('stats:calendar.detailTitle', { month: parseInt(selectedDate.split('-')[1]), day: parseInt(selectedDate.split('-')[2]) })}
           </Text>
           {selectedSummary.map(({ category, count, avgRating }) => {
-            const config = getContentConfig(category);
             const colors = CATEGORY_COLORS[category];
             return (
               <View key={category} style={styles.detailRow}>
                 <View style={styles.detailLeft}>
                   <View style={[styles.detailDot, { backgroundColor: colors.main }]} />
-                  <Text style={styles.detailName}>{config.name}</Text>
+                  <Text style={styles.detailName}>{t('content:category.' + category + '.name')}</Text>
                 </View>
                 <View style={styles.detailRight}>
-                  <Text style={styles.detailCount}>{count}회</Text>
+                  <Text style={styles.detailCount}>{count}{t('common:unit.count')}</Text>
                   <Text style={[styles.detailRating, { color: colors.main }]}>
-                    평균 {avgRating}점
+                    {t('stats:calendar.avgRating', { rating: avgRating })}
                   </Text>
                 </View>
               </View>
@@ -198,7 +198,7 @@ export default function PracticeCalendar({ records }: Props) {
 
       {selectedDate && selectedSummary.length === 0 && (
         <View style={styles.detail}>
-          <Text style={styles.detailEmpty}>이 날은 연습 기록이 없습니다</Text>
+          <Text style={styles.detailEmpty}>{t('stats:calendar.noRecord')}</Text>
         </View>
       )}
     </View>

@@ -1,0 +1,102 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "Effective: April 4, 2026",
+    "sections": [
+      {
+        "title": "1. Purpose of Collection and Use of Personal Information",
+        "body": "• Provision of membership registration and login services\n• Management of subscription services\n• Service improvement and bug fixes\n\n※ Learning records, practice statistics, exam results, and similar data are stored locally on the user's device only and are not collected by our servers."
+      },
+      {
+        "title": "2. Personal Information Collected",
+        "body": "[Required]\n• Email address: collected via Google Sign-In\n• Display name: Google account name or user-entered name\n\n[Information provided via Google Sign-In]\n• Google account email, name, and profile photo URL\n• Profile photo URL is stored on our servers and used to display your profile within the app\n\n[Automatically collected]\n• Subscription information: plan type (Free/Pro), subscription expiry date\n\n[Information not collected]\n• Location data, contacts, photos/media, device unique identifiers"
+      },
+      {
+        "title": "3. Retention Period",
+        "body": "• Server data is deleted immediately upon account deletion\n• Local device data (practice records, exam results, learning statistics, etc.) is also deleted upon account deletion and cannot be recovered as it is not backed up to our servers\n• Contract and payment records under the Act on the Consumer Protection in Electronic Commerce: 5 years\n• Log records under the Protection of Communications Secrets Act: 3 months"
+      },
+      {
+        "title": "4. Disclosure to Third Parties",
+        "body": "As a general rule, personal information is not disclosed to external parties.\n• Exception when the user has given prior consent\n• Exception when required by applicable law"
+      },
+      {
+        "title": "5. Outsourcing of Personal Data Processing",
+        "body": "• Supabase Inc. — Database hosting and authentication services\n• RevenueCat Inc. — Subscription payment management and receipt verification\n• Apple Inc. / Google LLC — In-app purchase processing"
+      },
+      {
+        "title": "6. User Rights",
+        "body": "• Access to personal information: available via the Profile screen within the app\n• Correction of personal information: change of display name\n• Account deletion: available via the Profile screen within the app\n• Withdrawal of consent: consent is withdrawn upon account deletion"
+      },
+      {
+        "title": "7. Security Measures",
+        "body": "• Database access control (Row Level Security)\n• HTTPS communication encryption\n• Data access management based on the principle of least privilege"
+      },
+      {
+        "title": "8. Data Protection Officer",
+        "body": "• Officer: Jisu Lim\n• Contact: 4ltree.service@gmail.com"
+      },
+      {
+        "title": "9. Changes to Privacy Policy",
+        "body": "This policy may be revised in accordance with changes in law, policy, or services. Users will be notified of any changes through in-app announcements."
+      }
+    ]
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "subtitle": "Effective: April 4, 2026",
+    "sections": [
+      {
+        "title": "Article 1 (Purpose)",
+        "body": "These Terms of Service govern the conditions and procedures for using the ear training service provided by MelodyGen."
+      },
+      {
+        "title": "Article 2 (Definitions)",
+        "body": "• Service: all features provided by the app, including ear training practice, mock exams, and learning statistics\n• User: a person who has registered an account and uses the Service\n• Paid Service (Pro): premium features accessible through a monthly subscription"
+      },
+      {
+        "title": "Article 3 (Service Description)",
+        "body": "• Ear training practice across 6 categories (melody, rhythm, interval, harmony, tonality, two-part)\n• Mock exams and result analysis\n• Learning statistics and progress tracking\n• Automatically generated exercises"
+      },
+      {
+        "title": "Article 3-2 (Data Storage)",
+        "body": "• Learning-related data, including practice records, mock exam results, learning statistics, and skill profiles, are stored locally on the user's device.\n• Local data is not backed up to our servers and will be permanently lost if the app is deleted, the device is reset, or the cache is cleared.\n• Only account information (email, display name, subscription status) is stored on our servers.\n• Local data is stored separately per account; data belonging to other accounts cannot be accessed."
+      },
+      {
+        "title": "Article 4 (Formation of Agreement)",
+        "body": "• A service agreement is formed when the user consents to these Terms and completes registration.\n• Registration may be refused if a user misappropriates another person's information or provides false information."
+      },
+      {
+        "title": "Article 5 (Paid Services)",
+        "body": "• The Pro subscription is KRW 5,500 per month and is billed through the App Store or Google Play.\n• Subscriptions renew automatically unless cancelled.\n• Refunds are subject to the refund policy of the respective store.\n• Pro features remain accessible until the expiry date even after cancellation."
+      },
+      {
+        "title": "Article 6 (User Obligations)",
+        "body": "Users must not engage in the following conduct:\n• Using the Service through unauthorized or fraudulent means\n• Circumventing the app's technical protection measures\n• Collecting personal information of other users\n• Interfering with the stable operation of the Service"
+      },
+      {
+        "title": "Article 7 (Service Interruption)",
+        "body": "• The Service may be temporarily suspended for reasons such as system maintenance or equipment replacement.\n• The Service may be restricted in cases of force majeure, including natural disasters, that render provision of the Service impossible."
+      },
+      {
+        "title": "Article 8 (Content Characteristics)",
+        "body": "• Exercises are automatically generated by algorithm and may differ from exercises created by professional instructors.\n• The app is a supplementary practice tool and does not replace professional instruction.\n• Exam results and learning statistics are for reference purposes only and do not guarantee actual admission exam scores."
+      },
+      {
+        "title": "Article 9 (Disclaimer)",
+        "body": "• We are not liable for service disruptions attributable to the user's own fault.\n• No separate warranty is provided for services offered free of charge.\n• We are not liable for learning outcomes obtained by users through use of the Service."
+      },
+      {
+        "title": "Article 10 (Account Deletion)",
+        "body": "• Users may delete their account (withdraw membership) at any time from within the app.\n• Upon account deletion, personal information stored on our servers (email, display name, subscription status) is deleted immediately.\n• Local data stored on the device (practice records, mock exam results, learning statistics, mascot experience points, etc.) is also deleted.\n• All deleted data, whether on the server or device, cannot be recovered.\n• Deleting your account does not automatically cancel a Pro subscription on the App Store or Google Play. You must cancel the subscription directly in the respective store to prevent further charges."
+      },
+      {
+        "title": "Article 11 (Dispute Resolution)",
+        "body": "• Disputes arising from the use of the Service shall be resolved in accordance with the laws of the Republic of Korea.\n• The court with jurisdiction over the location of the Service provider shall serve as the competent court in the event of a dispute."
+      },
+      {
+        "title": "Article 12 (Amendment of Terms)",
+        "body": "• These Terms may be amended to the extent permitted by applicable law.\n• Amended Terms will be announced within the app no later than 7 days before they take effect."
+      }
+    ]
+  }
+}

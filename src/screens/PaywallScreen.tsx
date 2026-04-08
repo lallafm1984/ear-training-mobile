@@ -7,9 +7,10 @@ import {
   Crown, X, Sparkles, Music2, FileMusic,
   Layers, ArrowUpDown, Key, Drum,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useAlert, useSubscription } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
-import { getOfferings, purchasePackage, isPro } from '../lib/revenueCat';
+import { getOfferings, purchasePackage, isPro, restorePurchases } from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 interface PaywallScreenProps {
@@ -28,14 +29,14 @@ interface CategoryCompare {
   pro: string;
 }
 
-const CATEGORY_COMPARES: CategoryCompare[] = [
-  { name: '선율', icon: <Music2 size={14} color="#6366f1" />, color: '#6366f1', free: 'Lv.1~3', pro: 'Lv.1~9' },
-  { name: '리듬', icon: <Drum size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1~2', pro: 'Lv.1~6' },
-  { name: '음정', icon: <ArrowUpDown size={14} color="#10b981" />, color: '#10b981', free: 'Lv.1~2', pro: 'Lv.1~4' },
-  { name: '화성', icon: <Layers size={14} color="#8b5cf6" />, color: '#8b5cf6', free: 'Lv.1', pro: 'Lv.1~4' },
-  { name: '조성', icon: <Key size={14} color="#ef4444" />, color: '#ef4444', free: 'Lv.1', pro: 'Lv.1~3' },
-  { name: '2성부', icon: <FileMusic size={14} color="#0ea5e9" />, color: '#0ea5e9', free: '잠금', pro: 'Lv.1~4' },
-  { name: '모의시험', icon: <Crown size={14} color="#f59e0b" />, color: '#f59e0b', free: '1단계', pro: '전체' },
+const CATEGORY_COMPARE_KEYS = [
+  { nameKey: 'subscription:paywall.compareMelody', icon: <Music2 size={14} color="#6366f1" />, color: '#6366f1', free: 'Lv.1~3', pro: 'Lv.1~9' },
+  { nameKey: 'subscription:paywall.compareRhythm', icon: <Drum size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1~2', pro: 'Lv.1~6' },
+  { nameKey: 'subscription:paywall.compareInterval', icon: <ArrowUpDown size={14} color="#10b981" />, color: '#10b981', free: 'Lv.1~2', pro: 'Lv.1~4' },
+  { nameKey: 'subscription:paywall.compareHarmony', icon: <Layers size={14} color="#8b5cf6" />, color: '#8b5cf6', free: 'Lv.1', pro: 'Lv.1~4' },
+  { nameKey: 'subscription:paywall.compareKey', icon: <Key size={14} color="#ef4444" />, color: '#ef4444', free: 'Lv.1', pro: 'Lv.1~3' },
+  { nameKey: 'subscription:paywall.compareTwoPart', icon: <FileMusic size={14} color="#0ea5e9" />, color: '#0ea5e9', free: 'locked', pro: 'Lv.1~4' },
+  { nameKey: 'subscription:paywall.compareMockExam', icon: <Crown size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1', pro: 'all' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -43,9 +44,11 @@ const CATEGORY_COMPARES: CategoryCompare[] = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
+  const { t } = useTranslation(['subscription', 'content', 'common']);
   const { tier: currentTier, loading } = useSubscription();
   const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
 
@@ -58,15 +61,15 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
 
   const handleSubscribe = async () => {
     if (currentTier === 'pro') {
-      showAlert({ title: '이미 Pro', message: '이미 Pro 플랜을 이용 중입니다.', type: 'info' });
+      showAlert({ title: t('subscription:paywall.alreadyProTitle'), message: t('subscription:paywall.alreadyProMessage'), type: 'info' });
       return;
     }
 
     const pkg = packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
     if (!pkg) {
       showAlert({
-        title: '상품 로드 실패',
-        message: '구독 상품 정보를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.',
+        title: t('subscription:paywall.loadFailTitle'),
+        message: t('subscription:paywall.loadFailMessage'),
         type: 'error',
       });
       return;
@@ -77,21 +80,50 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       const customerInfo = await purchasePackage(pkg);
       if (isPro(customerInfo)) {
         showAlert({
-          title: '구독 완료!',
-          message: 'Pro 플랜이 활성화되었습니다.\n모든 기능을 자유롭게 이용하세요.',
+          title: t('subscription:paywall.subscribeSuccessTitle'),
+          message: t('subscription:paywall.subscribeSuccessMessage'),
           type: 'success',
-          buttons: [{ text: '확인', onPress: onClose }],
+          buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
         });
       }
     } catch (e: any) {
       if (e?.userCancelled) return;
       showAlert({
-        title: '구독 오류',
-        message: '구독 처리 중 오류가 발생했습니다. 다시 시도해주세요.',
+        title: t('subscription:paywall.subscribeErrorTitle'),
+        message: t('subscription:paywall.subscribeErrorMessage'),
         type: 'error',
       });
     } finally {
       setPurchasing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const customerInfo = await restorePurchases();
+      if (isPro(customerInfo)) {
+        showAlert({
+          title: t('subscription:paywall.restoreSuccessTitle'),
+          message: t('subscription:paywall.restoreSuccessMessage'),
+          type: 'success',
+          buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
+        });
+      } else {
+        showAlert({
+          title: t('subscription:paywall.restoreNoneTitle'),
+          message: t('subscription:paywall.restoreNoneMessage'),
+          type: 'info',
+        });
+      }
+    } catch {
+      showAlert({
+        title: t('subscription:paywall.restoreErrorTitle'),
+        message: t('subscription:paywall.restoreErrorMessage'),
+        type: 'error',
+      });
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -104,7 +136,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <X size={18} color="#64748b" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>요금제</Text>
+        <Text style={styles.headerTitle}>{t('subscription:paywall.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -117,44 +149,44 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           <View style={styles.heroIconRow}>
             <Crown size={32} color="#6366f1" />
           </View>
-          <Text style={styles.heroTitle}>MelodyGen Pro</Text>
+          <Text style={styles.heroTitle}>{t('subscription:paywall.proBanner')}</Text>
           <Text style={styles.heroSubtitle}>
-            6가지 청음 훈련의{'\n'}모든 난이도를 잠금 해제하세요
+            {t('subscription:paywall.heroSubtitle')}
           </Text>
           {isPro_ && (
             <View style={styles.proBanner}>
               <Sparkles size={14} color="#6366f1" />
-              <Text style={styles.proBannerText}>현재 Pro 플랜 이용 중</Text>
+              <Text style={styles.proBannerText}>{t('subscription:paywall.currentPro')}</Text>
             </View>
           )}
         </View>
 
         {/* 카테고리별 Free vs Pro */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>청음 훈련 난이도 비교</Text>
+          <Text style={styles.sectionTitle}>{t('subscription:paywall.compareTitle')}</Text>
           <View style={styles.categoryCard}>
             <View style={styles.categoryHeader}>
-              <Text style={[styles.categoryHeaderCell, { flex: 1.5 }]}>카테고리</Text>
+              <Text style={[styles.categoryHeaderCell, { flex: 1.5 }]}>{t('subscription:paywall.compareCategory')}</Text>
               <Text style={[styles.categoryHeaderCell, { color: '#94a3b8' }]}>Free</Text>
               <Text style={[styles.categoryHeaderCell, { color: '#6366f1' }]}>Pro</Text>
             </View>
-            {CATEGORY_COMPARES.map((cat, i) => (
+            {CATEGORY_COMPARE_KEYS.map((cat, i) => (
               <View
                 key={i}
                 style={[styles.categoryRow, i % 2 === 0 && { backgroundColor: '#fafaff' }]}
               >
                 <View style={[styles.categoryNameCell, { flex: 1.5 }]}>
                   {cat.icon}
-                  <Text style={styles.categoryName}>{cat.name}</Text>
+                  <Text style={styles.categoryName}>{t(cat.nameKey)}</Text>
                 </View>
                 <Text style={[
                   styles.categoryValue,
-                  cat.free === '잠금' && { color: '#ef4444', fontSize: 11 },
+                  cat.free === 'locked' && { color: '#ef4444', fontSize: 11 },
                 ]}>
-                  {cat.free}
+                  {cat.free === 'locked' ? t('subscription:paywall.locked') : cat.free}
                 </Text>
                 <Text style={[styles.categoryValue, { color: '#6366f1', fontWeight: '700' }]}>
-                  {cat.pro}
+                  {cat.pro === 'all' ? t('subscription:paywall.allLevels') : cat.pro}
                 </Text>
               </View>
             ))}
@@ -172,18 +204,30 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             >
               <Crown size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>
-                {purchasing ? '처리 중...' : 'Pro 시작하기 · 월 5,500원'}
+                {purchasing ? t('subscription:paywall.processing') : t('subscription:paywall.subscribe')}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.ctaNote}>언제든 취소 가능 · 첫 결제 즉시 적용</Text>
+            <Text style={styles.ctaNote}>{t('subscription:paywall.ctaNote')}</Text>
           </View>
+        )}
+
+        {/* 구독 복원 */}
+        {!isPro_ && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={handleRestore}
+            disabled={restoring}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.restoreBtnText}>
+              {restoring ? t('subscription:paywall.restoring') : t('subscription:paywall.restore')}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* 면책 조항 */}
         <Text style={styles.disclaimer}>
-          구독은 Google Play / App Store를 통해 처리됩니다.{'\n'}
-          다음 갱신일 24시간 전까지 취소할 수 있습니다.{'\n'}
-          결제는 확인 시 iTunes / Google Play 계정에 청구됩니다.
+          {t('subscription:paywall.disclaimer')}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -364,6 +408,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94a3b8',
     marginTop: 10,
+  },
+
+  // ── 복원 ──────────────────────────────────────────────
+  restoreBtn: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 12,
+  },
+  restoreBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6366f1',
+    textDecorationLine: 'underline',
   },
 
   // ── 하단 ──────────────────────────────────────────────

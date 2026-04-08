@@ -11,11 +11,13 @@ import {
   RotateCcw, Home, Trophy, TrendingUp,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
+
+import { useAuth } from '../context';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -25,7 +27,9 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const { t } = useTranslation(['exam', 'content', 'common']);
   const route = useRoute<RouteProp>();
+  const { user } = useAuth();
   const savedRef = useRef(false);
   const {
     presetId,
@@ -58,22 +62,24 @@ export default function ExamResultScreen() {
       completed_at: new Date().toISOString(),
     };
 
-    AsyncStorage.getItem('@melodygen_exam_sessions').then(raw => {
+    if (!user) return;
+    const examKey = `@melodygen_exam_sessions_${user.id}`;
+    AsyncStorage.getItem(examKey).then(raw => {
       const existing = raw ? JSON.parse(raw) : [];
       const updated = [record, ...existing].slice(0, 50);
-      AsyncStorage.setItem('@melodygen_exam_sessions', JSON.stringify(updated));
+      AsyncStorage.setItem(examKey, JSON.stringify(updated));
     });
-  }, []);
+  }, [user]);
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
   const getGrade = (pct: number) => {
-    if (pct >= 90) return { label: 'A+', color: '#10b981', message: '탁월한 실력입니다!' };
-    if (pct >= 80) return { label: 'A', color: '#10b981', message: '훌륭해요!' };
-    if (pct >= 70) return { label: 'B+', color: '#3b82f6', message: '잘 하고 있어요!' };
-    if (pct >= 60) return { label: 'B', color: '#3b82f6', message: '조금 더 연습하면 좋겠어요' };
-    if (pct >= 50) return { label: 'C', color: COLORS.amber500, message: '꾸준히 연습해 보세요' };
-    return { label: 'D', color: '#ef4444', message: '기초부터 다시 연습해 보세요' };
+    if (pct >= 90) return { label: 'A+', color: '#10b981', message: t('exam:result.excellent') };
+    if (pct >= 80) return { label: 'A', color: '#10b981', message: t('exam:result.good') };
+    if (pct >= 70) return { label: 'B+', color: '#3b82f6', message: t('exam:result.good') };
+    if (pct >= 60) return { label: 'B', color: '#3b82f6', message: t('exam:result.average') };
+    if (pct >= 50) return { label: 'C', color: COLORS.amber500, message: t('exam:result.average') };
+    return { label: 'D', color: '#ef4444', message: t('exam:result.needsPractice') };
   };
 
   const grade = getGrade(percentage);
@@ -88,15 +94,15 @@ export default function ExamResultScreen() {
         {/* 결과 헤더 */}
         <View style={styles.resultHeader}>
           <Trophy size={32} color={COLORS.amber500} />
-          <Text style={styles.resultTitle}>시험 완료!</Text>
+          <Text style={styles.resultTitle}>{t('exam:result.title')}</Text>
           <Text style={styles.examTitle}>{title}</Text>
         </View>
 
         {/* 점수 원형 */}
         <View style={[styles.scoreCircle, { borderColor: grade.color }]}>
           <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}점</Text>
-          <Text style={styles.scoreFraction}>만점 100점</Text>
+          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}{t('common:unit.score')}</Text>
+          <Text style={styles.scoreFraction}>{t('exam:result.totalScore')}</Text>
         </View>
 
         <Text style={[styles.gradeMessage, { color: grade.color }]}>{grade.message}</Text>
@@ -104,21 +110,20 @@ export default function ExamResultScreen() {
         {/* 통계 요약 */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalQuestions}문항</Text>
-            <Text style={styles.statLabel}>전체 문항</Text>
+            <Text style={styles.statValue}>{totalQuestions}{t('exam:result.questions')}</Text>
+            <Text style={styles.statLabel}>{t('exam:result.totalQuestions')}</Text>
           </View>
           <View style={[styles.statItem, styles.statBorder]}>
             <Text style={styles.statValue}>{percentage}%</Text>
-            <Text style={styles.statLabel}>정답률</Text>
+            <Text style={styles.statLabel}>{t('exam:result.accuracy')}</Text>
           </View>
         </View>
 
         {/* 카테고리별 결과 */}
-        <Text style={styles.sectionTitle}>카테고리별 결과</Text>
+        <Text style={styles.sectionTitle}>{t('exam:result.categoryTitle')}</Text>
 
         <View style={styles.categoryResults}>
           {Object.entries(categoryScores).map(([cat, data]) => {
-            const catConfig = getContentConfig(cat as ContentCategory);
             const colors = CATEGORY_COLORS[cat as ContentCategory];
             const catPct = data.max > 0 ? Math.round((data.score / data.max) * 100) : 0;
 
@@ -127,8 +132,8 @@ export default function ExamResultScreen() {
                 <View style={styles.catLeft}>
                   <View style={[styles.catDot, { backgroundColor: colors.main }]} />
                   <View>
-                    <Text style={styles.catName}>{catConfig.name}</Text>
-                    <Text style={styles.catCount}>{data.count}문항</Text>
+                    <Text style={styles.catName}>{t('content:category.' + cat + '.name')}</Text>
+                    <Text style={styles.catCount}>{data.count}{t('exam:result.questions')}</Text>
                   </View>
                 </View>
 
@@ -155,7 +160,7 @@ export default function ExamResultScreen() {
           <View style={styles.tipCard}>
             <TrendingUp size={18} color={COLORS.primary500} />
             <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>학습 팁</Text>
+              <Text style={styles.tipTitle}>{t('exam:result.tipTitle')}</Text>
               <Text style={styles.tipText}>
                 {(() => {
                   const weakest = Object.entries(categoryScores)
@@ -164,9 +169,9 @@ export default function ExamResultScreen() {
                       if (diff !== 0) return diff;
                       return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
                     })[0];
-                  if (!weakest) return '꾸준히 연습하세요!';
-                  const catName = getContentConfig(weakest[0] as ContentCategory).name;
-                  return `${catName} 영역을 집중적으로 연습해 보세요. 카테고리별 연습에서 해당 영역을 선택할 수 있습니다.`;
+                  if (!weakest) return t('exam:result.tipDefault');
+                  const catName = t('content:category.' + weakest[0] + '.name');
+                  return t('exam:result.tipWeak', { category: catName });
                 })()}
               </Text>
             </View>
@@ -181,7 +186,7 @@ export default function ExamResultScreen() {
           onPress={() => navigation.replace('MockExamSetup')}
         >
           <RotateCcw size={18} color="#fff" />
-          <Text style={styles.actionBtnText}>다시 시험보기</Text>
+          <Text style={styles.actionBtnText}>{t('exam:result.retry')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -189,7 +194,7 @@ export default function ExamResultScreen() {
           onPress={() => navigation.navigate('Home')}
         >
           <Home size={18} color={COLORS.slate700} />
-          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>홈으로</Text>
+          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>{t('exam:result.goHome')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

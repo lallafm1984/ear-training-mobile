@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme/colors';
 import { STAGE_NAMES, getMascotParams } from '../lib/mascotConfig';
@@ -24,6 +25,7 @@ const ALL_LEVELS = Array.from({ length: 60 }, (_, i) => i + 1);
 export default function MascotGalleryScreen() {
   const navigation = useNavigation<NavProp>();
   const { level: currentLevel, totalExp } = useMascotExp();
+  const { t } = useTranslation(['mascot', 'common']);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -33,8 +35,8 @@ export default function MascotGalleryScreen() {
           <ArrowLeft size={24} color={COLORS.primary500} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.headerTitle}>마스코트 갤러리</Text>
-          <Text style={styles.headerSub}>현재 Lv.{currentLevel} · {totalExp} EXP</Text>
+          <Text style={styles.headerTitle}>{t('mascot:gallery.title')}</Text>
+          <Text style={styles.headerSub}>{t('mascot:gallery.currentLevel', { level: currentLevel })} · {totalExp} EXP</Text>
         </View>
       </View>
 
@@ -44,7 +46,7 @@ export default function MascotGalleryScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* 스테이지별 그룹 */}
-        {STAGE_NAMES.map((stageName, stageIdx) => {
+        {STAGE_NAMES.map((_stageName, stageIdx) => {
           const startLevel = stageIdx * 6 + 1;
           const endLevel = stageIdx * 6 + 6;
           const stageLevels = ALL_LEVELS.slice(stageIdx * 6, stageIdx * 6 + 6);
@@ -56,7 +58,7 @@ export default function MascotGalleryScreen() {
               <View style={[styles.stageHeader, { backgroundColor: stageColor + '15' }]}>
                 <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
                 <Text style={[styles.stageName, { color: stageColor }]}>
-                  {stageName}
+                  {t('mascot:stage.' + stageIdx)}
                 </Text>
                 <Text style={styles.stageRange}>
                   Lv.{startLevel} ~ {endLevel}

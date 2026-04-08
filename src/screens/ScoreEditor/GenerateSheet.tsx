@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Music2, Sparkles, Lock, Eye, EyeOff, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { TRACK_META } from '../../lib/trackConfig';
 import type { TrackType } from '../../theme/colors';
@@ -70,6 +71,7 @@ export default function GenerateSheet({
   openUpgrade,
 }: GenerateSheetProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['editor', 'content', 'common']);
 
   return (
     <Modal
@@ -86,7 +88,7 @@ export default function GenerateSheet({
 
           {/* 헤더 */}
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>AI 자동생성</Text>
+            <Text style={styles.sheetTitle}>{t('generate.title')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.sheetCloseBtn}>
               <X size={16} color="#94a3b8" />
             </TouchableOpacity>
@@ -99,14 +101,14 @@ export default function GenerateSheet({
               onPress={() => setGenTab('melody')}
             >
               <Music2 size={12} color={genTab === 'melody' ? '#6366f1' : '#94a3b8'} />
-              <Text style={[styles.genTabText, genTab === 'melody' && styles.genTabTextActive]}>선율</Text>
+              <Text style={[styles.genTabText, genTab === 'melody' && styles.genTabTextActive]}>{t('generate.melody')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.genTabItem, genTab === 'grand' && styles.genTabItemActive]}
               onPress={() => setGenTab('grand')}
             >
               <Music2 size={12} color={genTab === 'grand' ? '#7c3aed' : '#94a3b8'} />
-              <Text style={[styles.genTabText, genTab === 'grand' && styles.genTabTextActivePurple]}>큰보표</Text>
+              <Text style={[styles.genTabText, genTab === 'grand' && styles.genTabTextActivePurple]}>{t('generate.grand')}</Text>
               {useGrandStaff && <View style={styles.genTabActiveDot} />}
             </TouchableOpacity>
           </View>
@@ -150,14 +152,14 @@ export default function GenerateSheet({
                             fontSize: 13,
                           },
                         ]}>
-                          {meta.name}
+                          {t(`editor:generate.${mode}`)}
                         </Text>
                         <Text style={{
                           color: isActive ? 'rgba(255,255,255,0.8)' : '#94a3b8',
                           fontSize: 10,
                           marginTop: 2,
                         }}>
-                          {meta.description}
+                          {t(`editor:generate.${mode}Desc`)}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -167,7 +169,7 @@ export default function GenerateSheet({
                 {/* 레벨 선택 */}
                 {genPracticeMode === 'partPractice' ? (
                   <>
-                    <Text style={styles.genSectionLabel}>단계 선택</Text>
+                    <Text style={styles.genSectionLabel}>{t('generate.levelSelect')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {TRACK_META.partPractice.levels.map(lv => {
                         const isActive = genPartLevel === lv.level;
@@ -197,10 +199,10 @@ export default function GenerateSheet({
                               <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#4338ca99'} style={{ marginBottom: 1 }} />
                             )}
                             <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#4338ca' }]}>
-                              {lv.name}
+                              {`${lv.level}${t('common:unit.level')}`}
                             </Text>
                             <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#4338cacc' }]} numberOfLines={2}>
-                              {lv.description}
+                              {t(`content:track.part_${lv.level}`)}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -210,14 +212,13 @@ export default function GenerateSheet({
                     {/* 부분연습 안내 */}
                     <View style={{ marginTop: 10, padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
                       <Text style={{ fontSize: 11, color: '#64748b', lineHeight: 16 }}>
-                        선택한 요소 + 기본음표(2분·4분)만 나옵니다.{'\n'}
-                        C장조 · 4/4박자 · 4마디 고정
+                        {t('generate.partPracticeNote')}
                       </Text>
                     </View>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.genSectionLabel}>단계 선택</Text>
+                    <Text style={styles.genSectionLabel}>{t('generate.levelSelect')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {TRACK_META.comprehensive.levels.map(lv => {
                         const isActive = genCompLevel === lv.level;
@@ -247,10 +248,10 @@ export default function GenerateSheet({
                               <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#b4530999'} style={{ marginBottom: 1 }} />
                             )}
                             <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#b45309' }]}>
-                              {lv.name}
+                              {`${lv.level}${t('common:unit.level')}`}
                             </Text>
                             <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#b45309cc' }]} numberOfLines={2}>
-                              {lv.description}
+                              {t(`content:track.comp_${lv.level}`)}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -260,8 +261,7 @@ export default function GenerateSheet({
                     {/* 종합연습 안내 */}
                     <View style={{ marginTop: 10, padding: 10, backgroundColor: '#fffbeb', borderRadius: 8, borderWidth: 1, borderColor: '#fde68a' }}>
                       <Text style={{ fontSize: 11, color: '#92400e', lineHeight: 16 }}>
-                        선택한 범위의 모든 요소가 종합적으로 나옵니다.{'\n'}
-                        조성·박자·큰보표가 랜덤으로 결정됩니다 · 8마디
+                        {t('generate.comprehensiveNote')}
                       </Text>
                     </View>
                   </>
@@ -276,9 +276,9 @@ export default function GenerateSheet({
                     }
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.genCardTitle, genHideNotes && { color: '#92400e' }]}>음표 숨기기</Text>
+                    <Text style={[styles.genCardTitle, genHideNotes && { color: '#92400e' }]}>{t('generate.hideNotes')}</Text>
                     <Text style={[styles.genCardSubtitle, { marginLeft: 0 }, genHideNotes && { color: '#d97706' }]}>
-                      생성된 악보의 음표를 가립니다.
+                      {t('generate.hideNotesDesc')}
                     </Text>
                   </View>
                   <Switch
@@ -297,8 +297,8 @@ export default function GenerateSheet({
                     <Music2 size={13} color={useGrandStaff ? '#7c3aed' : '#64748b'} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.genCardTitle, useGrandStaff && { color: '#5b21b6' }]}>큰보표 (Grand Staff)</Text>
-                    <Text style={[styles.genCardSubtitle, { marginLeft: 0 }]}>높은음자리 + 낮은음자리</Text>
+                    <Text style={[styles.genCardTitle, useGrandStaff && { color: '#5b21b6' }]}>{t('generate.grandStaff')}</Text>
+                    <Text style={[styles.genCardSubtitle, { marginLeft: 0 }]}>{t('generate.grandStaffDesc')}</Text>
                   </View>
                   {limits.canUseGrandStaff ? (
                     <Switch
@@ -320,7 +320,7 @@ export default function GenerateSheet({
 
                 {/* 베이스 난이도 — 항상 표시, 큰보표 OFF면 비활성 */}
                 <View style={{ marginTop: 14, opacity: useGrandStaff ? 1 : 0.4 }}>
-                  <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>베이스 난이도</Text>
+                  <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>{t('generate.bassDifficulty')}</Text>
                   {[
                     ALL_BASS_DIFFICULTIES,
                   ].map((row, rowIdx) => (
@@ -347,7 +347,7 @@ export default function GenerateSheet({
                             ]}
                           >
                             <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#5b21b6' }]}>
-                              {levelNum}단계
+                              {t('generate.bassLevel', { level: levelNum })}
                             </Text>
                             <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#7c3aedcc' }]} numberOfLines={2}>
                               {BASS_DIFF_DESC[bd]}
@@ -371,11 +371,11 @@ export default function GenerateSheet({
             >
               <Sparkles size={16} color="#fff" />
               <Text style={styles.genPrimaryBtnText}>
-                생성하기
+                {t('generate.generateBtn')}
               </Text>
             </TouchableOpacity>
             <Text style={styles.genFooter}>
-              현재 조성 · 박자 · 큰보표 설정이 적용됩니다. 기존 음표는 교체됩니다.
+              {t('generate.generateNote')}
             </Text>
           </View>
         </View>

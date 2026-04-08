@@ -1,0 +1,138 @@
+{
+  "category": {
+    "melody": {
+      "name": "Melody",
+      "description": "Listen & notate melodies"
+    },
+    "rhythm": {
+      "name": "Rhythm",
+      "description": "Listen & notate rhythms"
+    },
+    "interval": {
+      "name": "Intervals",
+      "description": "Identify intervals"
+    },
+    "chord": {
+      "name": "Chords",
+      "description": "Identify chord types"
+    },
+    "key": {
+      "name": "Keys",
+      "description": "Identify key & mode"
+    },
+    "twoVoice": {
+      "name": "Two-Part",
+      "description": "Melody + bass staff"
+    }
+  },
+  "difficulty": {
+    "melody": {
+      "beginner_1": "Beginner 1 · Half/Quarter notes",
+      "beginner_2": "Beginner 2 · Eighth notes",
+      "beginner_3": "Beginner 3 · Dotted quarter notes",
+      "intermediate_1": "Intermediate 1 · Syncopation",
+      "intermediate_2": "Intermediate 2 · Ties",
+      "intermediate_3": "Intermediate 3 · Sixteenth notes",
+      "advanced_1": "Advanced 1 · Dotted eighth notes",
+      "advanced_2": "Advanced 2 · Triplets",
+      "advanced_3": "Advanced 3 · Accidentals"
+    },
+    "rhythm": {
+      "rhythm_1": "Level 1 · Half/Quarter notes + Quarter rests",
+      "rhythm_2": "Level 2 · Eighth notes + Rests",
+      "rhythm_3": "Level 3 · Dotted notes + Syncopation",
+      "rhythm_4": "Level 4 · Sixteenth notes",
+      "rhythm_5": "Level 5 · Triplets",
+      "rhythm_6": "Level 6 · Complex rhythms"
+    },
+    "interval": {
+      "interval_1": "Level 1 · 3rd·4th·5th·8ve",
+      "interval_2": "Level 2 · + 2nd·6th",
+      "interval_3": "Level 3 · + Semitone·7th",
+      "interval_4": "Level 4 · All (incl. unison·tritone)"
+    },
+    "chord": {
+      "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
+      "chord_3": "Level 2 · + Maj7·Min7 chords",
+      "chord_4": "Level 3 · + Dim7 chord"
+    },
+    "key": {
+      "key_1": "Level 1 · Relative keys (C/Am)",
+      "key_2": "Level 2 · 1~3 sharps/flats",
+      "key_3": "Level 3 · All 24 keys"
+    },
+    "twoVoice": {
+      "bass_1": "Level 1 · Basic bass",
+      "bass_2": "Level 2 · Rhythmic variation",
+      "bass_3": "Level 3 · Counterpoint elements",
+      "bass_4": "Level 4 · Complex parts"
+    }
+  },
+  "track": {
+    "part_1": "Half + Quarter (Basic)",
+    "part_2": "Eighth notes",
+    "part_3": "Dotted quarter notes",
+    "part_4": "Syncopation",
+    "part_5": "Ties",
+    "part_6": "Sixteenth notes",
+    "part_7": "Dotted eighth notes",
+    "part_8": "Triplets",
+    "part_9": "Accidentals",
+    "comp_1": "Basic Comprehensive",
+    "comp_2": "Standard Comprehensive",
+    "comp_3": "Advanced Comprehensive",
+    "comp_4": "Expert Comprehensive"
+  },
+  "interval": {
+    "0": "Perfect Unison (P1)",
+    "1": "Minor 2nd (m2)",
+    "2": "Major 2nd (M2)",
+    "3": "Minor 3rd (m3)",
+    "4": "Major 3rd (M3)",
+    "5": "Perfect 4th (P4)",
+    "6": "Augmented 4th (A4)",
+    "7": "Perfect 5th (P5)",
+    "8": "Minor 6th (m6)",
+    "9": "Major 6th (M6)",
+    "10": "Minor 7th (m7)",
+    "11": "Major 7th (M7)",
+    "12": "Perfect Octave (P8)"
+  },
+  "chord": {
+    "major": "Major Triad",
+    "minor": "Minor Triad",
+    "aug": "Augmented Triad",
+    "dim": "Diminished Triad",
+    "maj7": "Major 7th (M7)",
+    "min7": "Minor 7th (m7)",
+    "dim7": "Diminished 7th (dim7)",
+    "maj_inv1": "Major 1st Inversion",
+    "min_inv1": "Minor 1st Inversion"
+  },
+  "key": {
+    "C_major": "C Major",
+    "A_minor": "A minor",
+    "G_major": "G Major",
+    "E_minor": "E minor",
+    "F_major": "F Major",
+    "D_minor": "D minor",
+    "D_major": "D Major",
+    "B_minor": "B minor",
+    "Bb_major": "B♭ Major",
+    "G_minor": "G minor",
+    "A_major": "A Major",
+    "Fsh_minor": "F♯ minor",
+    "Eb_major": "E♭ Major",
+    "C_minor": "C minor",
+    "E_major": "E Major",
+    "Csh_minor": "C♯ minor",
+    "Ab_major": "A♭ Major",
+    "F_minor": "F minor",
+    "B_major": "B Major",
+    "Gsh_minor": "G♯ minor",
+    "Db_major": "D♭ Major",
+    "Bb_minor": "B♭ minor",
+    "Gb_major": "G♭ Major",
+    "Eb_minor": "E♭ minor"
+  }
+}

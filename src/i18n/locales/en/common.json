@@ -1,0 +1,43 @@
+{
+  "button": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "next": "Next",
+    "prev": "Previous",
+    "start": "Get Started",
+    "skip": "Skip",
+    "retry": "Try Again",
+    "delete": "Delete",
+    "later": "Later",
+    "goToSettings": "Go to Settings",
+    "settings": "Settings",
+    "goBack": "Go Back"
+  },
+  "loading": {
+    "appStart": "Starting app...",
+    "accountInfo": "Loading account info..."
+  },
+  "error": {
+    "loginRequired": "Login required."
+  },
+  "unit": {
+    "score": "pts",
+    "count": "times",
+    "day": "day",
+    "week": "week",
+    "month": "month",
+    "year": "year",
+    "level": "level",
+    "maxScore": "out of {{max}} pts"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{minutes}}m ago",
+    "hoursAgo": "{{hours}}h ago",
+    "daysAgo": "{{days}}d ago",
+    "weeksAgo": "{{weeks}}w ago"
+  },
+  "version": "MelodyGen v1.0.0"
+}

@@ -1,7 +1,9 @@
+import './src/i18n';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
 import { LoginScreen } from './src/screens';
 import MainStack from './src/navigation/MainStack';
@@ -13,10 +15,11 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 
 function AppNavigator() {
   const { session, loading, profileLoading } = useAuth();
+  const { t } = useTranslation('common');
 
   // 초기 세션 복원 중 또는 프로필 로딩 중
   if (loading || (session && profileLoading)) {
-    const message = loading ? '앱을 시작하는 중...' : '계정 정보를 불러오는 중...';
+    const message = loading ? t('loading.appStart') : t('loading.accountInfo');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
         <ActivityIndicator size="large" color="#6366f1" />

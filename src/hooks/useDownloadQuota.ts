@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 import { useAlert, useSubscription } from '../context';
 import * as MediaLibrary from 'expo-media-library';
 import type { UpgradeReason } from '../components';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 다운로드 권한 체크 훅.
@@ -11,6 +12,7 @@ import type { UpgradeReason } from '../components';
 export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => void) {
   const { showAlert } = useAlert();
   const { tier, limits } = useSubscription();
+  const { t } = useTranslation(['practice', 'common']);
 
   /** 다운로드 시도 (오디오) */
   const checkAndConsume = useCallback(async (): Promise<boolean> => {
@@ -20,8 +22,8 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         onUpgradeNeeded('download_audio');
       } else {
         showAlert({
-          title: '음원 다운로드 불가',
-          message: '청음 음원(MP3) 다운로드는 Pro 플랜 전용 기능입니다.',
+          title: t('practice:download.audioBlocked'),
+          message: t('practice:download.audioBlockedMsg'),
           type: 'warning',
         });
       }
@@ -38,12 +40,12 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         }
 
         showAlert({
-          title: '권한 설정 필요',
-          message: '파일을 기기에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+          title: t('practice:download.permissionTitle'),
+          message: t('practice:download.permissionAudioMsg'),
           type: 'info',
           buttons: [
-            { text: '나중에', style: 'cancel' },
-            { text: '설정으로 이동', onPress: () => Linking.openSettings() },
+            { text: t('common:button.later'), style: 'cancel' },
+            { text: t('common:button.goToSettings'), onPress: () => Linking.openSettings() },
           ],
         });
         return false;
@@ -53,7 +55,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
     }
 
     return true;
-  }, [limits, onUpgradeNeeded, showAlert]);
+  }, [limits, onUpgradeNeeded, showAlert, t]);
 
   /** 이미지 다운로드 전 체크 */
   const checkImageDownload = useCallback(async (): Promise<boolean> => {
@@ -63,8 +65,8 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         onUpgradeNeeded('download_image');
       } else {
         showAlert({
-          title: '이미지 저장 불가',
-          message: '악보 이미지(PNG) 저장은 Pro 플랜 전용 기능입니다.',
+          title: t('practice:download.imageBlocked'),
+          message: t('practice:download.imageBlockedMsg'),
           type: 'warning',
         });
       }
@@ -81,12 +83,12 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         }
 
         showAlert({
-          title: '권한 설정 필요',
-          message: '이미지를 갤러리에 저장하려면 저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+          title: t('practice:download.permissionTitle'),
+          message: t('practice:download.permissionImageMsg'),
           type: 'info',
           buttons: [
-            { text: '나중에', style: 'cancel' },
-            { text: '설정으로 이동', onPress: () => Linking.openSettings() },
+            { text: t('common:button.later'), style: 'cancel' },
+            { text: t('common:button.goToSettings'), onPress: () => Linking.openSettings() },
           ],
         });
         return false;
@@ -97,7 +99,7 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
     }
 
     return true;
-  }, [limits, onUpgradeNeeded, showAlert]);
+  }, [limits, onUpgradeNeeded, showAlert, t]);
 
   return {
     tier,

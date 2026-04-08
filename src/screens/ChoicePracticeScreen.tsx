@@ -13,9 +13,10 @@ import {
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
+import { getContentConfig } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
@@ -36,9 +37,10 @@ export default function ChoicePracticeScreen() {
   const { addRecord } = usePracticeHistory();
   const { updateStreak, applyEvaluation } = useSkillProfile();
 
+  const { t } = useTranslation(['practice', 'content', 'common']);
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
-  const diffLabel = getDifficultyLabel(category, difficulty);
+  const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
   // 문제 상태
   const [question, setQuestion] = useState<ChoiceQuestion>(() =>
@@ -179,9 +181,9 @@ export default function ChoicePracticeScreen() {
             <Text style={styles.resultFraction}>{stats.correct}/{stats.total}</Text>
           </View>
 
-          <Text style={styles.resultTitle}>연습 완료!</Text>
+          <Text style={styles.resultTitle}>{t('practice:choice.resultTitle')}</Text>
           <Text style={styles.resultDesc}>
-            {config.name} · {diffLabel}
+            {t('content:category.' + category + '.name')} · {diffLabel}
           </Text>
 
           <View style={styles.resultActions}>
@@ -197,14 +199,14 @@ export default function ChoicePracticeScreen() {
               }}
             >
               <RotateCcw size={18} color="#fff" />
-              <Text style={styles.resultBtnText}>다시 연습</Text>
+              <Text style={styles.resultBtnText}>{t('practice:choice.retryPractice')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>돌아가기</Text>
+              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>{t('common:button.goBack')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -221,7 +223,7 @@ export default function ChoicePracticeScreen() {
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.main }]}>{config.name}</Text>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>{t('content:category.' + category + '.name')}</Text>
           <Text style={styles.headerDesc}>{diffLabel}</Text>
         </View>
         <View style={styles.statsChip}>
@@ -252,7 +254,7 @@ export default function ChoicePracticeScreen() {
                 : <Volume2 size={28} color="#fff" />}
             </TouchableOpacity>
             <Text style={[styles.playHint, { color: colors.text }]}>
-              {isPlaying ? '재생 중...' : '탭하여 재생'}
+              {isPlaying ? t('practice:choice.playing') : t('practice:choice.tapToPlay')}
             </Text>
           </View>
           {/* 숨겨진 렌더러 (오디오만 사용) */}
@@ -325,7 +327,7 @@ export default function ChoicePracticeScreen() {
               style={[styles.bottomBtn, { backgroundColor: colors.main }]}
               onPress={handleNext}
             >
-              <Text style={styles.bottomBtnText}>다음 문제</Text>
+              <Text style={styles.bottomBtnText}>{t('practice:choice.nextQuestion')}</Text>
               <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
 
@@ -334,7 +336,7 @@ export default function ChoicePracticeScreen() {
                 style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
                 onPress={handleFinish}
               >
-                <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -344,7 +346,7 @@ export default function ChoicePracticeScreen() {
               style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={handleFinish}
             >
-              <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+              <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
             </TouchableOpacity>
           )
         )}

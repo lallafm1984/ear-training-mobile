@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
   Music, Drum, ArrowUpDown, Layers, Key, FileMusic, Lock,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
@@ -23,6 +24,7 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
+  const { t } = useTranslation(['common', 'content']);
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
   return (
@@ -40,10 +42,10 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
         <IconComponent size={24} color={locked ? '#6b7a8d' : config.color} />
       </View>
       <Text style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]} numberOfLines={1}>
-        {config.name}
+        {t('content:category.' + config.id + '.name')}
       </Text>
       <Text style={[styles.desc, locked && { color: COLORS.slate400 }]} numberOfLines={1}>
-        {config.description}
+        {t('content:category.' + config.id + '.description')}
       </Text>
       {locked && (
         <View style={styles.lockBadge}>
@@ -54,7 +56,7 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
       {!locked && practiceCount != null && practiceCount > 0 && (
         <View style={[styles.countBadge, { backgroundColor: config.color + '20' }]}>
           <Text style={[styles.countText, { color: config.color }]}>
-            {practiceCount}회
+            {practiceCount}{t('common:unit.count')}
           </Text>
         </View>
       )}

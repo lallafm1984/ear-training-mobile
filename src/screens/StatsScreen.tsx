@@ -15,7 +15,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
+import { useAuth } from '../context';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import PracticeCalendar from '../components/PracticeCalendar';
@@ -34,6 +36,8 @@ interface ExamRecord {
 
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
+  const { t } = useTranslation(['stats', 'practice', 'common']);
+  const { user } = useAuth();
   const { records, stats, loaded } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
 
@@ -51,7 +55,9 @@ export default function StatsScreen() {
   useEffect(() => {
     setExamLoading(true);
     setExamError(false);
-    AsyncStorage.getItem('@melodygen_exam_sessions').then(raw => {
+    const examKey = user ? `@melodygen_exam_sessions_${user.id}` : null;
+    if (!examKey) { setExamLoading(false); return; }
+    AsyncStorage.getItem(examKey).then(raw => {
       if (raw) {
         try {
           setExamRecords(JSON.parse(raw) as ExamRecord[]);
@@ -131,7 +137,7 @@ export default function StatsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
           <ArrowLeft size={24} color={COLORS.primary500} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>학습 통계</Text>
+        <Text style={styles.headerTitle}>{t('stats:title')}</Text>
       </View>
 
       <ScrollView
@@ -146,21 +152,21 @@ export default function StatsScreen() {
             <Text style={[styles.summaryValue, String(skillProfile.streakDays).length >= 4 && { fontSize: 18 }]}>
               {skillProfile.streakDays}
             </Text>
-            <Text style={styles.summaryLabel}>연속 학습일</Text>
+            <Text style={styles.summaryLabel}>{t('stats:summary.streak')}</Text>
           </View>
           <View style={styles.summaryCard}>
             <Target size={20} color={COLORS.amber500} />
             <Text style={[styles.summaryValue, String(stats.totalSessions).length >= 4 && { fontSize: 18 }]}>
               {stats.totalSessions}
             </Text>
-            <Text style={styles.summaryLabel}>총 연습 횟수</Text>
+            <Text style={styles.summaryLabel}>{t('stats:summary.totalSessions')}</Text>
           </View>
           <View style={styles.summaryCard}>
             <TrendingUp size={20} color={COLORS.success} />
             <Text style={[styles.summaryValue, String(stats.weeklyCount).length >= 4 && { fontSize: 18 }]}>
               {stats.weeklyCount}
             </Text>
-            <Text style={styles.summaryLabel}>이번 주</Text>
+            <Text style={styles.summaryLabel}>{t('stats:summary.thisWeek')}</Text>
           </View>
         </View>
 
@@ -168,8 +174,8 @@ export default function StatsScreen() {
         {stats.totalSessions === 0 && (
           <View style={styles.emptyCard}>
             <Target size={32} color={COLORS.slate300} />
-            <Text style={styles.emptyTitle}>아직 연습 기록이 없어요</Text>
-            <Text style={styles.emptyDesc}>연습을 시작하면 여기서 통계를 확인할 수 있습니다</Text>
+            <Text style={styles.emptyTitle}>{t('practice:empty.title')}</Text>
+            <Text style={styles.emptyDesc}>{t('practice:empty.desc')}</Text>
           </View>
         )}
 
@@ -179,7 +185,10 @@ export default function StatsScreen() {
         {/* 일별 평균 점수 차트 */}
         {stats.totalSessions > 0 && (
           <>
-            <Text style={styles.sectionTitle}>일별 평균 점수</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>{t('stats:section.dailyScore')}</Text>
+              <Text style={styles.sectionSubLabel}>{t('stats:section.dailyScoreMax')}</Text>
+            </View>
             <DailyScoreChart records={records} />
           </>
         )}
@@ -188,17 +197,17 @@ export default function StatsScreen() {
         {examLoading && (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
             <ActivityIndicator size="small" color={COLORS.primary500} />
-            <Text style={{ fontSize: 13, color: COLORS.slate400, marginTop: 8 }}>시험 기록 로딩 중...</Text>
+            <Text style={{ fontSize: 13, color: COLORS.slate400, marginTop: 8 }}>{t('stats:exam.loading')}</Text>
           </View>
         )}
         {examError && !examLoading && (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-            <Text style={{ fontSize: 13, color: COLORS.error }}>시험 기록을 불러올 수 없습니다</Text>
+            <Text style={{ fontSize: 13, color: COLORS.error }}>{t('stats:exam.loadError')}</Text>
           </View>
         )}
         {!examLoading && !examError && examRecords.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>모의시험 통계</Text>
+            <Text style={styles.sectionTitle}>{t('stats:section.examStats')}</Text>
 
             {/* 월 선택 */}
             <View style={styles.monthSelector}>
@@ -219,8 +228,8 @@ export default function StatsScreen() {
 
               <Text style={styles.monthLabel}>
                 {examMonth
-                  ? `${examMonth.year}년 ${examMonth.month + 1}월`
-                  : '전체'}
+                  ? t('stats:month.format', { year: examMonth.year, month: examMonth.month + 1 })
+                  : t('stats:month.all')}
               </Text>
 
               <TouchableOpacity
@@ -242,7 +251,7 @@ export default function StatsScreen() {
                 style={[styles.allBtn, !examMonth && styles.allBtnActive]}
               >
                 <Text style={[styles.allBtnText, !examMonth && { color: '#fff' }]}>
-                  {examMonth ? '전체' : '월별'}
+                  {examMonth ? t('stats:month.all') : t('stats:month.monthly')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -253,19 +262,19 @@ export default function StatsScreen() {
                 <View style={styles.examSummaryRow}>
                   <View style={styles.examSummaryCard}>
                     <Text style={styles.examSummaryValue}>{examStats.total}</Text>
-                    <Text style={styles.examSummaryLabel}>응시 횟수</Text>
+                    <Text style={styles.examSummaryLabel}>{t('stats:exam.attempts')}</Text>
                   </View>
                   <View style={styles.examSummaryCard}>
                     <Text style={[styles.examSummaryValue, { color: pctColor(examStats.avgPct) }]}>
-                      {examStats.avgPct}점
+                      {examStats.avgPct}{t('common:unit.score')}
                     </Text>
-                    <Text style={styles.examSummaryLabel}>평균 / 100점</Text>
+                    <Text style={styles.examSummaryLabel}>{t('stats:exam.avgScore')}</Text>
                   </View>
                   <View style={styles.examSummaryCard}>
                     <Text style={[styles.examSummaryValue, { color: pctColor(examStats.bestPct) }]}>
-                      {examStats.bestPct}점
+                      {examStats.bestPct}{t('common:unit.score')}
                     </Text>
-                    <Text style={styles.examSummaryLabel}>최고 / 100점</Text>
+                    <Text style={styles.examSummaryLabel}>{t('stats:exam.bestScore')}</Text>
                   </View>
                 </View>
 
@@ -279,14 +288,14 @@ export default function StatsScreen() {
                           <Award size={16} color={COLORS.amber500} />
                           <View>
                             <Text style={styles.examTitle}>{p.title}</Text>
-                            <Text style={styles.examDate}>{p.count}회 응시</Text>
+                            <Text style={styles.examDate}>{t('stats:exam.attemptCount', { count: p.count })}</Text>
                           </View>
                         </View>
                         <View style={styles.examRight}>
                           <Text style={[styles.examScore, { color: pctColor(avg) }]}>
-                            평균 {avg}점
+                            {t('stats:exam.avgLabel', { score: avg })}
                           </Text>
-                          <Text style={styles.examBest}>최고 {best} / 100점</Text>
+                          <Text style={styles.examBest}>{t('stats:exam.bestLabel', { score: best })}</Text>
                         </View>
                       </View>
                     );
@@ -297,8 +306,8 @@ export default function StatsScreen() {
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyDesc}>
                   {examMonth
-                    ? `${examMonth.year}년 ${examMonth.month + 1}월에 시험 기록이 없습니다`
-                    : '시험 기록이 없습니다'}
+                    ? t('stats:exam.noRecords', { year: examMonth.year, month: examMonth.month + 1 })
+                    : t('stats:exam.noRecordsAll')}
                 </Text>
               </View>
             )}
@@ -381,10 +390,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   // 섹션
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.slate800,
+  },
+  sectionSubLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.slate400,
   },
   // 월 선택
   monthSelector: {

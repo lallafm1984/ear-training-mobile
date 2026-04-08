@@ -1,0 +1,47 @@
+{
+  "title": "Learning Stats",
+  "summary": {
+    "streak": "Day Streak",
+    "totalSessions": "Total Sessions",
+    "thisWeek": "This Week"
+  },
+  "section": {
+    "dailyScore": "Daily Average Score",
+    "dailyScoreMax": "out of 5 pts",
+    "examStats": "Mock Exam Stats"
+  },
+  "exam": {
+    "attempts": "Attempts",
+    "avgScore": "Avg / 100",
+    "bestScore": "Best / 100",
+    "avgLabel": "Avg {{score}} pts",
+    "bestLabel": "Best {{score}} / 100",
+    "attemptCount": "{{count}} attempts",
+    "noRecords": "No exam records for {{year}}/{{month}}",
+    "noRecordsAll": "No exam records",
+    "loading": "Loading exam records...",
+    "loadError": "Failed to load exam records"
+  },
+  "month": {
+    "all": "All",
+    "monthly": "Monthly",
+    "format": "{{year}}/{{month}}"
+  },
+  "chart": {
+    "period7": "7 days",
+    "period14": "14 days",
+    "period30": "30 days"
+  },
+  "calendar": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "detailTitle": "Practice Record — {{month}}/{{day}}",
+    "avgRating": "Avg {{rating}} pts",
+    "noRecord": "No practice record for this day"
+  }
+}

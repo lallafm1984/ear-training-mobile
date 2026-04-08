@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { X, Copy } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface AbcNotationModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ const AbcNotationModal: React.FC<AbcNotationModalProps> = ({
   abcString,
   onCopy,
 }) => {
+  const { t } = useTranslation('editor');
   return (
     <Modal
       visible={visible}
@@ -49,7 +51,7 @@ const AbcNotationModal: React.FC<AbcNotationModalProps> = ({
             </TouchableOpacity>
           </View>
           <Text style={styles.abcModalHint}>
-            생성된 악보의 ABC 표기법입니다. (테스트용)
+            {t('abcNotation.hint')}
           </Text>
           <ScrollView
             style={styles.abcModalScroll}
@@ -66,7 +68,7 @@ const AbcNotationModal: React.FC<AbcNotationModalProps> = ({
             activeOpacity={0.85}
           >
             <Copy size={16} color="#ffffff" />
-            <Text style={styles.abcModalCopyBtnText}>텍스트 전체 복사</Text>
+            <Text style={styles.abcModalCopyBtnText}>{t('abcNotation.copyAll')}</Text>
           </TouchableOpacity>
         </View>
       </View>

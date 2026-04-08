@@ -1,5 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import AbcjsRenderer, { type AbcjsRendererHandle } from './AbcjsRenderer';
 import type { GradingResult as GradingResultType } from '../lib/grading';
@@ -31,6 +32,7 @@ function GradingResultView({
   barsPerStaff,
   onScrollDelta,
 }: GradingResultProps) {
+  const { t } = useTranslation(['practice']);
   const answerRef = useRef<AbcjsRendererHandle>(null);
 
   const percentage = Math.round(gradingResult.accuracy * 100);
@@ -63,13 +65,13 @@ function GradingResultView({
             <Text style={[styles.countNumber, { color: '#22dd44' }]}>
               {gradingResult.correctCount}
             </Text>
-            <Text style={styles.countLabel}>정답</Text>
+            <Text style={styles.countLabel}>{t('practice:choice.correct')}</Text>
           </View>
           <View style={styles.countItem}>
             <Text style={[styles.countNumber, { color: '#e74c3c' }]}>
               {wrongTotal}
             </Text>
-            <Text style={styles.countLabel}>오답</Text>
+            <Text style={styles.countLabel}>{t('practice:choice.incorrect')}</Text>
           </View>
         </View>
       </View>
@@ -77,12 +79,12 @@ function GradingResultView({
       {/* ── 문제 악보 card ── */}
       <View style={styles.card}>
         <View style={styles.scoreHeader}>
-          <Text style={styles.headerTitle}>문제 악보</Text>
+          <Text style={styles.headerTitle}>{t('practice:grading.questionScore')}</Text>
           <TouchableOpacity
             style={[styles.playButton, { backgroundColor: accentColor }]}
             onPress={() => answerRef.current?.togglePlay()}
           >
-            <Text style={styles.playButtonText}>▶ 다시 듣기</Text>
+            <Text style={styles.playButtonText}>{t('practice:grading.replay')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.cardBody}>
@@ -99,7 +101,7 @@ function GradingResultView({
       {/* ── 내 답안 card ── */}
       <View style={styles.card}>
         <View style={styles.scoreHeader}>
-          <Text style={styles.headerTitle}>내 답안</Text>
+          <Text style={styles.headerTitle}>{t('practice:grading.myAnswer')}</Text>
         </View>
         <View style={styles.cardBody}>
           <AbcjsRenderer

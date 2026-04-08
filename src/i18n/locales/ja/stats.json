@@ -1,0 +1,47 @@
+{
+  "title": "学習統計",
+  "summary": {
+    "streak": "連続学習日数",
+    "totalSessions": "総練習回数",
+    "thisWeek": "今週"
+  },
+  "section": {
+    "dailyScore": "日別平均点数",
+    "dailyScoreMax": "満点5点",
+    "examStats": "模擬試験統計"
+  },
+  "exam": {
+    "attempts": "受験回数",
+    "avgScore": "平均 / 100点",
+    "bestScore": "最高 / 100点",
+    "avgLabel": "平均 {{score}}点",
+    "bestLabel": "最高 {{score}} / 100点",
+    "attemptCount": "{{count}}回受験",
+    "noRecords": "{{year}}年{{month}}月の試験記録はありません",
+    "noRecordsAll": "試験記録がありません",
+    "loading": "試験記録を読み込み中...",
+    "loadError": "試験記録を読み込めませんでした"
+  },
+  "month": {
+    "all": "全体",
+    "monthly": "月別",
+    "format": "{{year}}年{{month}}月"
+  },
+  "chart": {
+    "period7": "7日",
+    "period14": "14日",
+    "period30": "30日"
+  },
+  "calendar": {
+    "sun": "日",
+    "mon": "月",
+    "tue": "火",
+    "wed": "水",
+    "thu": "木",
+    "fri": "金",
+    "sat": "土",
+    "detailTitle": "{{month}}月{{day}}日の練習記録",
+    "avgRating": "平均 {{rating}}点",
+    "noRecord": "この日の練習記録はありません"
+  }
+}

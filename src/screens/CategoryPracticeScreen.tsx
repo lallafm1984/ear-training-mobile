@@ -10,17 +10,15 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Lock, Play, Settings2 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { CATEGORY_COLORS } from '../theme/colors';
 import {
-  getContentConfig, getDifficultyList, getDifficultyLabel,
+  getContentConfig, getDifficultyList,
 } from '../lib/contentConfig';
 
-const RHYTHM_PITCH_LABELS: Record<string, string> = {
-  C: '도', D: '레', E: '미', F: '파', G: '솔', A: '라', B: '시',
-};
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
 import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
@@ -34,6 +32,7 @@ export default function CategoryPracticeScreen() {
   const route = useRoute<RouteProp>();
   const { category } = route.params;
   const { tier } = useSubscription();
+  const { t } = useTranslation(['practice', 'content', 'common', 'editor']);
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
@@ -84,8 +83,8 @@ export default function CategoryPracticeScreen() {
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.main }]}>{config.name}</Text>
-          <Text style={styles.headerDesc}>{config.description}</Text>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>{t('content:category.' + category + '.name')}</Text>
+          <Text style={styles.headerDesc}>{t('content:category.' + category + '.description')}</Text>
         </View>
       </View>
 
@@ -97,7 +96,7 @@ export default function CategoryPracticeScreen() {
       >
         {/* 난이도 선택 */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>난이도 선택</Text>
+          <Text style={styles.sectionTitle}>{t('practice:category.selectDifficulty')}</Text>
           {showSettings && (
             <TouchableOpacity
               onPress={() => setSettingsOpen(true)}
@@ -105,7 +104,7 @@ export default function CategoryPracticeScreen() {
               hitSlop={8}
             >
               <Settings2 size={16} color={colors.main} />
-              <Text style={[styles.settingsBtnText, { color: colors.main }]}>설정</Text>
+              <Text style={[styles.settingsBtnText, { color: colors.main }]}>{t('common:button.settings')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -122,7 +121,7 @@ export default function CategoryPracticeScreen() {
                 practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
                 category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
                 category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B' &&
-                  `음: ${RHYTHM_PITCH_LABELS[practiceSettings.rhythmPitch] ?? practiceSettings.rhythmPitch}`,
+                  `${t('editor:pitch.' + practiceSettings.rhythmPitch, { defaultValue: practiceSettings.rhythmPitch })}`,
                 practiceSettings.tempo !== 80 && `♩=${practiceSettings.tempo}`,
               ].filter(Boolean).join(' · ')}
             </Text>
@@ -166,7 +165,7 @@ export default function CategoryPracticeScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {getDifficultyLabel(category, diff)}
+                      {t('content:difficulty.' + category + '.' + diff)}
                     </Text>
                     {showSettings && (
                       practiceSettings.timeSignature !== '4/4' ||
@@ -204,12 +203,12 @@ export default function CategoryPracticeScreen() {
           {isLocked ? (
             <>
               <Lock size={20} color="#fff" />
-              <Text style={styles.startText}>Pro 업그레이드 필요</Text>
+              <Text style={styles.startText}>{t('practice:category.pro')}</Text>
             </>
           ) : (
             <>
               <Play size={20} color="#fff" fill="#fff" />
-              <Text style={styles.startText}>연습 시작</Text>
+              <Text style={styles.startText}>{t('practice:category.startPractice')}</Text>
             </>
           )}
         </TouchableOpacity>

@@ -1,0 +1,48 @@
+{
+  "section": {
+    "subscription": "Subscription",
+    "account": "Account",
+    "legal": "Terms & Policies",
+    "language": "Language",
+    "other": "Other"
+  },
+  "menu": {
+    "planManage": "Manage Plan",
+    "cancelSubscription": "Cancel Subscription",
+    "cancelSubscriptionValue": "Manage in Store",
+    "nickname": "Change Nickname",
+    "email": "Email",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "signOut": "Sign Out",
+    "signingOut": "Signing out...",
+    "deleteAccount": "Delete Account"
+  },
+  "editName": {
+    "title": "Change Nickname",
+    "placeholder": "Enter at least 2 characters",
+    "charCount": "{{count}} / 20"
+  },
+  "alert": {
+    "signOutTitle": "Sign Out",
+    "signOutMessage": "Are you sure you want to sign out?",
+    "signOutButton": "Sign Out",
+    "deleteTitle": "Delete Account",
+    "deleteMessage": "Deleting your account will permanently remove all your data.\n\nAre you sure you want to proceed?",
+    "deleteButton": "Delete",
+    "deleteProTitle": "Active Subscription Notice",
+    "deleteProMessage": "You currently have an active Pro subscription.\n\nDeleting your account will not automatically cancel your subscription on Google Play or App Store, and you may be charged on the next billing date.\n\nPlease cancel your subscription in the store before deleting your account.",
+    "goToCancelSub": "Go to Cancel Subscription",
+    "alreadyCancelled": "Already cancelled",
+    "cancelSubInfo": "You can cancel your subscription in Google Play or App Store.",
+    "error": "Error"
+  },
+  "expires": "Expires: {{date}}",
+  "expired": "(Expired)",
+  "language": {
+    "title": "Language",
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  }
+}

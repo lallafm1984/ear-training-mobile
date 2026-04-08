@@ -4,12 +4,13 @@
 
 import React, { useMemo, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3, Trophy } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../context';
 import { useSubscription } from '../context';
@@ -32,6 +33,7 @@ const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 
 export default function HomeScreen() {
+  const { t } = useTranslation(['home', 'common']);
   const navigation = useNavigation<NavProp>();
   const { profile } = useAuth();
   const { tier } = useSubscription();
@@ -71,6 +73,7 @@ export default function HomeScreen() {
   };
 
   const dailyDone = todayGoalDone >= DAILY_GOAL_COUNT;
+  const displayName = profile?.display_name ?? t('home:greeting.defaultUser');
 
   if (!loaded) {
     return (
@@ -87,21 +90,40 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.appName}>MelodyGen</Text>
           <Text style={styles.greeting}>
-            안녕하세요, {profile?.display_name ?? '학생'}님
+            {t('home:greeting.hello', { name: displayName })}
           </Text>
         </View>
         <View style={styles.headerRight}>
-          {tier === 'pro' && (
-            <View style={styles.proBadge}>
-              <Crown size={12} color={COLORS.primary500} />
-              <Text style={styles.proText}>Pro</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.tierBadge,
+              tier === 'pro'
+                ? { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }
+                : { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' },
+            ]}
+            onPress={() => navigation.navigate('Paywall')}
+            activeOpacity={0.7}
+          >
+            <Crown size={12} color={tier === 'pro' ? COLORS.primary500 : COLORS.slate400} />
+            <Text style={[
+              styles.tierText,
+              { color: tier === 'pro' ? COLORS.primary500 : COLORS.slate500 },
+            ]}>
+              {tier === 'pro' ? 'Pro' : 'Free'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
             hitSlop={8}
           >
-            <UserCircle size={32} color={COLORS.slate500} />
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <UserCircle size={32} color={COLORS.slate500} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -116,12 +138,12 @@ export default function HomeScreen() {
           <MascotCharacter size={80} level={mascotLevel} happy={dailyDone} />
           <View style={styles.mascotTextArea}>
             <Text style={styles.mascotTitle}>
-              {dailyDone ? '오늘도 잘 했어요!' : '오늘도 연습해 볼까요?'}
+              {dailyDone ? t('home:greeting.allDone') : t('home:greeting.keepGoing')}
             </Text>
             <Text style={styles.mascotDesc}>
               {dailyDone
-                ? '모든 목표를 달성했어요. 대단해요!'
-                : `오늘의 목표 ${todayGoalDone}/${DAILY_GOAL_COUNT} 진행 중`}
+                ? t('home:greeting.allDoneDesc')
+                : t('home:greeting.goalProgress', { done: todayGoalDone, total: DAILY_GOAL_COUNT })}
             </Text>
           </View>
         </View>
@@ -142,10 +164,10 @@ export default function HomeScreen() {
               ? <Trophy size={24} color="#f59e0b" />
               : <Flame size={24} color="#ea580c" />}
             <Text style={[styles.actionTitle, { color: dailyDone ? '#065f46' : '#9a3412' }]}>
-              {dailyDone ? '달성 완료!' : '일일 목표'}
+              {dailyDone ? t('home:action.dailyDone') : t('home:action.dailyGoal')}
             </Text>
             <Text style={styles.actionDesc}>
-              {todayGoalDone}/{DAILY_GOAL_COUNT} 완료
+              {t('home:action.dailyProgress', { done: todayGoalDone, total: DAILY_GOAL_COUNT })}
             </Text>
           </TouchableOpacity>
 
@@ -155,8 +177,8 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <Target size={24} color={COLORS.amber600} />
-            <Text style={[styles.actionTitle, { color: COLORS.amber800 }]}>모의시험</Text>
-            <Text style={styles.actionDesc}>실전 연습</Text>
+            <Text style={[styles.actionTitle, { color: COLORS.amber800 }]}>{t('home:action.mockExam')}</Text>
+            <Text style={styles.actionDesc}>{t('home:action.mockExamDesc')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -165,14 +187,14 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <BarChart3 size={24} color={COLORS.success} />
-            <Text style={[styles.actionTitle, { color: '#065f46' }]}>통계</Text>
-            <Text style={styles.actionDesc}>학습 진도</Text>
+            <Text style={[styles.actionTitle, { color: '#065f46' }]}>{t('home:action.stats')}</Text>
+            <Text style={styles.actionDesc}>{t('home:action.statsDesc')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* 청음 훈련 유형 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>청음 훈련 유형</Text>
+          <Text style={styles.sectionTitle}>{t('home:section.earTrainingTypes')}</Text>
           <View style={styles.categoryGrid}>
             {CONTENT_CATEGORIES.map((config) => (
               <CategoryCard
@@ -188,7 +210,7 @@ export default function HomeScreen() {
 
         {/* 최근 연습 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>최근 연습</Text>
+          <Text style={styles.sectionTitle}>{t('home:section.recentPractice')}</Text>
           <RecentActivityList records={stats.recentRecords} />
         </View>
       </ScrollView>
@@ -223,19 +245,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  proBadge: {
+  tierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
   },
-  proText: {
+  avatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  tierText: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.primary500,
   },
   scroll: {
     flex: 1,
@@ -288,6 +314,7 @@ const styles = StyleSheet.create({
   actionDesc: {
     fontSize: 10,
     color: COLORS.slate500,
+    textAlign: 'center',
   },
   section: {
     gap: 12,

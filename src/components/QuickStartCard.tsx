@@ -5,9 +5,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Zap } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import type { ContentCategory } from '../types/content';
-import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
 import type { ContentDifficulty } from '../types/content';
 
 interface QuickStartCardProps {
@@ -23,8 +23,8 @@ function QuickStartCard({
   streakDays,
   onPress,
 }: QuickStartCardProps) {
-  const config = getContentConfig(category);
-  const diffLabel = getDifficultyLabel(category, difficulty);
+  const { t } = useTranslation(['home', 'common', 'content']);
+  const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
   const catColor = CATEGORY_COLORS[category].main;
 
   return (
@@ -33,7 +33,7 @@ function QuickStartCard({
       {streakDays > 0 && (
         <View style={styles.streakBanner}>
           <Text style={styles.streakText}>
-            연속 학습 {streakDays}일째!
+            {t('home:quickStart.streak', { days: streakDays })}
           </Text>
         </View>
       )}
@@ -46,10 +46,10 @@ function QuickStartCard({
           </View>
         </View>
         <View style={styles.right}>
-          <Text style={styles.label}>빠른 시작</Text>
-          <Text style={styles.title}>오늘의 추천 연습</Text>
+          <Text style={styles.label}>{t('home:quickStart.label')}</Text>
+          <Text style={styles.title}>{t('home:quickStart.title')}</Text>
           <Text style={styles.detail} numberOfLines={1}>
-            {config.name} · {diffLabel}
+            {t('content:category.' + category + '.name')} · {diffLabel}
           </Text>
         </View>
       </TouchableOpacity>

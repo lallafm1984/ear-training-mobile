@@ -7,6 +7,7 @@ import type { Profile } from '../lib';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18n from '../i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading,        setLoading]        = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // ── 프로필 로드 ──────────────────────────────────────────
+  // ── 프로필 로드 (없으면 자동 생성) ──────────────────────
   const loadProfile = useCallback(async (uid: string) => {
     setProfileLoading(true);
     try {
@@ -67,10 +68,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', uid)
         .single();
 
-      if (error) {
-        if (__DEV__) console.warn('[AuthContext] 프로필 로드 실패:', error.message);
-      } else {
+      if (data) {
         setProfile(data as Profile);
+        return;
+      }
+
+      // 프로필이 없으면 생성 (탈퇴 후 재가입 등)
+      if (error?.code === 'PGRST116') {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        const meta = authUser.user_metadata ?? {};
+        const displayName = meta.display_name || meta.full_name
+          || authUser.email?.split('@')[0] || '';
+
+        const { data: created, error: insertErr } = await supabase
+          .from('profiles')
+          .insert({
+            id: uid,
+            email: authUser.email ?? '',
+            display_name: displayName,
+            avatar_url: meta.avatar_url || null,
+          })
+          .select('*')
+          .single();
+
+        if (insertErr) {
+          if (__DEV__) console.warn('[AuthContext] 프로필 생성 실패:', insertErr.message);
+        } else {
+          setProfile(created as Profile);
+        }
+      } else if (error) {
+        if (__DEV__) console.warn('[AuthContext] 프로필 로드 실패:', error.message);
       }
     } finally {
       setProfileLoading(false);
@@ -176,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 프로필 업데이트 ───────────────────────────────────────
   const updateProfile = useCallback(async (data: { display_name?: string }) => {
-    if (!user) return '로그인이 필요합니다.';
+    if (!user) return i18n.t('common:error.loginRequired');
     const { error } = await supabase
       .from('profiles')
       .update({ ...data, updated_at: new Date().toISOString() })
@@ -188,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── 회원 탈퇴 ────────────────────────────────────────────
   const deleteAccount = useCallback(async () => {
-    if (!user) return '로그인이 필요합니다.';
+    if (!user) return i18n.t('common:error.loginRequired');
 
     // profiles 레코드 삭제 (CASCADE로 auth.users도 삭제됨)
     const { error: delError } = await supabase
@@ -204,6 +233,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       '@melodygen_skill_profile',
       '@melodygen_last_practice_date',
       '@melodygen_onboarding_done',
+      '@melodygen_mascot_exp',
+      '@melodygen_daily_exp_rewarded',
+      '@melodygen_exam_sessions',
     ]).catch(() => {});
 
     // auth.users 삭제는 service_role key가 필요하므로

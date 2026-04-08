@@ -5,8 +5,9 @@ import {
   getExpForNextLevel,
   getMascotParams,
 } from '../lib/mascotConfig';
+import { useAuth } from '../context';
 
-const STORAGE_KEY = '@melodygen_mascot_exp';
+const BASE_KEY = '@melodygen_mascot_exp';
 
 interface StoredData {
   totalExp: number;
@@ -14,17 +15,23 @@ interface StoredData {
 }
 
 export function useMascotExp() {
+  const { user } = useAuth();
+  const storageKey = user ? `${BASE_KEY}_${user.id}` : null;
+
   const [totalExp, setTotalExp] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   // AsyncStorage에서 로드
   useEffect(() => {
+    if (!storageKey) { setLoaded(true); return; }
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(storageKey);
         if (raw) {
           const data: StoredData = JSON.parse(raw);
           setTotalExp(data.totalExp);
+        } else {
+          setTotalExp(0);
         }
       } catch {
         // 로드 실패 시 기본값 유지
@@ -32,11 +39,12 @@ export function useMascotExp() {
         setLoaded(true);
       }
     })();
-  }, []);
+  }, [storageKey]);
 
   // EXP 추가 및 저장
   const addExp = useCallback(
     async (amount: number) => {
+      if (!storageKey) return;
       const newTotal = totalExp + amount;
       setTotalExp(newTotal);
       try {
@@ -44,12 +52,12 @@ export function useMascotExp() {
           totalExp: newTotal,
           lastExpDate: new Date().toISOString().split('T')[0],
         };
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(data));
       } catch {
         // 저장 실패 시 무시
       }
     },
-    [totalExp],
+    [totalExp, storageKey],
   );
 
   const level = getLevel(totalExp);

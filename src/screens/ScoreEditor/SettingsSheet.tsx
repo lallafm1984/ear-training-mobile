@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { Lock } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import BottomSheet from '../../components/BottomSheet';
 import type { ScoreState } from '../../lib';
 import type { UpgradeReason } from '../../components';
@@ -30,25 +31,26 @@ export default function SettingsSheet({
   limits,
   openUpgrade,
 }: SettingsSheetProps) {
+  const { t } = useTranslation('editor');
   const [keyMode, setKeyMode] = useState<'major' | 'minor'>('major');
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="악보 설정">
+    <BottomSheet open={open} onClose={onClose} title={t('settings.title')}>
       {/* 제목 */}
       <View style={styles.bsGroup}>
-        <Text style={styles.bsLabel}>악보 제목</Text>
+        <Text style={styles.bsLabel}>{t('settings.scoreTitle')}</Text>
         <TextInput
           style={styles.bsInput}
           value={state.title}
-          onChangeText={t => setState(p => ({ ...p, title: t }))}
-          placeholder="제목을 입력하세요"
+          onChangeText={v => setState(p => ({ ...p, title: v }))}
+          placeholder={t('settings.titlePlaceholder')}
           placeholderTextColor="#cbd5e1"
         />
       </View>
 
       {/* 박자 */}
       <View style={styles.bsGroup}>
-        <Text style={styles.bsLabel}>박자</Text>
+        <Text style={styles.bsLabel}>{t('settings.timeSignature')}</Text>
         <View style={styles.settingsChipRow}>
           {TIME_SIGNATURES.map(t => {
             const allowed = limits.allowedTimeSignatures.includes(t);
@@ -71,7 +73,7 @@ export default function SettingsSheet({
 
       {/* BPM */}
       <View style={styles.bsGroup}>
-        <Text style={styles.bsLabel}>빠르기 (BPM)</Text>
+        <Text style={styles.bsLabel}>{t('settings.tempo')}</Text>
         <View style={styles.settingsBpmRow}>
           <TouchableOpacity
             onPress={() => setState(p => ({ ...p, tempo: Math.max(40, (p.tempo || 80) - 5) }))}
@@ -101,20 +103,20 @@ export default function SettingsSheet({
 
       {/* 조성 */}
       <View style={styles.bsGroup}>
-        <Text style={styles.bsLabel}>조성</Text>
+        <Text style={styles.bsLabel}>{t('settings.keySignature')}</Text>
         {/* 장조/단조 탭 */}
         <View style={styles.keyModeTabRow}>
           <TouchableOpacity
             onPress={() => setKeyMode('major')}
             style={[styles.keyModeTab, keyMode === 'major' && styles.keyModeTabActive]}
           >
-            <Text style={[styles.keyModeTabText, keyMode === 'major' && styles.keyModeTabTextActive]}>장조 (Major)</Text>
+            <Text style={[styles.keyModeTabText, keyMode === 'major' && styles.keyModeTabTextActive]}>{t('settings.major')} (Major)</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setKeyMode('minor')}
             style={[styles.keyModeTab, keyMode === 'minor' && styles.keyModeTabActive]}
           >
-            <Text style={[styles.keyModeTabText, keyMode === 'minor' && styles.keyModeTabTextActive]}>단조 (Minor)</Text>
+            <Text style={[styles.keyModeTabText, keyMode === 'minor' && styles.keyModeTabTextActive]}>{t('settings.minor')} (Minor)</Text>
           </TouchableOpacity>
         </View>
         {/* 조성 그리드 */}

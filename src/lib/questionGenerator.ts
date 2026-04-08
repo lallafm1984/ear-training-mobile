@@ -2,6 +2,7 @@
 // 객관식 문제 생성기 (음정 / 화성 / 조성)
 // ─────────────────────────────────────────────────────────────
 
+import i18n from '../i18n';
 import type {
   ContentCategory,
   ContentDifficulty,
@@ -144,14 +145,14 @@ function buildWrongChoices(correct: number, pool: number[]): string[] {
     if (wrongs.length >= 3) break;
     if (usedIntervals.has(sim)) continue;
     usedIntervals.add(sim);
-    wrongs.push(INTERVAL_NAMES[sim]);
+    wrongs.push(i18n.t('content:interval.' + sim));
   }
 
   // ② 풀 내 나머지
   for (const i of shuffle(pool.filter(i => !usedIntervals.has(i)))) {
     if (wrongs.length >= 3) break;
     usedIntervals.add(i);
-    wrongs.push(INTERVAL_NAMES[i]);
+    wrongs.push(i18n.t('content:interval.' + i));
   }
 
   // ③ 전체에서 보충
@@ -161,7 +162,7 @@ function buildWrongChoices(correct: number, pool: number[]): string[] {
       .filter(i => !usedIntervals.has(i));
     for (const i of shuffle(remaining)) {
       if (wrongs.length >= 3) break;
-      wrongs.push(INTERVAL_NAMES[i]);
+      wrongs.push(i18n.t('content:interval.' + i));
     }
   }
 
@@ -199,7 +200,7 @@ function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestio
     : [topNote, rootNote];
   const abc = `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${second} z |]`;
 
-  const correctAnswer = INTERVAL_NAMES[interval];
+  const correctAnswer = i18n.t('content:interval.' + interval);
   const wrongs = buildWrongChoices(interval, pool);
 
   return {
@@ -209,7 +210,7 @@ function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestio
     correctAnswer,
     choices: shuffle([correctAnswer, ...wrongs]),
     abcNotation: abc,
-    prompt: '두 음을 듣고 음정을 맞추세요.',
+    prompt: i18n.t('practice:choice.intervalPrompt'),
   };
 }
 
@@ -326,21 +327,21 @@ function buildChordWrongChoices(correctKey: string, pool: string[]): string[] {
     if (wrongs.length >= 3) break;
     if (used.has(sim)) continue;
     used.add(sim);
-    wrongs.push(CHORD_TEMPLATES[sim].name);
+    wrongs.push(i18n.t('content:chord.' + sim));
   }
 
   // ② 풀 내 나머지
   for (const k of shuffle(pool.filter(k => !used.has(k)))) {
     if (wrongs.length >= 3) break;
     used.add(k);
-    wrongs.push(CHORD_TEMPLATES[k].name);
+    wrongs.push(i18n.t('content:chord.' + k));
   }
 
   // ③ 전체에서 보충
   if (wrongs.length < 3) {
     for (const k of shuffle(Object.keys(CHORD_TEMPLATES).filter(k => !used.has(k)))) {
       if (wrongs.length >= 3) break;
-      wrongs.push(CHORD_TEMPLATES[k].name);
+      wrongs.push(i18n.t('content:chord.' + k));
     }
   }
 
@@ -388,16 +389,17 @@ function generateChordQuestion(difficulty: ChordDifficulty): ChoiceQuestion {
   }
 
   const abc = chordToAbc(rootIdx, intervals, presentation);
+  const correctAnswer = i18n.t('content:chord.' + chordKey);
   const wrongs = buildChordWrongChoices(chordKey, pool);
 
   return {
     id: generateId(),
     contentType: 'chord',
     difficulty,
-    correctAnswer: chord.name,
-    choices: shuffle([chord.name, ...wrongs]),
+    correctAnswer,
+    choices: shuffle([correctAnswer, ...wrongs]),
     abcNotation: abc,
-    prompt: '화음을 듣고 종류를 맞추세요.',
+    prompt: i18n.t('practice:choice.chordPrompt'),
   };
 }
 
@@ -545,6 +547,8 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
 
   const abc = `X:1\nM:4/4\nL:1/4\nK:${key.abcKey}\n${melodyBody}`;
 
+  const correctAnswer = i18n.t('content:key.' + keyId);
+
   // key_1: 2지선다 (장/단조 판별에 집중)
   if (difficulty === 'key_1') {
     const otherKeyId = pool.find(k => k !== keyId)!;
@@ -552,10 +556,10 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
       id: generateId(),
       contentType: 'key',
       difficulty,
-      correctAnswer: key.name,
-      choices: shuffle([key.name, KEY_TEMPLATES[otherKeyId].name]),
+      correctAnswer,
+      choices: shuffle([correctAnswer, i18n.t('content:key.' + otherKeyId)]),
       abcNotation: abc,
-      prompt: '멜로디를 듣고 장조/단조를 맞추세요.',
+      prompt: i18n.t('practice:choice.keyModePrompt'),
     };
   }
 
@@ -567,14 +571,14 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
   const relativeKeyId = RELATIVE_KEYS[keyId];
   if (relativeKeyId && !usedKeys.has(relativeKeyId)) {
     usedKeys.add(relativeKeyId);
-    wrongs.push(KEY_TEMPLATES[relativeKeyId].name);
+    wrongs.push(i18n.t('content:key.' + relativeKeyId));
   }
 
   // ② 풀 내 나머지에서 채움
   for (const k of shuffle(pool.filter(k => !usedKeys.has(k)))) {
     if (wrongs.length >= 3) break;
     usedKeys.add(k);
-    wrongs.push(KEY_TEMPLATES[k].name);
+    wrongs.push(i18n.t('content:key.' + k));
   }
 
   // ③ 풀 외부에서 보충 (풀이 작을 때)
@@ -582,7 +586,7 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
     const outside = Object.keys(KEY_TEMPLATES).filter(k => !usedKeys.has(k));
     for (const k of shuffle(outside)) {
       if (wrongs.length >= 3) break;
-      wrongs.push(KEY_TEMPLATES[k].name);
+      wrongs.push(i18n.t('content:key.' + k));
     }
   }
 
@@ -590,10 +594,10 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
     id: generateId(),
     contentType: 'key',
     difficulty,
-    correctAnswer: key.name,
-    choices: shuffle([key.name, ...wrongs.slice(0, 3)]),
+    correctAnswer,
+    choices: shuffle([correctAnswer, ...wrongs.slice(0, 3)]),
     abcNotation: abc,
-    prompt: '멜로디를 듣고 조성을 맞추세요.',
+    prompt: i18n.t('practice:choice.keyPrompt'),
   };
 }
 

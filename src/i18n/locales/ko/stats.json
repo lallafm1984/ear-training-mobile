@@ -1,0 +1,47 @@
+{
+  "title": "학습 통계",
+  "summary": {
+    "streak": "연속 학습일",
+    "totalSessions": "총 연습 횟수",
+    "thisWeek": "이번 주"
+  },
+  "section": {
+    "dailyScore": "일별 평균 점수",
+    "dailyScoreMax": "만점 5점",
+    "examStats": "모의시험 통계"
+  },
+  "exam": {
+    "attempts": "응시 횟수",
+    "avgScore": "평균 / 100점",
+    "bestScore": "최고 / 100점",
+    "avgLabel": "평균 {{score}}점",
+    "bestLabel": "최고 {{score}} / 100점",
+    "attemptCount": "{{count}}회 응시",
+    "noRecords": "{{year}}년 {{month}}월에 시험 기록이 없습니다",
+    "noRecordsAll": "시험 기록이 없습니다",
+    "loading": "시험 기록 로딩 중...",
+    "loadError": "시험 기록을 불러올 수 없습니다"
+  },
+  "month": {
+    "all": "전체",
+    "monthly": "월별",
+    "format": "{{year}}년 {{month}}월"
+  },
+  "chart": {
+    "period7": "7일",
+    "period14": "14일",
+    "period30": "30일"
+  },
+  "calendar": {
+    "sun": "일",
+    "mon": "월",
+    "tue": "화",
+    "wed": "수",
+    "thu": "목",
+    "fri": "금",
+    "sat": "토",
+    "detailTitle": "{{month}}월 {{day}}일 연습 기록",
+    "avgRating": "평균 {{rating}}점",
+    "noRecord": "이 날은 연습 기록이 없습니다"
+  }
+}

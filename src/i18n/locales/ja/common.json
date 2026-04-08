@@ -1,0 +1,43 @@
+{
+  "button": {
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "close": "閉じる",
+    "next": "次へ",
+    "prev": "前へ",
+    "start": "始める",
+    "skip": "スキップ",
+    "retry": "再試行",
+    "delete": "削除",
+    "later": "後で",
+    "goToSettings": "設定へ移動",
+    "settings": "設定",
+    "goBack": "戻る"
+  },
+  "loading": {
+    "appStart": "アプリを起動中...",
+    "accountInfo": "アカウント情報を読み込み中..."
+  },
+  "error": {
+    "loginRequired": "ログインが必要です。"
+  },
+  "unit": {
+    "score": "点",
+    "count": "回",
+    "day": "日",
+    "week": "週",
+    "month": "月",
+    "year": "年",
+    "level": "段階",
+    "maxScore": "満点 {{max}}点"
+  },
+  "time": {
+    "justNow": "たった今",
+    "minutesAgo": "{{minutes}}分前",
+    "hoursAgo": "{{hours}}時間前",
+    "daysAgo": "{{days}}日前",
+    "weeksAgo": "{{weeks}}週間前"
+  },
+  "version": "MelodyGen v1.0.0"
+}

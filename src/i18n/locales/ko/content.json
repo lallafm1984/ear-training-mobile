@@ -1,0 +1,138 @@
+{
+  "category": {
+    "melody": {
+      "name": "선율 받아쓰기",
+      "description": "멜로디를 듣고 악보로 기보"
+    },
+    "rhythm": {
+      "name": "리듬 받아쓰기",
+      "description": "리듬 패턴을 듣고 기보"
+    },
+    "interval": {
+      "name": "음정 듣기",
+      "description": "두 음 사이의 음정 식별"
+    },
+    "chord": {
+      "name": "화성 듣기",
+      "description": "화음의 종류 식별"
+    },
+    "key": {
+      "name": "조성 판별",
+      "description": "선율의 조성과 장/단조 판별"
+    },
+    "twoVoice": {
+      "name": "2성부 받아쓰기",
+      "description": "선율+베이스 큰보표 기보"
+    }
+  },
+  "difficulty": {
+    "melody": {
+      "beginner_1": "초급 1 · 2분음표/4분음표",
+      "beginner_2": "초급 2 · 8분음표",
+      "beginner_3": "초급 3 · 점4분음표",
+      "intermediate_1": "중급 1 · 당김음",
+      "intermediate_2": "중급 2 · 붙임줄",
+      "intermediate_3": "중급 3 · 16분음표",
+      "advanced_1": "고급 1 · 점8분음표",
+      "advanced_2": "고급 2 · 셋잇단음표",
+      "advanced_3": "고급 3 · 임시표"
+    },
+    "rhythm": {
+      "rhythm_1": "1단계 · 2분/4분음표 + 4분쉼표",
+      "rhythm_2": "2단계 · 8분음표 + 쉼표",
+      "rhythm_3": "3단계 · 점음표 + 당김음",
+      "rhythm_4": "4단계 · 16분음표",
+      "rhythm_5": "5단계 · 셋잇단음표",
+      "rhythm_6": "6단계 · 복합 리듬"
+    },
+    "interval": {
+      "interval_1": "1단계 · 3도·4도·5도·8도",
+      "interval_2": "2단계 · + 2도·6도",
+      "interval_3": "3단계 · + 반음·7도",
+      "interval_4": "4단계 · 전체 (동음·증4도 포함)"
+    },
+    "chord": {
+      "chord_2": "1단계 · 장/단/증/감3화음",
+      "chord_3": "2단계 · + 장7·단7화음",
+      "chord_4": "3단계 · + 감7화음"
+    },
+    "key": {
+      "key_1": "1단계 · 나란한조 (C/Am)",
+      "key_2": "2단계 · ♯♭ 1~3개 조성",
+      "key_3": "3단계 · 24조성 전체"
+    },
+    "twoVoice": {
+      "bass_1": "1단계 · 기본 베이스",
+      "bass_2": "2단계 · 리듬 변화",
+      "bass_3": "3단계 · 대위법 요소",
+      "bass_4": "4단계 · 복잡한 성부"
+    }
+  },
+  "track": {
+    "part_1": "2분 + 4분 (기본)",
+    "part_2": "8분음표",
+    "part_3": "점4분음표",
+    "part_4": "당김음",
+    "part_5": "붙임줄",
+    "part_6": "16분음표",
+    "part_7": "점8분음표",
+    "part_8": "셋잇단음표",
+    "part_9": "임시표",
+    "comp_1": "기초 종합",
+    "comp_2": "표준 종합",
+    "comp_3": "고급 종합",
+    "comp_4": "최고급 종합"
+  },
+  "interval": {
+    "0": "완전1도 (P1)",
+    "1": "단2도 (m2)",
+    "2": "장2도 (M2)",
+    "3": "단3도 (m3)",
+    "4": "장3도 (M3)",
+    "5": "완전4도 (P4)",
+    "6": "증4도 (A4)",
+    "7": "완전5도 (P5)",
+    "8": "단6도 (m6)",
+    "9": "장6도 (M6)",
+    "10": "단7도 (m7)",
+    "11": "장7도 (M7)",
+    "12": "완전8도 (P8)"
+  },
+  "chord": {
+    "major": "장3화음 (Major)",
+    "minor": "단3화음 (minor)",
+    "aug": "증3화음 (Aug)",
+    "dim": "감3화음 (dim)",
+    "maj7": "장7화음 (M7)",
+    "min7": "단7화음 (m7)",
+    "dim7": "감7화음 (dim7)",
+    "maj_inv1": "장3화음 제1전위",
+    "min_inv1": "단3화음 제1전위"
+  },
+  "key": {
+    "C_major": "C장조 (C Major)",
+    "A_minor": "A단조 (A minor)",
+    "G_major": "G장조 (G Major)",
+    "E_minor": "E단조 (E minor)",
+    "F_major": "F장조 (F Major)",
+    "D_minor": "D단조 (D minor)",
+    "D_major": "D장조 (D Major)",
+    "B_minor": "B단조 (B minor)",
+    "Bb_major": "B♭장조 (B♭ Major)",
+    "G_minor": "G단조 (G minor)",
+    "A_major": "A장조 (A Major)",
+    "Fsh_minor": "F♯단조 (F♯ minor)",
+    "Eb_major": "E♭장조 (E♭ Major)",
+    "C_minor": "C단조 (C minor)",
+    "E_major": "E장조 (E Major)",
+    "Csh_minor": "C♯단조 (C♯ minor)",
+    "Ab_major": "A♭장조 (A♭ Major)",
+    "F_minor": "F단조 (F minor)",
+    "B_major": "B장조 (B Major)",
+    "Gsh_minor": "G♯단조 (G♯ minor)",
+    "Db_major": "D♭장조 (D♭ Major)",
+    "Bb_minor": "B♭단조 (B♭ minor)",
+    "Gb_major": "G♭장조 (G♭ Major)",
+    "Eb_minor": "E♭단조 (E♭ minor)"
+  }
+}

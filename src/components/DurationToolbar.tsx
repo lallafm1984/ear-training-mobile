@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { NoteDuration } from '../lib/scoreUtils';
 
@@ -22,12 +23,12 @@ interface DurationToolbarProps {
   onToggleTriplet?: () => void;
 }
 
-const DURATION_BUTTONS: { dur: NoteDuration; icon: string; label: string }[] = [
-  { dur: '1', icon: 'music-note-whole', label: '온음표' },
-  { dur: '2', icon: 'music-note-half', label: '2분음표' },
-  { dur: '4', icon: 'music-note-quarter', label: '4분음표' },
-  { dur: '8', icon: 'music-note-eighth', label: '8분음표' },
-  { dur: '16', icon: 'music-note-sixteenth', label: '16분음표' },
+const DURATION_BUTTONS: { dur: NoteDuration; icon: string; labelKey: string }[] = [
+  { dur: '1', icon: 'music-note-whole', labelKey: 'editor:duration.whole' },
+  { dur: '2', icon: 'music-note-half', labelKey: 'editor:duration.half' },
+  { dur: '4', icon: 'music-note-quarter', labelKey: 'editor:duration.quarter' },
+  { dur: '8', icon: 'music-note-eighth', labelKey: 'editor:duration.eighth' },
+  { dur: '16', icon: 'music-note-sixteenth', labelKey: 'editor:duration.sixteenth' },
 ];
 
 const REST_ICON_MAP: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function DurationToolbar({
   tripletMode,
   onToggleTriplet,
 }: DurationToolbarProps) {
+  const { t } = useTranslation(['editor', 'practice']);
   const isSelected = (dur: NoteDuration) => selectedDuration === dur;
 
   const effectiveDurKey = isDotted ? `${selectedDuration}.` : selectedDuration;
@@ -67,7 +69,7 @@ export default function DurationToolbar({
     <View style={styles.container}>
       {/* Row 1 — 음표 버튼 + 점 + 쉼표 (중앙정렬) */}
       <View style={styles.row}>
-        {DURATION_BUTTONS.map(({ dur, icon, label }) => {
+        {DURATION_BUTTONS.map(({ dur, icon, labelKey }) => {
           const selected = isSelected(dur);
           const disabled = !canAddDuration(dur);
           return (
@@ -83,7 +85,7 @@ export default function DurationToolbar({
               ]}
               disabled={disabled}
               onPress={() => onDurationSelect(dur)}
-              accessibilityLabel={label}
+              accessibilityLabel={t(labelKey)}
             >
               <MaterialCommunityIcons
                 name={icon as any}
@@ -106,7 +108,7 @@ export default function DurationToolbar({
           ]}
           disabled={selectedDuration === '16'}
           onPress={onToggleDot}
-          accessibilityLabel="점음표 토글"
+          accessibilityLabel={t('practice:notation.dot')}
         >
           <Text
             style={[
@@ -114,7 +116,7 @@ export default function DurationToolbar({
               { color: selectedDuration === '16' ? COLORS.slate300 : isDotted ? accentColor : COLORS.slate600 },
             ]}
           >
-            점
+            {t('practice:notation.dot')}
           </Text>
         </TouchableOpacity>
 
@@ -128,7 +130,7 @@ export default function DurationToolbar({
             },
           ]}
           onPress={onAddRest}
-          accessibilityLabel="쉼표"
+          accessibilityLabel={t('practice:notation.restTab')}
         >
           <MaterialCommunityIcons
             name={restIcon as any}
@@ -150,7 +152,7 @@ export default function DurationToolbar({
             accidentalMode === '#' && styles.toolBtnActive,
           ]}
           onPress={() => onAccidentalMode(accidentalMode === '#' ? null : '#')}
-          accessibilityLabel="올림표"
+          accessibilityLabel={t('editor:accidental.sharp')}
         >
           <Text
             style={[
@@ -169,7 +171,7 @@ export default function DurationToolbar({
             accidentalMode === 'b' && styles.toolBtnActive,
           ]}
           onPress={() => onAccidentalMode(accidentalMode === 'b' ? null : 'b')}
-          accessibilityLabel="내림표"
+          accessibilityLabel={t('editor:accidental.flat')}
         >
           <Text
             style={[
@@ -185,7 +187,7 @@ export default function DurationToolbar({
         <TouchableOpacity
           style={[styles.toolBtn, tieMode && styles.toolBtnActive]}
           onPress={onToggleTie}
-          accessibilityLabel="붙임줄"
+          accessibilityLabel={t('practice:notation.tie')}
         >
           <Text
             style={[
@@ -202,14 +204,14 @@ export default function DurationToolbar({
           <TouchableOpacity
             style={[styles.toolBtn, tripletMode && styles.toolBtnActive]}
             onPress={onToggleTriplet}
-            accessibilityLabel="셋잇단음표"
+            accessibilityLabel={t('practice:notation.triplet')}
           >
             <MaterialCommunityIcons
               name="numeric-3-circle-outline"
               size={14}
               color={tripletMode ? '#fff' : COLORS.slate600}
             />
-            <Text style={[styles.toolBtnText, tripletMode && styles.toolBtnTextActive, { marginLeft: 2 }]}>셋잇단</Text>
+            <Text style={[styles.toolBtnText, tripletMode && styles.toolBtnTextActive, { marginLeft: 2 }]}>{t('practice:notation.triplet')}</Text>
           </TouchableOpacity>
         )}
 
@@ -218,7 +220,7 @@ export default function DurationToolbar({
           <TouchableOpacity
             style={styles.toolBtn}
             onPress={onClear}
-            accessibilityLabel="전체 지우기"
+            accessibilityLabel={t('practice:notation.reset')}
           >
             <MaterialCommunityIcons
               name="delete-outline"

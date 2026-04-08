@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView,
 } from 'react-native';
 import { Lock } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import BottomSheet from './BottomSheet';
 import { COLORS } from '../theme/colors';
 import type { PracticeSettings } from '../navigation/MainStack';
@@ -15,14 +16,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '9/8'];
 
 // 리듬 받아쓰기 음이름 옵션
-const RHYTHM_PITCHES: { pitch: string; label: string }[] = [
-  { pitch: 'C', label: '도' },
-  { pitch: 'D', label: '레' },
-  { pitch: 'E', label: '미' },
-  { pitch: 'F', label: '파' },
-  { pitch: 'G', label: '솔' },
-  { pitch: 'A', label: '라' },
-  { pitch: 'B', label: '시' },
+const RHYTHM_PITCHES: { pitch: string }[] = [
+  { pitch: 'C' },
+  { pitch: 'D' },
+  { pitch: 'E' },
+  { pitch: 'F' },
+  { pitch: 'G' },
+  { pitch: 'A' },
+  { pitch: 'B' },
 ];
 
 // 올림표/내림표 분리: 5도권 순서
@@ -76,6 +77,7 @@ interface PracticeSettingsSheetProps {
 export default function PracticeSettingsSheet({
   open, onClose, settings, onChangeSettings, accentColor, accentBg, tier, onUpgrade, category,
 }: PracticeSettingsSheetProps) {
+  const { t } = useTranslation(['editor', 'common']);
   const isFree = tier === 'free';
   const [keyMode, setKeyMode] = useState<'major' | 'minor'>(
     settings.keySignature.includes('m') ? 'minor' : 'major'
@@ -96,10 +98,10 @@ export default function PracticeSettingsSheet({
   const flatKeys = keyMode === 'major' ? FLAT_MAJOR : FLAT_MINOR;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="연습 설정">
+    <BottomSheet open={open} onClose={onClose} title={t('editor:settings.practiceTitle')}>
       {/* ── 박자 ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>박자</Text>
+        <Text style={styles.sectionLabel}>{t('editor:settings.timeSignature')}</Text>
         <View style={styles.chipRow}>
           {TIME_SIGNATURES.map(t => {
             const active = settings.timeSignature === t;
@@ -131,9 +133,9 @@ export default function PracticeSettingsSheet({
       {/* ── 리듬 음이름 (리듬 전용) ── */}
       {category === 'rhythm' && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>악보 음이름</Text>
+          <Text style={styles.sectionLabel}>{t('editor:settings.noteNames')}</Text>
           <View style={styles.chipRow}>
-            {RHYTHM_PITCHES.map(({ pitch, label }) => {
+            {RHYTHM_PITCHES.map(({ pitch }) => {
               const current = settings.rhythmPitch ?? 'B';
               const active = current === pitch;
               const isDef = pitch === 'B';
@@ -147,7 +149,7 @@ export default function PracticeSettingsSheet({
                   ]}
                 >
                   <Text style={[styles.timeChipText, active && { color: '#fff' }]}>
-                    {label}
+                    {t(`editor:pitch.${pitch}`)}
                   </Text>
                   {isDef && !active && (
                     <View style={[styles.defaultDot, { backgroundColor: accentColor + '40' }]} />
@@ -162,7 +164,7 @@ export default function PracticeSettingsSheet({
       {/* ── 조성 (리듬 제외) ── */}
       {category !== 'rhythm' && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>조성</Text>
+          <Text style={styles.sectionLabel}>{t('editor:settings.keySignature')}</Text>
         {/* 장조/단조 탭 */}
         <View style={styles.keyModeTabRow}>
           <TouchableOpacity
@@ -170,7 +172,7 @@ export default function PracticeSettingsSheet({
             style={[styles.keyModeTab, keyMode === 'major' && { backgroundColor: accentColor }]}
           >
             <Text style={[styles.keyModeTabText, keyMode === 'major' && { color: '#fff' }]}>
-              장조
+              {t('editor:settings.major')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -178,14 +180,14 @@ export default function PracticeSettingsSheet({
             style={[styles.keyModeTab, keyMode === 'minor' && { backgroundColor: accentColor }]}
           >
             <Text style={[styles.keyModeTabText, keyMode === 'minor' && { color: '#fff' }]}>
-              단조
+              {t('editor:settings.minor')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* 올림표 계열 */}
         <Text style={styles.keyGroupLabel}>
-          {sharpKeys[0] === 'C' || sharpKeys[0] === 'Am' ? '기본 / 올림표 (#)' : '올림표 (#)'}
+          {sharpKeys[0] === 'C' || sharpKeys[0] === 'Am' ? t('editor:settings.sharps') : t('editor:settings.sharpsOnly')}
         </Text>
         <View style={styles.keyGrid}>
           {sharpKeys.map(k => {
@@ -215,7 +217,7 @@ export default function PracticeSettingsSheet({
         </View>
 
         {/* 내림표 계열 */}
-        <Text style={[styles.keyGroupLabel, { marginTop: 5 }]}>내림표 (♭)</Text>
+        <Text style={[styles.keyGroupLabel, { marginTop: 5 }]}>{t('editor:settings.flats')}</Text>
         <View style={styles.keyGrid}>
           {flatKeys.map(k => {
             const active = settings.keySignature === k;
@@ -245,7 +247,7 @@ export default function PracticeSettingsSheet({
 
       {/* ── 빠르기 ── */}
       <View style={[styles.section, { marginBottom: 0 }]}>
-        <Text style={styles.sectionLabel}>빠르기 (BPM)</Text>
+        <Text style={styles.sectionLabel}>{t('editor:settings.tempo')}</Text>
         <View style={styles.tempoRow}>
           {TEMPOS.map(({ bpm }) => {
             const active = settings.tempo === bpm;

@@ -7,31 +7,41 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_SKILL_PROFILE } from '../lib/trackConfig';
 import type { UserSkillProfile } from '../lib/trackConfig';
 import type { TrackType } from '../theme';
+import { useAuth } from '../context';
 
-const STORAGE_KEY = '@melodygen_skill_profile';
+const BASE_KEY = '@melodygen_skill_profile';
+const BASE_LAST_DATE_KEY = '@melodygen_last_practice_date';
 const MS_PER_DAY = 86_400_000;
 
 export function useSkillProfile() {
+  const { user } = useAuth();
+  const storageKey = user ? `${BASE_KEY}_${user.id}` : null;
+  const lastDateKey = user ? `${BASE_LAST_DATE_KEY}_${user.id}` : null;
+
   const [profile, setProfile] = useState<UserSkillProfile>(DEFAULT_SKILL_PROFILE);
   const [loaded, setLoaded] = useState(false);
 
   // ── 로컬 로드 ──
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
+    if (!storageKey) { setLoaded(true); return; }
+    AsyncStorage.getItem(storageKey).then(raw => {
       if (raw) {
         try {
           setProfile({ ...DEFAULT_SKILL_PROFILE, ...JSON.parse(raw) });
         } catch { /* ignore */ }
+      } else {
+        setProfile(DEFAULT_SKILL_PROFILE);
       }
       setLoaded(true);
     });
-  }, []);
+  }, [storageKey]);
 
   // ── 저장 헬퍼 ──
   const persist = useCallback(async (updated: UserSkillProfile) => {
+    if (!storageKey) return;
     setProfile(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }, []);
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+  }, [storageKey]);
 
   // ── 자기 평가 반영 ──
   const applyEvaluation = useCallback(async (
@@ -71,9 +81,9 @@ export function useSkillProfile() {
 
   // ── 스트릭 업데이트 ──
   const updateStreak = useCallback(async () => {
+    if (!lastDateKey) return;
     const today = new Date().toDateString();
-    const lastKey = '@melodygen_last_practice_date';
-    const lastDate = await AsyncStorage.getItem(lastKey);
+    const lastDate = await AsyncStorage.getItem(lastDateKey);
 
     if (lastDate === today) return;
 
@@ -85,7 +95,7 @@ export function useSkillProfile() {
       updated.streakDays = 1;
     }
 
-    await AsyncStorage.setItem(lastKey, today);
+    await AsyncStorage.setItem(lastDateKey, today);
     await persist(updated);
   }, [profile, persist]);
 

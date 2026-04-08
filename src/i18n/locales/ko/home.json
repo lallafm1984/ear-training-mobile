@@ -1,0 +1,37 @@
+{
+  "greeting": {
+    "hello": "안녕하세요, {{name}}님",
+    "defaultUser": "학생",
+    "allDone": "오늘도 잘 했어요!",
+    "keepGoing": "오늘도 연습해 볼까요?",
+    "allDoneDesc": "모든 목표를 달성했어요. 대단해요!",
+    "goalProgress": "오늘의 목표 {{done}}/{{total}} 진행 중"
+  },
+  "section": {
+    "earTrainingTypes": "청음 훈련 유형",
+    "dailyGoal": "일일 목표",
+    "quickStart": "빠른 시작",
+    "recentActivity": "최근 활동",
+    "recentPractice": "최근 연습"
+  },
+  "action": {
+    "dailyDone": "달성 완료!",
+    "dailyGoal": "일일 목표",
+    "dailyProgress": "{{done}}/{{total}} 완료",
+    "mockExam": "모의시험",
+    "mockExamDesc": "실전 연습",
+    "stats": "통계",
+    "statsDesc": "학습 진도"
+  },
+  "quickStart": {
+    "streak": "연속 학습 {{days}}일째!",
+    "label": "빠른 시작",
+    "title": "오늘의 추천 연습"
+  },
+  "dailyGoalCard": {
+    "title": "오늘의 목표",
+    "progress": "{{done}}/{{total}}",
+    "complete": "완료!",
+    "goToGoal": "목표 보기"
+  }
+}

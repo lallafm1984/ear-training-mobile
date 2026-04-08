@@ -11,11 +11,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   Volume2, VolumeX, ChevronRight, Check, X,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
+import { getContentConfig } from '../lib/contentConfig';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import { generateAbc } from '../lib';
@@ -46,6 +47,7 @@ interface QuestionItem {
 }
 
 export default function MockExamScreen() {
+  const { t } = useTranslation(['exam', 'content', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
@@ -244,7 +246,7 @@ export default function MockExamScreen() {
 
     navigation.replace('ExamResult', {
       presetId: preset.id,
-      title: preset.name,
+      title: t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`),
       totalScore,
       maxScore,
       categoryScores: JSON.stringify(categoryScores),
@@ -263,12 +265,12 @@ export default function MockExamScreen() {
       }
       e.preventDefault();
       showAlert({
-        title: '시험 종료',
-        message: '시험을 종료하시겠습니까? 진행 상황이 사라집니다.',
+        title: t('exam:progress.exitTitle'),
+        message: t('exam:progress.exitMessage'),
         type: 'warning',
         buttons: [
-          { text: '계속하기', style: 'cancel' },
-          { text: '종료', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+          { text: t('exam:progress.continueExam'), style: 'cancel' },
+          { text: t('exam:progress.exit'), style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
         ],
       });
     });
@@ -277,12 +279,12 @@ export default function MockExamScreen() {
 
   const confirmSubmit = () => {
     showAlert({
-      title: '시험 제출',
-      message: '시험을 제출하시겠습니까?',
+      title: t('exam:progress.submitTitle'),
+      message: t('exam:progress.submitMessage'),
       type: 'warning',
       buttons: [
-        { text: '취소', style: 'cancel' },
-        { text: '제출', onPress: handleSubmit },
+        { text: t('common:button.cancel'), style: 'cancel' },
+        { text: t('exam:progress.submit'), onPress: handleSubmit },
       ],
     });
   };
@@ -297,14 +299,14 @@ export default function MockExamScreen() {
       {/* 상단 바 */}
       <View style={styles.topBar}>
         <View style={styles.topLeft}>
-          <Text style={styles.topTitle}>{preset.name}</Text>
+          <Text style={styles.topTitle}>{t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}</Text>
           <Text style={styles.topProgress}>
             {currentIndex + 1} / {totalQuestions}
           </Text>
         </View>
         <View style={styles.topRight}>
           <Text style={styles.topProgress}>
-            {answeredCount}/{totalQuestions} 답변
+            {t('exam:progress.answered', { answered: answeredCount, total: totalQuestions })}
           </Text>
         </View>
       </View>
@@ -326,10 +328,10 @@ export default function MockExamScreen() {
         {/* 문항 카테고리 표시 */}
         <View style={[styles.catChip, { backgroundColor: colors.bg }]}>
           <Text style={[styles.catChipText, { color: colors.main }]}>
-            {catConfig.name}
+            {t(`content:category.${currentQ.examQuestion.contentType}.name`)}
           </Text>
           <Text style={styles.catChipDiff}>
-            {getDifficultyLabel(currentQ.examQuestion.contentType, currentQ.examQuestion.difficulty)}
+            {t('content:difficulty.' + currentQ.examQuestion.contentType + '.' + currentQ.examQuestion.difficulty)}
           </Text>
         </View>
 
@@ -347,7 +349,7 @@ export default function MockExamScreen() {
                   : <Volume2 size={28} color="#fff" />}
               </TouchableOpacity>
               <Text style={[styles.playHint, { color: colors.text }]}>
-                {isPlaying ? '재생 중...' : '탭하여 재생'}
+                {isPlaying ? t('exam:progress.playing') : t('exam:progress.tapToPlay')}
               </Text>
             </View>
             {/* 숨겨진 렌더러 (오디오만) */}
@@ -409,7 +411,7 @@ export default function MockExamScreen() {
                   <Check size={28} color="#fff" />
                 </View>
                 <Text style={[styles.playHint, { color: colors.text, fontWeight: '700' }]}>
-                  기보 완료
+                  {t('exam:progress.notationDone')}
                 </Text>
               </View>
             ) : (
@@ -423,14 +425,14 @@ export default function MockExamScreen() {
                   <Volume2 size={28} color="#fff" />
                 </TouchableOpacity>
                 <Text style={[styles.playHint, { color: colors.text }]}>
-                  탭하여 기보 시작
+                  {t('exam:progress.tapToNotate')}
                 </Text>
                 <TouchableOpacity
                   style={[styles.notationBtn, { backgroundColor: colors.main, borderColor: colors.main }]}
                   onPress={() => handleOpenNotation(currentIndex)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.notationBtnText, { color: '#fff' }]}>기보하기</Text>
+                  <Text style={[styles.notationBtnText, { color: '#fff' }]}>{t('exam:progress.notate')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -473,7 +475,7 @@ export default function MockExamScreen() {
             disabled={!isCurrentAnswered}
           >
             <Text style={styles.submitBtnText}>
-              다음 ({currentIndex + 1}/{totalQuestions})
+              {t('exam:progress.next', { current: currentIndex + 1, total: totalQuestions })}
             </Text>
             <ChevronRight size={18} color="#fff" />
           </TouchableOpacity>
@@ -483,7 +485,7 @@ export default function MockExamScreen() {
             onPress={confirmSubmit}
             disabled={!isCurrentAnswered}
           >
-            <Text style={styles.submitBtnText}>제출하기</Text>
+            <Text style={styles.submitBtnText}>{t('exam:progress.submitBtn')}</Text>
           </TouchableOpacity>
         )}
       </View>

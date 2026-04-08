@@ -1,0 +1,48 @@
+{
+  "section": {
+    "subscription": "サブスクリプション",
+    "account": "アカウント",
+    "legal": "規約およびポリシー",
+    "language": "言語",
+    "other": "その他"
+  },
+  "menu": {
+    "planManage": "プラン管理",
+    "cancelSubscription": "サブスクリプションをキャンセル",
+    "cancelSubscriptionValue": "ストアで管理",
+    "nickname": "ニックネーム変更",
+    "email": "メールアドレス",
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfService": "利用規約",
+    "signOut": "ログアウト",
+    "signingOut": "ログアウト中...",
+    "deleteAccount": "アカウント削除"
+  },
+  "editName": {
+    "title": "ニックネーム変更",
+    "placeholder": "2文字以上入力してください",
+    "charCount": "{{count}} / 20文字"
+  },
+  "alert": {
+    "signOutTitle": "ログアウト",
+    "signOutMessage": "本当にログアウトしますか？",
+    "signOutButton": "ログアウト",
+    "deleteTitle": "アカウント削除",
+    "deleteMessage": "アカウントを削除すると、すべてのデータが完全に削除されます。\n\n本当に退会しますか？",
+    "deleteButton": "退会する",
+    "deleteProTitle": "サブスクリプション中の退会について",
+    "deleteProMessage": "現在Proサブスクリプションが有効です。\n\n退会しても、Google PlayまたはApp Storeのサブスクリプションは自動でキャンセルされず、次の請求日に料金が発生する場合があります。\n\n退会前に必ずストアでサブスクリプションをキャンセルしてください。",
+    "goToCancelSub": "サブスクリプションをキャンセルする",
+    "alreadyCancelled": "すでにキャンセル済みです",
+    "cancelSubInfo": "Google PlayまたはApp Storeでサブスクリプションをキャンセルできます。",
+    "error": "エラー"
+  },
+  "expires": "有効期限：{{date}}",
+  "expired": "（期限切れ）",
+  "language": {
+    "title": "言語 / Language",
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  }
+}

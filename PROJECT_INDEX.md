@@ -17,6 +17,9 @@ src/
 │   ├── examNotationStore.ts      # 모의시험↔기보연습 데이터 전달
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   └── ...              # 기타 라이브러리
+├── i18n/                # 국제화 (i18next)
+│   ├── index.ts         # i18n 초기화 + 언어 감지
+│   └── locales/         # 번역 파일 (ko/en/ja × 11 네임스페이스)
 ├── navigation/          # 네비게이션 설정
 ├── screens/             # 화면 컴포넌트
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)

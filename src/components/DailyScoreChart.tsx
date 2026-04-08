@@ -5,20 +5,16 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Line, Circle, Polyline, Text as SvgText } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
 import type { PracticeRecord, ContentCategory } from '../types/content';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_H_PAD = 32;
 const CHART_WIDTH = SCREEN_WIDTH - 40 - CHART_H_PAD * 2; // 화면 - 컨테이너패딩 - 차트패딩
+const CHART_TOP_PAD = 10; // Y축 최상단 텍스트 잘림 방지
 
 const CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'];
-const PERIODS = [
-  { label: '7일', days: 7 },
-  { label: '14일', days: 14 },
-  { label: '30일', days: 30 },
-];
 
 interface Props {
   records: PracticeRecord[];
@@ -29,6 +25,12 @@ function toDateKey(d: Date): string {
 }
 
 export default function DailyScoreChart({ records }: Props) {
+  const { t } = useTranslation(['stats', 'content']);
+  const PERIODS = [
+    { label: t('stats:chart.period7'), days: 7 },
+    { label: t('stats:chart.period14'), days: 14 },
+    { label: t('stats:chart.period30'), days: 30 },
+  ];
   const [periodIndex, setPeriodIndex] = useState(0);
   const [activeCategories, setActiveCategories] = useState<Set<ContentCategory>>(
     new Set(['melody', 'interval', 'chord']),
@@ -105,10 +107,10 @@ export default function DailyScoreChart({ records }: Props) {
 
       {/* SVG 차트 */}
       <View style={{ marginVertical: 12, alignItems: 'center' }}>
-        <Svg width={CHART_WIDTH + CHART_H_PAD * 2} height={chartHeight + 28}>
+        <Svg width={CHART_WIDTH + CHART_H_PAD * 2} height={chartHeight + CHART_TOP_PAD + 28}>
           {/* Y축 그리드 + 레이블 */}
           {[0, 1, 2, 3, 4, 5].map(v => {
-            const y = chartHeight - (v / yMax) * chartHeight;
+            const y = CHART_TOP_PAD + chartHeight - (v / yMax) * chartHeight;
             return (
               <React.Fragment key={v}>
                 <Line
@@ -142,7 +144,7 @@ export default function DailyScoreChart({ records }: Props) {
               if (val !== null) {
                 segments.push({
                   x: CHART_H_PAD + i * xStep,
-                  y: chartHeight - (val / yMax) * chartHeight,
+                  y: CHART_TOP_PAD + chartHeight - (val / yMax) * chartHeight,
                 });
               }
             });
@@ -186,7 +188,7 @@ export default function DailyScoreChart({ records }: Props) {
               <SvgText
                 key={i}
                 x={CHART_H_PAD + i * xStep}
-                y={chartHeight + 16}
+                y={CHART_TOP_PAD + chartHeight + 16}
                 textAnchor="middle"
                 fontSize={9}
                 fill={COLORS.slate400}
@@ -201,7 +203,6 @@ export default function DailyScoreChart({ records }: Props) {
       {/* 범례 (토글) */}
       <View style={styles.legend}>
         {CATEGORIES.map(cat => {
-          const config = getContentConfig(cat);
           const active = activeCategories.has(cat);
           return (
             <TouchableOpacity
@@ -210,7 +211,7 @@ export default function DailyScoreChart({ records }: Props) {
               onPress={() => toggleCategory(cat)}
             >
               <View style={[styles.legendDot, { backgroundColor: CATEGORY_COLORS[cat].main }]} />
-              <Text style={styles.legendText}>{config.name}</Text>
+              <Text style={styles.legendText}>{t('content:category.' + cat + '.name')}</Text>
             </TouchableOpacity>
           );
         })}

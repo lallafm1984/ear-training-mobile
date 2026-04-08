@@ -3,6 +3,7 @@ import {
   Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions,
 } from 'react-native';
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import type { AlertConfig } from '../context/AlertContext';
 
 const { width: W } = Dimensions.get('window');
@@ -21,6 +22,7 @@ const TYPE_CONFIG = {
 };
 
 export default function AppAlert({ visible, config, onClose }: Props) {
+  const { t } = useTranslation('common');
   const scaleAnim   = useRef(new Animated.Value(0.88)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,7 +51,7 @@ export default function AppAlert({ visible, config, onClose }: Props) {
 
   const type = config.type ?? 'info';
   const { Icon, color, bg, border } = TYPE_CONFIG[type];
-  const buttons = config.buttons ?? [{ text: '확인' }];
+  const buttons = config.buttons ?? [{ text: t('common:button.confirm') }];
 
   const handlePress = (btn: typeof buttons[number]) => {
     onClose();

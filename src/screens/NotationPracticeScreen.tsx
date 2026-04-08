@@ -11,11 +11,12 @@ import {
   ArrowLeft, Volume2, VolumeX, Eye, EyeOff, RotateCcw, ChevronRight, Delete, Music,
 } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig, getDifficultyLabel } from '../lib/contentConfig';
+import { getContentConfig } from '../lib/contentConfig';
 import {
   generateAbc,
   ScoreNote, PitchName, Accidental, durationToSixteenths,
@@ -71,16 +72,19 @@ const NOTE_BUTTONS: RhythmInput[] = ['1', '2', '2.', '4', '4.', '8', '8.', '16',
 // 쉼표 버튼 (전체 일관)
 const REST_BUTTONS: RhythmInput[] = ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'];
 
-const DURATION_LABELS: Record<string, string> = {
-  '1': '온음표', '1.': '점온음표',
-  '2': '2분', '2.': '점2분',
-  '4': '4분', '4.': '점4분',
-  '8': '8분', '8.': '점8분',
-  '16': '16분',
-  'triplet': '셋잇단',
-  'r_1': '온쉼표', 'r_2': '2분쉼표', 'r_4': '4분쉼표',
-  'r_8': '8분쉼표', 'r_16': '16분쉼표',
-};
+function getDurationLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    '1': t('editor:duration.whole'),     '1.': t('practice:notation.dotWhole'),
+    '2': t('editor:duration.half'),      '2.': t('practice:notation.dotHalf'),
+    '4': t('editor:duration.quarter'),   '4.': t('practice:notation.dotQuarter'),
+    '8': t('editor:duration.eighth'),    '8.': t('practice:notation.dotEighth'),
+    '16': t('editor:duration.sixteenth'),
+    'triplet': t('practice:notation.triplet'),
+    'r_1': t('practice:notation.restWhole'),   'r_2': t('practice:notation.restHalf'),
+    'r_4': t('practice:notation.restQuarter'), 'r_8': t('practice:notation.restEighth'),
+    'r_16': t('practice:notation.restSixteenth'),
+  };
+}
 
 /** MaterialCommunityIcons 아이콘 매핑 */
 const DURATION_ICON: Record<string, string> = {
@@ -253,6 +257,8 @@ function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
 // ─────────────────────────────────────────────────────────────
 
 export default function NotationPracticeScreen() {
+  const { t } = useTranslation(['practice', 'editor', 'content', 'common']);
+  const DURATION_LABELS = getDurationLabels(t);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
@@ -260,7 +266,7 @@ export default function NotationPracticeScreen() {
 
   const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
-  const diffLabel = getDifficultyLabel(category, difficulty);
+  const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
   const { addRecord } = usePracticeHistory();
   const { applyEvaluation, updateStreak } = useSkillProfile();
@@ -637,9 +643,9 @@ export default function NotationPracticeScreen() {
             <Text style={styles.resultMax}>{avgRating} / 5</Text>
           </View>
 
-          <Text style={styles.resultTitle}>연습 완료!</Text>
+          <Text style={styles.resultTitle}>{t('practice:choice.resultTitle')}</Text>
           <Text style={styles.resultDesc}>
-            {config.name} · {diffLabel} · {practiceCount}문제
+            {t(`content:category.${category}.name`)} · {diffLabel} · {t('practice:notation.problemCount', { count: practiceCount })}
           </Text>
 
           <View style={styles.resultActions}>
@@ -655,14 +661,14 @@ export default function NotationPracticeScreen() {
               }}
             >
               <RotateCcw size={18} color="#fff" />
-              <Text style={styles.resultBtnText}>다시 연습</Text>
+              <Text style={styles.resultBtnText}>{t('practice:choice.retryPractice')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>돌아가기</Text>
+              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>{t('common:button.goBack')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -681,18 +687,18 @@ export default function NotationPracticeScreen() {
           </TouchableOpacity>
         )}
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.main }]}>{config.name}</Text>
-          <Text style={styles.headerSub}>{diffLabel} · {practiceCount + 1}문제</Text>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>{t(`content:category.${category}.name`)}</Text>
+          <Text style={styles.headerSub}>{diffLabel} · {t('practice:notation.problemCount', { count: practiceCount + 1 })}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           {isMelodyInput && !melodySubmitted && (
             <TouchableOpacity onPress={noteInput.clear} hitSlop={8}>
-              <Text style={[styles.finishText, { color: COLORS.slate500, fontSize: 13 }]}>초기화</Text>
+              <Text style={[styles.finishText, { color: COLORS.slate500, fontSize: 13 }]}>{t('practice:notation.reset')}</Text>
             </TouchableOpacity>
           )}
           {practiceCount > 0 && (submitted || melodySubmitted || rated) && (
             <TouchableOpacity onPress={handleFinish} hitSlop={8}>
-              <Text style={[styles.finishText, { color: colors.main }]}>종료</Text>
+              <Text style={[styles.finishText, { color: colors.main }]}>{t('practice:notation.finish')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -717,7 +723,7 @@ export default function NotationPracticeScreen() {
         {isGenerating ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.main} />
-            <Text style={styles.loadingText}>악보 생성 중...</Text>
+            <Text style={styles.loadingText}>{t('practice:notation.generating')}</Text>
           </View>
         ) : (
           <>
@@ -747,7 +753,7 @@ export default function NotationPracticeScreen() {
                     <Music size={18} color={isPlayingScale ? '#fff' : colors.main} />
                   </View>
                   <Text style={[styles.playHint, { color: COLORS.slate500, fontSize: 11 }]}>
-                    {isPlayingScale ? '스케일...' : '스케일'}
+                    {isPlayingScale ? t('practice:notation.scalePlayingShort') : t('practice:notation.scale')}
                   </Text>
                 </TouchableOpacity>
                 <View style={{ width: 1, height: 20, backgroundColor: COLORS.slate200, marginHorizontal: 4 }} />
@@ -762,7 +768,7 @@ export default function NotationPracticeScreen() {
                       : <Volume2 size={20} color="#fff" />}
                   </View>
                   <Text style={[styles.playHint, { color: colors.text }]}>
-                    {isPlaying ? '재생 중...' : '탭하여 재생'}
+                    {isPlaying ? t('practice:notation.playing') : t('practice:notation.tapToPlay')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -778,7 +784,7 @@ export default function NotationPracticeScreen() {
                     : <Volume2 size={28} color="#fff" />}
                 </TouchableOpacity>
                 <Text style={[styles.playHint, { color: colors.text }]}>
-                  {isPlaying ? '재생 중...' : '탭하여 재생'}
+                  {isPlaying ? t('practice:notation.playing') : t('practice:notation.tapToPlay')}
                 </Text>
               </View>
             ) : null}
@@ -815,7 +821,7 @@ export default function NotationPracticeScreen() {
               <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
                 <View style={styles.scoreHeader}>
                   <Text style={styles.scoreLabel}>
-                    {hideNotes ? (isRhythm ? '리듬을 듣고 맞춰보세요' : '악보가 숨겨져 있습니다') : '정답 악보'}
+                    {hideNotes ? (isRhythm ? t('practice:notation.listenRhythm') : t('practice:notation.scoreHidden')) : t('practice:notation.answerScore')}
                   </Text>
                   {!isRhythm && (
                     <TouchableOpacity
@@ -849,9 +855,13 @@ export default function NotationPracticeScreen() {
             {isMelodyInput && !melodySubmitted && (
               <View style={styles.rhythmInputDisplay}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={styles.rhythmInputLabel}>내 답안</Text>
+                  <Text style={styles.rhythmInputLabel}>{t('practice:notation.myAnswer')}</Text>
                   <Text style={{ fontSize: 12, color: colors.main, fontWeight: '600' }}>
-                    마디 {noteInput.getCurrentPositionInfo().measure}/{noteInput.getCurrentPositionInfo().totalMeasures} · {noteInput.getCurrentPositionInfo().beat}번째 박
+                    {t('practice:notation.barBeat', {
+                      measure: noteInput.getCurrentPositionInfo().measure,
+                      total: noteInput.getCurrentPositionInfo().totalMeasures,
+                      beat: noteInput.getCurrentPositionInfo().beat,
+                    })}
                   </Text>
                 </View>
                 <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
@@ -894,7 +904,10 @@ export default function NotationPracticeScreen() {
             {isRhythm && !submitted && (
               <View style={styles.rhythmInputDisplay}>
                 <Text style={styles.rhythmInputLabel}>
-                  내 답 (마디 {splitRhythmIntoMeasures(userInput, barSix).filter(m => getTotalSixteenths(m) >= barSix).length}/{splitRhythmIntoMeasures(fullAnswer, barSix).length})
+                  {t('practice:notation.myAnswerMeasure', {
+                    current: splitRhythmIntoMeasures(userInput, barSix).filter(m => getTotalSixteenths(m) >= barSix).length,
+                    total: splitRhythmIntoMeasures(fullAnswer, barSix).length,
+                  })}
                 </Text>
                 {userInput.length > 0 ? (
                   <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
@@ -908,7 +921,7 @@ export default function NotationPracticeScreen() {
                   </View>
                 ) : (
                   <View style={styles.rhythmEmptyAnswer}>
-                    <Text style={styles.rhythmEmptyText}>아래 음표를 탭하여 입력하세요</Text>
+                    <Text style={styles.rhythmEmptyText}>{t('practice:notation.tapNoteToInput')}</Text>
                   </View>
                 )}
               </View>
@@ -939,7 +952,7 @@ export default function NotationPracticeScreen() {
                 style={[styles.nextBtn, { backgroundColor: COLORS.amber500 }]}
                 onPress={() => navigation.goBack()}
               >
-                <Text style={styles.nextBtnText}>시험으로 돌아가기</Text>
+                <Text style={styles.nextBtnText}>{t('practice:notation.backToExam')}</Text>
                 <ChevronRight size={18} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -949,7 +962,7 @@ export default function NotationPracticeScreen() {
               style={[styles.nextBtn, { backgroundColor: colors.main }]}
               onPress={handleNext}
             >
-              <Text style={styles.nextBtnText}>다음 문제</Text>
+              <Text style={styles.nextBtnText}>{t('practice:choice.nextQuestion')}</Text>
               <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
             {practiceCount >= 1 && (
@@ -957,7 +970,7 @@ export default function NotationPracticeScreen() {
                 style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
                 onPress={handleFinish}
               >
-                <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -973,7 +986,7 @@ export default function NotationPracticeScreen() {
             <TouchableOpacity
               style={styles.undoFloating}
               onPress={noteInput.undo}
-              accessibilityLabel="되돌리기"
+              accessibilityLabel={t('practice:notation.undo')}
               hitSlop={8}
             >
               <MaterialCommunityIcons name="undo" size={14} color={COLORS.slate400} />
@@ -990,14 +1003,14 @@ export default function NotationPracticeScreen() {
                     onPress={() => setRhythmTab('note')}
                   >
                     <MaterialCommunityIcons name="music-note-quarter" size={16} color={rhythmTab === 'note' ? '#fff' : COLORS.slate500} />
-                    <Text style={[styles.rhythmTabText, rhythmTab === 'note' && { color: '#fff' }]}>음표</Text>
+                    <Text style={[styles.rhythmTabText, rhythmTab === 'note' && { color: '#fff' }]}>{t('practice:notation.noteTab')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rhythmTab, rhythmTab === 'rest' && { backgroundColor: COLORS.slate600 }]}
                     onPress={() => setRhythmTab('rest')}
                   >
                     <MaterialCommunityIcons name="music-rest-quarter" size={16} color={rhythmTab === 'rest' ? '#fff' : COLORS.slate500} />
-                    <Text style={[styles.rhythmTabText, rhythmTab === 'rest' && { color: '#fff' }]}>쉼표</Text>
+                    <Text style={[styles.rhythmTabText, rhythmTab === 'rest' && { color: '#fff' }]}>{t('practice:notation.restTab')}</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.rhythmBtnRow}>
@@ -1031,7 +1044,7 @@ export default function NotationPracticeScreen() {
                     disabled={userInput.length === 0}
                   >
                     <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>
-                      ← 삭제
+                      {t('practice:notation.delete')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1044,7 +1057,7 @@ export default function NotationPracticeScreen() {
                     <Text style={[styles.rhythmActionBtnText, {
                       color: rhythmFilled ? '#fff' : COLORS.slate400,
                     }]}>
-                      제출
+                      {t('practice:notation.submit')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1055,7 +1068,7 @@ export default function NotationPracticeScreen() {
                   style={[styles.nextBtn, { backgroundColor: colors.main }]}
                   onPress={handleNext}
                 >
-                  <Text style={styles.nextBtnText}>다음 문제</Text>
+                  <Text style={styles.nextBtnText}>{t('practice:choice.nextQuestion')}</Text>
                   <ChevronRight size={18} color="#fff" />
                 </TouchableOpacity>
                 {practiceCount >= 1 && (
@@ -1063,7 +1076,7 @@ export default function NotationPracticeScreen() {
                     style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
                     onPress={handleFinish}
                   >
-                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1078,13 +1091,13 @@ export default function NotationPracticeScreen() {
                       style={[styles.voiceTab, noteInput.activeVoice === 'treble' && { backgroundColor: colors.main }]}
                       onPress={() => noteInput.setActiveVoice('treble')}
                     >
-                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'treble' && { color: '#fff' }]}>높은음자리</Text>
+                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'treble' && { color: '#fff' }]}>{t('practice:notation.treble')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.voiceTab, noteInput.activeVoice === 'bass' && { backgroundColor: colors.main }]}
                       onPress={() => noteInput.setActiveVoice('bass')}
                     >
-                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'bass' && { color: '#fff' }]}>낮은음자리</Text>
+                      <Text style={[styles.voiceTabText, noteInput.activeVoice === 'bass' && { color: '#fff' }]}>{t('practice:notation.bass')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1138,12 +1151,12 @@ export default function NotationPracticeScreen() {
                     }]}
                     onPress={() => {
                       showAlert({
-                        title: '제출 확인',
-                        message: '기보한 내용을 제출하시겠습니까?',
+                        title: t('practice:notation.submitConfirmTitle'),
+                        message: t('practice:notation.submitConfirmMessage'),
                         type: 'warning',
                         buttons: [
-                          { text: '취소', style: 'cancel' },
-                          { text: '제출', onPress: handleMelodySubmit },
+                          { text: t('common:button.cancel'), style: 'cancel' },
+                          { text: t('practice:notation.submit'), onPress: handleMelodySubmit },
                         ],
                       });
                     }}
@@ -1151,7 +1164,7 @@ export default function NotationPracticeScreen() {
                   >
                     <Text style={[styles.rhythmActionBtnText, {
                       color: noteInput.isComplete ? '#fff' : COLORS.slate400,
-                    }]}>제출</Text>
+                    }]}>{t('practice:notation.submit')}</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -1160,7 +1173,7 @@ export default function NotationPracticeScreen() {
             // ── 폴백: 자기 평가 ──
             !rated ? (
               <>
-                <Text style={styles.rateLabel}>자기 평가</Text>
+                <Text style={styles.rateLabel}>{t('practice:selfEval.title')}</Text>
                 <View style={styles.rateRow}>
                   {[1, 2, 3, 4, 5].map(r => (
                     <TouchableOpacity
@@ -1187,7 +1200,7 @@ export default function NotationPracticeScreen() {
                   style={[styles.nextBtn, { backgroundColor: colors.main }]}
                   onPress={handleNext}
                 >
-                  <Text style={styles.nextBtnText}>다음 문제</Text>
+                  <Text style={styles.nextBtnText}>{t('practice:choice.nextQuestion')}</Text>
                   <ChevronRight size={18} color="#fff" />
                 </TouchableOpacity>
                 {practiceCount >= 1 && (
@@ -1195,7 +1208,7 @@ export default function NotationPracticeScreen() {
                     style={[styles.nextBtn, { backgroundColor: COLORS.slate200 }]}
                     onPress={handleFinish}
                   >
-                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>연습 종료</Text>
+                    <Text style={[styles.nextBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

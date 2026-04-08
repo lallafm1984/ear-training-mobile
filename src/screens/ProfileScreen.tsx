@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Modal, Pressable,
+  ActivityIndicator, Modal, Pressable, Linking, Platform, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User, Mail, Crown, LogOut, Trash2, ChevronRight,
-  Check, X, Shield, FileText,
+  X, Shield, FileText, Globe,
 } from 'lucide-react-native';
-import { Linking } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
+import LegalModal from '../components/LegalModal';
+import type { LegalType } from '../components/LegalModal';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -29,6 +31,7 @@ function EditNameModal({
   onSave: (name: string) => Promise<void>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['profile', 'common']);
   const [name, setName] = useState(currentName);
   const [saving, setSaving] = useState(false);
 
@@ -44,22 +47,22 @@ function EditNameModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalCard}>
-          <Text style={styles.modalTitle}>닉네임 변경</Text>
+          <Text style={styles.modalTitle}>{t('profile:editName.title')}</Text>
           <TextInput
             style={styles.modalInput}
             value={name}
             onChangeText={setName}
-            placeholder="2자 이상 입력"
+            placeholder={t('profile:editName.placeholder')}
             placeholderTextColor="#cbd5e1"
             autoFocus
             maxLength={20}
             returnKeyType="done"
             onSubmitEditing={handle}
           />
-          <Text style={styles.modalHint}>{name.trim().length} / 20자</Text>
+          <Text style={styles.modalHint}>{t('profile:editName.charCount', { count: name.trim().length })}</Text>
           <View style={styles.modalBtnRow}>
             <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelText}>취소</Text>
+              <Text style={styles.modalCancelText}>{t('common:button.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalSaveBtn, (name.trim().length < 2 || saving) && { opacity: 0.5 }]}
@@ -68,7 +71,7 @@ function EditNameModal({
             >
               {saving
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.modalSaveText}>저장</Text>}
+                : <Text style={styles.modalSaveText}>{t('common:button.save')}</Text>}
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -83,6 +86,7 @@ function EditNameModal({
 // ─────────────────────────────────────────────────────────────
 
 export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenProps) {
+  const { t, i18n } = useTranslation(['profile', 'common', 'subscription']);
   const { user, profile, signOut, updateProfile, deleteAccount, profileLoading } = useAuth();
   const { tier, subscriptionState, isExpired } = useSubscription();
 
@@ -90,6 +94,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
   const [showEditName, setShowEditName] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [legalType, setLegalType] = useState<LegalType | null>(null);
 
   const tierColor = PLAN_COLOR[tier];
   const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? '사용자';
@@ -107,12 +112,12 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
   // ── 로그아웃 ─────────────────────────────────────────────
   const handleSignOut = () => {
     showAlert({
-      title: '로그아웃',
-      message: '정말 로그아웃 하시겠습니까?',
+      title: t('profile:alert.signOutTitle'),
+      message: t('profile:alert.signOutMessage'),
       type: 'warning',
       buttons: [
-        { text: '취소', style: 'cancel' },
-        { text: '로그아웃', style: 'destructive', onPress: async () => {
+        { text: t('common:button.cancel'), style: 'cancel' },
+        { text: t('profile:alert.signOutButton'), style: 'destructive', onPress: async () => {
           setSigningOut(true);
           await signOut();
           setSigningOut(false);
@@ -124,15 +129,40 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
   // ── 회원 탈퇴 ────────────────────────────────────────────
   const handleDeleteAccount = () => {
+    if (tier === 'pro' && !isExpired) {
+      // 구독 중인 경우: 구독 취소 안내 먼저 표시
+      showAlert({
+        title: t('profile:alert.deleteProTitle'),
+        message: t('profile:alert.deleteProMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('common:button.cancel'), style: 'cancel' },
+          { text: t('profile:alert.goToCancelSub'), onPress: () => {
+            const url = Platform.OS === 'ios'
+              ? 'https://apps.apple.com/account/subscriptions'
+              : 'https://play.google.com/store/account/subscriptions';
+            Linking.openURL(url);
+          }},
+          { text: t('profile:alert.alreadyCancelled'), style: 'destructive', onPress: () => {
+            confirmDeleteAccount();
+          }},
+        ],
+      });
+    } else {
+      confirmDeleteAccount();
+    }
+  };
+
+  const confirmDeleteAccount = () => {
     showAlert({
-      title: '회원 탈퇴',
-      message: '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n정말 탈퇴하시겠습니까?',
+      title: t('profile:alert.deleteTitle'),
+      message: t('profile:alert.deleteMessage'),
       type: 'warning',
       buttons: [
-        { text: '취소', style: 'cancel' },
-        { text: '탈퇴하기', style: 'destructive', onPress: async () => {
+        { text: t('common:button.cancel'), style: 'cancel' },
+        { text: t('profile:alert.deleteButton'), style: 'destructive', onPress: async () => {
           const err = await deleteAccount();
-          if (err) showAlert({ title: '오류', message: err, type: 'error' });
+          if (err) showAlert({ title: t('profile:alert.error'), message: err, type: 'error' });
           else onClose();
         }},
       ],
@@ -184,9 +214,16 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
           ) : (
             <View style={styles.profileCardBody}>
               <View style={styles.profileInitialBadge}>
-                <Text style={styles.profileInitialText}>
-                  {displayName.charAt(0).toUpperCase()}
-                </Text>
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.profileAvatar}
+                  />
+                ) : (
+                  <Text style={styles.profileInitialText}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </Text>
+                )}
               </View>
               <View style={styles.profileTextBlock}>
                 <Text style={styles.profileName}>{displayName}</Text>
@@ -198,11 +235,11 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
                 >
                   <Crown size={11} color={tierColor} />
                   <Text style={[styles.planBadgeText, { color: tierColor }]}>
-                    {PLAN_NAME[tier]}{isExpired ? ' (만료)' : ''}
+                    {PLAN_NAME[tier]}{isExpired ? ` ${t('profile:expired')}` : ''}
                   </Text>
                 </TouchableOpacity>
                 {expiresLabel && (
-                  <Text style={styles.expiresText}>만료일: {expiresLabel}</Text>
+                  <Text style={styles.expiresText}>{t('profile:expires', { date: expiresLabel })}</Text>
                 )}
               </View>
             </View>
@@ -211,22 +248,22 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
         {/* ── 구독 섹션 ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>구독</Text>
+          <Text style={styles.sectionTitle}>{t('profile:section.subscription')}</Text>
           <View style={styles.sectionCard}>
             <MenuItem
               icon={<Crown size={16} color={tierColor} />}
-              label="요금제 관리"
+              label={t('profile:menu.planManage')}
               value={PLAN_NAME[tier]}
               onPress={() => { onClose(); onGoToPaywall(); }}
             />
             {tier !== 'free' && (
               <MenuItem
                 icon={<Shield size={16} color="#64748b" />}
-                label="구독 취소"
-                value="스토어에서 관리"
+                label={t('profile:menu.cancelSubscription')}
+                value={t('profile:menu.cancelSubscriptionValue')}
                 onPress={() => showAlert({
-                  title: '구독 취소',
-                  message: 'Google Play 또는 App Store에서 구독을 취소할 수 있습니다.',
+                  title: t('profile:menu.cancelSubscription'),
+                  message: t('profile:alert.cancelSubInfo'),
                   type: 'info',
                 })}
               />
@@ -236,17 +273,17 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
         {/* ── 계정 섹션 ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>계정</Text>
+          <Text style={styles.sectionTitle}>{t('profile:section.account')}</Text>
           <View style={styles.sectionCard}>
             <MenuItem
               icon={<User size={16} color="#64748b" />}
-              label="닉네임 변경"
+              label={t('profile:menu.nickname')}
               value={displayName}
               onPress={() => setShowEditName(true)}
             />
             <MenuItem
               icon={<Mail size={16} color="#64748b" />}
-              label="이메일"
+              label={t('profile:menu.email')}
               value={email}
             />
           </View>
@@ -254,40 +291,58 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
 
         {/* ── 기타 섹션 ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>약관 및 정책</Text>
+          <Text style={styles.sectionTitle}>{t('profile:section.legal')}</Text>
           <View style={styles.sectionCard}>
             <MenuItem
               icon={<FileText size={16} color="#64748b" />}
-              label="개인정보처리방침"
-              onPress={() => Linking.openURL('https://github.com/lallafm1984/ear-training-mobile/blob/master/docs/PRIVACY_POLICY.md')}
+              label={t('profile:menu.privacyPolicy')}
+              onPress={() => setLegalType('privacy')}
             />
             <MenuItem
               icon={<FileText size={16} color="#64748b" />}
-              label="이용약관"
-              onPress={() => Linking.openURL('https://github.com/lallafm1984/ear-training-mobile/blob/master/docs/TERMS_OF_SERVICE.md')}
+              label={t('profile:menu.termsOfService')}
+              onPress={() => setLegalType('terms')}
+            />
+          </View>
+        </View>
+
+        {/* ── 언어 섹션 ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('profile:section.language')}</Text>
+          <View style={styles.sectionCard}>
+            <MenuItem
+              icon={<Globe size={16} color="#64748b" />}
+              label={t('profile:language.title')}
+              value={t(`profile:language.${i18n.language}`)}
+              onPress={() => {
+                const langs = ['ko', 'en', 'ja'] as const;
+                const currentIdx = langs.indexOf(i18n.language as typeof langs[number]);
+                const nextLang = langs[(currentIdx + 1) % langs.length];
+                i18n.changeLanguage(nextLang);
+              }}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>기타</Text>
+          <Text style={styles.sectionTitle}>{t('profile:section.other')}</Text>
           <View style={styles.sectionCard}>
             <MenuItem
               icon={<LogOut size={16} color="#64748b" />}
-              label={signingOut ? '로그아웃 중...' : '로그아웃'}
+              label={signingOut ? t('profile:menu.signingOut') : t('profile:menu.signOut')}
               onPress={handleSignOut}
               disabled={signingOut}
             />
             <MenuItem
               icon={<Trash2 size={16} color="#ef4444" />}
-              label="회원 탈퇴"
+              label={t('profile:menu.deleteAccount')}
               onPress={handleDeleteAccount}
               danger
             />
           </View>
         </View>
 
-        <Text style={styles.versionText}>MelodyGen v1.0.0</Text>
+        <Text style={styles.versionText}>{t('common:version')}</Text>
       </ScrollView>
 
       {/* 서브 모달들 */}
@@ -297,6 +352,13 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         onSave={name => updateProfile({ display_name: name }).then(() => { })}
         onClose={() => setShowEditName(false)}
       />
+      {legalType && (
+        <LegalModal
+          visible
+          type={legalType}
+          onClose={() => setLegalType(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -354,6 +416,9 @@ const styles = StyleSheet.create({
   },
   profileInitialText: {
     fontSize: 22, fontWeight: '800', color: '#6366f1',
+  },
+  profileAvatar: {
+    width: 52, height: 52, borderRadius: 16,
   },
   profileTextBlock: { flex: 1, gap: 4 },
   profileName: { fontSize: 17, fontWeight: '700', color: '#0f172a' },

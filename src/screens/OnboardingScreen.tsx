@@ -14,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme/colors';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -39,36 +40,37 @@ const SLIDES: SlideData[] = [
     icon: Music,
     color: COLORS.primary500,
     bgColor: '#eef2ff',
-    title: '청음 훈련, 시작하세요',
-    description: '선율·리듬·음정·화성·조성·2성부\n6가지 카테고리로 체계적인 훈련',
+    title: 'auth:onboarding.slide1Title',
+    description: 'auth:onboarding.slide1Desc',
   },
   {
     id: '2',
     icon: Headphones,
     color: '#10b981',
     bgColor: '#ecfdf5',
-    title: '듣고 맞추는 연습',
-    description: '음원을 듣고 악보를 기보하거나\n객관식으로 음정·화음을 식별하세요',
+    title: 'auth:onboarding.slide2Title',
+    description: 'auth:onboarding.slide2Desc',
   },
   {
     id: '3',
     icon: Target,
     color: COLORS.amber500,
     bgColor: '#fffbeb',
-    title: '모의시험으로 실전 대비',
-    description: '입시·자격증 형식의 모의시험으로\n실전 감각을 키우세요',
+    title: 'auth:onboarding.slide3Title',
+    description: 'auth:onboarding.slide3Desc',
   },
   {
     id: '4',
     icon: BarChart3,
     color: '#8b5cf6',
     bgColor: '#f5f3ff',
-    title: '나의 성장을 확인하세요',
-    description: '카테고리별 진도와 통계로\n약점을 파악하고 효율적으로 학습',
+    title: 'auth:onboarding.slide4Title',
+    description: 'auth:onboarding.slide4Desc',
   },
 ];
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation(['auth', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -103,8 +105,8 @@ export default function OnboardingScreen() {
         <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
           <IconComp size={48} color={item.color} />
         </View>
-        <Text style={styles.slideTitle}>{item.title}</Text>
-        <Text style={styles.slideDesc}>{item.description}</Text>
+        <Text style={styles.slideTitle}>{t(item.title)}</Text>
+        <Text style={styles.slideDesc}>{t(item.description)}</Text>
       </View>
     );
   };
@@ -114,7 +116,7 @@ export default function OnboardingScreen() {
       <View style={styles.topBar}>
         {!isLast && (
           <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-            <Text style={styles.skipText}>건너뛰기</Text>
+            <Text style={styles.skipText}>{t('common:button.skip')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -180,14 +182,14 @@ export default function OnboardingScreen() {
             style={[styles.startBtn, { backgroundColor: COLORS.primary500 }]}
             onPress={handleStart}
           >
-            <Text style={styles.startText}>시작하기</Text>
+            <Text style={styles.startText}>{t('common:button.start')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={[styles.nextBtn, { backgroundColor: SLIDES[currentIndex].color }]}
             onPress={handleNext}
           >
-            <Text style={styles.nextText}>다음</Text>
+            <Text style={styles.nextText}>{t('common:button.next')}</Text>
             <ChevronRight size={18} color="#fff" />
           </TouchableOpacity>
         )}
