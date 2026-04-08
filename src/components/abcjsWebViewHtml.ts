@@ -289,21 +289,26 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
       var nH = toSvgH(noteScr.height);
       var nCY = nY + nH / 2;
 
-      // 바라인으로 보표 세로 범위 결정 (모든 줄에서 동일한 높이)
-      var barEls = svg.querySelectorAll('.abcjs-bar');
+      // 같은 성부의 음표/쉼표들로 보표 세로 범위 결정
       var sTop = nY, sBot = nY + nH;
-      for (var bi = 0; bi < barEls.length; bi++) {
+      var sameVoiceEls = Array.from(ct.querySelectorAll('.' + vc + '.abcjs-note, .' + vc + '.abcjs-rest'));
+      // 같은 줄(시스템)에 있는 음표만 필터 (Y 범위가 비슷한 것)
+      var staffTop = nY, staffBot = nY + nH;
+      for (var si = 0; si < sameVoiceEls.length; si++) {
         try {
-          var bScr = barEls[bi].getBoundingClientRect();
-          var bY = toSvgY(bScr.top);
-          var bBot = toSvgY(bScr.bottom);
-          if (bY <= nCY && bBot >= nCY) {
-            sTop = bY;
-            sBot = bBot;
-            break;
+          var sScr = sameVoiceEls[si].getBoundingClientRect();
+          var sY = toSvgY(sScr.top);
+          var sBo = toSvgY(sScr.bottom);
+          var sCY = sY + (sBo - sY) / 2;
+          // 같은 줄 판별: 음표 중심 Y가 현재 음표와 가까운 범위 (보표 높이 이내)
+          if (Math.abs(sCY - nCY) < 80) {
+            if (sY < staffTop) staffTop = sY;
+            if (sBo > staffBot) staffBot = sBo;
           }
         } catch(e3) {}
       }
+      sTop = staffTop;
+      sBot = staffBot;
 
       var padX = 10, padY = 5;
       var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');

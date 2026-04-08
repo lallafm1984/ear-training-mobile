@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -311,10 +311,20 @@ export default function NotationPracticeScreen() {
 
   const firstHintNote = score?.trebleNotes[0] ?? null;
 
+  // 생성된 악보에서 실제 마디 수 계산
+  const scoreMeasures = (() => {
+    if (!score) return 4;
+    const barSix = getBarSixteenths(score.timeSignature);
+    const totalSix = score.trebleNotes.reduce(
+      (sum, n) => sum + durationToSixteenths(n.duration), 0,
+    );
+    return Math.max(1, Math.ceil(totalSix / barSix));
+  })();
+
   const noteInput = useNoteInput({
     keySignature: score?.keySignature ?? 'C',
     timeSignature: score?.timeSignature ?? '4/4',
-    measures: 4,
+    measures: scoreMeasures,
     useGrandStaff: score?.useGrandStaff ?? false,
     firstNote: isMelodyInput ? firstHintNote : null,
   });
@@ -342,7 +352,13 @@ export default function NotationPracticeScreen() {
       setScore(newScore);
       if (category === 'melody' || category === 'twoVoice') {
         const first = newScore.trebleNotes[0] ?? null;
-        noteInput.reset(first ? { ...first, tie: false } : null);
+        // 실제 마디 수 계산하여 reset에 전달
+        const barSix = getBarSixteenths(newScore.timeSignature);
+        const totalSix = newScore.trebleNotes.reduce(
+          (sum, n) => sum + durationToSixteenths(n.duration), 0,
+        );
+        const actualMeasures = Math.max(1, Math.ceil(totalSix / barSix));
+        noteInput.reset(first ? { ...first, tie: false } : null, actualMeasures, barSix, newScore.useGrandStaff);
       }
       setIsGenerating(false);
     }, 500);
@@ -827,7 +843,7 @@ export default function NotationPracticeScreen() {
                     마디 {noteInput.getCurrentPositionInfo().measure}/{noteInput.getCurrentPositionInfo().totalMeasures} · {noteInput.getCurrentPositionInfo().beat}번째 박
                   </Text>
                 </View>
-                <View style={[styles.scoreCard, { borderColor: noteInput.selectedNoteIndex !== null ? colors.main : colors.main + '20' }]}>
+                <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
                   <AbcjsRenderer
                     abcString={noteInput.getUserAbcString()}
                     hideNotes={false}
@@ -839,14 +855,12 @@ export default function NotationPracticeScreen() {
                     onNoteClick={(index, voice) => {
                       if (Date.now() - lastAddTimeRef.current < 300) return;
                       noteInput.setActiveVoice(voice);
-                      noteInput.selectNote(index);
+                      noteInput.moveCursor(index);
                     }}
-                    selectedNote={noteInput.selectedNoteIndex !== null ? {
-                      index: noteInput.isTripletSelected
-                        ? noteInput.selectedNoteIndex + noteInput.tripletEditStep
-                        : noteInput.selectedNoteIndex,
+                    selectedNote={{
+                      index: noteInput.cursorIndex,
                       voice: noteInput.activeVoice,
-                    } : null}
+                    }}
                   />
                 </View>
               </View>
@@ -1068,18 +1082,9 @@ export default function NotationPracticeScreen() {
                   isDotted={noteInput.isDotted}
                   accidentalMode={noteInput.accidentalMode}
                   tieMode={noteInput.selectedNoteIndex !== null ? noteInput.isSelectedNoteTied : noteInput.tieMode}
-                  canAddDuration={(dur) => {
-                    if (noteInput.selectedNoteIndex !== null) {
-                      return noteInput.canEditDuration(dur);
-                    }
-                    return noteInput.canAddDuration(dur);
-                  }}
+                  canAddDuration={(dur) => noteInput.canReplaceDuration(dur)}
                   onDurationSelect={(dur) => {
-                    if (noteInput.selectedNoteIndex !== null) {
-                      noteInput.updateSelectedNoteDuration(dur);
-                    } else {
-                      noteInput.setDuration(dur);
-                    }
+                    noteInput.setDuration(dur);
                   }}
                   onToggleDot={noteInput.toggleDot}
                   onAccidentalMode={noteInput.setAccidentalMode}
@@ -1091,12 +1096,8 @@ export default function NotationPracticeScreen() {
                     }
                   }}
                   onAddRest={() => {
-                    if (noteInput.selectedNoteIndex !== null) {
-                      noteInput.replaceWithRest();
-                    } else {
-                      noteInput.addRest();
-                      lastAddTimeRef.current = Date.now();
-                    }
+                    noteInput.addRest();
+                    lastAddTimeRef.current = Date.now();
                   }}
                   onUndo={noteInput.undo}
                   accentColor={colors.main}
@@ -1120,32 +1121,20 @@ export default function NotationPracticeScreen() {
                   />
                 </View>
                 <View style={[styles.rhythmActionRow, { marginTop: 3 }]}>
-                  {noteInput.selectedNoteIndex !== null && (
-                    <>
-                      <Text style={{ fontSize: 11, color: colors.main, fontWeight: '600' }}>
-                        {noteInput.isTripletSelected
-                          ? `셋잇단 ${noteInput.tripletEditStep + 1}/3 - 건반으로 교체`
-                          : '건반을 눌러 교체'}
-                      </Text>
-                      <TouchableOpacity
-                        style={[styles.rhythmActionBtn, { backgroundColor: '#fee2e2' }]}
-                        onPress={noteInput.deleteSelectedNote}
-                      >
-                        <Text style={[styles.rhythmActionBtnText, { color: '#991b1b' }]}>삭제</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.rhythmActionBtn, { backgroundColor: COLORS.slate200 }]}
-                        onPress={noteInput.cancelEdit}
-                      >
-                        <Text style={[styles.rhythmActionBtnText, { color: COLORS.slate600 }]}>수정취소</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
                   <TouchableOpacity
                     style={[styles.rhythmActionBtn, {
                       backgroundColor: noteInput.isComplete ? colors.main : COLORS.slate200,
                     }]}
-                    onPress={handleMelodySubmit}
+                    onPress={() => {
+                      Alert.alert(
+                        '제출 확인',
+                        '제출 하시겠습니까?',
+                        [
+                          { text: '취소', style: 'cancel' },
+                          { text: '제출', onPress: handleMelodySubmit },
+                        ],
+                      );
+                    }}
                     disabled={!noteInput.isComplete}
                   >
                     <Text style={[styles.rhythmActionBtnText, {

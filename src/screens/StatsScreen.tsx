@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft, TrendingUp, Calendar, Target, Award,
 } from 'lucide-react-native';
@@ -33,7 +33,6 @@ interface ExamRecord {
 }
 
 export default function StatsScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { stats, loaded } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
@@ -72,14 +71,14 @@ export default function StatsScreen() {
 
   if (!loaded) {
     return (
-      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={COLORS.primary500} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
@@ -90,7 +89,7 @@ export default function StatsScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* 요약 카드 */}

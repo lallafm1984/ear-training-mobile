@@ -6,7 +6,7 @@ import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -70,7 +70,6 @@ function getSmartRecommendation(
 }
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { profile } = useAuth();
   const { tier } = useSubscription();
@@ -106,14 +105,14 @@ export default function HomeScreen() {
 
   if (!loaded) {
     return (
-      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={COLORS.primary500} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: 4 }]}>
         <View>
@@ -140,7 +139,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* 빠른 시작 */}
