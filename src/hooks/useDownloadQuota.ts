@@ -5,12 +5,12 @@ import * as MediaLibrary from 'expo-media-library';
 import type { UpgradeReason } from '../components';
 
 /**
- * 다운로드 권한 체크 + 소모 훅.
+ * 다운로드 권한 체크 훅.
  * onUpgradeNeeded: 구독 제한 도달 시 호출할 콜백 (UpgradeModal 트리거용)
  */
 export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => void) {
   const { showAlert } = useAlert();
-  const { tier, limits, remainingDownloads, consumeDownload } = useSubscription();
+  const { tier, limits } = useSubscription();
 
   /** 다운로드 시도 (오디오) */
   const checkAndConsume = useCallback(async (): Promise<boolean> => {
@@ -28,32 +28,13 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       return false;
     }
 
-    // 2. 한도 체크
-    if (limits.monthlyDownloadLimit !== null) {
-      if (remainingDownloads !== null && remainingDownloads <= 0) {
-        if (onUpgradeNeeded) {
-          onUpgradeNeeded('download_limit');
-        } else {
-          showAlert({
-            title: '다운로드 한도 초과',
-            message: `이번 달 다운로드 ${limits.monthlyDownloadLimit}회를 모두 사용했습니다.\n\n무제한 다운로드는 Pro 플랜에서 이용 가능합니다.`,
-            type: 'warning',
-          });
-        }
-        return false;
-      }
-    }
-
-    // 3. 기기 권한 체크 (라이브러리 저장용)
+    // 2. 기기 권한 체크 (라이브러리 저장용)
     try {
       const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
       if (status !== 'granted') {
         if (status === 'undetermined' || (status === 'denied' && canAskAgain)) {
           const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
-          if (newStatus === 'granted') {
-            const ok = await consumeDownload();
-            return ok;
-          }
+          if (newStatus === 'granted') return true;
         }
 
         showAlert({
@@ -69,16 +50,10 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       }
     } catch (error) {
       if (__DEV__) console.warn('권한 체크 에러(오디오):', error);
-      const ok = await consumeDownload();
-      return ok;
     }
 
-    // 4. 소모 및 성공
-    const ok = await consumeDownload();
-    if (!ok) return false;
-
     return true;
-  }, [limits, remainingDownloads, consumeDownload, onUpgradeNeeded]);
+  }, [limits, onUpgradeNeeded, showAlert]);
 
   /** 이미지 다운로드 전 체크 */
   const checkImageDownload = useCallback(async (): Promise<boolean> => {
@@ -122,15 +97,12 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
     }
 
     return true;
-  }, [limits, onUpgradeNeeded]);
+  }, [limits, onUpgradeNeeded, showAlert]);
 
   return {
     tier,
-    remainingDownloads,
-    monthlyLimit: limits.monthlyDownloadLimit,
     checkAndConsume,
     checkCanDownload: checkAndConsume,
-    consumeDownload,
     checkImageDownload,
   };
 }

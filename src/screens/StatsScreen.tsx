@@ -13,12 +13,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
-import { useAuth } from '../context';
-import { supabase } from '../lib';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -36,33 +35,30 @@ export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
   const { stats, loaded } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
-  const { session } = useAuth();
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
   const [examLoading, setExamLoading] = useState(false);
   const [examError, setExamError] = useState(false);
 
-  // 시험 기록 로드
+  // 시험 기록 로드 (AsyncStorage)
   useEffect(() => {
-    if (!session?.user?.id) return;
     setExamLoading(true);
     setExamError(false);
-    supabase
-      .from('exam_sessions')
-      .select('id, title, total_score, max_score, completed_at')
-      .eq('user_id', session.user.id)
-      .order('completed_at', { ascending: false })
-      .limit(10)
-      .then(({ data, error }) => {
-        if (error) {
-          if (__DEV__) console.warn('[StatsScreen] 시험 기록 로드 실패:', error.message);
+    AsyncStorage.getItem('@melodygen_exam_sessions').then(raw => {
+      if (raw) {
+        try {
+          const data = JSON.parse(raw) as ExamRecord[];
+          setExamRecords(data.slice(0, 10));
+        } catch {
           setExamError(true);
-        } else if (data) {
-          setExamRecords(data as ExamRecord[]);
         }
-        setExamLoading(false);
-      });
-  }, [session?.user?.id]);
+      }
+      setExamLoading(false);
+    }).catch(() => {
+      setExamError(true);
+      setExamLoading(false);
+    });
+  }, []);
 
   const maxCategoryCount = Math.max(
     ...Object.values(stats.totalByCategory),

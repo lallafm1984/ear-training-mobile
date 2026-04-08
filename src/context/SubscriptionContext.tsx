@@ -11,34 +11,16 @@ import type { CustomerInfo } from 'react-native-purchases';
 
 
 // ─────────────────────────────────────────────────────────────
-// 헬퍼
-// ─────────────────────────────────────────────────────────────
-
-function getCurrentYearMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-const DEFAULT_STATE: SubscriptionState = {
-  tier:                 'free',
-  expiresAt:            null,
-  monthlyDownloadCount: 0,
-  downloadResetMonth:   getCurrentYearMonth(),
-};
-
-// ─────────────────────────────────────────────────────────────
 // Context 타입
 // ─────────────────────────────────────────────────────────────
 
 export interface SubscriptionContextValue {
-  tier:               PlanTier;
-  limits:             PlanLimits;
-  isExpired:          boolean;
-  remainingDownloads: number | null;
-  upgradePlan:        (newTier: PlanTier, durationDays?: number) => Promise<void>;
-  consumeDownload:    () => Promise<boolean>;
-  subscriptionState:  SubscriptionState;
-  loading:            boolean;
+  tier:              PlanTier;
+  limits:            PlanLimits;
+  isExpired:         boolean;
+  upgradePlan:       (newTier: PlanTier, durationDays?: number) => Promise<void>;
+  subscriptionState: SubscriptionState;
+  loading:           boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -46,6 +28,11 @@ const SubscriptionContext = createContext<SubscriptionContextValue | null>(null)
 // ─────────────────────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────────────────────
+
+const DEFAULT_STATE: SubscriptionState = {
+  tier:      'free',
+  expiresAt: null,
+};
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
@@ -71,24 +58,19 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     const syncSubscription = async () => {
       try {
-        // RevenueCat에 Supabase user ID 연결
         await loginRevenueCat(user.id);
         const info = await getCustomerInfo();
         const rcPro = isPro(info);
 
-        const currentMonth = getCurrentYearMonth();
         let tier: PlanTier = rcPro ? 'pro' : 'free';
         let expiresAt: string | null = null;
-        let downloadCount = profile.monthly_download_count ?? 0;
-        let resetMonth = profile.download_reset_month ?? currentMonth;
 
-        // RevenueCat에서 만료일 가져오기
         const entitlement = info.entitlements.active[ENTITLEMENT_ID];
         if (entitlement?.expirationDate) {
           expiresAt = entitlement.expirationDate;
         }
 
-        // DB의 tier와 RevenueCat이 다르면 DB 동기화 (RevenueCat이 source of truth)
+        // DB의 tier와 RevenueCat이 다르면 DB 동기화
         if (profile.tier !== tier) {
           supabase
             .from('profiles')
@@ -97,25 +79,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
             .then(() => {});
         }
 
-        // 월 변경 시 카운트 리셋
-        if (resetMonth !== currentMonth) {
-          downloadCount = 0;
-          resetMonth = currentMonth;
-          supabase
-            .from('profiles')
-            .update({ monthly_download_count: 0, download_reset_month: currentMonth })
-            .eq('id', user.id)
-            .then(() => {});
-        }
-
-        setSubState({ tier, expiresAt, monthlyDownloadCount: downloadCount, downloadResetMonth: resetMonth });
+        setSubState({ tier, expiresAt });
       } catch {
         // RevenueCat 실패 시 DB 기반 폴백
-        const currentMonth = getCurrentYearMonth();
         let tier = (profile.tier as PlanTier) ?? 'free';
         let expiresAt = profile.subscription_expires_at ?? null;
-        let downloadCount = profile.monthly_download_count ?? 0;
-        let resetMonth = profile.download_reset_month ?? currentMonth;
 
         if (tier === 'premium' as any) tier = 'pro';
         if (expiresAt && new Date(expiresAt) < new Date()) {
@@ -123,7 +91,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           expiresAt = null;
         }
 
-        setSubState({ tier, expiresAt, monthlyDownloadCount: downloadCount, downloadResetMonth: resetMonth });
+        setSubState({ tier, expiresAt });
       } finally {
         setLoading(false);
       }
@@ -141,8 +109,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       .update({
         tier:                    next.tier,
         subscription_expires_at: next.expiresAt,
-        monthly_download_count:  next.monthlyDownloadCount,
-        download_reset_month:    next.downloadResetMonth,
       })
       .eq('id', user.id);
   }, [user]);
@@ -153,30 +119,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       ? null
       : new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
-    await persistToSupabase({
-      tier:                 newTier,
-      expiresAt,
-      monthlyDownloadCount: 0,
-      downloadResetMonth:   getCurrentYearMonth(),
-    });
-  }, [persistToSupabase]);
-
-  // ── 다운로드 소모 ────────────────────────────────────────
-  const consumeDownload = useCallback(async (): Promise<boolean> => {
-    // 함수형 업데이트로 최신 상태 참조 (stale closure 방지)
-    return new Promise<boolean>((resolve) => {
-      setSubState(prev => {
-        const limits = PLAN_LIMITS[prev.tier];
-        if (limits.monthlyDownloadLimit === null) { resolve(true); return prev; }
-        if (limits.monthlyDownloadLimit === 0)    { resolve(false); return prev; }
-        if (prev.monthlyDownloadCount >= limits.monthlyDownloadLimit) { resolve(false); return prev; }
-
-        const next = { ...prev, monthlyDownloadCount: prev.monthlyDownloadCount + 1 };
-        persistToSupabase(next);
-        resolve(true);
-        return next;
-      });
-    });
+    await persistToSupabase({ tier: newTier, expiresAt });
   }, [persistToSupabase]);
 
   // ── 파생값 ──────────────────────────────────────────────
@@ -184,15 +127,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const effectiveTier: PlanTier = isExpired ? 'free' : subState.tier;
   const limits = PLAN_LIMITS[effectiveTier];
 
-  const remainingDownloads: number | null = (() => {
-    if (limits.monthlyDownloadLimit === null) return null;
-    if (limits.monthlyDownloadLimit === 0)    return 0;
-    return Math.max(0, limits.monthlyDownloadLimit - subState.monthlyDownloadCount);
-  })();
-
   const value: SubscriptionContextValue = {
-    tier: effectiveTier, limits, isExpired, remainingDownloads,
-    upgradePlan, consumeDownload, subscriptionState: subState, loading,
+    tier: effectiveTier, limits, isExpired,
+    upgradePlan, subscriptionState: subState, loading,
   };
 
   return (

@@ -1,11 +1,9 @@
 // ─────────────────────────────────────────────────────────────
-// useSkillProfile — UserSkillProfile 영속화 (AsyncStorage + Supabase)
+// useSkillProfile — UserSkillProfile 영속화 (AsyncStorage 로컬 전용)
 // ─────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../context';
-import { supabase } from '../lib';
 import { DEFAULT_SKILL_PROFILE } from '../lib/trackConfig';
 import type { UserSkillProfile } from '../lib/trackConfig';
 import type { TrackType } from '../theme';
@@ -16,7 +14,6 @@ const MS_PER_DAY = 86_400_000;
 export function useSkillProfile() {
   const [profile, setProfile] = useState<UserSkillProfile>(DEFAULT_SKILL_PROFILE);
   const [loaded, setLoaded] = useState(false);
-  const { session } = useAuth();
 
   // ── 로컬 로드 ──
   useEffect(() => {
@@ -30,52 +27,11 @@ export function useSkillProfile() {
     });
   }, []);
 
-  // ── Supabase에서 가져오기 (로그인 시) ──
-  useEffect(() => {
-    if (!session?.user?.id || !loaded) return;
-    supabase
-      .from('user_skill_profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          const remote: UserSkillProfile = {
-            partPracticeLevel: data.part_practice_level ?? data.rhythm_level ?? 1,
-            comprehensiveLevel: data.comprehensive_level ?? 1,
-            recentAccuracy: data.recent_accuracy ?? 0.6,
-            streakDays: data.streak_days ?? 0,
-            lastQuickTrack: data.last_quick_track ?? null,
-            sameTrackCount: data.same_track_count ?? 0,
-          };
-          setProfile(remote);
-          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
-        }
-      });
-  }, [session?.user?.id, loaded]);
-
   // ── 저장 헬퍼 ──
   const persist = useCallback(async (updated: UserSkillProfile) => {
     setProfile(updated);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-    // Supabase 동기화 (비차단)
-    if (session?.user?.id) {
-      supabase
-        .from('user_skill_profiles')
-        .upsert({
-          user_id: session.user.id,
-          part_practice_level: updated.partPracticeLevel,
-          comprehensive_level: updated.comprehensiveLevel,
-          recent_accuracy: updated.recentAccuracy,
-          streak_days: updated.streakDays,
-          last_quick_track: updated.lastQuickTrack,
-          same_track_count: updated.sameTrackCount,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' })
-        .then(() => { /* fire & forget */ });
-    }
-  }, [session?.user?.id]);
+  }, []);
 
   // ── 자기 평가 반영 ──
   const applyEvaluation = useCallback(async (

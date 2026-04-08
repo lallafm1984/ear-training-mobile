@@ -93,7 +93,7 @@ export default function ScoreEditorScreen() {
   const routeParams = route.params;
 
   // ── 구독 관련 훅 ──
-  const { tier, limits, remainingDownloads } = useSubscription();
+  const { tier, limits } = useSubscription();
   const { profile } = useAuth();
 
   // AI 생성 로딩 상태
@@ -110,7 +110,7 @@ export default function ScoreEditorScreen() {
     setShowUpgradeModal(true);
   }, []);
 
-  const { checkCanDownload, consumeDownload, checkImageDownload } = useDownloadQuota(
+  const { checkCanDownload, checkImageDownload } = useDownloadQuota(
     useCallback((reason: UpgradeReason) => {
       setUpgradeReason(reason);
       setShowUpgradeModal(true);
@@ -681,7 +681,7 @@ export default function ScoreEditorScreen() {
             ? <FileAudio size={14} color="#ffffff" />
             : <Lock size={14} color="#94a3b8" />}
           <Text style={{ fontSize: 12, color: limits.canDownloadAudio ? '#ffffff' : '#94a3b8', marginLeft: 6, fontWeight: 'bold' }}>
-            MP3 저장{limits.canDownloadAudio && remainingDownloads !== null ? ` (${remainingDownloads})` : ''}
+            MP3 저장
           </Text>
         </TouchableOpacity>
       </View>
@@ -732,7 +732,6 @@ export default function ScoreEditorScreen() {
                 selectedNote={selectedNoteAbcInfo}
                 isPlaying={isPlaying}
                 onPlayStateChange={(playing) => setIsPlaying(playing)}
-                onAudioSaveSuccess={consumeDownload}
                 showNoteCursor={showNoteCursor}
                 showMeasureHighlight={showMeasureHighlight}
                 hideNotes={hideNotes}

@@ -26,17 +26,13 @@ export const PLAN_COLOR: Record<PlanTier, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// 구독 상태 (AsyncStorage 저장 데이터)
+// 구독 상태
 // ─────────────────────────────────────────────────────────────
 
 export interface SubscriptionState {
   tier: PlanTier;
   /** 구독 만료 ISO 날짜 (free는 null) */
   expiresAt: string | null;
-  /** 결제일 기준 이번 달 다운로드 사용 횟수 */
-  monthlyDownloadCount: number;
-  /** 다운로드 카운트 리셋 기준 날짜 (YYYY-MM 형식) */
-  downloadResetMonth: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -58,8 +54,6 @@ export interface PlanLimits {
   canDownloadAudio: boolean;
   /** 이미지 다운로드 가능 여부 */
   canDownloadImage: boolean;
-  /** 월 다운로드 제한 횟수 (null = 무제한) */
-  monthlyDownloadLimit: number | null;
   /** 악보 저장 가능 여부 */
   canSaveScores: boolean;
   /** 최대 저장 악보 수 (null = 무제한) */
@@ -91,7 +85,6 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     canEditNotes:          false,
     canDownloadAudio:      false,
     canDownloadImage:      true,
-    monthlyDownloadLimit:  0,
     canSaveScores:         true,
     maxSavedScores:        5,
     allowedKeySignatures:  ['C'],
@@ -109,7 +102,6 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     canEditNotes:          true,
     canDownloadAudio:      true,
     canDownloadImage:      true,
-    monthlyDownloadLimit:  null,
     canSaveScores:         true,
     maxSavedScores:        20,
     allowedKeySignatures:  ALL_KEY_SIGNATURES,

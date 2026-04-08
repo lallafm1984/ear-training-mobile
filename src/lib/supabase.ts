@@ -44,8 +44,6 @@ export interface Profile {
   avatar_url:            string | null;
   tier:                  'free' | 'pro';
   subscription_expires_at: string | null;
-  monthly_download_count:  number;
-  download_reset_month:    string;
   created_at:            string;
   updated_at:            string;
 }

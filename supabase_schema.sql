@@ -9,10 +9,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email                    TEXT        NOT NULL,
   display_name             TEXT,
   avatar_url               TEXT,
-  tier                     TEXT        NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'pro', 'premium')),
+  tier                     TEXT        NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'pro')),
   subscription_expires_at  TIMESTAMPTZ,
-  monthly_download_count   INT         NOT NULL DEFAULT 0,
-  download_reset_month     TEXT        NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM'),
   created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -67,15 +65,3 @@ DROP TRIGGER IF EXISTS set_profiles_updated_at ON public.profiles;
 CREATE TRIGGER set_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
-
--- ── 5. 매월 1일 다운로드 카운트 초기화 함수 ────────────────
--- (선택사항: Supabase Scheduled Jobs 또는 Edge Function에서 호출)
-CREATE OR REPLACE FUNCTION public.reset_monthly_downloads()
-RETURNS void AS $$
-BEGIN
-  UPDATE public.profiles
-  SET monthly_download_count = 0,
-      download_reset_month   = TO_CHAR(NOW(), 'YYYY-MM')
-  WHERE download_reset_month < TO_CHAR(NOW(), 'YYYY-MM');
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
