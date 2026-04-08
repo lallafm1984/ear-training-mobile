@@ -27,7 +27,8 @@ function timeAgo(dateStr: string): string {
 }
 
 function ratingToStars(rating: number): string {
-  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  const clamped = Math.max(0, Math.min(5, Math.round(rating)));
+  return '★'.repeat(clamped) + '☆'.repeat(5 - clamped);
 }
 
 export default function RecentActivityList({ records, maxItems = 5 }: RecentActivityListProps) {

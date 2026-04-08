@@ -65,6 +65,14 @@ export default function ChoicePracticeScreen() {
     }
   }, [isPlaying]);
 
+  // 문제 진입/변경 시 자동 1회 재생 (렌더러 초기화 대기 후)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      abcjsRef.current?.togglePlay();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [question.id]);
+
   // 화면 벗어날 때 오디오 정지
   useFocusEffect(
     useCallback(() => {

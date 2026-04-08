@@ -10,6 +10,8 @@ export interface ExamSection {
   contentType: ContentCategory;
   questionCount: number;
   difficulty: ContentDifficulty;
+  /** 섹션 전체 배점 (문항 수로 균등 분배) */
+  points: number;
 }
 
 /** 모의시험 설정 */

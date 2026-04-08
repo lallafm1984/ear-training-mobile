@@ -9,7 +9,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft, Play, GraduationCap, BookOpen, Trophy,
-  ArrowUpDown, Layers, Crown,
+  ArrowUpDown, Layers, Crown, Lock,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -40,9 +40,8 @@ export default function MockExamSetupScreen() {
   const handleStart = () => {
     if (!selectedPreset) return;
 
-    // Pro 전용 체크: twoVoice 섹션이 있으면
-    const hasPro = selectedPreset.sections.some(s => s.contentType === 'twoVoice');
-    if (hasPro && tier === 'free') {
+    // free 유저는 기초 종합만 사용 가능
+    if (tier === 'free' && selectedPreset.id !== 'basic') {
       navigation.navigate('Paywall');
       return;
     }
@@ -79,7 +78,7 @@ export default function MockExamSetupScreen() {
           {EXAM_PRESETS.map(preset => {
             const active = selectedPreset?.id === preset.id;
             const IconComp = ICON_MAP[preset.icon] ?? GraduationCap;
-            const hasPro = preset.sections.some(s => s.contentType === 'twoVoice');
+            const isLocked = tier === 'free' && preset.id !== 'basic';
             const qCount = preset.sections.reduce((s, sec) => s + sec.questionCount, 0);
 
             return (
@@ -87,36 +86,39 @@ export default function MockExamSetupScreen() {
                 key={preset.id}
                 style={[
                   styles.presetCard,
-                  active && styles.presetCardActive,
+                  active && !isLocked && styles.presetCardActive,
+                  isLocked && styles.presetCardLocked,
                 ]}
-                onPress={() => setSelectedPreset(preset)}
-                activeOpacity={0.7}
+                onPress={() => isLocked ? navigation.navigate('Paywall') : setSelectedPreset(preset)}
+                activeOpacity={isLocked ? 1 : 0.7}
               >
                 <View style={styles.presetHeader}>
                   <View style={[
                     styles.presetIcon,
-                    active ? { backgroundColor: COLORS.amber500 } : { backgroundColor: COLORS.amber50 },
+                    isLocked
+                      ? { backgroundColor: '#b0bccc' }
+                      : active ? { backgroundColor: COLORS.amber500 } : { backgroundColor: COLORS.amber50 },
                   ]}>
-                    <IconComp size={20} color={active ? '#fff' : COLORS.amber600} />
+                    <IconComp size={20} color={isLocked ? '#6b7a8d' : active ? '#fff' : COLORS.amber600} />
                   </View>
                   <View style={styles.presetInfo}>
                     <View style={styles.presetNameRow}>
-                      <Text style={[styles.presetName, active && { color: COLORS.amber700 }]}>
+                      <Text style={[styles.presetName, isLocked && styles.presetNameLocked, !isLocked && active && { color: COLORS.amber700 }]}>
                         {preset.name}
                       </Text>
-                      {hasPro && tier === 'free' && (
-                        <View style={styles.proBadge}>
-                          <Crown size={10} color={COLORS.primary500} />
-                          <Text style={styles.proBadgeText}>Pro</Text>
+                      {isLocked && (
+                        <View style={styles.lockBadge}>
+                          <Lock size={10} color={COLORS.slate600} />
+                          <Text style={styles.lockBadgeText}>Pro</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.presetDesc}>{preset.description}</Text>
+                    <Text style={[styles.presetDesc, isLocked && { color: COLORS.slate400 }]}>{preset.description}</Text>
                   </View>
                 </View>
 
                 <View style={styles.presetMeta}>
-                  <Text style={styles.presetMetaText}>{qCount}문항</Text>
+                  <Text style={[styles.presetMetaText, isLocked && { color: COLORS.slate400 }]}>{qCount}문항</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -144,7 +146,7 @@ export default function MockExamSetupScreen() {
 
             <View style={styles.detailSummary}>
               <Text style={styles.detailSummaryText}>
-                총 {totalQuestions}문항 · 만점 {totalQuestions * 5}점
+                총 {totalQuestions}문항 · 만점 100점
               </Text>
             </View>
           </View>
@@ -254,19 +256,27 @@ const styles = StyleSheet.create({
     color: COLORS.slate500,
     marginTop: 2,
   },
-  proBadge: {
+  presetCardLocked: {
+    backgroundColor: '#dde3ed',
+    borderColor: '#94a3b8',
+    borderStyle: 'dashed',
+  },
+  presetNameLocked: {
+    color: COLORS.slate500,
+  },
+  lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: '#64748b',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
-    gap: 2,
+    gap: 3,
   },
-  proBadgeText: {
+  lockBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.primary500,
+    color: '#fff',
   },
   presetMeta: {
     flexDirection: 'row',

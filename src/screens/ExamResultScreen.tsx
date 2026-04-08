@@ -40,6 +40,7 @@ export default function ExamResultScreen() {
   const categoryScores: Record<string, { score: number; max: number; count: number }> =
     JSON.parse(categoryScoresStr);
 
+
   // AsyncStorage에 시험 결과 저장 (1회)
   useEffect(() => {
     if (savedRef.current) return;
@@ -94,8 +95,8 @@ export default function ExamResultScreen() {
         {/* 점수 원형 */}
         <View style={[styles.scoreCircle, { borderColor: grade.color }]}>
           <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}%</Text>
-          <Text style={styles.scoreFraction}>{totalScore} / {maxScore}</Text>
+          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}점</Text>
+          <Text style={styles.scoreFraction}>만점 100점</Text>
         </View>
 
         <Text style={[styles.gradeMessage, { color: grade.color }]}>{grade.message}</Text>
@@ -141,7 +142,7 @@ export default function ExamResultScreen() {
                     />
                   </View>
                   <Text style={[styles.catScore, { color: colors.main }]}>
-                    {data.score}/{data.max}
+                    {Math.round(data.score)}/{Math.round(data.max)}
                   </Text>
                 </View>
               </View>

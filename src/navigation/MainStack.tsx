@@ -15,6 +15,8 @@ import MockExamSetupScreen from '../screens/MockExamSetupScreen';
 import MockExamScreen from '../screens/MockExamScreen';
 import ExamResultScreen from '../screens/ExamResultScreen';
 import StatsScreen from '../screens/StatsScreen';
+import DailyGoalScreen from '../screens/DailyGoalScreen';
+import MascotGalleryScreen from '../screens/MascotGalleryScreen';
 import OnboardingScreen, { hasCompletedOnboarding } from '../screens/OnboardingScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -56,6 +58,8 @@ export type MainStackParamList = {
     totalQuestions: number;
   };
   Stats: undefined;
+  DailyGoal: undefined;
+  MascotGallery: undefined;
   Paywall: undefined;
   Profile: undefined;
 };
@@ -89,6 +93,8 @@ export default function MainStack() {
       <Stack.Screen name="MockExam" component={MockExamScreen} />
       <Stack.Screen name="ExamResult" component={ExamResultScreen} />
       <Stack.Screen name="Stats" component={StatsScreen} />
+      <Stack.Screen name="DailyGoal" component={DailyGoalScreen} />
+      <Stack.Screen name="MascotGallery" component={MascotGalleryScreen} />
       <Stack.Screen
         name="Paywall"
         options={{ presentation: 'modal' }}

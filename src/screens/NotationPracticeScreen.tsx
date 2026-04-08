@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -37,6 +37,7 @@ import DurationToolbar from '../components/DurationToolbar';
 import GradingResultView from '../components/GradingResult';
 import { useNoteInput } from '../hooks/useNoteInput';
 import { gradeNotes, type GradingResult, type NoteGrade } from '../lib/grading';
+import { useAlert } from '../context';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -263,6 +264,7 @@ export default function NotationPracticeScreen() {
 
   const { addRecord } = usePracticeHistory();
   const { applyEvaluation, updateStreak } = useSkillProfile();
+  const { showAlert } = useAlert();
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
   const scaleAbcjsRef = useRef<AbcjsRendererHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -294,6 +296,7 @@ export default function NotationPracticeScreen() {
   const [rated, setRated] = useState(false);
   const [practiceCount, setPracticeCount] = useState(0);
   const [ratings, setRatings] = useState<number[]>([]);
+  const [accuracies, setAccuracies] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [rhythmTab, setRhythmTab] = useState<'note' | 'rest'>('note');
 
@@ -443,6 +446,7 @@ export default function NotationPracticeScreen() {
     setHideNotes(false);
     setPracticeCount(prev => prev + 1);
     setRatings(prev => [...prev, rating]);
+    setAccuracies(prev => [...prev, (rating - 1) / 4]);
 
     // 연습 기록 저장
     const record: PracticeRecord = {
@@ -532,6 +536,7 @@ export default function NotationPracticeScreen() {
 
     setPracticeCount(prev => prev + 1);
     setRatings(prev => [...prev, result.selfRating]);
+    setAccuracies(prev => [...prev, result.accuracy]);
     setCorrectCounts(prev => [...prev, correctCount]);
 
     const record: PracticeRecord = {
@@ -588,6 +593,7 @@ export default function NotationPracticeScreen() {
 
     setPracticeCount(prev => prev + 1);
     setRatings(prev => [...prev, result.selfRating]);
+    setAccuracies(prev => [...prev, result.accuracy]);
 
     const record: PracticeRecord = {
       id: `pr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -617,14 +623,18 @@ export default function NotationPracticeScreen() {
     const avgRating = ratings.length > 0
       ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
       : 0;
+    const avgAccuracy = accuracies.length > 0
+      ? accuracies.reduce((a, b) => a + b, 0) / accuracies.length
+      : 0;
+    const percentage = Math.round(avgAccuracy * 100);
     const totalCorrect = correctCounts.reduce((a, b) => a + b, 0);
 
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.resultContainer}>
           <View style={[styles.resultCircle, { borderColor: colors.main }]}>
-            <Text style={[styles.resultScore, { color: colors.main }]}>{avgRating}</Text>
-            <Text style={styles.resultMax}>/5</Text>
+            <Text style={[styles.resultScore, { color: colors.main }]}>{percentage}%</Text>
+            <Text style={styles.resultMax}>{avgRating} / 5</Text>
           </View>
 
           <Text style={styles.resultTitle}>연습 완료!</Text>
@@ -639,6 +649,7 @@ export default function NotationPracticeScreen() {
                 setShowResult(false);
                 setPracticeCount(0);
                 setRatings([]);
+                setAccuracies([]);
                 setCorrectCounts([]);
                 generate();
               }}
@@ -1126,14 +1137,15 @@ export default function NotationPracticeScreen() {
                       backgroundColor: noteInput.isComplete ? colors.main : COLORS.slate200,
                     }]}
                     onPress={() => {
-                      Alert.alert(
-                        '제출 확인',
-                        '제출 하시겠습니까?',
-                        [
+                      showAlert({
+                        title: '제출 확인',
+                        message: '기보한 내용을 제출하시겠습니까?',
+                        type: 'warning',
+                        buttons: [
                           { text: '취소', style: 'cancel' },
                           { text: '제출', onPress: handleMelodySubmit },
                         ],
-                      );
+                      });
                     }}
                     disabled={!noteInput.isComplete}
                   >

@@ -6,3 +6,4 @@ export { useDownloadQuota } from './useDownloadQuota';
 export { useSkillProfile } from './useSkillProfile';
 export { usePracticeHistory } from './usePracticeHistory';
 export type { PracticeStats } from './usePracticeHistory';
+export { useMascotExp } from './useMascotExp';

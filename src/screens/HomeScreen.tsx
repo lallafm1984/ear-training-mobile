@@ -2,84 +2,47 @@
 // HomeScreen — 카드형 대시보드 메인 화면
 // ─────────────────────────────────────────────────────────────
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3, Trophy } from 'lucide-react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { useAuth } from '../context';
 import { useSubscription } from '../context';
 import { useSkillProfile } from '../hooks';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { useMascotExp } from '../hooks/useMascotExp';
 import { COLORS } from '../theme/colors';
-import { CONTENT_CATEGORIES, getContentConfig, getDifficultyList } from '../lib/contentConfig';
-import type { ContentCategory, ContentDifficulty } from '../types/content';
+import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
+import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 import CategoryCard from '../components/CategoryCard';
-import QuickStartCard from '../components/QuickStartCard';
 import RecentActivityList from '../components/RecentActivityList';
+import MascotCharacter from '../components/MascotCharacter';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const DAILY_GOAL_FREE = 2;
-const DAILY_GOAL_PRO = 5;
+const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
+const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
-/** 연습 기록 기반 가장 약한 카테고리 추천 */
-function getSmartRecommendation(
-  stats: { totalByCategory: Record<ContentCategory, number>; avgRatingByCategory: Record<ContentCategory, number> },
-  partPracticeLevel: number,
-): { category: ContentCategory; difficulty: ContentDifficulty } {
-  const candidates: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
-
-  // 연습 횟수가 가장 적은 카테고리, 동률이면 평균 점수가 낮은 카테고리
-  const sorted = [...candidates].sort((a, b) => {
-    const countDiff = (stats.totalByCategory[a] || 0) - (stats.totalByCategory[b] || 0);
-    if (countDiff !== 0) return countDiff;
-    return (stats.avgRatingByCategory[a] || 0) - (stats.avgRatingByCategory[b] || 0);
-  });
-
-  const category = sorted[0];
-  const difficulties = getDifficultyList(category);
-
-  // 카테고리별 적절한 난이도 결정
-  let levelIndex: number;
-  if (category === 'melody') {
-    levelIndex = Math.min(partPracticeLevel - 1, difficulties.length - 1);
-  } else {
-    // 평균 점수 기반: 3점 이상이면 다음 레벨
-    const avg = stats.avgRatingByCategory[category] || 0;
-    const count = stats.totalByCategory[category] || 0;
-    if (count === 0) {
-      levelIndex = 0;
-    } else if (avg >= 4) {
-      levelIndex = Math.min(Math.floor(count / 5), difficulties.length - 1);
-    } else {
-      levelIndex = Math.min(Math.floor(count / 8), difficulties.length - 1);
-    }
-  }
-
-  return {
-    category,
-    difficulty: difficulties[Math.max(0, levelIndex)],
-  };
-}
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavProp>();
   const { profile } = useAuth();
   const { tier } = useSubscription();
   const { profile: skillProfile } = useSkillProfile();
-  const { stats, loaded } = usePracticeHistory();
+  const { stats, loaded, reload } = usePracticeHistory();
+  const { level: mascotLevel } = useMascotExp();
 
-  // 스마트 추천
-  const recommendation = useMemo(
-    () => getSmartRecommendation(stats, skillProfile.partPracticeLevel),
-    [stats, skillProfile.partPracticeLevel],
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
   );
 
   const handleCategoryPress = (category: ContentCategory) => {
@@ -91,17 +54,23 @@ export default function HomeScreen() {
     navigation.navigate('CategoryPractice', { category });
   };
 
-  const handleQuickStart = () => {
-    navigation.navigate('CategoryPractice', { category: recommendation.category });
-  };
-
-  const dailyGoal = tier === 'pro' ? DAILY_GOAL_PRO : DAILY_GOAL_FREE;
+  // 오늘 연습한 목표 카테고리 수
+  const todayGoalDone = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const cats = new Set<ContentCategory>();
+    stats.recentRecords.forEach(r => {
+      if (new Date(r.practicedAt).toDateString() === todayStr && GOAL_CATEGORIES.includes(r.contentType)) {
+        cats.add(r.contentType);
+      }
+    });
+    return cats.size;
+  }, [stats.recentRecords]);
 
   const handleDailyGoal = () => {
-    navigation.navigate('CategoryPractice', { category: recommendation.category });
+    navigation.navigate('DailyGoal');
   };
 
-  const dailyDone = stats.dailyCount >= dailyGoal;
+  const dailyDone = todayGoalDone >= DAILY_GOAL_COUNT;
 
   if (!loaded) {
     return (
@@ -142,13 +111,24 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* 빠른 시작 */}
-        <QuickStartCard
-          category={recommendation.category}
-          difficulty={recommendation.difficulty}
-          streakDays={skillProfile.streakDays}
-          onPress={handleQuickStart}
-        />
+        {/* 마스코트 인사 */}
+        <TouchableOpacity
+          style={styles.mascotCard}
+          onPress={() => navigation.navigate('MascotGallery')}
+          activeOpacity={0.7}
+        >
+          <MascotCharacter size={80} level={mascotLevel} happy={dailyDone} />
+          <View style={styles.mascotTextArea}>
+            <Text style={styles.mascotTitle}>
+              {dailyDone ? '오늘도 잘 했어요!' : '오늘도 연습해 볼까요?'}
+            </Text>
+            <Text style={styles.mascotDesc}>
+              {dailyDone
+                ? '모든 목표를 달성했어요. 대단해요!'
+                : `오늘의 목표 ${todayGoalDone}/${DAILY_GOAL_COUNT} 진행 중`}
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>
@@ -163,13 +143,13 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             {dailyDone
-              ? <CheckCircle size={24} color={COLORS.success} />
+              ? <Trophy size={24} color="#f59e0b" />
               : <Flame size={24} color="#ea580c" />}
             <Text style={[styles.actionTitle, { color: dailyDone ? '#065f46' : '#9a3412' }]}>
-              일일 목표
+              {dailyDone ? '달성 완료!' : '일일 목표'}
             </Text>
             <Text style={styles.actionDesc}>
-              {stats.dailyCount}/{dailyGoal} 완료
+              {todayGoalDone}/{DAILY_GOAL_COUNT} 완료
             </Text>
           </TouchableOpacity>
 
@@ -268,6 +248,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 20,
+  },
+  mascotCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+  },
+  mascotTextArea: {
+    flex: 1,
+    gap: 4,
+  },
+  mascotTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#312e81',
+  },
+  mascotDesc: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '500',
   },
   actionRow: {
     flexDirection: 'row',

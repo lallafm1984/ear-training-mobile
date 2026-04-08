@@ -27,22 +27,27 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: config.bgColor, borderColor: config.color + '30' }]}
+      style={[
+        styles.card,
+        locked
+          ? { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed' }
+          : { backgroundColor: config.bgColor, borderColor: config.color + '30' },
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconWrap, { backgroundColor: config.color + '18' }]}>
-        <IconComponent size={24} color={config.color} />
+      <View style={[styles.iconWrap, { backgroundColor: locked ? '#b0bccc' : config.color + '18' }]}>
+        <IconComponent size={24} color={locked ? '#6b7a8d' : config.color} />
       </View>
-      <Text style={[styles.name, { color: config.color }]} numberOfLines={1}>
+      <Text style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]} numberOfLines={1}>
         {config.name}
       </Text>
-      <Text style={styles.desc} numberOfLines={1}>
+      <Text style={[styles.desc, locked && { color: COLORS.slate400 }]} numberOfLines={1}>
         {config.description}
       </Text>
       {locked && (
         <View style={styles.lockBadge}>
-          <Lock size={10} color={COLORS.slate400} />
+          <Lock size={10} color={COLORS.slate600} />
           <Text style={styles.lockText}>Pro</Text>
         </View>
       )}
@@ -91,16 +96,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    backgroundColor: COLORS.slate100,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: '#64748b',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 8,
-    gap: 2,
+    gap: 3,
   },
   lockText: {
     fontSize: 9,
-    fontWeight: '600',
-    color: COLORS.slate400,
+    fontWeight: '700',
+    color: '#fff',
   },
   countBadge: {
     marginTop: 6,

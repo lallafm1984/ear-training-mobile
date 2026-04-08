@@ -46,7 +46,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style="dark" backgroundColor="#f8fafc" />
         <NavigationContainer>
           <AlertProvider>
             <AuthProvider>

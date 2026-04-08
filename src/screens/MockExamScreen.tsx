@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, Alert,
+  View, Text, TouchableOpacity, StyleSheet, Animated,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,12 +24,14 @@ import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
+import { useAlert } from '../context';
 import type { ExamQuestion, MockExamSession, ExamSection } from '../types/exam';
 import type { ContentCategory, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'MockExam'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
+
 
 interface QuestionItem {
   examQuestion: ExamQuestion;
@@ -39,6 +41,8 @@ interface QuestionItem {
   /** 기보형 문항용 PracticeScore (채점용) */
   practiceScore?: PracticeScore;
   sectionIndex: number;
+  /** 문항 1개당 배점 */
+  pointsPerQuestion: number;
 }
 
 export default function MockExamScreen() {
@@ -50,6 +54,7 @@ export default function MockExamScreen() {
   const preset = EXAM_PRESETS.find(p => p.id === presetId)!;
   const { addBatchRecords } = usePracticeHistory();
   const { updateStreak } = useSkillProfile();
+  const { showAlert } = useAlert();
 
   // 오디오 재생
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
@@ -74,6 +79,7 @@ export default function MockExamScreen() {
   const questions = useMemo<QuestionItem[]>(() => {
     const items: QuestionItem[] = [];
     preset.sections.forEach((section, sIdx) => {
+      const pointsPerQuestion = section.points / section.questionCount;
       for (let i = 0; i < section.questionCount; i++) {
         const isChoice = ['interval', 'chord', 'key'].includes(section.contentType);
 
@@ -89,9 +95,9 @@ export default function MockExamScreen() {
             },
             choiceQuestion: cq,
             sectionIndex: sIdx,
+            pointsPerQuestion,
           });
         } else {
-          // 기보형 문항 (melody, rhythm, twoVoice) — ABC notation 생성
           const score = generatePracticeScore(section.contentType, section.difficulty);
           const abc = generateAbc({
             title: '',
@@ -113,6 +119,7 @@ export default function MockExamScreen() {
             abcNotation: abc,
             practiceScore: score,
             sectionIndex: sIdx,
+            pointsPerQuestion,
           });
         }
       }
@@ -190,25 +197,30 @@ export default function MockExamScreen() {
 
     // 결과 계산 + 문항별 연습 기록 수집
     let totalScore = 0;
-    const maxScore = totalQuestions * 5;
     const practiceRecords: PracticeRecord[] = [];
 
     const categoryScores: Record<string, { score: number; max: number; count: number }> = {};
 
     questions.forEach((q, idx) => {
       const cat = q.examQuestion.contentType;
+      const catMax = q.pointsPerQuestion;
       if (!categoryScores[cat]) {
         categoryScores[cat] = { score: 0, max: 0, count: 0 };
       }
       categoryScores[cat].count++;
-      categoryScores[cat].max += 5;
+      categoryScores[cat].max += catMax;
 
       let score: number;
+      let recordRating: number; // 1-5 (연습 기록용)
       if (isChoiceQuestion(q)) {
         const isCorrect = answers[idx] === q.examQuestion.correctAnswer;
-        score = isCorrect ? 5 : (selfRatings[idx] ?? 1);
+        score = isCorrect ? catMax : 0;
+        recordRating = isCorrect ? 5 : 1;
       } else {
-        score = selfRatings[idx] ?? 1;
+        // selfRating 1-5 → 카테고리 만점 비례 변환
+        const rating = selfRatings[idx] ?? 1;
+        score = Math.round((rating / 5) * catMax);
+        recordRating = rating;
       }
       totalScore += score;
       categoryScores[cat].score += score;
@@ -217,10 +229,13 @@ export default function MockExamScreen() {
         id: `pr_exam_${Date.now()}_${idx}`,
         contentType: cat,
         difficulty: q.examQuestion.difficulty,
-        selfRating: score,
+        selfRating: recordRating,
         practicedAt: new Date().toISOString(),
       });
     });
+
+    // 카테고리별 만점 합산
+    const maxScore = Object.values(categoryScores).reduce((sum, v) => sum + v.max, 0);
 
     // 배치로 한 번에 저장 (AsyncStorage 동시 쓰기 방지)
     await addBatchRecords(practiceRecords);
@@ -247,27 +262,29 @@ export default function MockExamScreen() {
         return;
       }
       e.preventDefault();
-      Alert.alert(
-        '시험 종료',
-        '시험을 종료하시겠습니까? 진행 상황이 사라집니다.',
-        [
+      showAlert({
+        title: '시험 종료',
+        message: '시험을 종료하시겠습니까? 진행 상황이 사라집니다.',
+        type: 'warning',
+        buttons: [
           { text: '계속하기', style: 'cancel' },
           { text: '종료', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
-        ]
-      );
+        ],
+      });
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, showAlert]);
 
   const confirmSubmit = () => {
-    Alert.alert(
-      '시험 제출',
-      '시험을 제출하시겠습니까?',
-      [
+    showAlert({
+      title: '시험 제출',
+      message: '시험을 제출하시겠습니까?',
+      type: 'warning',
+      buttons: [
         { text: '취소', style: 'cancel' },
         { text: '제출', onPress: handleSubmit },
       ],
-    );
+    });
   };
 
   // 진행도
@@ -597,15 +614,13 @@ const styles = StyleSheet.create({
   // 문항 도트
   dotsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     marginTop: 8,
   },
   dot: {
-    width: 28,
+    flex: 1,
     height: 28,
-    borderRadius: 8,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.slate100,

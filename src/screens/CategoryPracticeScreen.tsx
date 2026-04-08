@@ -142,7 +142,7 @@ export default function CategoryPracticeScreen() {
                   locked && styles.diffLocked,
                 ]}
                 onPress={() => setSelectedDiff(diff)}
-                activeOpacity={0.7}
+                activeOpacity={locked ? 1 : 0.7}
               >
                 <View style={styles.diffLeft}>
                   <View style={[
@@ -183,7 +183,7 @@ export default function CategoryPracticeScreen() {
                     )}
                   </View>
                 </View>
-                {locked && <Lock size={14} color={active ? '#fff' : '#94a3b8'} />}
+                {locked && <Lock size={14} color={active ? '#fff' : '#64748b'} />}
               </TouchableOpacity>
             );
           })}
@@ -315,7 +315,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   diffLocked: {
-    opacity: 0.6,
+    backgroundColor: '#dde3ed',
+    borderColor: '#94a3b8',
+    borderStyle: 'dashed',
   },
   diffLeft: {
     flexDirection: 'row',

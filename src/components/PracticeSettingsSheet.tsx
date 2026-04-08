@@ -112,10 +112,10 @@ export default function PracticeSettingsSheet({
                 style={[
                   styles.timeChip,
                   active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { opacity: 0.45 },
+                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
                 ]}
               >
-                {locked && <Lock size={8} color="#94a3b8" style={{ position: 'absolute', top: 3, right: 3 }} />}
+                {locked && <Lock size={8} color="#64748b" style={{ position: 'absolute', top: 3, right: 3 }} />}
                 <Text style={[styles.timeChipText, active && { color: '#fff' }]}>
                   {t}
                 </Text>
@@ -199,10 +199,10 @@ export default function PracticeSettingsSheet({
                 style={[
                   styles.keyChip,
                   active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { opacity: 0.45 },
+                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
                 ]}
               >
-                {locked && <Lock size={7} color="#94a3b8" style={{ position: 'absolute', top: 2, right: 2 }} />}
+                {locked && <Lock size={7} color="#64748b" style={{ position: 'absolute', top: 2, right: 2 }} />}
                 <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
                   {KEY_DISPLAY[k] ?? k}
                 </Text>
@@ -228,10 +228,10 @@ export default function PracticeSettingsSheet({
                 style={[
                   styles.keyChip,
                   active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { opacity: 0.45 },
+                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
                 ]}
               >
-                {locked && <Lock size={7} color="#94a3b8" style={{ position: 'absolute', top: 2, right: 2 }} />}
+                {locked && <Lock size={7} color="#64748b" style={{ position: 'absolute', top: 2, right: 2 }} />}
                 <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
                   {KEY_DISPLAY[k] ?? k}
                 </Text>

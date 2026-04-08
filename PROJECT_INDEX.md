@@ -6,15 +6,16 @@
 
 ```
 src/
-├── components/          # 재사용 가능 UI 컴포넌트 (17개)
+├── components/          # 재사용 가능 UI 컴포넌트 (19개)
 ├── context/             # React Context 프로바이더 (3개)
-├── hooks/               # 커스텀 React 훅 (5개)
+├── hooks/               # 커스텀 React 훅 (6개)
 ├── lib/                 # 비즈니스 로직 모듈
 │   ├── scoreUtils/      # 악보 유틸리티 (8개 모듈)
 │   ├── scoreGenerator/  # 악보 생성 엔진 (6개 모듈)
 │   ├── twoVoice/        # 2성부 작곡 모듈 (12개)
 │   ├── practiceScoreGenerator.ts  # 기보형 악보 생성 (공유)
 │   ├── examNotationStore.ts      # 모의시험↔기보연습 데이터 전달
+│   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   └── ...              # 기타 라이브러리
 ├── navigation/          # 네비게이션 설정
 ├── screens/             # 화면 컴포넌트
@@ -98,6 +99,7 @@ src/
 | `usePracticeHistory()` | 연습 통계/기록 |
 | `useDownloadQuota()` | 다운로드 권한/소모 |
 | `useNoteInput()` | 음표 입력 핸들링 |
+| `useMascotExp()` | 마스코트 EXP/레벨 관리 (AsyncStorage) |
 | `usePlaybackConfig()` | ScoreEditor 재생 설정 상태 (15개) |
 | `useGenerationState()` | ScoreEditor 생성 파라미터 상태 (8개) |
 
