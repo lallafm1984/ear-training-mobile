@@ -112,11 +112,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* 마스코트 인사 */}
-        <TouchableOpacity
-          style={styles.mascotCard}
-          onPress={() => navigation.navigate('MascotGallery')}
-          activeOpacity={0.7}
-        >
+        <View style={styles.mascotCard}>
           <MascotCharacter size={80} level={mascotLevel} happy={dailyDone} />
           <View style={styles.mascotTextArea}>
             <Text style={styles.mascotTitle}>
@@ -128,7 +124,7 @@ export default function HomeScreen() {
                 : `오늘의 목표 ${todayGoalDone}/${DAILY_GOAL_COUNT} 진행 중`}
             </Text>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>

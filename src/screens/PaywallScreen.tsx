@@ -1,86 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Dimensions, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Crown, Check, X, Sparkles, Music2, Download, Disc3, BookOpen, Edit3 } from 'lucide-react-native';
+import {
+  Crown, X, Sparkles, Music2, FileMusic,
+  Layers, ArrowUpDown, Key, Drum,
+} from 'lucide-react-native';
 import { useAlert, useSubscription } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
-import { getOfferings, purchasePackage, restorePurchases, isPro, getCustomerInfo } from '../lib/revenueCat';
+import { getOfferings, purchasePackage, isPro } from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PaywallScreenProps {
   onClose: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────
-// 요금제 정보
+// 청음 훈련 카테고리별 Free/Pro 비교
 // ─────────────────────────────────────────────────────────────
 
-interface PlanCard {
-  tier: PlanTier;
-  price: string;
-  priceNote: string;
-  badge?: string;
-  features: { label: string; icon: React.ReactNode }[];
-}
-
-const PLAN_CARDS: PlanCard[] = [
-  {
-    tier: 'free',
-    price: '무료',
-    priceNote: '영구 무료',
-    features: [
-      { label: '다장조(C) · 4/4박자만', icon: <Music2 size={13} color="#94a3b8" /> },
-      { label: '초급 난이도 선택 가능', icon: <BookOpen size={13} color="#94a3b8" /> },
-      { label: '최대 4마디 생성', icon: <Music2 size={13} color="#94a3b8" /> },
-      { label: '악보 최대 5개 저장', icon: <Check size={13} color="#94a3b8" /> },
-      { label: '악보 이미지 저장 가능', icon: <Download size={13} color="#94a3b8" /> },
-      { label: '일반 재생 모드만 사용 가능', icon: <Disc3 size={13} color="#94a3b8" /> },
-    ],
-  },
-  {
-    tier: 'pro',
-    price: '5,500원',
-    priceNote: '월 구독 / 언제든 취소',
-    badge: '모든 기능 잠금 해제',
-    features: [
-      { label: '모든 조성 · 박자 사용 가능', icon: <Music2 size={13} color="#6366f1" /> },
-      { label: '큰보표 (Grand Staff) 사용', icon: <Check size={13} color="#6366f1" /> },
-      { label: '모든 재생 모드 사용 가능', icon: <Disc3 size={13} color="#6366f1" /> },
-      { label: '초·중·고급 전 난이도', icon: <BookOpen size={13} color="#6366f1" /> },
-      { label: '모든 마디 수 선택 가능', icon: <Music2 size={13} color="#6366f1" /> },
-      { label: '음표 편집 기능', icon: <Edit3 size={13} color="#6366f1" /> },
-      { label: '음원 · 이미지 무제한 다운로드', icon: <Download size={13} color="#6366f1" /> },
-      { label: '악보 최대 20개 저장', icon: <Check size={13} color="#6366f1" /> },
-    ],
-  },
-];
-
-// ─────────────────────────────────────────────────────────────
-// 비교표 행
-// ─────────────────────────────────────────────────────────────
-
-interface CompareRow {
-  label: string;
+interface CategoryCompare {
+  name: string;
+  icon: React.ReactNode;
+  color: string;
   free: string;
   pro: string;
 }
 
-const COMPARE_ROWS: CompareRow[] = [
-  { label: '조성', free: 'C만', pro: '전체 (24개)' },
-  { label: '박자', free: '4/4만', pro: '전체 (8종)' },
-  { label: '큰보표', free: '✕', pro: '✓' },
-  { label: '재생 모드', free: '일반만', pro: '전체' },
-  { label: '난이도', free: '초급', pro: '전체' },
-  { label: '마디 수', free: '최대 4', pro: '무제한' },
-  { label: '악보 저장', free: '5개', pro: '20개' },
-  { label: '음표 편집', free: '✕', pro: '✓' },
-  { label: '음원 다운로드', free: '✕', pro: '무제한' },
-  { label: '이미지 저장', free: '✓', pro: '✓' },
+const CATEGORY_COMPARES: CategoryCompare[] = [
+  { name: '선율', icon: <Music2 size={14} color="#6366f1" />, color: '#6366f1', free: 'Lv.1~3', pro: 'Lv.1~9' },
+  { name: '리듬', icon: <Drum size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1~2', pro: 'Lv.1~6' },
+  { name: '음정', icon: <ArrowUpDown size={14} color="#10b981" />, color: '#10b981', free: 'Lv.1~2', pro: 'Lv.1~4' },
+  { name: '화성', icon: <Layers size={14} color="#8b5cf6" />, color: '#8b5cf6', free: 'Lv.1', pro: 'Lv.1~4' },
+  { name: '조성', icon: <Key size={14} color="#ef4444" />, color: '#ef4444', free: 'Lv.1', pro: 'Lv.1~3' },
+  { name: '2성부', icon: <FileMusic size={14} color="#0ea5e9" />, color: '#0ea5e9', free: '잠금', pro: 'Lv.1~4' },
+  { name: '모의시험', icon: <Crown size={14} color="#f59e0b" />, color: '#f59e0b', free: '1단계', pro: '전체' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -90,12 +45,10 @@ const COMPARE_ROWS: CompareRow[] = [
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const { tier: currentTier, loading } = useSubscription();
   const { showAlert } = useAlert();
-  const [purchasing, setPurchasing] = useState<PlanTier | null>(null);
-  const [showCompare, setShowCompare] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
 
-  // RevenueCat에서 상품 정보 로드
   useEffect(() => {
     getOfferings()
       .then(pkgs => setPackages(pkgs))
@@ -103,31 +56,12 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       .finally(() => setLoadingPackages(false));
   }, []);
 
-  const handleSelectPlan = async (tier: PlanTier) => {
-    if (tier === currentTier) {
-      showAlert({ title: '현재 플랜', message: `이미 ${PLAN_NAME[tier]} 플랜을 이용 중입니다.`, type: 'info' });
+  const handleSubscribe = async () => {
+    if (currentTier === 'pro') {
+      showAlert({ title: '이미 Pro', message: '이미 Pro 플랜을 이용 중입니다.', type: 'info' });
       return;
     }
 
-    if (currentTier === 'pro' && tier === 'free') {
-      showAlert({
-        title: '플랜 변경 불가',
-        message: 'Pro 플랜에서 무료 플랜으로는 직접 변경할 수 없습니다.\n\nGoogle Play / App Store에서 구독을 취소하세요.',
-        type: 'warning',
-      });
-      return;
-    }
-
-    if (tier === 'free') {
-      showAlert({
-        title: '무료 플랜으로 변경',
-        message: '유료 구독을 취소하면 다음 갱신일 이후 무료 플랜으로 전환됩니다.\n\nGoogle Play / App Store에서 직접 구독을 취소하세요.',
-        type: 'info',
-      });
-      return;
-    }
-
-    // RevenueCat 패키지 구매
     const pkg = packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
     if (!pkg) {
       showAlert({
@@ -138,19 +72,18 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       return;
     }
 
-    setPurchasing(tier);
+    setPurchasing(true);
     try {
       const customerInfo = await purchasePackage(pkg);
       if (isPro(customerInfo)) {
         showAlert({
-          title: '구독 완료',
-          message: `${PLAN_NAME[tier]} 플랜이 활성화되었습니다!\n모든 기능을 자유롭게 이용하세요.`,
+          title: '구독 완료!',
+          message: 'Pro 플랜이 활성화되었습니다.\n모든 기능을 자유롭게 이용하세요.',
           type: 'success',
           buttons: [{ text: '확인', onPress: onClose }],
         });
       }
     } catch (e: any) {
-      // 사용자가 취소한 경우 (userCancelled)
       if (e?.userCancelled) return;
       showAlert({
         title: '구독 오류',
@@ -158,34 +91,11 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         type: 'error',
       });
     } finally {
-      setPurchasing(null);
+      setPurchasing(false);
     }
   };
 
-  const handleRestore = async () => {
-    setPurchasing('pro');
-    try {
-      const info = await restorePurchases();
-      if (isPro(info)) {
-        showAlert({
-          title: '복원 완료',
-          message: 'Pro 구독이 복원되었습니다!',
-          type: 'success',
-          buttons: [{ text: '확인', onPress: onClose }],
-        });
-      } else {
-        showAlert({
-          title: '복원 결과',
-          message: '활성 구독을 찾을 수 없습니다.',
-          type: 'info',
-        });
-      }
-    } catch {
-      showAlert({ title: '오류', message: '구독 복원 중 오류가 발생했습니다.', type: 'error' });
-    } finally {
-      setPurchasing(null);
-    }
-  };
+  const isPro_ = currentTier === 'pro';
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -194,10 +104,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <X size={18} color="#64748b" />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Crown size={18} color="#6366f1" />
-          <Text style={styles.headerTitle}>MelodyGen 요금제</Text>
-        </View>
+        <Text style={styles.headerTitle}>요금제</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -205,142 +112,78 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 부제목 */}
-        <Text style={styles.subtitle}>
-          전문적인 청음 훈련을 위한 플랜을 선택하세요
-        </Text>
-
-        {/* 현재 플랜 표시 */}
-        {currentTier !== 'free' && (
-          <View style={styles.currentPlanBanner}>
-            <Sparkles size={14} color={PLAN_COLOR[currentTier]} />
-            <Text style={[styles.currentPlanText, { color: PLAN_COLOR[currentTier] }]}>
-              현재 {PLAN_NAME[currentTier]} 플랜 이용 중
-            </Text>
+        {/* 히어로 섹션 */}
+        <View style={styles.hero}>
+          <View style={styles.heroIconRow}>
+            <Crown size={32} color="#6366f1" />
           </View>
-        )}
-
-        {/* 요금제 카드 */}
-        {PLAN_CARDS.map(card => {
-          const isCurrentPlan = card.tier === currentTier;
-          const color = PLAN_COLOR[card.tier];
-          const isPurchasing = purchasing === card.tier;
-
-          return (
-            <View
-              key={card.tier}
-              style={[
-                styles.planCard,
-                isCurrentPlan && { borderColor: color, borderWidth: 2 },
-                card.tier === 'pro' && styles.planCardHighlight,
-              ]}
-            >
-              {/* 배지 */}
-              {card.badge && (
-                <View style={[styles.badge, { backgroundColor: color }]}>
-                  <Text style={styles.badgeText}>{card.badge}</Text>
-                </View>
-              )}
-              {isCurrentPlan && (
-                <View style={[styles.currentBadge, { backgroundColor: `${color}22` }]}>
-                  <Text style={[styles.currentBadgeText, { color }]}>현재 플랜</Text>
-                </View>
-              )}
-
-              {/* 플랜 이름 & 가격 */}
-              <View style={styles.planHeader}>
-                <Text style={[styles.planName, { color }]}>{PLAN_NAME[card.tier]}</Text>
-                <Text style={styles.planPrice}>{card.price}</Text>
-                <Text style={styles.planPriceNote}>{card.priceNote}</Text>
-              </View>
-
-              {/* 기능 목록 */}
-              <View style={styles.featureList}>
-                {card.features.map((f, i) => (
-                  <View key={i} style={styles.featureRow}>
-                    {f.icon}
-                    <Text style={styles.featureText}>{f.label}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* CTA 버튼 */}
-              <TouchableOpacity
-                style={[
-                  styles.selectBtn,
-                  { backgroundColor: isCurrentPlan ? '#f1f5f9' : color },
-                  isPurchasing && { opacity: 0.4 },
-                ]}
-                onPress={() => handleSelectPlan(card.tier)}
-                disabled={isPurchasing || loading}
-              >
-                <Text
-                  style={[
-                    styles.selectBtnText,
-                    { color: isCurrentPlan ? '#94a3b8' : '#ffffff' },
-                  ]}
-                >
-                  {isCurrentPlan
-                    ? '현재 플랜'
-                    : isPurchasing
-                      ? '처리 중...'
-                      : card.tier === 'free'
-                        ? '무료로 계속'
-                        : `${PLAN_NAME[card.tier]} 시작하기`}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-
-        {/* 비교표 토글 */}
-        <TouchableOpacity
-          style={styles.compareToggle}
-          onPress={() => setShowCompare(v => !v)}
-        >
-          <Text style={styles.compareToggleText}>
-            {showCompare ? '비교표 숨기기' : '전체 기능 비교표 보기'}
+          <Text style={styles.heroTitle}>MelodyGen Pro</Text>
+          <Text style={styles.heroSubtitle}>
+            6가지 청음 훈련의{'\n'}모든 난이도를 잠금 해제하세요
           </Text>
-        </TouchableOpacity>
-
-        {/* 비교표 */}
-        {showCompare && (
-          <View style={styles.compareTable}>
-            {/* 헤더 */}
-            <View style={[styles.compareRow, styles.compareHeaderRow]}>
-              <Text style={[styles.compareCell, styles.compareLabel, styles.compareHeaderText]}>기능</Text>
-              <Text style={[styles.compareCell, styles.compareHeaderText, { color: PLAN_COLOR.free }]}>Free</Text>
-              <Text style={[styles.compareCell, styles.compareHeaderText, { color: PLAN_COLOR.pro }]}>Pro</Text>
+          {isPro_ && (
+            <View style={styles.proBanner}>
+              <Sparkles size={14} color="#6366f1" />
+              <Text style={styles.proBannerText}>현재 Pro 플랜 이용 중</Text>
             </View>
-            {COMPARE_ROWS.map((row, i) => (
+          )}
+        </View>
+
+        {/* 카테고리별 Free vs Pro */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>청음 훈련 난이도 비교</Text>
+          <View style={styles.categoryCard}>
+            <View style={styles.categoryHeader}>
+              <Text style={[styles.categoryHeaderCell, { flex: 1.5 }]}>카테고리</Text>
+              <Text style={[styles.categoryHeaderCell, { color: '#94a3b8' }]}>Free</Text>
+              <Text style={[styles.categoryHeaderCell, { color: '#6366f1' }]}>Pro</Text>
+            </View>
+            {CATEGORY_COMPARES.map((cat, i) => (
               <View
                 key={i}
-                style={[styles.compareRow, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}
+                style={[styles.categoryRow, i % 2 === 0 && { backgroundColor: '#fafaff' }]}
               >
-                <Text style={[styles.compareCell, styles.compareLabel]}>{row.label}</Text>
-                <Text style={[styles.compareCell, row.free === '✕' && { color: '#ef4444' }]}>{row.free}</Text>
-                <Text style={[styles.compareCell, { color: PLAN_COLOR.pro, fontWeight: 'bold' }]}>{row.pro}</Text>
+                <View style={[styles.categoryNameCell, { flex: 1.5 }]}>
+                  {cat.icon}
+                  <Text style={styles.categoryName}>{cat.name}</Text>
+                </View>
+                <Text style={[
+                  styles.categoryValue,
+                  cat.free === '잠금' && { color: '#ef4444', fontSize: 11 },
+                ]}>
+                  {cat.free}
+                </Text>
+                <Text style={[styles.categoryValue, { color: '#6366f1', fontWeight: '700' }]}>
+                  {cat.pro}
+                </Text>
               </View>
             ))}
           </View>
-        )}
+        </View>
 
-        {/* 구독 복원 */}
-        <TouchableOpacity
-          style={styles.restoreBtn}
-          onPress={handleRestore}
-          disabled={!!purchasing}
-        >
-          <Text style={styles.restoreBtnText}>
-            {purchasing === 'pro' ? '복원 중...' : '이전 구독 복원'}
-          </Text>
-        </TouchableOpacity>
+        {/* CTA 버튼 */}
+        {!isPro_ && (
+          <View style={styles.ctaSection}>
+            <TouchableOpacity
+              style={[styles.ctaBtn, purchasing && { opacity: 0.5 }]}
+              onPress={handleSubscribe}
+              disabled={purchasing || loading}
+              activeOpacity={0.8}
+            >
+              <Crown size={18} color="#fff" />
+              <Text style={styles.ctaBtnText}>
+                {purchasing ? '처리 중...' : 'Pro 시작하기 · 월 5,500원'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.ctaNote}>언제든 취소 가능 · 첫 결제 즉시 적용</Text>
+          </View>
+        )}
 
         {/* 면책 조항 */}
         <Text style={styles.disclaimer}>
-          * 구독은 Google Play / App Store를 통해 처리됩니다.{'\n'}
-          * 구독은 다음 갱신일 24시간 전까지 취소할 수 있습니다.{'\n'}
-          * 결제는 확인 시 iTunes/Google Play 계정에 청구됩니다.
+          구독은 Google Play / App Store를 통해 처리됩니다.{'\n'}
+          다음 갱신일 24시간 전까지 취소할 수 있습니다.{'\n'}
+          결제는 확인 시 iTunes / Google Play 계정에 청구됩니다.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -374,186 +217,163 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   headerTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#1e293b',
   },
   scrollContent: {
-    padding: 16,
     paddingBottom: 48,
   },
-  subtitle: {
-    fontSize: 13,
+
+  // ── 히어로 ──────────────────────────────────────────────
+  hero: {
+    alignItems: 'center',
+    paddingTop: 28,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2ff',
+  },
+  heroIconRow: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  currentPlanBanner: {
+  proBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
     backgroundColor: '#eef2ff',
-    borderRadius: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-  },
-  currentPlanText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  planCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    position: 'relative',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginTop: 14,
   },
-  planCardHighlight: {
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  badge: {
-    position: 'absolute',
-    top: -10,
-    right: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  currentBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  currentBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  planHeader: {
-    marginBottom: 16,
-  },
-  planName: {
+  proBannerText: {
     fontSize: 13,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  planPrice: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  planPriceNote: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  featureList: {
-    gap: 10,
-    marginBottom: 20,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  featureText: {
-    fontSize: 13,
-    color: '#1e293b',
-    flex: 1,
-  },
-  selectBtn: {
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  selectBtnText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  compareToggle: {
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  compareToggleText: {
-    fontSize: 13,
+    fontWeight: '700',
     color: '#6366f1',
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
   },
-  compareTable: {
+
+  // ── 섹션 ──────────────────────────────────────────────
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+
+  // ── 카테고리 비교 ──────────────────────────────────────
+  categoryCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginBottom: 16,
   },
-  compareRow: {
+  categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-  },
-  compareHeaderRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     backgroundColor: '#f1f5f9',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
-  compareCell: {
+  categoryHeaderCell: {
     flex: 1,
-    fontSize: 12,
-    color: '#475569',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
     textAlign: 'center',
   },
-  compareLabel: {
-    flex: 1.3,
-    textAlign: 'left',
-    color: '#1e293b',
-    fontWeight: '600',
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
   },
-  compareHeaderText: {
-    fontWeight: 'bold',
-    fontSize: 12,
+  categoryNameCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
-  restoreBtn: {
-    alignSelf: 'center',
-    paddingVertical: 12,
-    marginTop: 16,
-  },
-  restoreBtnText: {
+  categoryName: {
     fontSize: 13,
-    color: '#6366f1',
-    textDecorationLine: 'underline',
+    fontWeight: '600',
+    color: '#1e293b',
   },
+  categoryValue: {
+    flex: 1,
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  // ── CTA ────────────────────────────────────────────────
+  ctaSection: {
+    paddingHorizontal: 16,
+    paddingTop: 28,
+    alignItems: 'center',
+  },
+  ctaBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#6366f1',
+    borderRadius: 16,
+    paddingVertical: 16,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  ctaBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  ctaNote: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 10,
+  },
+
+  // ── 하단 ──────────────────────────────────────────────
   disclaimer: {
     fontSize: 11,
     color: '#94a3b8',
     lineHeight: 18,
     textAlign: 'center',
     marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 20,
   },
 });
