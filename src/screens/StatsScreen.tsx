@@ -38,7 +38,7 @@ export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation(['stats', 'practice', 'common']);
   const { user } = useAuth();
-  const { records, stats, loaded } = usePracticeHistory();
+  const { records, stats, loaded, reload } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
@@ -122,6 +122,54 @@ export default function StatsScreen() {
 
   const pctColor = (p: number) => p >= 70 ? COLORS.success : p >= 50 ? COLORS.amber600 : COLORS.error;
 
+  // ── DEV 전용: 테스트 데이터 주입 ──
+  const seedTestData = async () => {
+    if (!user) return;
+    const categories = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'] as const;
+    const difficulties = ['beginner_1', 'rhythm_2', 'interval_1', 'chord_2', 'key_1', 'bass_1'];
+    const now = Date.now();
+
+    const practiceRecords = Array.from({ length: 200 }, (_, i) => ({
+      id: `seed_${i}`,
+      contentType: categories[i % categories.length],
+      difficulty: difficulties[i % difficulties.length],
+      selfRating: Math.floor(Math.random() * 5) + 1,
+      practicedAt: new Date(now - Math.random() * 60 * 86400_000).toISOString(),
+    }));
+    await AsyncStorage.setItem(
+      `@melodygen_recent_activity_${user.id}`,
+      JSON.stringify(practiceRecords),
+    );
+
+    const examTitles = ['기초 청음', '중급 종합', '리듬 집중'];
+    const examRecords = Array.from({ length: 30 }, (_, i) => ({
+      id: `exam_seed_${i}`,
+      title: examTitles[i % examTitles.length],
+      total_score: Math.floor(Math.random() * 80) + 20,
+      max_score: 100,
+      completed_at: new Date(now - Math.random() * 60 * 86400_000).toISOString(),
+    }));
+    await AsyncStorage.setItem(
+      `@melodygen_exam_sessions_${user.id}`,
+      JSON.stringify(examRecords),
+    );
+
+    // 스킬 프로필 — 연속 학습일 주입
+    const skillRaw = await AsyncStorage.getItem(`@melodygen_skill_profile_${user.id}`);
+    const skillProfile = skillRaw ? JSON.parse(skillRaw) : {};
+    await AsyncStorage.setItem(
+      `@melodygen_skill_profile_${user.id}`,
+      JSON.stringify({ ...skillProfile, streakDays: 14 }),
+    );
+    await AsyncStorage.setItem(
+      `@melodygen_last_practice_date_${user.id}`,
+      new Date().toDateString(),
+    );
+
+    await reload();
+    setExamRecords(examRecords);
+  };
+
   if (!loaded) {
     return (
       <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
@@ -138,6 +186,11 @@ export default function StatsScreen() {
           <ArrowLeft size={24} color={COLORS.primary500} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('stats:title')}</Text>
+        {__DEV__ && (
+          <TouchableOpacity onPress={seedTestData} style={styles.devBtn}>
+            <Text style={styles.devBtnText}>SEED</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -331,6 +384,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: { padding: 4 },
+  devBtn: {
+    marginLeft: 'auto',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#fee2e2',
+  },
+  devBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#dc2626',
+  },
   headerTitle: {
     flex: 1,
     fontSize: 20,

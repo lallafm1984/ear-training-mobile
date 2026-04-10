@@ -96,7 +96,11 @@ export default function AppAlert({ visible, config, onClose }: Props) {
           )}
 
           {/* 버튼 */}
-          <View style={[styles.btnRow, buttons.length === 1 && styles.btnRowSingle]}>
+          <View style={[
+            styles.btnRow,
+            buttons.length === 1 && styles.btnRowSingle,
+            buttons.length >= 3 && styles.btnRowVertical,
+          ]}>
             {buttons.map((btn, i) => {
               const isDestructive = btn.style === 'destructive';
               const isCancel      = btn.style === 'cancel';
@@ -106,6 +110,7 @@ export default function AppAlert({ visible, config, onClose }: Props) {
                   key={i}
                   style={[
                     styles.btn,
+                    buttons.length >= 3 && styles.btnFull,
                     isPrimary    && styles.btnPrimary,
                     isDestructive && styles.btnDestructive,
                     isCancel     && styles.btnCancel,
@@ -186,12 +191,20 @@ const styles = StyleSheet.create({
   btnRowSingle: {
     justifyContent: 'center',
   },
+  btnRowVertical: {
+    flexDirection: 'column',
+    gap: 8,
+  },
   btn: {
     flex: 1,
     borderRadius: 14,
     paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  btnFull: {
+    flex: 0,
+    width: '100%',
   },
   btnPrimary: {
     backgroundColor: '#6366f1',

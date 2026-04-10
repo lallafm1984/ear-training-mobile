@@ -44,8 +44,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "a5fc0b5c-a19c-461e-a2b8-7f654f22496a"
       }
-    }
+    },
+    "owner": "lallafm"
   }
 }

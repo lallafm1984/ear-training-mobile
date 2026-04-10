@@ -4,8 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "test": "jest",
     "test:abc": "npx tsx scripts/generateTestAbc.ts",
     "test:abc:all": "npx tsx scripts/generateTestAbc.ts --all",
@@ -24,6 +24,7 @@
     "expo-auth-session": "~7.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
+    "expo-dev-client": "^55.0.24",
     "expo-file-system": "~19.0.21",
     "expo-localization": "^55.0.12",
     "expo-media-library": "~18.2.1",
