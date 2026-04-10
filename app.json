@@ -35,7 +35,8 @@
         "READ_EXTERNAL_STORAGE",
         "com.android.vending.BILLING"
       ],
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "navigationBarColor": "#f8fafc"
     },
     "scheme": "melodygen",
     "plugins": [
