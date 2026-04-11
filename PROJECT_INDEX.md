@@ -238,3 +238,11 @@ Login → Onboarding → Home
 | `examPresets.test.ts` | 시험 프리셋 구조 검증 |
 
 실행: `npm test` (179개 테스트)
+
+---
+
+## 문서
+
+| 파일 | 설명 |
+|------|------|
+| `AD_COPY.md` | 페이지별 광고 문구 모음 (13개 활성 화면) |
