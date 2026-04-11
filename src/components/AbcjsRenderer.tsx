@@ -5,7 +5,6 @@ import {
 import { useAlert } from '../context';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import type { APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings } from '../types';
 import { generateAbcScaleNotes } from '../lib';
@@ -250,30 +249,15 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     });
 
     const isImage = ext === 'png';
-    let savedToLib = false;
-
-    if (isImage) {
-      try {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === 'granted') {
-          await MediaLibrary.saveToLibraryAsync(cacheUri);
-          savedToLib = true;
-        }
-      } catch {}
-    }
 
     try {
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(cacheUri, {
           mimeType: mime,
-          dialogTitle: savedToLib
-            ? `갤러리 저장 완료 — 다른 앱으로도 공유할 수 있습니다`
-            : `${ext.toUpperCase()} 파일 저장`,
+          dialogTitle: `${ext.toUpperCase()} 파일 저장`,
           UTI: isImage ? 'public.png' : 'public.audio',
         });
-      } else if (savedToLib) {
-        showAlert({ title: '저장 완료', message: `사진 앱에 저장되었습니다.\n파일명: ${filename}`, type: 'success' });
       } else {
         showAlert({ title: '저장 실패', message: '파일을 저장할 수 없습니다.', type: 'error' });
       }

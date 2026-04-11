@@ -19,6 +19,7 @@ export interface SubscriptionContextValue {
   limits:            PlanLimits;
   isExpired:         boolean;
   upgradePlan:       (newTier: PlanTier, durationDays?: number) => Promise<void>;
+  refreshSubscription: () => Promise<void>;
   subscriptionState: SubscriptionState;
   loading:           boolean;
 }
@@ -60,7 +61,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       try {
         await loginRevenueCat(user.id);
         const info = await getCustomerInfo();
-        const rcPro = isPro(info);
+        const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
 
         let tier: PlanTier = rcPro ? 'pro' : 'free';
         let expiresAt: string | null = null;
@@ -113,6 +114,39 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       .eq('id', user.id);
   }, [user]);
 
+  // ── RevenueCat에서 구독 상태 재동기화 ─────────────────────
+  const refreshSubscription = useCallback(async () => {
+    try {
+      const info = await getCustomerInfo();
+      if (__DEV__) {
+        console.log('[Subscription] entitlements:', JSON.stringify(info.entitlements, null, 2));
+        console.log('[Subscription] activeSubscriptions:', info.activeSubscriptions);
+      }
+
+      // Entitlement 또는 활성 구독이 있으면 Pro
+      const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
+      const tier: PlanTier = rcPro ? 'pro' : 'free';
+      let expiresAt: string | null = null;
+
+      const entitlement = info.entitlements.active[ENTITLEMENT_ID];
+      if (entitlement?.expirationDate) {
+        expiresAt = entitlement.expirationDate;
+      }
+
+      setSubState({ tier, expiresAt });
+
+      if (user) {
+        supabase
+          .from('profiles')
+          .update({ tier, subscription_expires_at: expiresAt })
+          .eq('id', user.id)
+          .then(() => {});
+      }
+    } catch {
+      // 실패 시 무시
+    }
+  }, [user]);
+
   // ── 플랜 업그레이드 ──────────────────────────────────────
   const upgradePlan = useCallback(async (newTier: PlanTier, durationDays = 30) => {
     const expiresAt = newTier === 'free'
@@ -129,7 +163,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const value: SubscriptionContextValue = {
     tier: effectiveTier, limits, isExpired,
-    upgradePlan, subscriptionState: subState, loading,
+    upgradePlan, refreshSubscription, subscriptionState: subState, loading,
   };
 
   return (

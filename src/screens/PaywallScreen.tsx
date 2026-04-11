@@ -45,7 +45,7 @@ const CATEGORY_COMPARE_KEYS = [
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const { t } = useTranslation(['subscription', 'content', 'common']);
-  const { tier: currentTier, loading } = useSubscription();
+  const { tier: currentTier, loading, refreshSubscription } = useSubscription();
   const { showAlert } = useAlert();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -78,16 +78,19 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     setPurchasing(true);
     try {
       const customerInfo = await purchasePackage(pkg);
-      if (isPro(customerInfo)) {
-        showAlert({
-          title: t('subscription:paywall.subscribeSuccessTitle'),
-          message: t('subscription:paywall.subscribeSuccessMessage'),
-          type: 'success',
-          buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
-        });
+      if (__DEV__) {
+        console.log('[Paywall] purchasePackage result:', JSON.stringify(customerInfo.entitlements, null, 2));
       }
+      await refreshSubscription();
+      showAlert({
+        title: t('subscription:paywall.subscribeSuccessTitle'),
+        message: t('subscription:paywall.subscribeSuccessMessage'),
+        type: 'success',
+        buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
+      });
     } catch (e: any) {
       if (e?.userCancelled) return;
+      if (__DEV__) console.log('[Paywall] purchase error:', e);
       showAlert({
         title: t('subscription:paywall.subscribeErrorTitle'),
         message: t('subscription:paywall.subscribeErrorMessage'),
@@ -103,6 +106,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     try {
       const customerInfo = await restorePurchases();
       if (isPro(customerInfo)) {
+        await refreshSubscription();
         showAlert({
           title: t('subscription:paywall.restoreSuccessTitle'),
           message: t('subscription:paywall.restoreSuccessMessage'),

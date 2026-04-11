@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
-import { Linking } from 'react-native';
 import { useAlert, useSubscription } from '../context';
-import * as MediaLibrary from 'expo-media-library';
 import type { UpgradeReason } from '../components';
 import { useTranslation } from 'react-i18next';
 
@@ -30,30 +28,6 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
       return false;
     }
 
-    // 2. 기기 권한 체크 (라이브러리 저장용)
-    try {
-      const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
-      if (status !== 'granted') {
-        if (status === 'undetermined' || (status === 'denied' && canAskAgain)) {
-          const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
-          if (newStatus === 'granted') return true;
-        }
-
-        showAlert({
-          title: t('practice:download.permissionTitle'),
-          message: t('practice:download.permissionAudioMsg'),
-          type: 'info',
-          buttons: [
-            { text: t('common:button.later'), style: 'cancel' },
-            { text: t('common:button.goToSettings'), onPress: () => Linking.openSettings() },
-          ],
-        });
-        return false;
-      }
-    } catch (error) {
-      if (__DEV__) console.warn('권한 체크 에러(오디오):', error);
-    }
-
     return true;
   }, [limits, onUpgradeNeeded, showAlert, t]);
 
@@ -71,31 +45,6 @@ export function useDownloadQuota(onUpgradeNeeded?: (reason: UpgradeReason) => vo
         });
       }
       return false;
-    }
-
-    // 2. 기기 권한 체크
-    try {
-      const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
-      if (status !== 'granted') {
-        if (status === 'undetermined' || (status === 'denied' && canAskAgain)) {
-          const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
-          if (newStatus === 'granted') return true;
-        }
-
-        showAlert({
-          title: t('practice:download.permissionTitle'),
-          message: t('practice:download.permissionImageMsg'),
-          type: 'info',
-          buttons: [
-            { text: t('common:button.later'), style: 'cancel' },
-            { text: t('common:button.goToSettings'), onPress: () => Linking.openSettings() },
-          ],
-        });
-        return false;
-      }
-    } catch (error) {
-      if (__DEV__) console.warn('권한 체크 에러(이미지):', error);
-      return true;
     }
 
     return true;

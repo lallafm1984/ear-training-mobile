@@ -12,7 +12,7 @@ import Purchases, {
 // ── API 키 (RevenueCat 대시보드에서 발급) ──────────────────
 // TODO: 실제 키로 교체 필요. EAS Secrets 또는 환경변수 사용 권장.
 const REVENUECAT_API_KEY_IOS = 'appl_YOUR_IOS_API_KEY';
-const REVENUECAT_API_KEY_ANDROID = 'goog_YOUR_ANDROID_API_KEY';
+const REVENUECAT_API_KEY_ANDROID = 'goog_WlXgMWVREJgnSBeRcTeRzrqtFyA';
 
 // ── RevenueCat 제품 식별자 ─────────────────────────────────
 // RevenueCat 대시보드에서 설정한 Entitlement ID
