@@ -51,10 +51,17 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
+  const [priceString, setPriceString] = useState<string>('');
 
   useEffect(() => {
     getOfferings()
-      .then(pkgs => setPackages(pkgs))
+      .then(pkgs => {
+        setPackages(pkgs);
+        const monthly = pkgs.find(p => p.packageType === 'MONTHLY') ?? pkgs[0];
+        if (monthly) {
+          setPriceString(monthly.product.priceString);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoadingPackages(false));
   }, []);
@@ -91,6 +98,24 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     } catch (e: any) {
       if (e?.userCancelled) return;
       if (__DEV__) console.log('[Paywall] purchase error:', e);
+
+      // 이미 구독 중인 경우 자동 복원 시도
+      if (e?.code === 'PRODUCT_ALREADY_PURCHASED_ERROR' ||
+          e?.message?.includes('already') ||
+          e?.code === '6') {
+        try {
+          await restorePurchases();
+          await refreshSubscription();
+          showAlert({
+            title: t('subscription:paywall.subscribeSuccessTitle'),
+            message: t('subscription:paywall.subscribeSuccessMessage'),
+            type: 'success',
+            buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
+          });
+          return;
+        } catch {}
+      }
+
       showAlert({
         title: t('subscription:paywall.subscribeErrorTitle'),
         message: t('subscription:paywall.subscribeErrorMessage'),
@@ -208,7 +233,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             >
               <Crown size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>
-                {purchasing ? t('subscription:paywall.processing') : t('subscription:paywall.subscribe')}
+                {purchasing ? t('subscription:paywall.processing') : t('subscription:paywall.subscribe', { price: priceString })}
               </Text>
             </TouchableOpacity>
             <Text style={styles.ctaNote}>{t('subscription:paywall.ctaNote')}</Text>

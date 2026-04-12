@@ -3,7 +3,7 @@
     "free": "Free",
     "pro": "Pro",
     "freePrice": "무료",
-    "proPrice": "5,500원 / 월"
+    "proPrice": "{{price}} / 월"
   },
   "paywall": {
     "title": "요금제",
@@ -25,7 +25,7 @@
     "locked": "잠금",
     "allLevels": "전체",
     "processing": "처리 중...",
-    "subscribe": "Pro 시작하기 · 월 5,500원",
+    "subscribe": "Pro 시작하기 · 월 {{price}}",
     "ctaNote": "언제든 취소 가능 · 첫 결제 즉시 적용",
     "restoring": "복원 중...",
     "restore": "이전 구독 복원하기",

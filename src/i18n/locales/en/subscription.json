@@ -3,7 +3,7 @@
     "free": "Free",
     "pro": "Pro",
     "freePrice": "Free",
-    "proPrice": "$4.99 / month"
+    "proPrice": "{{price}} / month"
   },
   "paywall": {
     "title": "Plans",
@@ -25,7 +25,7 @@
     "locked": "Locked",
     "allLevels": "All Levels",
     "processing": "Processing...",
-    "subscribe": "Start Pro · $4.99/month",
+    "subscribe": "Start Pro · {{price}}/month",
     "ctaNote": "Cancel anytime · Charged immediately upon first payment",
     "restoring": "Restoring...",
     "restore": "Restore Previous Subscription",

@@ -3,7 +3,7 @@
     "free": "Free",
     "pro": "Pro",
     "freePrice": "無料",
-    "proPrice": "月額 ¥XXX"
+    "proPrice": "月額 {{price}}"
   },
   "paywall": {
     "title": "プラン",
@@ -25,7 +25,7 @@
     "locked": "ロック中",
     "allLevels": "すべて",
     "processing": "処理中...",
-    "subscribe": "Proを始める · 月額5,500ウォン",
+    "subscribe": "Proを始める · 月額 {{price}}",
     "ctaNote": "いつでもキャンセル可能 · 初回決済即時適用",
     "restoring": "復元中...",
     "restore": "以前のサブスクリプションを復元する",
