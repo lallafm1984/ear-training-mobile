@@ -4,7 +4,7 @@ import { supabase } from '../lib';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
 import {
-  initRevenueCat, getCustomerInfo, isPro,
+  initRevenueCat, getCustomerInfo,
   loginRevenueCat, logoutRevenueCat, ENTITLEMENT_ID,
 } from '../lib/revenueCat';
 import type { CustomerInfo } from 'react-native-purchases';
@@ -35,6 +35,20 @@ const DEFAULT_STATE: SubscriptionState = {
   expiresAt: null,
 };
 
+// RevenueCat CustomerInfo → 앱 구독 상태.
+// 진실 공급원은 오직 entitlement 하나다. activeSubscriptions를 폴백으로 쓰면
+// 환불 후에도 원래 만료일까지 SKU가 남아 있어 며칠간 Pro가 유지되는 버그가 발생한다.
+function deriveSubscriptionFromRc(info: CustomerInfo): SubscriptionState {
+  const entitlement = info.entitlements.active[ENTITLEMENT_ID];
+  if (!entitlement) {
+    return { tier: 'free', expiresAt: null };
+  }
+  return {
+    tier: 'pro',
+    expiresAt: entitlement.expirationDate ?? null,
+  };
+}
+
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const [subState, setSubState] = useState<SubscriptionState>(DEFAULT_STATE);
@@ -61,18 +75,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       try {
         await loginRevenueCat(user.id);
         const info = await getCustomerInfo();
-        const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
+        const { tier, expiresAt } = deriveSubscriptionFromRc(info);
 
-        let tier: PlanTier = rcPro ? 'pro' : 'free';
-        let expiresAt: string | null = null;
-
-        const entitlement = info.entitlements.active[ENTITLEMENT_ID];
-        if (entitlement?.expirationDate) {
-          expiresAt = entitlement.expirationDate;
-        }
-
-        // DB의 tier와 RevenueCat이 다르면 DB 동기화
-        if (profile.tier !== tier) {
+        // DB의 tier/만료일과 RevenueCat이 다르면 DB 동기화
+        // (환불 시 tier='free'로 내려가도록, expiresAt도 항상 함께 맞춘다)
+        const dbExpiresAt = profile.subscription_expires_at ?? null;
+        if (profile.tier !== tier || dbExpiresAt !== expiresAt) {
           supabase
             .from('profiles')
             .update({ tier, subscription_expires_at: expiresAt })
@@ -123,16 +131,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         console.log('[Subscription] activeSubscriptions:', info.activeSubscriptions);
       }
 
-      // Entitlement 또는 활성 구독이 있으면 Pro
-      const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
-      const tier: PlanTier = rcPro ? 'pro' : 'free';
-      let expiresAt: string | null = null;
-
-      const entitlement = info.entitlements.active[ENTITLEMENT_ID];
-      if (entitlement?.expirationDate) {
-        expiresAt = entitlement.expirationDate;
-      }
-
+      const { tier, expiresAt } = deriveSubscriptionFromRc(info);
       setSubState({ tier, expiresAt });
 
       if (user) {
