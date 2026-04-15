@@ -1,7 +1,9 @@
 import './src/i18n';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
@@ -46,6 +48,13 @@ function AppNavigator() {
 // ─────────────────────────────────────────────────────────────
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#f8fafc');
+      NavigationBar.setButtonStyleAsync('dark');
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>

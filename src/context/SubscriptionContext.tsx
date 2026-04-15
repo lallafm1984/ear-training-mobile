@@ -4,7 +4,7 @@ import { supabase } from '../lib';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
 import {
-  initRevenueCat, getCustomerInfo, isPro,
+  initRevenueCat, getCustomerInfo, isPro, restorePurchases,
   loginRevenueCat, logoutRevenueCat, ENTITLEMENT_ID,
 } from '../lib/revenueCat';
 import type { CustomerInfo } from 'react-native-purchases';
@@ -61,7 +61,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       try {
         await loginRevenueCat(user.id);
         const info = await getCustomerInfo();
-        const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
+        const rcPro = isPro(info);
 
         let tier: PlanTier = rcPro ? 'pro' : 'free';
         let expiresAt: string | null = null;
@@ -123,8 +123,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         console.log('[Subscription] activeSubscriptions:', info.activeSubscriptions);
       }
 
-      // Entitlement 또는 활성 구독이 있으면 Pro
-      const rcPro = isPro(info) || info.activeSubscriptions.length > 0;
+      const rcPro = isPro(info);
       const tier: PlanTier = rcPro ? 'pro' : 'free';
       let expiresAt: string | null = null;
 

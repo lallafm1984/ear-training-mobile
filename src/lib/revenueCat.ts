@@ -16,7 +16,7 @@ const REVENUECAT_API_KEY_ANDROID = 'goog_WlXgMWVREJgnSBeRcTeRzrqtFyA';
 
 // ── RevenueCat 제품 식별자 ─────────────────────────────────
 // RevenueCat 대시보드에서 설정한 Entitlement ID
-export const ENTITLEMENT_ID = 'pro';
+export const ENTITLEMENT_ID = 'MelodyGen Pro';
 
 /** RevenueCat SDK 초기화. 앱 시작 시 1회 호출. */
 export async function initRevenueCat(userId?: string): Promise<void> {

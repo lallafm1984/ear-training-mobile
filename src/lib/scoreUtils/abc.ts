@@ -840,7 +840,9 @@ export function generateAbc(state: ScoreState): string {
     `T: ${state.title || ''}`,
     `M: ${state.timeSignature}`,
     `L: 1/16`,
-    `Q: 1/4=${state.tempo}`,
+    isCompoundMeter(state.timeSignature)
+      ? `Q: 1/8=${state.tempo * 2}`
+      : `Q: 1/4=${state.tempo}`,
     ...directives,
     `K: ${state.keySignature}`,
   ].join('\n');

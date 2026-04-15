@@ -14,6 +14,10 @@
 - 새로운 화면, 컴포넌트, 훅, 라이브러리 모듈을 추가하면 해당 섹션에 항목을 추가한다.
 - 기능별 파일 매핑이 변경되면 "기능별 파일 매핑" 섹션도 업데이트한다.
 
+## 빌드 규칙
+
+- Android 릴리스 빌드(`bundleRelease`) 시 `android/app/build.gradle`의 `versionCode`를 자동으로 1 증가시킨 후 빌드한다.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill

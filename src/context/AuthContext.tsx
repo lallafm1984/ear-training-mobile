@@ -238,9 +238,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       '@melodygen_exam_sessions',
     ]).catch(() => {});
 
-    // auth.users 삭제는 service_role key가 필요하므로
-    // 프로덕션에서는 Supabase Edge Function으로 처리 필요.
-    // 현재는 세션만 종료합니다.
+    // auth.users 삭제 (security definer DB Function)
+    const { error: authDelError } = await supabase.rpc('delete_own_account');
+    if (__DEV__ && authDelError) console.warn('auth.users 삭제 실패:', authDelError.message);
+
     await supabase.auth.signOut();
     return null;
   }, [user]);

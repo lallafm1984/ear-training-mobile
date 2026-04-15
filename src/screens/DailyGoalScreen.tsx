@@ -132,7 +132,7 @@ export default function DailyGoalScreen() {
     [records],
   );
 
-  // EXP 지급: 새로 완료된 목표마다 2 EXP, 전부 완료 시 +10 EXP 보너스
+  // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (최대 30)
   // rewardedCount를 AsyncStorage에 저장하여 화면 재진입 시 중복 지급 방지
   useEffect(() => {
     if (!EXP_REWARD_KEY) return;
@@ -140,9 +140,9 @@ export default function DailyGoalScreen() {
     if (completedCount <= rewardedCount) return; // 새로 완료된 목표 없음
 
     const newlyCompleted = completedCount - rewardedCount;
-    let expToAdd = newlyCompleted * 2;
+    let expToAdd = newlyCompleted * 5;
     if (completedCount >= DAILY_GOAL_COUNT && rewardedCount < DAILY_GOAL_COUNT) {
-      expToAdd += 10;
+      expToAdd += 5;
     }
     addExp(expToAdd);
 
