@@ -336,6 +336,7 @@ export default function NotationPracticeScreen() {
     measures: scoreMeasures,
     useGrandStaff: score?.useGrandStaff ?? false,
     firstNote: isMelodyInput ? firstHintNote : null,
+    tempo: practiceSettings?.tempo ?? 90,
   });
 
   // ── 악보 생성 ──

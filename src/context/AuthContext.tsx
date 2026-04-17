@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
+import { logoutRevenueCat } from '../lib/revenueCat';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -241,6 +242,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // auth.users 삭제 (security definer DB Function)
     const { error: authDelError } = await supabase.rpc('delete_own_account');
     if (__DEV__ && authDelError) console.warn('auth.users 삭제 실패:', authDelError.message);
+
+    // RevenueCat 사용자 초기화 — 탈퇴 후 재가입 시 이전 구매 토큰이
+    // oldPurchaseToken으로 사용되어 "구독 변경 불가" 오류가 나는 것을 방지
+    await logoutRevenueCat().catch(() => {});
 
     await supabase.auth.signOut();
     return null;

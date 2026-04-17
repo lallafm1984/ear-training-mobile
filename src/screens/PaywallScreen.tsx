@@ -8,9 +8,9 @@ import {
   Layers, ArrowUpDown, Key, Drum,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { useAlert, useSubscription } from '../context';
+import { useAlert, useSubscription, useAuth } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
-import { getOfferings, purchasePackage, isPro, restorePurchases } from '../lib/revenueCat';
+import { getOfferings, purchasePackage, isPro, restorePurchases, loginRevenueCat, logoutRevenueCat } from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 interface PaywallScreenProps {
@@ -47,6 +47,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const { t } = useTranslation(['subscription', 'content', 'common']);
   const { tier: currentTier, loading, refreshSubscription } = useSubscription();
   const { showAlert } = useAlert();
+  const { user } = useAuth();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -97,11 +98,16 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       });
     } catch (e: any) {
       if (e?.userCancelled) return;
-      if (__DEV__) console.log('[Paywall] purchase error:', e);
+
+      const msg = e?.message ?? '';
+      const underlyingMsg = typeof e?.underlyingErrorMessage === 'string'
+        ? e.underlyingErrorMessage
+        : JSON.stringify(e?.underlyingErrorMessage ?? '');
+      const readableCode = e?.readableErrorCode ?? e?.readable_error_code ?? '';
 
       // 이미 구독 중인 경우 자동 복원 시도
       if (e?.code === 'PRODUCT_ALREADY_PURCHASED_ERROR' ||
-          e?.message?.includes('already') ||
+          msg.includes('already') ||
           e?.code === '6') {
         try {
           await restorePurchases();
@@ -114,6 +120,40 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           });
           return;
         } catch {}
+      }
+
+      // 취소/환불된 구독 토큰이 RC에 남아 "구독 변경"으로 잘못 처리되는 경우
+      // (PurchaseInvalidError code 4: Account identifiers don't match the previous subscription)
+      const isSubscriptionConflict =
+        msg.includes('변경할 수 없습니다') ||
+        msg.includes('cannot be changed') ||
+        msg.includes('subscription update') ||
+        e?.code === 'PURCHASE_NOT_ALLOWED_ERROR' ||
+        readableCode === 'PurchaseInvalidError' ||
+        underlyingMsg.includes('Account identifiers');
+
+      if (isSubscriptionConflict) {
+        try {
+          await logoutRevenueCat();
+          if (user?.id) await loginRevenueCat(user.id);
+          await purchasePackage(pkg!);
+          await refreshSubscription();
+          showAlert({
+            title: t('subscription:paywall.subscribeSuccessTitle'),
+            message: t('subscription:paywall.subscribeSuccessMessage'),
+            type: 'success',
+            buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
+          });
+          return;
+        } catch (retryErr: any) {
+          if (retryErr?.userCancelled) return;
+          showAlert({
+            title: '구독 오류',
+            message: 'Google Play에 이전 구독 기록이 남아있어 구독할 수 없습니다.\n\nGoogle Play 앱 → 프로필 → 구독에서 기존 항목을 확인 후 다시 시도해주세요.',
+            type: 'error',
+          });
+          return;
+        }
       }
 
       showAlert({

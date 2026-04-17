@@ -5,6 +5,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { ScoreNote, NoteDuration, PitchName, Accidental } from '../lib/scoreUtils';
 import { uid, durationToSixteenths, getSixteenthsPerBar, getKeySigAlteration } from '../lib/scoreUtils';
+import { isCompoundMeter } from '../lib/scoreUtils/duration';
 
 // ── Types ──
 
@@ -29,6 +30,7 @@ interface UseNoteInputOptions {
   measures: number;
   useGrandStaff: boolean;
   firstNote?: ScoreNote | null;
+  tempo?: number;
 }
 
 // ── Simple ABC converter (no engraving transforms) ──
@@ -42,6 +44,7 @@ function userNotesToAbc(
   useGrandStaff?: boolean,
   trebleInvisibleFrom?: number,
   bassInvisibleFrom?: number,
+  tempo?: number,
 ): string {
   if (notes.length === 0 && (!bassNotes || bassNotes.length === 0)) return '';
 
@@ -148,7 +151,7 @@ function userNotesToAbc(
     'T: ',
     `M: ${timeSignature}`,
     'L: 1/16',
-    'Q: 1/4=90',
+    isCompoundMeter(timeSignature) ? `Q: 1/8=${(tempo ?? 90) * 2}` : `Q: 1/4=${tempo ?? 90}`,
     useGrandStaff ? '%%staves {V1 V2}' : null,
     `K: ${keySignature}`,
   ].filter(Boolean).join('\n');
@@ -530,7 +533,7 @@ function makeInitialState(
 // ── Hook ──
 
 export function useNoteInput(options: UseNoteInputOptions) {
-  const { keySignature, timeSignature, measures, useGrandStaff, firstNote } = options;
+  const { keySignature, timeSignature, measures, useGrandStaff, firstNote, tempo } = options;
 
   const [state, setState] = useState<NoteInputState>(() =>
     makeInitialState(firstNote, measures * getSixteenthsPerBar(timeSignature), getSixteenthsPerBar(timeSignature), useGrandStaff),
@@ -1063,8 +1066,11 @@ export function useNoteInput(options: UseNoteInputOptions) {
       timeSignature,
       useGrandStaff ? state.bassNotes : undefined,
       useGrandStaff,
+      undefined,
+      undefined,
+      tempo,
     );
-  }, [keySignature, timeSignature, useGrandStaff, state.trebleNotes, state.bassNotes]);
+  }, [keySignature, timeSignature, useGrandStaff, tempo, state.trebleNotes, state.bassNotes]);
 
   /** 현재 입력 위치 정보 (마디, 박) — 커서 기반 */
   const getCurrentPositionInfo = useCallback(() => {
