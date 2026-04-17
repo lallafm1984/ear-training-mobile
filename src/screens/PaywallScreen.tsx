@@ -148,8 +148,8 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         } catch (retryErr: any) {
           if (retryErr?.userCancelled) return;
           showAlert({
-            title: '구독 오류',
-            message: 'Google Play에 이전 구독 기록이 남아있어 구독할 수 없습니다.\n\nGoogle Play 앱 → 프로필 → 구독에서 기존 항목을 확인 후 다시 시도해주세요.',
+            title: t('subscription:paywall.subscriptionConflictTitle'),
+            message: t('subscription:paywall.subscriptionConflictMessage'),
             type: 'error',
           });
           return;

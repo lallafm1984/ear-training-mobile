@@ -44,6 +44,8 @@
     "subscribeCompleteMsg": "Proプランが有効になりました。\nすべての機能をご自由にご利用ください。",
     "subscribeErrorTitle": "サブスクリプションエラー",
     "subscribeErrorMessage": "サブスクリプション処理中にエラーが発生しました。もう一度お試しください。",
+    "subscriptionConflictTitle": "サブスクリプションエラー",
+    "subscriptionConflictMessage": "Google Playに以前のサブスクリプション履歴が残っており、新規登録できません。\n\nGoogle Play アプリ → プロフィール → サブスクリプションで既存の項目を確認してから再度お試しください。",
     "subscribeError": "サブスクリプションエラー",
     "subscribeErrorMsg": "サブスクリプション処理中にエラーが発生しました。もう一度お試しください。",
     "restoreSuccessTitle": "復元完了",

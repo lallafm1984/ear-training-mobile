@@ -44,6 +44,8 @@
     "subscribeCompleteMsg": "Your Pro plan is now active.\nEnjoy all features freely.",
     "subscribeErrorTitle": "Subscription Error",
     "subscribeErrorMessage": "An error occurred while processing your subscription. Please try again.",
+    "subscriptionConflictTitle": "Subscription Error",
+    "subscriptionConflictMessage": "A previous subscription record in Google Play is preventing a new subscription.\n\nPlease open Google Play → Profile → Subscriptions, check any existing items, and try again.",
     "subscribeError": "Subscription Error",
     "subscribeErrorMsg": "An error occurred while processing your subscription. Please try again.",
     "restoreSuccessTitle": "Restore Complete",

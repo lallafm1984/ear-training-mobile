@@ -4,13 +4,13 @@ import {
 } from '../lib/melodyRhythmLevel';
 
 describe('getDurationPoolForMelodyLevel', () => {
-  it('레벨 1은 온음표/2분음표 풀이다', () => {
-    expect(getDurationPoolForMelodyLevel(1)).toEqual([16, 8]);
+  it('레벨 1은 2분음표/4분음표 풀이다', () => {
+    expect(getDurationPoolForMelodyLevel(1)).toEqual([8, 4]);
   });
 
-  it('레벨 3은 8분음표를 포함한다', () => {
+  it('레벨 3은 점4분음표를 포함한다', () => {
     const pool = getDurationPoolForMelodyLevel(3);
-    expect(pool).toContain(2); // 8분음표 = 2 sixteenths
+    expect(pool).toContain(6); // 점4분음표 = 6 sixteenths
   });
 
   it('레벨 6은 16분음표를 포함한다', () => {
@@ -48,8 +48,8 @@ describe('getTrebleRhythmParamsForMelodyLevel', () => {
     expect(params.tripletProb).toBe(0);
   });
 
-  it('레벨 9는 셋잇단음표 확률이 0보다 크다', () => {
-    const params = getTrebleRhythmParamsForMelodyLevel(9);
+  it('레벨 8은 셋잇단음표 확률이 0보다 크다', () => {
+    const params = getTrebleRhythmParamsForMelodyLevel(8);
     expect(params.tripletProb).toBeGreaterThan(0);
     expect(params.tripletBudget[1]).toBeGreaterThan(0);
   });

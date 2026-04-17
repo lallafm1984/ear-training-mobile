@@ -44,6 +44,8 @@
     "subscribeCompleteMsg": "Pro 플랜이 활성화되었습니다.\n모든 기능을 자유롭게 이용하세요.",
     "subscribeErrorTitle": "구독 오류",
     "subscribeErrorMessage": "구독 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
+    "subscriptionConflictTitle": "구독 오류",
+    "subscriptionConflictMessage": "Google Play에 이전 구독 기록이 남아있어 구독할 수 없습니다.\n\nGoogle Play 앱 → 프로필 → 구독에서 기존 항목을 확인 후 다시 시도해주세요.",
     "subscribeError": "구독 오류",
     "subscribeErrorMsg": "구독 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
     "restoreSuccessTitle": "복원 완료",

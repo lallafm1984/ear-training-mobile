@@ -65,8 +65,8 @@ describe('getDifficultyList', () => {
     expect(getDifficultyList('interval')).toHaveLength(4);
   });
 
-  it('chord 카테고리는 4개 난이도를 가진다', () => {
-    expect(getDifficultyList('chord')).toHaveLength(4);
+  it('chord 카테고리는 3개 난이도를 가진다', () => {
+    expect(getDifficultyList('chord')).toHaveLength(3);
   });
 
   it('key 카테고리는 3개 난이도를 가진다', () => {
@@ -80,7 +80,7 @@ describe('getDifficultyList', () => {
 
 describe('getDifficultyLabel', () => {
   it('melody beginner_1 라벨이 올바르다', () => {
-    expect(getDifficultyLabel('melody', 'beginner_1' as any)).toBe('초급 1 · 온음표/2분음표');
+    expect(getDifficultyLabel('melody', 'beginner_1' as any)).toBe('초급 1 · 2분음표/4분음표');
   });
 
   it('rhythm rhythm_3 라벨이 올바르다', () => {

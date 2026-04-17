@@ -262,9 +262,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
         showAlert({ title: '저장 실패', message: '파일을 저장할 수 없습니다.', type: 'error' });
       }
     } catch {
-      if (savedToLib) {
-        showAlert({ title: '저장 완료', message: `사진 앱에 저장되었습니다.\n파일명: ${filename}`, type: 'success' });
-      }
+      // 공유 시트 취소 또는 실패 — 별도 안내 불필요
     }
   }, [scoreTitle]);
 
@@ -312,7 +310,9 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
           showAlert({ title: '오류', message: msg.message || '음원 생성에 실패했습니다.', type: 'error' });
           break;
       }
-    } catch {}
+    } catch {
+      // WebView에서 오는 비-JSON 메시지 무시
+    }
   }, [onNoteClick, onPlayStateChange, saveToDevice, onAudioSaveSuccess]);
 
   const togglePlay = useCallback(() => {
