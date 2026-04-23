@@ -841,7 +841,7 @@ export function generateAbc(state: ScoreState): string {
     `M: ${state.timeSignature}`,
     `L: 1/16`,
     isCompoundMeter(state.timeSignature)
-      ? `Q: 1/8=${state.tempo * 2}`
+      ? `Q: 1/8=${state.tempo}`
       : `Q: 1/4=${state.tempo}`,
     ...directives,
     `K: ${state.keySignature}`,

@@ -117,6 +117,16 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
   }
   function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
 
+  // 복합박자(6/8, 9/8, 12/8): tempo는 8분음표(♪) 기준 → beat = 60/tempo
+  // 단순박자: tempo는 4분음표(♩) 기준 → beat = (60/tempo) * (4/btm)
+  function isCompoundTS(top, btm) {
+    return btm === 8 && (top === 6 || top === 9 || top === 12);
+  }
+  function computeBeatSec(tempo, top, btm) {
+    var t = tempo || 120;
+    return isCompoundTS(top, btm) ? (60 / t) : (60 / t) * (4 / btm);
+  }
+
   function reportHeight() {
     var wrapper  = document.getElementById('score-wrapper');
     var controls = document.getElementById('controls');
@@ -554,7 +564,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     // 스케일/메트로놈 프리펜드 시간만큼 지연 후 시작
     var ts  = (p.timeSignature || '4/4').split('/');
     var top = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
-    var beat  = (60 / (p.tempo || 120)) * (4 / btm);
+    var beat  = computeBeatSec(p.tempo, top, btm);
     var sBeat = (60 / (p.scaleTempo || 120)) * (4 / btm);
     var delayMs = 0;
     if (p.prependBasePitch) delayMs += 16 * sBeat * 1000;
@@ -605,7 +615,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         if (cancelFlag) return;
         var ts   = (p.timeSignature || '4/4').split('/');
         var top  = parseInt(ts[0]) || 4, btm = parseInt(ts[1]) || 4;
-        var beat = (60 / (p.tempo || 120)) * (4 / btm);
+        var beat = computeBeatSec(p.tempo, top, btm);
         var sBeat= (60 / (p.scaleTempo || 120)) * (4 / btm);
         if (p.prependMetronome) {
           var mStart = p.prependBasePitch ? 16 * sBeat : 0;
@@ -668,7 +678,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     var ts = (p.timeSignature || '4/4').split('/');
     var top   = parseInt(ts[0]) || 4;
     var btm   = parseInt(ts[1]) || 4;
-    var beat  = (60 / (p.tempo || 120)) * (4 / btm);
+    var beat  = computeBeatSec(p.tempo, top, btm);
     var sBeat = (60 / (p.scaleTempo || 120)) * (4 / btm);
     var measureDur  = top * beat;
     var examWait    = (p.examWaitSeconds || 3) * 1000;
@@ -1123,7 +1133,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     if (!totalDur || isNaN(totalDur)) {
       var ts2  = (p.timeSignature||'4/4').split('/');
       var top2 = parseInt(ts2[0])||4, btm2 = parseInt(ts2[1])||4;
-      var beat2  = (60/(p.tempo||120))*(4/btm2);
+      var beat2  = computeBeatSec(p.tempo, top2, btm2);
       var sBeat2 = (60/(p.scaleTempo||120))*(4/btm2);
       var bodyLines2 = abc.split('\\n').filter(function(l){ return !/^[A-Z]:/.test(l) && !/^%%/.test(l); });
       var measures2  = (bodyLines2.join('\\n').match(/\\|/g)||[]).length;
@@ -1147,7 +1157,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         if (p.prependMetronome) {
           var ts3  = (p.timeSignature||'4/4').split('/');
           var top3 = parseInt(ts3[0])||4, btm3 = parseInt(ts3[1])||4;
-          var beat3  = (60/(p.tempo||120))*(4/btm3);
+          var beat3  = computeBeatSec(p.tempo, top3, btm3);
           var sBeat3 = (60/(p.scaleTempo||120))*(4/btm3);
           var mStart = p.prependBasePitch ? 16*sBeat3 : 0;
           for (var i=0;i<top3;i++)
@@ -1171,6 +1181,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         c.style.visibility = v;
       });
     });
+    /* 음표 머리(notehead) — abcjs 가 symbol 타입으로 .abcjs-note 외부에 별도 배치할 수 있음 */
+    ct.querySelectorAll('.abcjs-notehead').forEach(function(el) {
+      el.style.visibility = v;
+    });
     /* 슬러(.abcjs-legato)·타이(.abcjs-tie) — 음표와 별도 SVG 그룹(.abcjs-slur) */
     ct.querySelectorAll('.abcjs-slur').forEach(function(el) {
       el.style.visibility = v;
@@ -1180,26 +1194,28 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
       el.style.visibility = v;
     });
     /* 꼬리·빔·가림줄 — 음표 그룹 밖에 별도 요소로 그려짐.
-       박자표 등 선두(.abcjs-staff-extra) 꼬리는 유지. abcjs는 꼬리를 pathToBack 으로 그릴 때
-       부모 <g> 밖(SVG 직하위)에 두는 경우가 있어, staff-extra 영역과의 bbox 겹침으로도 판별함. */
-    var staffExtraGroups = ct.querySelectorAll('.abcjs-staff-extra');
-    function stemBelongsToStaffExtra(el) {
+       템포 표시 등 선두(.abcjs-staff-extra) 영역의 요소는 숨기지 않음.
+       abcjs 가 stem 을 pathToBack 으로 DOM 외부에 배치할 수 있어 getBoundingClientRect 로 x 범위 비교. */
+    var staffExtraXRanges = [];
+    ct.querySelectorAll('.abcjs-staff-extra').forEach(function(group) {
+      try {
+        var r = group.getBoundingClientRect();
+        if (r.width > 0) staffExtraXRanges.push({ left: r.left - 8, right: r.right + 8 });
+      } catch(e) {}
+    });
+    function elemInStaffExtraX(el) {
       if (el.closest && el.closest('.abcjs-staff-extra')) return true;
       try {
-        if (!el.getBBox) return false;
-        var b = el.getBBox();
-        var cx = b.x + b.width / 2;
-        var cy = b.y + b.height / 2;
-        for (var gi = 0; gi < staffExtraGroups.length; gi++) {
-          var sb = staffExtraGroups[gi].getBBox();
-          if (cx >= sb.x - 2 && cx <= sb.x + sb.width + 2 &&
-              cy >= sb.y - 4 && cy <= sb.y + sb.height + 4) return true;
+        var r = el.getBoundingClientRect();
+        var cx = r.left + r.width / 2;
+        for (var i = 0; i < staffExtraXRanges.length; i++) {
+          if (cx >= staffExtraXRanges[i].left && cx <= staffExtraXRanges[i].right) return true;
         }
-      } catch (e) {}
+      } catch(e) {}
       return false;
     }
     ct.querySelectorAll('.abcjs-stem,.abcjs-beam-elem,.abcjs-ledger').forEach(function(el) {
-      if (hide && stemBelongsToStaffExtra(el)) return;
+      if (hide && elemInStaffExtraX(el)) return;
       el.style.visibility = v;
     });
   }

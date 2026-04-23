@@ -151,7 +151,7 @@ function userNotesToAbc(
     'T: ',
     `M: ${timeSignature}`,
     'L: 1/16',
-    isCompoundMeter(timeSignature) ? `Q: 1/8=${(tempo ?? 90) * 2}` : `Q: 1/4=${tempo ?? 90}`,
+    isCompoundMeter(timeSignature) ? `Q: 1/8=${tempo ?? 90}` : `Q: 1/4=${tempo ?? 90}`,
     useGrandStaff ? '%%staves {V1 V2}' : null,
     `K: ${keySignature}`,
   ].filter(Boolean).join('\n');

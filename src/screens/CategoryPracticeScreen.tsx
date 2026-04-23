@@ -123,7 +123,7 @@ export default function CategoryPracticeScreen() {
                 category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
                 category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B' &&
                   `${t('editor:pitch.' + practiceSettings.rhythmPitch, { defaultValue: practiceSettings.rhythmPitch })}`,
-                practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo * 2}` : `♩=${practiceSettings.tempo}`),
+                practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo}` : `♩=${practiceSettings.tempo}`),
               ].filter(Boolean).join(' · ')}
             </Text>
           </View>
@@ -177,7 +177,7 @@ export default function CategoryPracticeScreen() {
                         {[
                           category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
                           practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
-                          practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo * 2}` : `♩=${practiceSettings.tempo}`),
+                          practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo}` : `♩=${practiceSettings.tempo}`),
                         ].filter(Boolean).join(' · ')}
                       </Text>
                     )}
