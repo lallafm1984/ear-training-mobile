@@ -7,6 +7,7 @@ import Purchases, {
   LOG_LEVEL,
   PurchasesPackage,
   CustomerInfo,
+  CustomerInfoUpdateListener,
 } from 'react-native-purchases';
 
 // ── API 키 (RevenueCat 대시보드에서 발급) ──────────────────
@@ -34,6 +35,26 @@ export async function initRevenueCat(userId?: string): Promise<void> {
 /** 현재 사용자의 구독 정보 조회 */
 export async function getCustomerInfo(): Promise<CustomerInfo> {
   return Purchases.getCustomerInfo();
+}
+
+/**
+ * SDK 내부에 캐시된 CustomerInfo를 무효화한다.
+ * 환불 등 앱 외부에서 발생한 변경사항을 강제로 다시 가져와야 할 때 사용.
+ */
+export async function invalidateCustomerInfoCache(): Promise<void> {
+  await Purchases.invalidateCustomerInfoCache();
+}
+
+/**
+ * RevenueCat이 CustomerInfo 변경을 감지할 때마다 호출되는 리스너를 등록.
+ * 환불/갱신 등 서버 측 변경이 SDK에 반영되면 자동 호출된다.
+ * 반환값은 등록 해제 함수.
+ */
+export function addCustomerInfoUpdateListener(
+  listener: CustomerInfoUpdateListener,
+): () => void {
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => Purchases.removeCustomerInfoUpdateListener(listener);
 }
 
 /** 사용 가능한 패키지(상품) 목록 조회 */

@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Platform } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
 import {
   initRevenueCat, getCustomerInfo,
   loginRevenueCat, logoutRevenueCat, ENTITLEMENT_ID,
+  invalidateCustomerInfoCache, addCustomerInfoUpdateListener,
 } from '../lib/revenueCat';
 import type { CustomerInfo } from 'react-native-purchases';
 
@@ -54,10 +55,30 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subState, setSubState] = useState<SubscriptionState>(DEFAULT_STATE);
   const [loading,  setLoading]  = useState(true);
   const [rcReady, setRcReady] = useState(false);
+  const userIdRef = useRef<string | null>(null);
 
   // ── RevenueCat 초기화 ─────────────────────────────────────
   useEffect(() => {
     initRevenueCat().then(() => setRcReady(true)).catch(() => setRcReady(true));
+  }, []);
+
+  // ── 구독 상태를 RC CustomerInfo + DB와 동기화 ─────────────
+  // RC가 진실 공급원. DB는 캐시일 뿐이므로 차이가 있으면 DB를 RC에 맞춘다.
+  const syncFromCustomerInfo = useCallback((info: CustomerInfo) => {
+    const { tier, expiresAt } = deriveSubscriptionFromRc(info);
+    setSubState(prev => {
+      if (prev.tier === tier && prev.expiresAt === expiresAt) return prev;
+      return { tier, expiresAt };
+    });
+
+    const uid = userIdRef.current;
+    if (uid) {
+      supabase
+        .from('profiles')
+        .update({ tier, subscription_expires_at: expiresAt })
+        .eq('id', uid)
+        .then(() => {});
+    }
   }, []);
 
   // ── RevenueCat 사용자 연결 + 구독 상태 동기화 ─────────────
@@ -65,30 +86,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     if (!rcReady) return;
 
     if (!user || !profile) {
+      userIdRef.current = null;
       logoutRevenueCat().catch(() => {});
       setSubState(DEFAULT_STATE);
       setLoading(false);
       return;
     }
 
+    userIdRef.current = user.id;
+
     const syncSubscription = async () => {
       try {
         await loginRevenueCat(user.id);
+        // 환불/외부 변경을 놓치지 않도록 캐시 무효화 후 최신 상태를 가져온다.
+        await invalidateCustomerInfoCache().catch(() => {});
         const info = await getCustomerInfo();
-        const { tier, expiresAt } = deriveSubscriptionFromRc(info);
-
-        // DB의 tier/만료일과 RevenueCat이 다르면 DB 동기화
-        // (환불 시 tier='free'로 내려가도록, expiresAt도 항상 함께 맞춘다)
-        const dbExpiresAt = profile.subscription_expires_at ?? null;
-        if (profile.tier !== tier || dbExpiresAt !== expiresAt) {
-          supabase
-            .from('profiles')
-            .update({ tier, subscription_expires_at: expiresAt })
-            .eq('id', user.id)
-            .then(() => {});
-        }
-
-        setSubState({ tier, expiresAt });
+        syncFromCustomerInfo(info);
       } catch {
         // RevenueCat 실패 시 DB 기반 폴백
         let tier = (profile.tier as PlanTier) ?? 'free';
@@ -107,7 +120,36 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     };
 
     syncSubscription();
-  }, [user, profile, rcReady]);
+  }, [user, profile, rcReady, syncFromCustomerInfo]);
+
+  // ── RC CustomerInfo 변경 리스너 ──────────────────────────
+  // 환불/갱신 등 서버 측 변경이 SDK에 반영되면 자동으로 상태/DB가 동기화된다.
+  useEffect(() => {
+    if (!rcReady) return;
+    const unsubscribe = addCustomerInfoUpdateListener(info => {
+      syncFromCustomerInfo(info);
+    });
+    return unsubscribe;
+  }, [rcReady, syncFromCustomerInfo]);
+
+  // ── 앱이 포그라운드로 복귀하면 캐시 무효화 후 재동기화 ─────
+  // 환불은 앱 밖(스토어)에서 발생하므로, 복귀 시점에 강제로 최신 상태를 끌어온다.
+  useEffect(() => {
+    if (!rcReady) return;
+    const handleAppStateChange = async (state: AppStateStatus) => {
+      if (state !== 'active') return;
+      if (!userIdRef.current) return;
+      try {
+        await invalidateCustomerInfoCache();
+        const info = await getCustomerInfo();
+        syncFromCustomerInfo(info);
+      } catch {
+        // 무시
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppStateChange);
+    return () => sub.remove();
+  }, [rcReady, syncFromCustomerInfo]);
 
   // ── Supabase에 구독 상태 저장 ────────────────────────────
   const persistToSupabase = useCallback(async (next: SubscriptionState) => {
@@ -125,26 +167,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // ── RevenueCat에서 구독 상태 재동기화 ─────────────────────
   const refreshSubscription = useCallback(async () => {
     try {
+      // 환불 직후 등 캐시가 stale일 수 있으므로 무효화 후 최신 데이터를 받는다.
+      await invalidateCustomerInfoCache().catch(() => {});
       const info = await getCustomerInfo();
       if (__DEV__) {
         console.log('[Subscription] entitlements:', JSON.stringify(info.entitlements, null, 2));
         console.log('[Subscription] activeSubscriptions:', info.activeSubscriptions);
       }
-
-      const { tier, expiresAt } = deriveSubscriptionFromRc(info);
-      setSubState({ tier, expiresAt });
-
-      if (user) {
-        supabase
-          .from('profiles')
-          .update({ tier, subscription_expires_at: expiresAt })
-          .eq('id', user.id)
-          .then(() => {});
-      }
+      syncFromCustomerInfo(info);
     } catch {
       // 실패 시 무시
     }
-  }, [user]);
+  }, [syncFromCustomerInfo]);
 
   // ── 플랜 업그레이드 ──────────────────────────────────────
   const upgradePlan = useCallback(async (newTier: PlanTier, durationDays = 30) => {
