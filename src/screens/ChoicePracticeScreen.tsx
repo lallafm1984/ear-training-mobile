@@ -21,6 +21,7 @@ import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGene
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
+import { useSessionContentLog } from '../context';
 import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -36,6 +37,7 @@ export default function ChoicePracticeScreen() {
   const { category, difficulty } = route.params;
   const { addRecord } = usePracticeHistory();
   const { updateStreak, applyEvaluation } = useSkillProfile();
+  const { trackContentRun } = useSessionContentLog();
 
   const { t } = useTranslation(['practice', 'content', 'common']);
   const config = getContentConfig(category);
@@ -50,6 +52,10 @@ export default function ChoicePracticeScreen() {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [showResult, setShowResult] = useState(false);
+
+  useEffect(() => {
+    trackContentRun({ contentType: category, difficulty, source: 'choice_practice' });
+  }, [category, difficulty, question.id, trackContentRun]);
 
   // 오디오 재생
   const abcjsRef = useRef<AbcjsRendererHandle>(null);

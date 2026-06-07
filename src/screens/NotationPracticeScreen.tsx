@@ -38,7 +38,7 @@ import DurationToolbar from '../components/DurationToolbar';
 import GradingResultView from '../components/GradingResult';
 import { useNoteInput } from '../hooks/useNoteInput';
 import { gradeNotes, type GradingResult, type NoteGrade } from '../lib/grading';
-import { useAlert } from '../context';
+import { useAlert, useSessionContentLog } from '../context';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -271,6 +271,7 @@ export default function NotationPracticeScreen() {
   const { addRecord } = usePracticeHistory();
   const { applyEvaluation, updateStreak } = useSkillProfile();
   const { showAlert } = useAlert();
+  const { trackContentRun } = useSessionContentLog();
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
   const scaleAbcjsRef = useRef<AbcjsRendererHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -360,6 +361,9 @@ export default function NotationPracticeScreen() {
         : generatePracticeScore(category, difficulty, practiceSettings);
       if (!newScore) return;
       setScore(newScore);
+      if (!examMode) {
+        trackContentRun({ contentType: category, difficulty, source: 'notation_practice' });
+      }
       if (category === 'melody' || category === 'twoVoice') {
         const first = newScore.trebleNotes[0] ?? null;
         // 실제 마디 수 계산하여 reset에 전달
@@ -372,7 +376,7 @@ export default function NotationPracticeScreen() {
       }
       setIsGenerating(false);
     }, 500);
-  }, [category, difficulty, practiceSettings, examMode]);
+  }, [category, difficulty, practiceSettings, examMode, trackContentRun]);
 
   // 마운트 시 첫 악보 생성
   useEffect(() => { generate(); }, [generate]);

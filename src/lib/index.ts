@@ -53,5 +53,7 @@ export type { ChoiceQuestion } from './questionGenerator';
 export { computeStats } from './computeStats';
 export type { PracticeStats } from './computeStats';
 
+export * from './sessionContentLog';
+
 // 모의시험 프리셋
 export { EXAM_PRESETS } from './examPresets';

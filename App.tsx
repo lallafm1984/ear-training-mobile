@@ -6,7 +6,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { AuthProvider, useAuth, SubscriptionProvider, AlertProvider } from './src/context';
+import {
+  AlertProvider,
+  AuthProvider,
+  SessionContentLogProvider,
+  SubscriptionProvider,
+  useAuth,
+} from './src/context';
 import { LoginScreen } from './src/screens';
 import MainStack from './src/navigation/MainStack';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -37,9 +43,11 @@ function AppNavigator() {
 
   // 로그인 완료 → 홈 대시보드 (네비게이션 스택)
   return (
-    <SubscriptionProvider>
-      <MainStack />
-    </SubscriptionProvider>
+    <SessionContentLogProvider>
+      <SubscriptionProvider>
+        <MainStack />
+      </SubscriptionProvider>
+    </SessionContentLogProvider>
   );
 }
 

@@ -24,7 +24,7 @@
         "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
-      "versionCode": 21,
+      "versionCode": 51,
       "permissions": [
         "READ_MEDIA_AUDIO",
         "WRITE_EXTERNAL_STORAGE",

@@ -25,7 +25,7 @@ import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
-import { useAlert } from '../context';
+import { useAlert, useSessionContentLog } from '../context';
 import type { ExamQuestion, MockExamSession, ExamSection } from '../types/exam';
 import type { ContentCategory, PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -57,6 +57,7 @@ export default function MockExamScreen() {
   const { addBatchRecords } = usePracticeHistory();
   const { updateStreak } = useSkillProfile();
   const { showAlert } = useAlert();
+  const { trackContentRuns } = useSessionContentLog();
 
   // 오디오 재생
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
@@ -128,6 +129,20 @@ export default function MockExamScreen() {
     });
     return items;
   }, [preset]);
+
+  const loggedPresetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (loggedPresetRef.current === preset.id) return;
+    loggedPresetRef.current = preset.id;
+    trackContentRuns(
+      questions.map((q) => ({
+        contentType: q.examQuestion.contentType,
+        difficulty: q.examQuestion.difficulty,
+        source: 'mock_exam',
+      })),
+    );
+  }, [preset.id, questions, trackContentRuns]);
 
   const totalQuestions = questions.length;
   const [currentIndex, setCurrentIndex] = useState(0);

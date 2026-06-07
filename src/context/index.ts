@@ -10,3 +10,6 @@ export type { AuthContextValue } from './AuthContext';
 
 export { SubscriptionProvider, useSubscription } from './SubscriptionContext';
 export type { SubscriptionContextValue } from './SubscriptionContext';
+
+export { SessionContentLogProvider, useSessionContentLog } from './SessionContentLogContext';
+export type { SessionContentLogContextValue } from './SessionContentLogContext';
