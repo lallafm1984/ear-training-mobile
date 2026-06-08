@@ -69,7 +69,7 @@ function twoVoiceDifficultyToBassDiff(difficulty: ContentDifficulty): BassDiffic
 
 /** 카테고리 기반 초기 genPracticeMode/level 설정 */
 function categoryToInitialConfig(category: ContentCategory, difficulty: ContentDifficulty): { mode: 'partPractice' | 'comprehensive'; level: number } {
-  if (category === 'melody') return { mode: 'partPractice', level: melodyDifficultyToLevel(difficulty) };
+  if (category === 'melody' || category === 'barMelody') return { mode: 'partPractice', level: melodyDifficultyToLevel(difficulty) };
   if (category === 'rhythm') return { mode: 'partPractice', level: rhythmDifficultyToLevel(difficulty) };
   if (category === 'twoVoice') return { mode: 'partPractice', level: 1 }; // 2성부는 handleGenerate에서 별도 처리
   return { mode: 'partPractice', level: 1 };
@@ -276,7 +276,7 @@ export default function ScoreEditorScreen() {
     const maxSixteenths = barLen - noteStartInMeasure;
 
     const DUR_OPTIONS: [NoteDuration, number][] = [['1', 16], ['2.', 12], ['2', 8], ['4.', 6], ['4', 4], ['8.', 3], ['8', 2], ['16', 1]];
-    let requestedS = durationToSixteenths(d);
+    const requestedS = durationToSixteenths(d);
     let effectiveDur: NoteDuration = d;
     let newS = requestedS;
     if (requestedS > maxSixteenths) {
@@ -306,7 +306,7 @@ export default function ScoreEditorScreen() {
         for (let i = pIdx + 1; i < newArr.length; i++) {
           const nextS = durationToSixteenths(newArr[i].duration);
           if (nextS <= remaining) { removeCount++; remaining -= nextS; if (remaining === 0) break; }
-          else { removeCount++; leftoverRests = fillWithRests(nextS - remaining).map(rd => ({ id: Math.random().toString(36).substr(2, 9), pitch: 'rest' as PitchName, octave: 4, duration: rd, accidental: '' as Accidental, tie: false })); remaining = 0; break; }
+          else { removeCount++; leftoverRests = fillWithRests(nextS - remaining).map(rd => ({ id: Math.random().toString(36).substr(2, 9), pitch: 'rest' as PitchName, octave: 4, duration: rd, accidental: '' as Accidental, tie: false })); break; }
         }
         if (removeCount > 0) { newArr.splice(pIdx + 1, removeCount); if (leftoverRests.length > 0) newArr.splice(pIdx + 1, 0, ...leftoverRests); }
       }

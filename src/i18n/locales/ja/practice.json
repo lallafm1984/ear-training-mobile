@@ -39,6 +39,8 @@
     "finishPractice": "練習終了",
     "intervalPrompt": "2つの音を聴いて音程を答えてください。",
     "chordPrompt": "和音を聴いて種類を答えてください。",
+    "progressionPrompt": "聞こえる和声進行を選んでください。",
+    "cadencePrompt": "最後のカデンツの種類を選んでください。",
     "keyModePrompt": "メロディーを聴いて長調/短調を答えてください。",
     "keyPrompt": "メロディーを聴いて調性を答えてください。"
   },

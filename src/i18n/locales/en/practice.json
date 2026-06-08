@@ -39,6 +39,8 @@
     "finishPractice": "Finish Practice",
     "intervalPrompt": "Listen and identify the interval.",
     "chordPrompt": "Listen and identify the chord type.",
+    "progressionPrompt": "Listen and identify the harmonic progression.",
+    "cadencePrompt": "Listen and identify the final cadence.",
     "keyModePrompt": "Listen and identify major or minor.",
     "keyPrompt": "Listen and identify the key."
   },

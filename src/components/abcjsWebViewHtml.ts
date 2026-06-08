@@ -201,8 +201,8 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     var bodyStr    = countLines.join(' ');
 
     // 총 마디 수 계산 → 짝수 마디씩 배치 (2 또는 4)
-    var totalBars = (bodyStr.match(/\|/g) || []).length;
-    var doubleBars = (bodyStr.match(/\|\|/g) || []).length;
+    var totalBars = (bodyStr.match(/[|]/g) || []).length;
+    var doubleBars = (bodyStr.match(/[|][|]/g) || []).length;
     totalBars = Math.max(1, totalBars - doubleBars);
     // 마디당 평균 음표 수로 줄당 마디 수 자동 결정
     // ABC 음표 문자: A-G(저음), a-g(고음), z(쉼표)
@@ -214,8 +214,8 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     var renderResult = ABCJS.renderAbc('score-container', abc, {
       add_classes: true,
       responsive: 'resize',
-      scale: 1.2,
-      staffwidth: 800,
+      scale: currentParams.renderScale || 1.2,
+      staffwidth: currentParams.staffWidth || 800,
       wrap: { minSpacing: 1.8, maxSpacing: 2.5, preferredMeasuresPerLine: perLine },
       format: { stretchlast: currentParams.stretchLast },
       clickListener: function(abcElem, tuneNumber, classes, analysis) {
@@ -1248,6 +1248,9 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
           customPlaySettings: msg.customPlaySettings || null,
           barsPerStaff:     msg.barsPerStaff    || null,
           noteColors:       msg.noteColors      || null,
+          pitchTapMode:     msg.pitchTapMode    || false,
+          renderScale:      msg.renderScale     || 1.2,
+          staffWidth:       msg.staffWidth      || 800,
         };
         renderScore(msg.abc, msg.selectedNote);
         if (msg.hideNotes) {
@@ -1262,6 +1265,53 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         // RN PanResponder에서 탭으로 판정된 좌표 → 가장 가까운 음표 탐색
         var tapCt = document.getElementById('score-container');
         if (tapCt) {
+          if (currentParams.pitchTapMode) {
+            var pitchTapAll = Array.from(tapCt.querySelectorAll('.abcjs-v0.abcjs-note, .abcjs-v0.abcjs-rest'));
+            var slotEl = null, slotDist = Infinity;
+            for (var pi = 0; pi < pitchTapAll.length; pi++) {
+              var pr = pitchTapAll[pi].getBoundingClientRect();
+              var pcx = pr.left + pr.width / 2;
+              var pd = Math.abs(msg.x - pcx);
+              if (pd < slotDist) { slotDist = pd; slotEl = pitchTapAll[pi]; }
+            }
+
+            var staffEls = Array.from(tapCt.querySelectorAll('.abcjs-staff'));
+            var staffYs = [];
+            for (var syi = 0; syi < staffEls.length; syi++) {
+              var sr = staffEls[syi].getBoundingClientRect();
+              if (sr.width > 80) staffYs.push(sr.top + sr.height / 2);
+            }
+            staffYs.sort(function(a, b) { return a - b; });
+            var uniqueStaffYs = [];
+            for (var uyi = 0; uyi < staffYs.length; uyi++) {
+              if (!uniqueStaffYs.length || Math.abs(staffYs[uyi] - uniqueStaffYs[uniqueStaffYs.length - 1]) > 2) {
+                uniqueStaffYs.push(staffYs[uyi]);
+              }
+            }
+
+            var bestGroup = null, bestGroupDist = Infinity;
+            for (var gi = 0; gi <= uniqueStaffYs.length - 5; gi++) {
+              var group = uniqueStaffYs.slice(gi, gi + 5);
+              var groupSpan = group[4] - group[0];
+              if (groupSpan < 12 || groupSpan > 120) continue;
+              var groupCenter = (group[0] + group[4]) / 2;
+              var gd = Math.abs(msg.y - groupCenter);
+              if (gd < bestGroupDist) { bestGroupDist = gd; bestGroup = group; }
+            }
+
+            if (slotEl && bestGroup) {
+              var halfStep = (bestGroup[4] - bestGroup[0]) / 8;
+              if (halfStep > 0) {
+                var degree = Math.round(10 - ((msg.y - bestGroup[0]) / halfStep));
+                degree = Math.max(0, Math.min(7, degree));
+                var slotIdx = pitchTapAll.indexOf(slotEl);
+                if (slotIdx >= 0) {
+                  postMsg({ type:'SCORE_PITCH_TAP', index:slotIdx, degree:degree, voice:'treble' });
+                  return;
+                }
+              }
+            }
+          }
           var noteEls = tapCt.querySelectorAll('.abcjs-note, .abcjs-rest');
           var bestEl = null, bestDist = Infinity;
           for (var ni = 0; ni < noteEls.length; ni++) {

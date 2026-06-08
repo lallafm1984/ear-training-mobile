@@ -1,16 +1,16 @@
 import { computeStats } from '../lib/computeStats';
-import type { PracticeRecord, ContentCategory } from '../types/content';
+import type { PracticeRecord } from '../types/content';
 
 function makeRecord(
-  contentType: string,
+  contentType: PracticeRecord['contentType'],
   selfRating: number,
   daysAgo = 0,
 ): PracticeRecord {
   const date = new Date(Date.now() - daysAgo * 86400_000);
   return {
     id: `test_${Math.random().toString(36).slice(2)}`,
-    contentType: contentType as any,
-    difficulty: 'melody_1' as any,
+    contentType,
+    difficulty: 'beginner_1',
     selfRating,
     practicedAt: date.toISOString(),
   };
@@ -25,6 +25,8 @@ describe('computeStats', () => {
     expect(stats.recentRecords).toHaveLength(0);
     expect(stats.totalByCategory.melody).toBe(0);
     expect(stats.avgRatingByCategory.melody).toBe(0);
+    expect(stats.totalByCategory.progression).toBe(0);
+    expect(stats.avgRatingByCategory.progression).toBe(0);
   });
 
   it('단일 레코드: 정확한 카운트 및 평균', () => {
@@ -43,14 +45,17 @@ describe('computeStats', () => {
       makeRecord('melody', 5, 1),
       makeRecord('interval', 4, 0),
       makeRecord('chord', 2, 0),
+      makeRecord('progression', 5, 0),
     ];
     const stats = computeStats(records);
-    expect(stats.totalSessions).toBe(4);
+    expect(stats.totalSessions).toBe(5);
     expect(stats.totalByCategory.melody).toBe(2);
     expect(stats.totalByCategory.interval).toBe(1);
     expect(stats.totalByCategory.chord).toBe(1);
+    expect(stats.totalByCategory.progression).toBe(1);
     expect(stats.avgRatingByCategory.melody).toBe(4); // (3+5)/2 = 4
     expect(stats.avgRatingByCategory.interval).toBe(4);
+    expect(stats.avgRatingByCategory.progression).toBe(5);
   });
 
   it('주간/월간 카운트: 오래된 기록 제외', () => {
@@ -88,6 +93,10 @@ describe('computeStats', () => {
     const stats = computeStats(records);
     expect(stats.totalByCategory.rhythm).toBe(0);
     expect(stats.avgRatingByCategory.rhythm).toBe(0);
+    expect(stats.totalByCategory.barMelody).toBe(0);
+    expect(stats.avgRatingByCategory.barMelody).toBe(0);
+    expect(stats.totalByCategory.progression).toBe(0);
+    expect(stats.avgRatingByCategory.progression).toBe(0);
     expect(stats.totalByCategory.twoVoice).toBe(0);
   });
 });

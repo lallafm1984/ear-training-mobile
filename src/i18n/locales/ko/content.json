@@ -4,6 +4,10 @@
       "name": "선율 받아쓰기",
       "description": "멜로디를 듣고 악보로 기보"
     },
+    "barMelody": {
+      "name": "마디 받아쓰기",
+      "description": "한 마디 선율을 듣고 음정 간격 기보"
+    },
     "rhythm": {
       "name": "리듬 받아쓰기",
       "description": "리듬 패턴을 듣고 기보"
@@ -15,6 +19,10 @@
     "chord": {
       "name": "화성 듣기",
       "description": "화음의 종류 식별"
+    },
+    "progression": {
+      "name": "화성 진행",
+      "description": "화음의 흐름과 종지 판별"
     },
     "key": {
       "name": "조성 판별",
@@ -37,6 +45,14 @@
       "advanced_2": "고급 2 · 셋잇단음표",
       "advanced_3": "고급 3 · 임시표"
     },
+    "barMelody": {
+      "bar_1": "1단계 · 2도+3도",
+      "bar_2": "2단계 · 4도까지",
+      "bar_3": "3단계 · 5도까지",
+      "bar_4": "4단계 · 6도까지",
+      "bar_5": "5단계 · 반음 이웃음",
+      "bar_6": "6단계 · 반음+온음"
+    },
     "rhythm": {
       "rhythm_1": "1단계 · 2분/4분음표 + 4분쉼표",
       "rhythm_2": "2단계 · 8분음표 + 쉼표",
@@ -55,6 +71,12 @@
       "chord_2": "1단계 · 장/단/증/감3화음",
       "chord_3": "2단계 · + 장7·단7화음",
       "chord_4": "3단계 · + 감7화음"
+    },
+    "progression": {
+      "progression_1": "1단계 · 기본 진행",
+      "progression_2": "2단계 · 종지 판별",
+      "progression_3": "3단계 · 실전 진행",
+      "progression_4": "4단계 · 문맥형"
     },
     "key": {
       "key_1": "1단계 · 나란한조 (C/Am)",
@@ -108,6 +130,27 @@
     "dim7": "감7화음 (dim7)",
     "maj_inv1": "장3화음 제1전위",
     "min_inv1": "단3화음 제1전위"
+  },
+  "progression": {
+    "I-V-I": "I-V-I",
+    "I-IV-I": "I-IV-I",
+    "I-IV-V-I": "I-IV-V-I",
+    "I-vi-IV-V": "I-vi-IV-V",
+    "ii-V-I": "ii-V-I",
+    "IV-V-I": "IV-V-I",
+    "I-ii-V": "I-ii-V",
+    "vi-IV-V": "vi-IV-V",
+    "I-vi-ii-V": "I-vi-ii-V",
+    "I-V-vi-IV": "I-V-vi-IV",
+    "I-IV-ii-V": "I-IV-ii-V",
+    "i-iv-V-i": "i-iv-V-i",
+    "i-VI-iv-V": "i-VI-iv-V"
+  },
+  "cadence": {
+    "authentic": "완전종지",
+    "half": "반종지",
+    "plagal": "변격종지",
+    "deceptive": "기만종지"
   },
   "key": {
     "C_major": "C장조 (C Major)",

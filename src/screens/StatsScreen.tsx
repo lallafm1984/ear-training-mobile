@@ -125,8 +125,8 @@ export default function StatsScreen() {
   // ── DEV 전용: 테스트 데이터 주입 ──
   const seedTestData = async () => {
     if (!user) return;
-    const categories = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'] as const;
-    const difficulties = ['beginner_1', 'rhythm_2', 'interval_1', 'chord_2', 'key_1', 'bass_1'];
+    const categories = ['melody', 'barMelody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'] as const;
+    const difficulties = ['beginner_1', 'beginner_1', 'rhythm_2', 'interval_1', 'chord_2', 'key_1', 'bass_1'];
     const now = Date.now();
 
     const practiceRecords = Array.from({ length: 200 }, (_, i) => ({

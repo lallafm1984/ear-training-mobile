@@ -5,14 +5,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
-  Music, Drum, ArrowUpDown, Layers, Key, FileMusic, Lock,
+  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic, Lock,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  Music, Drum, ArrowUpDown, Layers, Key, FileMusic,
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic,
 };
 
 interface CategoryCardProps {
@@ -68,8 +68,9 @@ export default React.memo(CategoryCard);
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    minWidth: '30%',
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: '30%',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 12,

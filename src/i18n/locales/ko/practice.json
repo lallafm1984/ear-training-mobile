@@ -39,6 +39,8 @@
     "finishPractice": "연습 종료",
     "intervalPrompt": "두 음을 듣고 음정을 맞추세요.",
     "chordPrompt": "화음을 듣고 종류를 맞추세요.",
+    "progressionPrompt": "들리는 화성 진행을 고르세요.",
+    "cadencePrompt": "마지막 종지의 종류를 고르세요.",
     "keyModePrompt": "멜로디를 듣고 장조/단조를 맞추세요.",
     "keyPrompt": "멜로디를 듣고 조성을 맞추세요."
   },

@@ -184,7 +184,6 @@ function sumSixteenths(notes: ScoreNote[]): number {
 
 /** 음표 인덱스가 속한 마디의 시작/끝 인덱스와 마디 내 위치 반환 */
 function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
-  let cumulative = 0;
   let measureStartIdx = 0;
   let measureCum = 0; // 현재 마디 내 누적
 
@@ -197,7 +196,6 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
     }
     if (i === noteIndex) {
       // 이 마디의 총 음가 계산 (이 마디에 속하는 모든 음표)
-      let measureTotal = 0;
       let measureEndIdx = i; // inclusive
       let tempCum = 0;
       for (let j = measureStartIdx; j < notes.length; j++) {
@@ -206,7 +204,7 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
         tempCum += d;
         measureEndIdx = j;
       }
-      measureTotal = tempCum;
+      const measureTotal = tempCum;
       return {
         measureStartIdx,
         measureEndIdx,
@@ -450,7 +448,7 @@ function replaceNoteAtPosition(
   // 우측 음표들을 소비
   const result = [...notes];
   let remaining = needed;
-  let removeStart = targetIdx + 1;
+  const removeStart = targetIdx + 1;
   let removeCount = 0;
   const trailingRests: ScoreNote[] = [];
 
@@ -1093,7 +1091,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const isComplete = (() => {
     const treble = state.trebleNotes;
     // 첫음 이후에 쉼표가 아닌 음표가 있으면 제출 가능
-    const hasInput = treble.some((n, i) => i > 0 && n.pitch !== 'rest');
+    const hasInput = treble.some((n, i) => (!firstNote || i > 0) && n.pitch !== 'rest');
     if (useGrandStaff) {
       const bassHasInput = state.bassNotes.some(n => n.pitch !== 'rest');
       return hasInput && bassHasInput;

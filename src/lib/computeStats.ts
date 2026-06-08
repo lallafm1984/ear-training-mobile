@@ -14,7 +14,16 @@ export interface PracticeStats {
   monthlyCount: number;
 }
 
-const CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'];
+const CATEGORIES: ContentCategory[] = [
+  'melody',
+  'barMelody',
+  'rhythm',
+  'interval',
+  'chord',
+  'progression',
+  'key',
+  'twoVoice',
+];
 
 function emptyStats(): PracticeStats {
   const totalByCategory = {} as Record<ContentCategory, number>;

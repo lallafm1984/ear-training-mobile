@@ -4,6 +4,10 @@
       "name": "旋律聴音",
       "description": "メロディーを聴いて楽譜に記譜"
     },
+    "barMelody": {
+      "name": "1小節ディクテーション",
+      "description": "1\u5c0f\u7bc0\u306e\u97f3\u7a0b\u306e\u52d5\u304d\u3092\u8a18\u8b5c"
+    },
     "rhythm": {
       "name": "リズム聴音",
       "description": "リズムパターンを聴いて記譜"
@@ -15,6 +19,10 @@
     "chord": {
       "name": "和声聴き取り",
       "description": "和音の種類を識別"
+    },
+    "progression": {
+      "name": "和声進行",
+      "description": "和音の流れとカデンツを判別"
     },
     "key": {
       "name": "調性判別",
@@ -37,6 +45,14 @@
       "advanced_2": "上級2 · 三連符",
       "advanced_3": "上級3 · 臨時記号"
     },
+    "barMelody": {
+      "bar_1": "\u30ec\u30d9\u30eb1 \u00b7 2\u5ea6+3\u5ea6",
+      "bar_2": "\u30ec\u30d9\u30eb2 \u00b7 4\u5ea6\u307e\u3067",
+      "bar_3": "\u30ec\u30d9\u30eb3 \u00b7 5\u5ea6\u307e\u3067",
+      "bar_4": "\u30ec\u30d9\u30eb4 \u00b7 6\u5ea6\u307e\u3067",
+      "bar_5": "\u30ec\u30d9\u30eb5 \u00b7 \u534a\u97f3\u306e\u96a3\u63a5\u97f3",
+      "bar_6": "\u30ec\u30d9\u30eb6 \u00b7 \u534a\u97f3+\u5168\u97f3"
+    },
     "rhythm": {
       "rhythm_1": "レベル1 · 二分/四分音符 + 四分休符",
       "rhythm_2": "レベル2 · 八分音符 + 休符",
@@ -55,6 +71,12 @@
       "chord_2": "レベル1 · 長/短/増/減三和音",
       "chord_3": "レベル2 · + 長七/短七の和音",
       "chord_4": "レベル3 · + 減七の和音"
+    },
+    "progression": {
+      "progression_1": "レベル1 · 基本進行",
+      "progression_2": "レベル2 · カデンツ判別",
+      "progression_3": "レベル3 · 実践進行",
+      "progression_4": "レベル4 · 文脈型"
     },
     "key": {
       "key_1": "レベル1 · 平行調（C/Am）",
@@ -108,6 +130,27 @@
     "dim7": "減七の和音 (dim7)",
     "maj_inv1": "長三和音 第1転回",
     "min_inv1": "短三和音 第1転回"
+  },
+  "progression": {
+    "I-V-I": "I-V-I",
+    "I-IV-I": "I-IV-I",
+    "I-IV-V-I": "I-IV-V-I",
+    "I-vi-IV-V": "I-vi-IV-V",
+    "ii-V-I": "ii-V-I",
+    "IV-V-I": "IV-V-I",
+    "I-ii-V": "I-ii-V",
+    "vi-IV-V": "vi-IV-V",
+    "I-vi-ii-V": "I-vi-ii-V",
+    "I-V-vi-IV": "I-V-vi-IV",
+    "I-IV-ii-V": "I-IV-ii-V",
+    "i-iv-V-i": "i-iv-V-i",
+    "i-VI-iv-V": "i-VI-iv-V"
+  },
+  "cadence": {
+    "authentic": "完全終止",
+    "half": "半終止",
+    "plagal": "変格終止",
+    "deceptive": "偽終止"
   },
   "key": {
     "C_major": "ハ長調 (C Major)",

@@ -1,14 +1,26 @@
 // ─────────────────────────────────────────────────────────────
-// 청음 콘텐츠 6대 카테고리 설정
+// 청음 콘텐츠 카테고리 설정
 // ─────────────────────────────────────────────────────────────
 
 import type { ContentCategory, ContentTypeConfig, ContentDifficulty } from '../types/content';
+import { BAR_MELODY_DIFFICULTY_LABELS } from './barMelody';
 
 // ─────────────────────────────────────────────────────────────
 // 카테고리 설정
 // ─────────────────────────────────────────────────────────────
 
 export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
+  {
+    id: 'barMelody',
+    name: '마디 받아쓰기',
+    icon: 'Music',
+    color: '#14b8a6',   // teal
+    bgColor: '#f0fdfa',
+    description: '한 마디 선율을 듣고 음정 간격 기보',
+    answerType: 'notation',
+    maxLevel: 6,
+    freeMaxLevel: 3,
+  },
   {
     id: 'melody',
     name: '선율 받아쓰기',
@@ -49,6 +61,17 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     color: '#8b5cf6',   // violet
     bgColor: '#f5f3ff',
     description: '화음의 종류 식별',
+    answerType: 'choice',
+    maxLevel: 4,
+    freeMaxLevel: 1,
+  },
+  {
+    id: 'progression',
+    name: '화성 진행',
+    icon: 'GitBranch',
+    color: '#0f766e',   // teal green
+    bgColor: '#ecfdf5',
+    description: '화음의 흐름과 종지 판별',
     answerType: 'choice',
     maxLevel: 4,
     freeMaxLevel: 1,
@@ -124,6 +147,13 @@ export const CHORD_DIFF_LABELS: Record<string, string> = {
   chord_4: '3단계 · + 감7화음',
 };
 
+export const PROGRESSION_DIFF_LABELS: Record<string, string> = {
+  progression_1: '1단계 · 기본 진행',
+  progression_2: '2단계 · 종지 판별',
+  progression_3: '3단계 · 실전 진행',
+  progression_4: '4단계 · 문맥형',
+};
+
 export const KEY_DIFF_LABELS: Record<string, string> = {
   key_1: '1단계 · 나란한조 (C/Am)',
   key_2: '2단계 · ♯♭ 1~3개 조성',
@@ -139,10 +169,12 @@ export const TWO_VOICE_DIFF_LABELS: Record<string, string> = {
 
 /** 카테고리별 난이도 라벨 맵 */
 export const CATEGORY_DIFF_LABELS: Record<ContentCategory, Record<string, string>> = {
+  barMelody: BAR_MELODY_DIFFICULTY_LABELS,
   melody: MELODY_DIFF_LABELS,
   rhythm: RHYTHM_DIFF_LABELS,
   interval: INTERVAL_DIFF_LABELS,
   chord: CHORD_DIFF_LABELS,
+  progression: PROGRESSION_DIFF_LABELS,
   key: KEY_DIFF_LABELS,
   twoVoice: TWO_VOICE_DIFF_LABELS,
 };

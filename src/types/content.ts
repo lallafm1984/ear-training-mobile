@@ -2,8 +2,16 @@
 // 청음 콘텐츠 카테고리 타입 정의
 // ─────────────────────────────────────────────────────────────
 
-/** 6대 청음 콘텐츠 카테고리 */
-export type ContentCategory = 'melody' | 'rhythm' | 'interval' | 'chord' | 'key' | 'twoVoice';
+/** 청음 콘텐츠 카테고리 */
+export type ContentCategory =
+  | 'melody'
+  | 'barMelody'
+  | 'rhythm'
+  | 'interval'
+  | 'chord'
+  | 'progression'
+  | 'key'
+  | 'twoVoice';
 
 /** 답안 형태: 기보형(악보 작성) vs 객관식 */
 export type AnswerType = 'notation' | 'choice';
@@ -39,6 +47,10 @@ export type MelodyDifficulty =
   | 'intermediate_1' | 'intermediate_2' | 'intermediate_3'
   | 'advanced_1' | 'advanced_2' | 'advanced_3';
 
+/** 마디 받아쓰기 난이도 (음정 폭/반음 기준 6단계) */
+export type BarMelodyDifficulty =
+  | 'bar_1' | 'bar_2' | 'bar_3' | 'bar_4' | 'bar_5' | 'bar_6';
+
 /** 리듬 난이도 (6단계) */
 export type RhythmDifficulty =
   | 'rhythm_1' | 'rhythm_2' | 'rhythm_3'
@@ -52,6 +64,10 @@ export type IntervalDifficulty =
 export type ChordDifficulty =
   | 'chord_2' | 'chord_3' | 'chord_4';
 
+/** 화성 진행 난이도 (4단계) */
+export type ProgressionDifficulty =
+  | 'progression_1' | 'progression_2' | 'progression_3' | 'progression_4';
+
 /** 조성 판별 난이도 (3단계) */
 export type KeyDifficulty =
   | 'key_1' | 'key_2' | 'key_3';
@@ -62,10 +78,12 @@ export type TwoVoiceDifficulty =
 
 /** 통합 난이도 타입 */
 export type ContentDifficulty =
+  | BarMelodyDifficulty
   | MelodyDifficulty
   | RhythmDifficulty
   | IntervalDifficulty
   | ChordDifficulty
+  | ProgressionDifficulty
   | KeyDifficulty
   | TwoVoiceDifficulty;
 

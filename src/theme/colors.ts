@@ -96,9 +96,11 @@ export const CATEGORY_COLORS: Record<ContentCategory, {
   text: string;
 }> = {
   melody:   { main: '#6366f1', bg: '#eef2ff', text: '#4338ca' },
+  barMelody: { main: '#14b8a6', bg: '#f0fdfa', text: '#0f766e' },
   rhythm:   { main: '#f59e0b', bg: '#fffbeb', text: '#b45309' },
   interval: { main: '#10b981', bg: '#ecfdf5', text: '#065f46' },
   chord:    { main: '#8b5cf6', bg: '#f5f3ff', text: '#5b21b6' },
+  progression: { main: '#0f766e', bg: '#ecfdf5', text: '#115e59' },
   key:      { main: '#ef4444', bg: '#fef2f2', text: '#991b1b' },
   twoVoice: { main: '#0ea5e9', bg: '#f0f9ff', text: '#075985' },
 };

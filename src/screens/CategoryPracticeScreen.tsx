@@ -18,9 +18,10 @@ import { CATEGORY_COLORS } from '../theme/colors';
 import {
   getContentConfig, getDifficultyList,
 } from '../lib/contentConfig';
+import { isNotationCategory } from '../lib/notationPractice';
 import { isCompoundMeter } from '../lib/scoreUtils/duration';
 
-import type { ContentCategory, ContentDifficulty } from '../types/content';
+import type { ContentDifficulty } from '../types/content';
 import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
 import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
 
@@ -58,7 +59,7 @@ export default function CategoryPracticeScreen() {
     }
 
     // 선율/2성부/리듬은 기보형 연습 전용 화면, 음정/화성/조성은 객관식 화면
-    if (category === 'melody' || category === 'twoVoice' || category === 'rhythm') {
+    if (isNotationCategory(category)) {
       navigation.navigate('NotationPractice', {
         category,
         difficulty: selectedDiff,

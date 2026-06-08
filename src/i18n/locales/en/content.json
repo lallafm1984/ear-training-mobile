@@ -4,6 +4,10 @@
       "name": "Melody",
       "description": "Listen & notate melodies"
     },
+    "barMelody": {
+      "name": "Bar Dictation",
+      "description": "Notate one-bar interval movement"
+    },
     "rhythm": {
       "name": "Rhythm",
       "description": "Listen & notate rhythms"
@@ -15,6 +19,10 @@
     "chord": {
       "name": "Chords",
       "description": "Identify chord types"
+    },
+    "progression": {
+      "name": "Progressions",
+      "description": "Identify harmonic motion and cadences"
     },
     "key": {
       "name": "Keys",
@@ -37,6 +45,14 @@
       "advanced_2": "Advanced 2 · Triplets",
       "advanced_3": "Advanced 3 · Accidentals"
     },
+    "barMelody": {
+      "bar_1": "Level 1 · 2nds+3rds",
+      "bar_2": "Level 2 · Up to 4ths",
+      "bar_3": "Level 3 · Up to 5ths",
+      "bar_4": "Level 4 · Up to 6ths",
+      "bar_5": "Level 5 · Chromatic neighbor",
+      "bar_6": "Level 6 · Semitone+whole tone"
+    },
     "rhythm": {
       "rhythm_1": "Level 1 · Half/Quarter notes + Quarter rests",
       "rhythm_2": "Level 2 · Eighth notes + Rests",
@@ -55,6 +71,12 @@
       "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
       "chord_3": "Level 2 · + Maj7·Min7 chords",
       "chord_4": "Level 3 · + Dim7 chord"
+    },
+    "progression": {
+      "progression_1": "Level 1 · Basic progressions",
+      "progression_2": "Level 2 · Cadence ID",
+      "progression_3": "Level 3 · Practical progressions",
+      "progression_4": "Level 4 · Contextual"
     },
     "key": {
       "key_1": "Level 1 · Relative keys (C/Am)",
@@ -108,6 +130,27 @@
     "dim7": "Diminished 7th (dim7)",
     "maj_inv1": "Major 1st Inversion",
     "min_inv1": "Minor 1st Inversion"
+  },
+  "progression": {
+    "I-V-I": "I-V-I",
+    "I-IV-I": "I-IV-I",
+    "I-IV-V-I": "I-IV-V-I",
+    "I-vi-IV-V": "I-vi-IV-V",
+    "ii-V-I": "ii-V-I",
+    "IV-V-I": "IV-V-I",
+    "I-ii-V": "I-ii-V",
+    "vi-IV-V": "vi-IV-V",
+    "I-vi-ii-V": "I-vi-ii-V",
+    "I-V-vi-IV": "I-V-vi-IV",
+    "I-IV-ii-V": "I-IV-ii-V",
+    "i-iv-V-i": "i-iv-V-i",
+    "i-VI-iv-V": "i-VI-iv-V"
+  },
+  "cadence": {
+    "authentic": "Authentic Cadence",
+    "half": "Half Cadence",
+    "plagal": "Plagal Cadence",
+    "deceptive": "Deceptive Cadence"
   },
   "key": {
     "C_major": "C Major",

@@ -7,7 +7,9 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { UserCircle, Flame, CheckCircle, Target, Crown, BarChart3, Trophy } from 'lucide-react-native';
+import {
+  UserCircle, Flame, Target, Crown, BarChart3, Trophy,
+} from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';

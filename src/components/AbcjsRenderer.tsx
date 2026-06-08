@@ -49,6 +49,11 @@ interface AbcjsRendererProps {
   barsPerStaff?: number;
   /** 음표별 색상 — 인덱스 = 음표 소스 순서, 값 = 'correct'|'partial'|'wrong'|null */
   noteColors?: (string | null)[];
+  interactive?: boolean;
+  pitchTapMode?: boolean;
+  renderScale?: number;
+  staffWidth?: number;
+  onScorePitchTap?: (payload: { index: number; degree: number; voice: 'treble' | 'bass' }) => void;
 }
 
 const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(function AbcjsRenderer({
@@ -80,6 +85,11 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
   showMeasureHighlight = true,
   barsPerStaff,
   noteColors,
+  interactive = true,
+  pitchTapMode = false,
+  renderScale = 1.2,
+  staffWidth = 800,
+  onScorePitchTap,
 }: AbcjsRendererProps, ref: React.ForwardedRef<AbcjsRendererHandle>) {
   const { showAlert } = useAlert();
   const webViewRef = useRef<WebView>(null);
@@ -231,11 +241,14 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
       customPlaySettings: customPlaySettings || null,
       barsPerStaff: barsPerStaff || null,
       noteColors: noteColors || null,
+      pitchTapMode,
+      renderScale,
+      staffWidth,
     }));
   }, [abcString, combinedAbc, selectedNote, webViewReady,
       examMode, examWaitSeconds, prependMetronome, prependBasePitch,
       metronomeFreq, timeSignature, tempo, scaleTempo, keySignature, stretchLast,
-      playbackMode, hideNotes, showNoteCursor, showMeasureHighlight,
+      playbackMode, hideNotes, showNoteCursor, showMeasureHighlight, pitchTapMode, renderScale, staffWidth,
       apExamSettings, koreanExamSettings, echoSettings, customPlaySettings, barsPerStaff, noteColors]);
 
   // ── RN 파일 저장: 기기에 직접 저장 + 공유 시트 제공 ──
@@ -277,6 +290,13 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
         case 'NOTE_CLICK':
           onNoteClick?.(msg.index, msg.voice);
           break;
+        case 'SCORE_PITCH_TAP':
+          onScorePitchTap?.({
+            index: msg.index,
+            degree: msg.degree,
+            voice: msg.voice === 'bass' ? 'bass' : 'treble',
+          });
+          break;
         case 'PLAY_STATE':
           onPlayStateChange?.(msg.isPlaying);
           break;
@@ -313,7 +333,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
     } catch {
       // WebView에서 오는 비-JSON 메시지 무시
     }
-  }, [onNoteClick, onPlayStateChange, saveToDevice, onAudioSaveSuccess]);
+  }, [onNoteClick, onScorePitchTap, onPlayStateChange, saveToDevice, onAudioSaveSuccess]);
 
   const togglePlay = useCallback(() => {
     if (!webViewRef.current || !abcString) return;
@@ -366,7 +386,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(fu
         />
       </View>
       {/* PanResponder 오버레이: 드래그→scrollTo, 탭→WebView에 좌표 전달 */}
-      <View style={styles.overlay} {...panResponder.panHandlers} />
+      {interactive && <View style={styles.overlay} {...panResponder.panHandlers} />}
     </View>
   );
 });

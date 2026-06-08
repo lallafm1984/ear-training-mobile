@@ -14,7 +14,16 @@ const CHART_H_PAD = 32;
 const CHART_WIDTH = SCREEN_WIDTH - 40 - CHART_H_PAD * 2; // 화면 - 컨테이너패딩 - 차트패딩
 const CHART_TOP_PAD = 10; // Y축 최상단 텍스트 잘림 방지
 
-const CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'];
+const CATEGORIES: ContentCategory[] = [
+  'melody',
+  'barMelody',
+  'rhythm',
+  'interval',
+  'chord',
+  'progression',
+  'key',
+  'twoVoice',
+];
 
 interface Props {
   records: PracticeRecord[];
@@ -62,7 +71,7 @@ export default function DailyScoreChart({ records }: Props) {
       grouped[key][r.contentType].count += 1;
     });
 
-    const catData: Record<ContentCategory, (number | null)[]> = {} as any;
+    const catData = {} as Record<ContentCategory, (number | null)[]>;
     CATEGORIES.forEach(cat => {
       catData[cat] = keys.map(key => {
         const g = grouped[key]?.[cat];

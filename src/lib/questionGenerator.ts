@@ -9,6 +9,7 @@ import type {
   IntervalDifficulty,
   ChordDifficulty,
   KeyDifficulty,
+  ProgressionDifficulty,
 } from '../types/content';
 
 // ─────────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ const INTERVAL_WEIGHTS: Partial<Record<number, number>> = {
 };
 
 /** 직전 출제 음정 기록 (연속 중복 방지, 최대 2개) */
-let recentIntervals: number[] = [];
+const recentIntervals: number[] = [];
 
 /** 가중치 기반 랜덤 선택 */
 function weightedPick(pool: number[]): number {
@@ -298,7 +299,7 @@ const CHORD_ROOT_RANGES: Record<ChordDifficulty, { min: number; max: number }> =
 };
 
 /** 직전 출제 화음 기록 (연속 중복 방지) */
-let recentChords: string[] = [];
+const recentChords: string[] = [];
 
 /** 화음 ABC notation 생성 */
 function chordToAbc(
@@ -507,9 +508,9 @@ const RELATIVE_KEYS: Record<string, string> = {
 };
 
 /** 직전 출제 조성 기록 (연속 중복 방지) */
-let recentKeys: string[] = [];
+const recentKeys: string[] = [];
 /** 직전 출제 패턴 기록 (연속 동일 패턴 방지) */
-let recentPatterns: number[] = [];
+const recentPatterns: number[] = [];
 
 function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
   const pool = KEY_POOLS[difficulty];
@@ -602,6 +603,363 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 화성 진행 / 종지 데이터
+// ─────────────────────────────────────────────────────────────
+
+type ProgressionKind = 'progression' | 'cadence';
+type ProgressionMode = 'major' | 'minor';
+
+interface ProgressionTemplate {
+  id: string;
+  answerKey: string;
+  kind: ProgressionKind;
+  roman: string[];
+  mode: ProgressionMode;
+  similar: string[];
+}
+
+interface ProgressionKey {
+  abcKey: string;
+  tonicMidi: number;
+}
+
+const MAJOR_PROGRESSION_KEYS: ProgressionKey[] = [
+  { abcKey: 'C', tonicMidi: 60 },
+  { abcKey: 'G', tonicMidi: 55 },
+  { abcKey: 'F', tonicMidi: 53 },
+  { abcKey: 'D', tonicMidi: 50 },
+  { abcKey: 'Bb', tonicMidi: 58 },
+];
+
+const MINOR_PROGRESSION_KEYS: ProgressionKey[] = [
+  { abcKey: 'Am', tonicMidi: 57 },
+  { abcKey: 'Dm', tonicMidi: 50 },
+  { abcKey: 'Em', tonicMidi: 52 },
+];
+
+const PROGRESSION_TEMPLATES: ProgressionTemplate[] = [
+  {
+    id: 'basic_i_v_i',
+    answerKey: 'I-V-I',
+    kind: 'progression',
+    roman: ['I', 'V', 'I'],
+    mode: 'major',
+    similar: ['I-IV-I', 'IV-V-I', 'I-ii-V'],
+  },
+  {
+    id: 'basic_i_iv_i',
+    answerKey: 'I-IV-I',
+    kind: 'progression',
+    roman: ['I', 'IV', 'I'],
+    mode: 'major',
+    similar: ['I-V-I', 'IV-V-I', 'vi-IV-V'],
+  },
+  {
+    id: 'basic_i_iv_v_i',
+    answerKey: 'I-IV-V-I',
+    kind: 'progression',
+    roman: ['I', 'IV', 'V', 'I'],
+    mode: 'major',
+    similar: ['I-vi-IV-V', 'I-vi-ii-V', 'I-IV-ii-V'],
+  },
+  {
+    id: 'basic_i_vi_iv_v',
+    answerKey: 'I-vi-IV-V',
+    kind: 'progression',
+    roman: ['I', 'vi', 'IV', 'V'],
+    mode: 'major',
+    similar: ['I-IV-V-I', 'I-V-vi-IV', 'I-vi-ii-V'],
+  },
+  {
+    id: 'practical_ii_v_i',
+    answerKey: 'ii-V-I',
+    kind: 'progression',
+    roman: ['ii', 'V', 'I'],
+    mode: 'major',
+    similar: ['IV-V-I', 'I-ii-V', 'vi-IV-V'],
+  },
+  {
+    id: 'practical_iv_v_i',
+    answerKey: 'IV-V-I',
+    kind: 'progression',
+    roman: ['IV', 'V', 'I'],
+    mode: 'major',
+    similar: ['ii-V-I', 'I-ii-V', 'I-IV-I'],
+  },
+  {
+    id: 'practical_i_ii_v',
+    answerKey: 'I-ii-V',
+    kind: 'progression',
+    roman: ['I', 'ii', 'V'],
+    mode: 'major',
+    similar: ['ii-V-I', 'IV-V-I', 'I-V-I'],
+  },
+  {
+    id: 'practical_vi_iv_v',
+    answerKey: 'vi-IV-V',
+    kind: 'progression',
+    roman: ['vi', 'IV', 'V'],
+    mode: 'major',
+    similar: ['I-ii-V', 'IV-V-I', 'I-IV-I'],
+  },
+  {
+    id: 'practical_i_vi_ii_v',
+    answerKey: 'I-vi-ii-V',
+    kind: 'progression',
+    roman: ['I', 'vi', 'ii', 'V'],
+    mode: 'major',
+    similar: ['I-vi-IV-V', 'I-IV-ii-V', 'I-V-vi-IV'],
+  },
+  {
+    id: 'practical_i_v_vi_iv',
+    answerKey: 'I-V-vi-IV',
+    kind: 'progression',
+    roman: ['I', 'V', 'vi', 'IV'],
+    mode: 'major',
+    similar: ['I-vi-IV-V', 'I-IV-V-I', 'I-vi-ii-V'],
+  },
+  {
+    id: 'practical_i_iv_ii_v',
+    answerKey: 'I-IV-ii-V',
+    kind: 'progression',
+    roman: ['I', 'IV', 'ii', 'V'],
+    mode: 'major',
+    similar: ['I-vi-ii-V', 'I-IV-V-I', 'I-V-vi-IV'],
+  },
+  {
+    id: 'minor_i_iv_v_i',
+    answerKey: 'i-iv-V-i',
+    kind: 'progression',
+    roman: ['i', 'iv', 'V', 'i'],
+    mode: 'minor',
+    similar: ['i-VI-iv-V', 'ii-V-I', 'I-IV-V-I'],
+  },
+  {
+    id: 'minor_i_vi_iv_v',
+    answerKey: 'i-VI-iv-V',
+    kind: 'progression',
+    roman: ['i', 'VI', 'iv', 'V'],
+    mode: 'minor',
+    similar: ['i-iv-V-i', 'I-vi-IV-V', 'I-V-vi-IV'],
+  },
+];
+
+const CADENCE_TEMPLATES: ProgressionTemplate[] = [
+  {
+    id: 'cadence_authentic',
+    answerKey: 'authentic',
+    kind: 'cadence',
+    roman: ['V', 'I'],
+    mode: 'major',
+    similar: ['half', 'plagal', 'deceptive'],
+  },
+  {
+    id: 'cadence_half_i_v',
+    answerKey: 'half',
+    kind: 'cadence',
+    roman: ['I', 'V'],
+    mode: 'major',
+    similar: ['authentic', 'deceptive', 'plagal'],
+  },
+  {
+    id: 'cadence_half_iv_v',
+    answerKey: 'half',
+    kind: 'cadence',
+    roman: ['IV', 'V'],
+    mode: 'major',
+    similar: ['authentic', 'deceptive', 'plagal'],
+  },
+  {
+    id: 'cadence_plagal',
+    answerKey: 'plagal',
+    kind: 'cadence',
+    roman: ['IV', 'I'],
+    mode: 'major',
+    similar: ['authentic', 'half', 'deceptive'],
+  },
+  {
+    id: 'cadence_deceptive',
+    answerKey: 'deceptive',
+    kind: 'cadence',
+    roman: ['V', 'vi'],
+    mode: 'major',
+    similar: ['authentic', 'half', 'plagal'],
+  },
+];
+
+const PROGRESSION_POOLS: Record<ProgressionDifficulty, ProgressionTemplate[]> = {
+  progression_1: PROGRESSION_TEMPLATES.slice(0, 4),
+  progression_2: CADENCE_TEMPLATES,
+  progression_3: PROGRESSION_TEMPLATES.slice(4),
+  progression_4: [
+    ...PROGRESSION_TEMPLATES.slice(2),
+    ...CADENCE_TEMPLATES.map(template => ({
+      ...template,
+      roman: template.answerKey === 'authentic'
+        ? ['I', 'IV', 'V', 'I']
+        : template.answerKey === 'half'
+          ? ['I', 'vi', 'IV', 'V']
+          : template.answerKey === 'plagal'
+            ? ['I', 'V', 'IV', 'I']
+            : ['I', 'IV', 'V', 'vi'],
+    })),
+  ],
+};
+
+const MAJOR_ROMAN_INTERVALS: Record<string, number[]> = {
+  I: [0, 4, 7],
+  ii: [2, 5, 9],
+  IV: [5, 9, 12],
+  V: [7, 11, 14],
+  vi: [9, 12, 16],
+};
+
+const MINOR_ROMAN_INTERVALS: Record<string, number[]> = {
+  i: [0, 3, 7],
+  iv: [5, 8, 12],
+  V: [7, 11, 14],
+  VI: [8, 12, 15],
+};
+
+const ABC_PITCH_CLASS_NAMES = ['C', '^C', 'D', '^D', 'E', 'F', '^F', 'G', '^G', 'A', '^A', 'B'];
+
+const recentProgressions: string[] = [];
+
+function pickProgressionTemplate(pool: ProgressionTemplate[]): ProgressionTemplate {
+  const available = pool.filter(template => !recentProgressions.includes(template.id));
+  const pickPool = available.length >= 2 ? available : pool;
+  const picked = pickPool[Math.floor(Math.random() * pickPool.length)];
+  recentProgressions.push(picked.id);
+  if (recentProgressions.length > 2) recentProgressions.shift();
+  return picked;
+}
+
+function pickProgressionKey(mode: ProgressionMode): ProgressionKey {
+  const pool = mode === 'minor' ? MINOR_PROGRESSION_KEYS : MAJOR_PROGRESSION_KEYS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function midiToAbcPitch(midi: number): string {
+  const pitchClass = ((midi % 12) + 12) % 12;
+  const octave = Math.floor(midi / 12) - 1;
+  const name = ABC_PITCH_CLASS_NAMES[pitchClass];
+  const accidental = name.startsWith('^') ? '^' : '';
+  const letter = accidental ? name.slice(1) : name;
+
+  if (octave <= 3) {
+    return `${name}${','.repeat(4 - octave)}`;
+  }
+  if (octave === 4) {
+    return name;
+  }
+  return `${accidental}${letter.toLowerCase()}${"'".repeat(Math.max(0, octave - 5))}`;
+}
+
+function romanToChordAbc(roman: string, template: ProgressionTemplate, key: ProgressionKey): string {
+  const intervals = template.mode === 'minor'
+    ? MINOR_ROMAN_INTERVALS[roman]
+    : MAJOR_ROMAN_INTERVALS[roman];
+  const safeIntervals = intervals ?? MAJOR_ROMAN_INTERVALS.I;
+  const notes = safeIntervals.map(interval => midiToAbcPitch(key.tonicMidi + interval));
+  return `[${notes.join('')}]`;
+}
+
+function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey): string {
+  const chords = template.roman.map(roman => romanToChordAbc(roman, template, key));
+  let body: string;
+
+  if (chords.length === 2) {
+    body = `${chords[0]} ${chords[1]} |]`;
+  } else if (chords.length === 3) {
+    body = `${chords[0]} ${chords[1]} | ${chords[2]}2 |]`;
+  } else {
+    body = `${chords[0]} ${chords[1]} | ${chords[2]} ${chords[3]} |]`;
+  }
+
+  return `X:1\nM:4/4\nL:1/2\nK:${key.abcKey}\n${body}`;
+}
+
+function progressionAnswerLabel(kind: ProgressionKind, answerKey: string): string {
+  const namespace = kind === 'cadence' ? 'cadence' : 'progression';
+  return i18n.t(`content:${namespace}.${answerKey}`);
+}
+
+function isCompatibleProgressionChoice(
+  template: ProgressionTemplate,
+  candidate: ProgressionTemplate,
+): boolean {
+  if (candidate.kind !== template.kind || candidate.answerKey === template.answerKey) {
+    return false;
+  }
+  return template.kind !== 'progression' || candidate.roman.length === template.roman.length;
+}
+
+function buildProgressionWrongChoices(
+  template: ProgressionTemplate,
+  pool: ProgressionTemplate[],
+): string[] {
+  const wrongs: string[] = [];
+  const usedAnswerKeys = new Set<string>([template.answerKey]);
+  const fallbackPool = template.kind === 'cadence'
+    ? CADENCE_TEMPLATES
+    : PROGRESSION_TEMPLATES;
+  const answerUniverse = [...pool, ...fallbackPool];
+  const sameShapePool = pool.filter(candidate => isCompatibleProgressionChoice(template, candidate));
+
+  for (const similarKey of template.similar) {
+    if (wrongs.length >= 3) break;
+    if (usedAnswerKeys.has(similarKey)) continue;
+    if (!answerUniverse.some(candidate => (
+      candidate.answerKey === similarKey
+      && isCompatibleProgressionChoice(template, candidate)
+    ))) continue;
+    usedAnswerKeys.add(similarKey);
+    wrongs.push(progressionAnswerLabel(template.kind, similarKey));
+  }
+
+  for (const candidate of shuffle(sameShapePool.filter(candidate => !usedAnswerKeys.has(candidate.answerKey)))) {
+    if (wrongs.length >= 3) break;
+    usedAnswerKeys.add(candidate.answerKey);
+    wrongs.push(progressionAnswerLabel(template.kind, candidate.answerKey));
+  }
+
+  for (const candidate of shuffle(fallbackPool.filter(candidate => (
+    !usedAnswerKeys.has(candidate.answerKey)
+    && isCompatibleProgressionChoice(template, candidate)
+  )))) {
+    if (wrongs.length >= 3) break;
+    usedAnswerKeys.add(candidate.answerKey);
+    wrongs.push(progressionAnswerLabel(template.kind, candidate.answerKey));
+  }
+
+  return wrongs.slice(0, 3);
+}
+
+function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQuestion {
+  const pool = PROGRESSION_POOLS[difficulty];
+  if (!pool) {
+    throw new Error(`Invalid progression difficulty: ${difficulty}`);
+  }
+
+  const template = pickProgressionTemplate(pool);
+  const key = pickProgressionKey(template.mode);
+  const correctAnswer = progressionAnswerLabel(template.kind, template.answerKey);
+  const wrongs = buildProgressionWrongChoices(template, pool);
+
+  return {
+    id: generateId(),
+    contentType: 'progression',
+    difficulty,
+    correctAnswer,
+    choices: shuffle([correctAnswer, ...wrongs]),
+    abcNotation: renderProgressionAbc(template, key),
+    prompt: template.kind === 'cadence'
+      ? i18n.t('practice:choice.cadencePrompt')
+      : i18n.t('practice:choice.progressionPrompt'),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // 통합 생성 API
 // ─────────────────────────────────────────────────────────────
 
@@ -617,6 +975,8 @@ export function generateChoiceQuestion(
       return generateIntervalQuestion(difficulty as IntervalDifficulty);
     case 'chord':
       return generateChordQuestion(difficulty as ChordDifficulty);
+    case 'progression':
+      return generateProgressionQuestion(difficulty as ProgressionDifficulty);
     case 'key':
       return generateKeyQuestion(difficulty as KeyDifficulty);
     default:

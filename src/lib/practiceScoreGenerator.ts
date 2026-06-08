@@ -8,6 +8,7 @@ import type { Difficulty, BassDifficulty } from './scoreGenerator';
 import type { ScoreNote } from './scoreUtils/types';
 import { generateRhythmDictation } from './rhythmEngine';
 import { buildGeneratorOptions } from './trackConfig';
+import { generateBarMelodyNotes } from './barMelody';
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
 export interface PracticeScore {
@@ -44,6 +45,20 @@ export function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
   return map[difficulty] ?? 1;
 }
 
+function generateBarMelodyPracticeScore(
+  difficulty: ContentDifficulty,
+): PracticeScore {
+  return {
+    trebleNotes: generateBarMelodyNotes(difficulty),
+    bassNotes: [],
+    keySignature: 'C',
+    timeSignature: '4/4',
+    useGrandStaff: false,
+    barsPerStaff: 1,
+    disableTies: true,
+  };
+}
+
 export function generatePracticeScore(
   category: ContentCategory,
   difficulty: ContentDifficulty,
@@ -72,6 +87,10 @@ export function generatePracticeScore(
       barsPerStaff: level <= 2 ? 4 : level >= 4 ? 2 : undefined,
       disableTies: level <= 5,
     };
+  }
+
+  if (category === 'barMelody') {
+    return generateBarMelodyPracticeScore(difficulty);
   }
 
   if (category === 'rhythm') {

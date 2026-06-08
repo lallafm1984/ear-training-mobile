@@ -2,7 +2,7 @@
   "expo": {
     "name": "MelodyGen",
     "slug": "melodygen",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
         "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
-      "versionCode": 51,
+      "versionCode": 52,
       "permissions": [
         "READ_MEDIA_AUDIO",
         "WRITE_EXTERNAL_STORAGE",

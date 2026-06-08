@@ -1,6 +1,6 @@
 import { EXAM_PRESETS } from '../lib/examPresets';
 
-const VALID_CONTENT_TYPES = ['melody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'];
+const VALID_CONTENT_TYPES = ['melody', 'barMelody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'];
 
 describe('EXAM_PRESETS', () => {
   it('5개의 프리셋이 존재한다', () => {

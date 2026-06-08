@@ -2,7 +2,7 @@
 // NotationPracticeScreen — 기보형 연습 전용 화면 (선율/리듬/2성부)
 // ─────────────────────────────────────────────────────────────
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -19,26 +19,40 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { getContentConfig } from '../lib/contentConfig';
 import {
   generateAbc,
-  ScoreNote, PitchName, Accidental, durationToSixteenths,
+  ScoreNote,
   generateAbcScaleNotes,
+  sumScoreNotesSixteenths,
 } from '../lib';
 import type { NoteDuration } from '../lib/scoreUtils';
 import {
-  generatePracticeScore, melodyDifficultyToLevel,
+  generatePracticeScore,
   type PracticeScore,
 } from '../lib/practiceScoreGenerator';
+import {
+  getMelodyAnswerNotesForGrading,
+  getMelodyUserNotesForGrading,
+  getMelodyUserSourceIndexOffset,
+  isMelodyInputCategory,
+  shouldUseFirstNoteHint,
+} from '../lib/notationPractice';
 import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
-import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
-import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
+import type { PracticeRecord } from '../types/content';
+import type { MainStackParamList } from '../navigation/MainStack';
 import PianoKeyboard from '../components/PianoKeyboard';
 import DurationToolbar from '../components/DurationToolbar';
+import BarMelodyStaffInput from '../components/BarMelodyStaffInput';
 import GradingResultView from '../components/GradingResult';
 import { useNoteInput } from '../hooks/useNoteInput';
 import { gradeNotes, type GradingResult, type NoteGrade } from '../lib/grading';
 import { useAlert, useSessionContentLog } from '../context';
+import {
+  appendBarMelodyInput,
+  makeBarMelodyKeyboardNote,
+  removeLastBarMelodyInput,
+} from '../lib/barMelody';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -256,6 +270,14 @@ function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
 // 메인 컴포넌트
 // ─────────────────────────────────────────────────────────────
 
+function createEmptyBarMelodyInput(): (ScoreNote | null)[] {
+  return [null, null, null, null];
+}
+
+function compactBarMelodyNotes(notes: (ScoreNote | null)[]): ScoreNote[] {
+  return notes.filter((note): note is ScoreNote => note !== null);
+}
+
 export default function NotationPracticeScreen() {
   const { t } = useTranslation(['practice', 'editor', 'content', 'common']);
   const DURATION_LABELS = getDurationLabels(t);
@@ -309,25 +331,26 @@ export default function NotationPracticeScreen() {
 
   // ── 리듬 전용 상태 ──
   const isRhythm = category === 'rhythm';
+  const isBarMelody = category === 'barMelody';
   const [userInput, setUserInput] = useState<RhythmInput[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [correctCounts, setCorrectCounts] = useState<number[]>([]);
 
   // ── 선율/2성부 입력 모드 상태 ──
-  const isMelodyInput = category === 'melody' || category === 'twoVoice';
+  const isMelodyInput = isMelodyInputCategory(category);
+  const useFirstNoteHint = shouldUseFirstNoteHint(category);
   const [melodySubmitted, setMelodySubmitted] = useState(false);
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+  const [barMelodyNotes, setBarMelodyNotes] = useState<(ScoreNote | null)[]>(createEmptyBarMelodyInput);
   const lastAddTimeRef = useRef(0);
 
-  const firstHintNote = score?.trebleNotes[0] ?? null;
+  const firstHintNote = useFirstNoteHint ? score?.trebleNotes[0] ?? null : null;
 
   // 생성된 악보에서 실제 마디 수 계산
   const scoreMeasures = (() => {
     if (!score) return 4;
     const barSix = getBarSixteenths(score.timeSignature);
-    const totalSix = score.trebleNotes.reduce(
-      (sum, n) => sum + durationToSixteenths(n.duration), 0,
-    );
+    const totalSix = sumScoreNotesSixteenths(score.trebleNotes);
     return Math.max(1, Math.ceil(totalSix / barSix));
   })();
 
@@ -339,6 +362,21 @@ export default function NotationPracticeScreen() {
     firstNote: isMelodyInput ? firstHintNote : null,
     tempo: practiceSettings?.tempo ?? 90,
   });
+  const notationBarsPerStaff = score?.barsPerStaff ?? 2;
+  const barMelodyUserNotes = useMemo(() => compactBarMelodyNotes(barMelodyNotes), [barMelodyNotes]);
+  const barMelodyComplete = barMelodyUserNotes.length === 4;
+  const barMelodyUserAbcString = useMemo(() => {
+    if (!score || !barMelodyComplete) return '';
+    return generateAbc({
+      title: '',
+      keySignature: 'C',
+      timeSignature: '4/4',
+      tempo: 80,
+      notes: barMelodyUserNotes,
+      useGrandStaff: false,
+      disableTies: true,
+    });
+  }, [score, barMelodyComplete, barMelodyUserNotes]);
 
   // ── 악보 생성 ──
   const generate = useCallback(() => {
@@ -352,6 +390,7 @@ export default function NotationPracticeScreen() {
     setCorrectCounts([]);
     setMelodySubmitted(false);
     setGradingResult(null);
+    setBarMelodyNotes(createEmptyBarMelodyInput());
     noteInput.selectNote(null);
 
     setTimeout(() => {
@@ -364,19 +403,17 @@ export default function NotationPracticeScreen() {
       if (!examMode) {
         trackContentRun({ contentType: category, difficulty, source: 'notation_practice' });
       }
-      if (category === 'melody' || category === 'twoVoice') {
+      if (isMelodyInputCategory(category)) {
         const first = newScore.trebleNotes[0] ?? null;
         // 실제 마디 수 계산하여 reset에 전달
         const barSix = getBarSixteenths(newScore.timeSignature);
-        const totalSix = newScore.trebleNotes.reduce(
-          (sum, n) => sum + durationToSixteenths(n.duration), 0,
-        );
+        const totalSix = sumScoreNotesSixteenths(newScore.trebleNotes);
         const actualMeasures = Math.max(1, Math.ceil(totalSix / barSix));
-        noteInput.reset(first ? { ...first, tie: false } : null, actualMeasures, barSix, newScore.useGrandStaff);
+        noteInput.reset(useFirstNoteHint && first ? { ...first, tie: false } : null, actualMeasures, barSix, newScore.useGrandStaff);
       }
       setIsGenerating(false);
     }, 500);
-  }, [category, difficulty, practiceSettings, examMode, trackContentRun]);
+  }, [category, difficulty, practiceSettings, examMode, trackContentRun, useFirstNoteHint]);
 
   // 마운트 시 첫 악보 생성
   useEffect(() => { generate(); }, [generate]);
@@ -400,7 +437,7 @@ export default function NotationPracticeScreen() {
     title: '',
     keySignature: score.keySignature,
     timeSignature: score.timeSignature,
-    tempo: practiceSettings?.tempo ?? 90,
+    tempo: isBarMelody ? 80 : practiceSettings?.tempo ?? 90,
     notes: score.trebleNotes,
     bassNotes: score.useGrandStaff ? score.bassNotes : undefined,
     useGrandStaff: score.useGrandStaff,
@@ -451,6 +488,17 @@ export default function NotationPracticeScreen() {
   }, []);
 
   // ── 자기 평가 ──
+  const handleBarMelodyKeyPress = useCallback((pitch: ScoreNote['pitch'], octave: number, accidental: ScoreNote['accidental']) => {
+    setBarMelodyNotes(prev => {
+      if (compactBarMelodyNotes(prev).length >= 4) return prev;
+      return appendBarMelodyInput(prev, makeBarMelodyKeyboardNote(pitch, octave, accidental));
+    });
+  }, []);
+
+  const handleBarMelodyUndo = useCallback(() => {
+    setBarMelodyNotes(prev => removeLastBarMelodyInput(prev));
+  }, []);
+
   const handleRate = useCallback(async (rating: number) => {
     setSelfRating(rating);
     setTimeout(() => setRated(true), 300); // 선택 피드백 후 전환
@@ -569,13 +617,17 @@ export default function NotationPracticeScreen() {
   // ── 선율/2성부: 제출 + 채점 ──
   const handleMelodySubmit = useCallback(async () => {
     if (!score || melodySubmitted) return;
+    if (isBarMelody && !barMelodyComplete) return;
 
-    // 첫 음표는 힌트로 제공되므로 채점에서 제외
-    const result = gradeNotes(score.trebleNotes.slice(1), noteInput.trebleNotes.slice(1));
+    const userSourceIndexOffset = getMelodyUserSourceIndexOffset(category);
+    const result = gradeNotes(
+      getMelodyAnswerNotesForGrading(category, score.trebleNotes),
+      isBarMelody ? barMelodyUserNotes : getMelodyUserNotesForGrading(category, noteInput.trebleNotes),
+    );
     // userSourceIndices를 +1 오프셋 (원본 배열 기준 색상 표시용)
     result.grades = result.grades.map(g => ({
       ...g,
-      userSourceIndices: g.userSourceIndices.map(i => i + 1),
+      userSourceIndices: g.userSourceIndices.map(i => i + userSourceIndexOffset),
     }));
 
     if (score.useGrandStaff && score.bassNotes.length > 0) {
@@ -622,7 +674,8 @@ export default function NotationPracticeScreen() {
     const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
     await applyEvaluation(track, level, evalRating);
   }, [score, melodySubmitted, noteInput.trebleNotes, noteInput.bassNotes,
-      category, difficulty, addRecord, updateStreak, applyEvaluation, examMode]);
+      category, difficulty, addRecord, updateStreak, applyEvaluation, examMode,
+      isBarMelody, barMelodyComplete, barMelodyUserNotes]);
 
   const userTotalSixteenths = getTotalSixteenths(userInput);
   const rhythmFilled = userTotalSixteenths >= fullTotalSixteenths && fullTotalSixteenths > 0;
@@ -696,8 +749,11 @@ export default function NotationPracticeScreen() {
           <Text style={styles.headerSub}>{diffLabel} · {t('practice:notation.problemCount', { count: practiceCount + 1 })}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {isMelodyInput && !melodySubmitted && (
-            <TouchableOpacity onPress={noteInput.clear} hitSlop={8}>
+          {isMelodyInput && !isBarMelody && !melodySubmitted && (
+            <TouchableOpacity
+              onPress={isBarMelody ? () => setBarMelodyNotes(createEmptyBarMelodyInput()) : noteInput.clear}
+              hitSlop={8}
+            >
               <Text style={[styles.finishText, { color: COLORS.slate500, fontSize: 13 }]}>{t('practice:notation.reset')}</Text>
             </TouchableOpacity>
           )}
@@ -733,7 +789,7 @@ export default function NotationPracticeScreen() {
         ) : (
           <>
             {/* 숨겨진 스케일 렌더러 (오디오 전용) */}
-            {isMelodyInput && scaleAbcString ? (
+            {isMelodyInput && !isBarMelody && scaleAbcString ? (
               <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
                 <AbcjsRenderer
                   ref={scaleAbcjsRef}
@@ -749,19 +805,23 @@ export default function NotationPracticeScreen() {
             {/* 재생 카드 — 선율/2성부 모드에서는 컴팩트 + 스케일 듣기 (제출 전만 표시) */}
             {isMelodyInput && !melodySubmitted ? (
               <View style={[styles.playCardCompact, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-                <TouchableOpacity
-                  style={styles.playGroupCompact}
-                  onPress={handlePlayScale}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.playBtnSmall, { backgroundColor: isPlayingScale ? COLORS.slate400 : colors.main + '18' }]}>
-                    <Music size={18} color={isPlayingScale ? '#fff' : colors.main} />
-                  </View>
-                  <Text style={[styles.playHint, { color: COLORS.slate500, fontSize: 11 }]}>
-                    {isPlayingScale ? t('practice:notation.scalePlayingShort') : t('practice:notation.scale')}
-                  </Text>
-                </TouchableOpacity>
-                <View style={{ width: 1, height: 20, backgroundColor: COLORS.slate200, marginHorizontal: 4 }} />
+                {!isBarMelody && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.playGroupCompact}
+                      onPress={handlePlayScale}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.playBtnSmall, { backgroundColor: isPlayingScale ? COLORS.slate400 : colors.main + '18' }]}>
+                        <Music size={18} color={isPlayingScale ? '#fff' : colors.main} />
+                      </View>
+                      <Text style={[styles.playHint, { color: COLORS.slate500, fontSize: 11 }]}>
+                        {isPlayingScale ? t('practice:notation.scalePlayingShort') : t('practice:notation.scale')}
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={{ width: 1, height: 20, backgroundColor: COLORS.slate200, marginHorizontal: 4 }} />
+                  </>
+                )}
                 <TouchableOpacity
                   style={styles.playGroupCompact}
                   onPress={handlePlay}
@@ -804,7 +864,7 @@ export default function NotationPracticeScreen() {
                   tempo={practiceSettings?.tempo ?? 80}
                   isPlaying={isPlaying}
                   onPlayStateChange={handlePlayStateChange}
-                  barsPerStaff={2}
+                  barsPerStaff={notationBarsPerStaff}
                   prependMetronome={true}
                   timeSignature={score?.timeSignature ?? '4/4'}
                 />
@@ -861,34 +921,43 @@ export default function NotationPracticeScreen() {
               <View style={styles.rhythmInputDisplay}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <Text style={styles.rhythmInputLabel}>{t('practice:notation.myAnswer')}</Text>
-                  <Text style={{ fontSize: 12, color: colors.main, fontWeight: '600' }}>
-                    {t('practice:notation.barBeat', {
-                      measure: noteInput.getCurrentPositionInfo().measure,
-                      total: noteInput.getCurrentPositionInfo().totalMeasures,
-                      beat: noteInput.getCurrentPositionInfo().beat,
-                    })}
-                  </Text>
+                  {!isBarMelody && (
+                    <Text style={{ fontSize: 12, color: colors.main, fontWeight: '600' }}>
+                      {t('practice:notation.barBeat', {
+                        measure: noteInput.getCurrentPositionInfo().measure,
+                        total: noteInput.getCurrentPositionInfo().totalMeasures,
+                        beat: noteInput.getCurrentPositionInfo().beat,
+                      })}
+                    </Text>
+                  )}
                 </View>
-                <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
-                  <AbcjsRenderer
-                    abcString={noteInput.getUserAbcString()}
-                    hideNotes={false}
-                    tempo={practiceSettings?.tempo ?? 80}
-                    barsPerStaff={2}
-                    timeSignature={score?.timeSignature ?? '4/4'}
-                    stretchLast={true}
-                    onScrollDelta={handleScrollDelta}
-                    onNoteClick={(index, voice) => {
-                      if (Date.now() - lastAddTimeRef.current < 300) return;
-                      noteInput.setActiveVoice(voice);
-                      noteInput.moveCursor(index);
-                    }}
-                    selectedNote={{
-                      index: noteInput.cursorIndex,
-                      voice: noteInput.activeVoice,
-                    }}
+                {isBarMelody ? (
+                  <BarMelodyStaffInput
+                    notes={barMelodyNotes}
+                    accentColor={colors.main}
                   />
-                </View>
+                ) : (
+                  <View style={[styles.scoreCard, { borderColor: colors.main + '20' }]}>
+                    <AbcjsRenderer
+                      abcString={noteInput.getUserAbcString()}
+                      hideNotes={false}
+                      tempo={practiceSettings?.tempo ?? 80}
+                      barsPerStaff={notationBarsPerStaff}
+                      timeSignature={score?.timeSignature ?? '4/4'}
+                      stretchLast={true}
+                      onScrollDelta={handleScrollDelta}
+                      onNoteClick={(index, voice) => {
+                        if (Date.now() - lastAddTimeRef.current < 300) return;
+                        noteInput.setActiveVoice(voice);
+                        noteInput.moveCursor(index);
+                      }}
+                      selectedNote={{
+                        index: noteInput.cursorIndex,
+                        voice: noteInput.activeVoice,
+                      }}
+                    />
+                  </View>
+                )}
               </View>
             )}
 
@@ -896,11 +965,11 @@ export default function NotationPracticeScreen() {
             {isMelodyInput && melodySubmitted && gradingResult && (
               <GradingResultView
                 answerAbcString={abcString}
-                userAbcString={noteInput.getUserAbcString()}
+                userAbcString={isBarMelody ? barMelodyUserAbcString : noteInput.getUserAbcString()}
                 gradingResult={gradingResult}
                 timeSignature={score?.timeSignature ?? '4/4'}
                 accentColor={colors.main}
-                barsPerStaff={2}
+                barsPerStaff={notationBarsPerStaff}
                 onScrollDelta={handleScrollDelta}
               />
             )}
@@ -990,7 +1059,7 @@ export default function NotationPracticeScreen() {
           {isMelodyInput && !melodySubmitted && (
             <TouchableOpacity
               style={styles.undoFloating}
-              onPress={noteInput.undo}
+              onPress={isBarMelody ? handleBarMelodyUndo : noteInput.undo}
               accessibilityLabel={t('practice:notation.undo')}
               hitSlop={8}
             >
@@ -1089,6 +1158,30 @@ export default function NotationPracticeScreen() {
           ) : isMelodyInput ? (
             // ── 선율/2성부 모드: 피아노 입력 ──
             !melodySubmitted ? (
+              isBarMelody ? (
+                <>
+                  <View style={{ marginTop: 2 }}>
+                    <PianoKeyboard
+                      onKeyPress={handleBarMelodyKeyPress}
+                      accentColor={colors.main}
+                      initialOctave={4}
+                    />
+                  </View>
+                  <View style={[styles.rhythmActionRow, { marginTop: 3 }]}>
+                    <TouchableOpacity
+                      style={[styles.rhythmActionBtn, {
+                        backgroundColor: barMelodyComplete ? colors.main : COLORS.slate200,
+                      }]}
+                      onPress={handleMelodySubmit}
+                      disabled={!barMelodyComplete}
+                    >
+                      <Text style={[styles.rhythmActionBtnText, {
+                        color: barMelodyComplete ? '#fff' : COLORS.slate400,
+                      }]}>{t('practice:notation.submit')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
               <>
                 {score?.useGrandStaff && (
                   <View style={styles.voiceRow}>
@@ -1173,6 +1266,7 @@ export default function NotationPracticeScreen() {
                   </TouchableOpacity>
                 </View>
               </>
+              )
             ) : null
           ) : (
             // ── 폴백: 자기 평가 ──
