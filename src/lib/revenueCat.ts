@@ -18,6 +18,7 @@ const REVENUECAT_API_KEY_ANDROID = 'goog_WlXgMWVREJgnSBeRcTeRzrqtFyA';
 // ── RevenueCat 제품 식별자 ─────────────────────────────────
 // RevenueCat 대시보드에서 설정한 Entitlement ID
 export const ENTITLEMENT_ID = 'MelodyGen Pro';
+export const DEFAULT_MONTHLY_PRICE_STRING = '1,500원';
 
 /** RevenueCat SDK 초기화. 앱 시작 시 1회 호출. */
 export async function initRevenueCat(userId?: string): Promise<void> {
@@ -64,6 +65,21 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
     return [];
   }
   return offerings.current.availablePackages;
+}
+
+export function getMonthlyPackage(
+  packages: PurchasesPackage[],
+): PurchasesPackage | undefined {
+  return packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
+}
+
+export function getPackagePriceString(pkg?: PurchasesPackage): string {
+  return pkg?.product.priceString || DEFAULT_MONTHLY_PRICE_STRING;
+}
+
+export async function getMonthlyPriceString(): Promise<string> {
+  const packages = await getOfferings();
+  return getPackagePriceString(getMonthlyPackage(packages));
 }
 
 /** 패키지 구매 */

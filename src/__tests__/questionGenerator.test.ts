@@ -1,10 +1,13 @@
 jest.mock('expo-localization', () => ({
-  getLocales: () => [{ languageCode: 'ko' }],
+  getLocales: () => [{ languageCode: 'ko', languageTag: 'ko-KR' }],
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(null)),
-  setItem: jest.fn(() => Promise.resolve()),
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+  },
 }));
 
 import { generateChoiceQuestion, generateChoiceQuestions } from '../lib/questionGenerator';
@@ -13,7 +16,7 @@ describe('generateChoiceQuestion', () => {
   describe('interval', () => {
     const difficulties = ['interval_1', 'interval_2', 'interval_3', 'interval_4'] as const;
 
-    difficulties.forEach(diff => {
+    difficulties.forEach((diff) => {
       it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {
         const q = generateChoiceQuestion('interval', diff);
         expect(q.choices).toHaveLength(4);
@@ -37,7 +40,7 @@ describe('generateChoiceQuestion', () => {
   describe('chord', () => {
     const difficulties = ['chord_2', 'chord_3', 'chord_4'] as const;
 
-    difficulties.forEach(diff => {
+    difficulties.forEach((diff) => {
       it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {
         const q = generateChoiceQuestion('chord', diff);
         expect(q.choices).toHaveLength(4);
@@ -57,10 +60,12 @@ describe('generateChoiceQuestion', () => {
   describe('key', () => {
     const difficulties = ['key_1', 'key_2', 'key_3'] as const;
 
-    difficulties.forEach(diff => {
-      it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {
+    difficulties.forEach((diff) => {
+      const expectedChoiceCount = diff === 'key_1' ? 2 : 4;
+
+      it(`${diff}: ${expectedChoiceCount}개 보기 + 정답 포함 + ABC notation 존재`, () => {
         const q = generateChoiceQuestion('key', diff);
-        expect(q.choices).toHaveLength(diff === 'key_1' ? 2 : 4);
+        expect(q.choices).toHaveLength(expectedChoiceCount);
         expect(q.choices).toContain(q.correctAnswer);
         expect(q.abcNotation).toBeTruthy();
         expect(q.contentType).toBe('key');
@@ -131,7 +136,7 @@ describe('generateChoiceQuestions (배치)', () => {
   it('지정한 개수만큼 문제 생성', () => {
     const questions = generateChoiceQuestions('interval', 'interval_1', 5);
     expect(questions).toHaveLength(5);
-    questions.forEach(q => {
+    questions.forEach((q) => {
       expect(q.choices).toHaveLength(4);
       expect(q.choices).toContain(q.correctAnswer);
     });

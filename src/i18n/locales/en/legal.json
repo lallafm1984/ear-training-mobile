@@ -67,7 +67,7 @@
       },
       {
         "title": "Article 5 (Paid Services)",
-        "body": "• The Pro subscription is KRW 5,500 per month and is billed through the App Store or Google Play.\n• Subscriptions renew automatically unless cancelled.\n• Refunds are subject to the refund policy of the respective store.\n• Pro features remain accessible until the expiry date even after cancellation."
+        "body": "• The Pro subscription is {{price}} per month and is billed through the App Store or Google Play.\n• Subscriptions renew automatically unless cancelled.\n• Refunds are subject to the refund policy of the respective store.\n• Pro features remain accessible until the expiry date even after cancellation."
       },
       {
         "title": "Article 6 (User Obligations)",

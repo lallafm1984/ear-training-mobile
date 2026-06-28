@@ -10,7 +10,7 @@ export type PlanTier = 'free' | 'pro';
 /** 플랜별 가격 (표시용) */
 export const PLAN_PRICE: Record<PlanTier, string> = {
   free:    '무료',
-  pro:     '5,500원 / 월',
+  pro:     '1,500원 / 월',
 };
 
 /** 플랜별 한국어 이름 */

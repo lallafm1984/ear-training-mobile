@@ -117,14 +117,24 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
   }
   function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
 
-  // 복합박자(6/8, 9/8, 12/8): tempo는 8분음표(♪) 기준 → beat = 60/tempo
-  // 단순박자: tempo는 4분음표(♩) 기준 → beat = (60/tempo) * (4/btm)
+  // 복합박자(6/8, 9/8, 12/8) 검출
   function isCompoundTS(top, btm) {
     return btm === 8 && (top === 6 || top === 9 || top === 12);
   }
+  // 음표 기본 단위 길이(초). 단순/복합 동일하게 (60/tempo) * (4/btm).
+  // 복합박자에서는 tempo가 ♪ 기준(표시 ♪=tempo*2와 동일 의미)이어야 ABC Q: 1/8=tempo*2와 일치.
+  // → 호출부는 표시값(♪=tempo*2)을 그대로 넘기지 말고, 내부 tempo 값을 그대로 넘기면 된다.
   function computeBeatSec(tempo, top, btm) {
-    var t = tempo || 120;
-    return isCompoundTS(top, btm) ? (60 / t) : (60 / t) * (4 / btm);
+    return (60 / (tempo || 120)) * (4 / btm);
+  }
+  // 메트로놈 클릭 스케줄
+  //  - 단순박자: 매 박마다 클릭, 첫 박만 강박 (예 4/4 → 강-약-약-약)
+  //  - 복합박자(6/8·9/8·12/8): 매 ♪마다 클릭, 3개 묶음마다 강박 (예 9/8 → 강-약-약,강-약-약,강-약-약)
+  function getMetronomeSchedule(tempo, top, btm) {
+    var beat = computeBeatSec(tempo, top, btm);
+    return isCompoundTS(top, btm)
+      ? { count: top, interval: beat, accentEvery: 3 }
+      : { count: top, interval: beat, accentEvery: top };
   }
 
   function reportHeight() {
@@ -176,8 +186,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
   function createMetronomeClick(ctx, t, accent, freq) {
     var osc = ctx.createOscillator(), g = ctx.createGain();
     osc.connect(g); g.connect(ctx.destination);
-    osc.frequency.value = freq; osc.type = 'sine';
-    g.gain.setValueAtTime(accent ? 0.7 : 0.4, t);
+    osc.type = 'sine';
+    // 강박/약박 음량·지속시간 동일, 주파수만 차별화 (강박: 1.5배 높은 음)
+    osc.frequency.value = accent ? freq * 1.5 : freq;
+    g.gain.setValueAtTime(0.5, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     osc.start(t); osc.stop(t + 0.05);
   }
@@ -619,8 +631,9 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         var sBeat= (60 / (p.scaleTempo || 120)) * (4 / btm);
         if (p.prependMetronome) {
           var mStart = p.prependBasePitch ? 16 * sBeat : 0;
-          for (var i = 0; i < top; i++)
-            createMetronomeClick(audioCtx, audioCtx.currentTime + mStart + i * beat, i===0, p.metronomeFreq||1000);
+          var sch = getMetronomeSchedule(p.tempo, top, btm);
+          for (var i = 0; i < sch.count; i++)
+            createMetronomeClick(audioCtx, audioCtx.currentTime + mStart + i * sch.interval, i % sch.accentEvery === 0, p.metronomeFreq||1000);
         }
         synth.start();
         startTimingCallbacks();
@@ -686,11 +699,12 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     var parts       = parseAbcParts(currentAbc);
     var N           = parts.treble.length;
 
+    var metroSch = getMetronomeSchedule(p.tempo, top, btm);
     function playMetro() {
       return new Promise(function(resolve) {
         if (cancelFlag) { resolve(); return; }
-        for (var j = 0; j < top; j++)
-          createMetronomeClick(audioCtx, audioCtx.currentTime + j * beat, j===0, metroFreq);
+        for (var j = 0; j < metroSch.count; j++)
+          createMetronomeClick(audioCtx, audioCtx.currentTime + j * metroSch.interval, j % metroSch.accentEvery === 0, metroFreq);
         setTimeout(resolve, measureDur * 1000);
       });
     }
@@ -1160,8 +1174,9 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
           var beat3  = computeBeatSec(p.tempo, top3, btm3);
           var sBeat3 = (60/(p.scaleTempo||120))*(4/btm3);
           var mStart = p.prependBasePitch ? 16*sBeat3 : 0;
-          for (var i=0;i<top3;i++)
-            createMetronomeClick(offCtx, mStart + i*beat3, i===0, p.metronomeFreq||1000);
+          var sch3 = getMetronomeSchedule(p.tempo, top3, btm3);
+          for (var i=0;i<sch3.count;i++)
+            createMetronomeClick(offCtx, mStart + i*sch3.interval, i % sch3.accentEvery === 0, p.metronomeFreq||1000);
         }
         synth2.start();
         return offCtx.startRendering();

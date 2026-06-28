@@ -21,7 +21,7 @@ MelodyGen은 음악 전공자 및 입시 준비생을 위한 모바일 청음 �
 - 기본 연습 모드
 - 학습 통계
 
-Pro 구독 (5,500원/월):
+Pro 구독 (1,500원/월):
 - 모든 난이도 해금 (선율 9단계, 리듬 6단계 등)
 - 2성부 받아쓰기 (큰보표)
 - 모의시험 모드
@@ -56,7 +56,7 @@ https://github.com/lallafm1984/ear-training-mobile/blob/master/docs/PRIVACY_POLI
 - [ ] 콘텐츠 등급 설문 작성
 - [ ] 앱 액세스 정보 (로그인 필요 → 테스트 계정 제공)
 - [ ] 개인정보처리방침 URL 입력
-- [ ] 인앱 상품 등록 (월간 구독 5,500원)
+- [ ] 인앱 상품 등록 (월간 구독 1,500원)
 - [ ] RevenueCat 대시보드에서 Google Play 연결 + API 키 발급
 - [ ] revenueCat.ts의 API 키 교체
 - [ ] Google 서비스 계정 키 (google-service-account.json) 생성

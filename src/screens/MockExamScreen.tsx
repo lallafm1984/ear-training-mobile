@@ -3,14 +3,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Volume2, VolumeX, ChevronRight, Check, X,
-} from 'lucide-react-native';
+import { Volume2, VolumeX, ChevronRight, Check, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -33,7 +28,6 @@ import type { MainStackParamList } from '../navigation/MainStack';
 type RouteProp = StackScreenProps<MainStackParamList, 'MockExam'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-
 interface QuestionItem {
   examQuestion: ExamQuestion;
   choiceQuestion?: ChoiceQuestion;
@@ -53,7 +47,7 @@ export default function MockExamScreen() {
   const route = useRoute<RouteProp>();
   const { presetId } = route.params;
 
-  const preset = EXAM_PRESETS.find(p => p.id === presetId)!;
+  const preset = EXAM_PRESETS.find((p) => p.id === presetId)!;
   const { addBatchRecords } = usePracticeHistory();
   const { updateStreak } = useSkillProfile();
   const { showAlert } = useAlert();
@@ -74,7 +68,9 @@ export default function MockExamScreen() {
   // 화면 벗어날 때 오디오 정지
   useFocusEffect(
     useCallback(() => {
-      return () => { stopAudio(); };
+      return () => {
+        stopAudio();
+      };
     }, [stopAudio]),
   );
 
@@ -153,37 +149,44 @@ export default function MockExamScreen() {
 
   const currentQ = questions[currentIndex];
   const isChoiceType = !!currentQ.choiceQuestion;
-  const isCurrentAnswered = isChoiceType
-    ? !!answers[currentIndex]
-    : !!selfRatings[currentIndex];
+  const isCurrentAnswered = isChoiceType ? !!answers[currentIndex] : !!selfRatings[currentIndex];
   const catConfig = getContentConfig(currentQ.examQuestion.contentType);
   const colors = CATEGORY_COLORS[currentQ.examQuestion.contentType];
 
-  const handleSelectAnswer = useCallback((choice: string) => {
-    setAnswers(prev => ({ ...prev, [currentIndex]: choice }));
-  }, [currentIndex]);
+  const handleSelectAnswer = useCallback(
+    (choice: string) => {
+      setAnswers((prev) => ({ ...prev, [currentIndex]: choice }));
+    },
+    [currentIndex],
+  );
 
-  const handleSelfRate = useCallback((rating: number) => {
-    setSelfRatings(prev => ({ ...prev, [currentIndex]: rating }));
-  }, [currentIndex]);
+  const handleSelfRate = useCallback(
+    (rating: number) => {
+      setSelfRatings((prev) => ({ ...prev, [currentIndex]: rating }));
+    },
+    [currentIndex],
+  );
 
   // 기보형 문항: NotationPractice 화면으로 이동
   const pendingNotationIndexRef = useRef<number | null>(null);
   const navigatingToNotationRef = useRef(false);
 
-  const handleOpenNotation = useCallback((questionIdx: number) => {
-    const q = questions[questionIdx];
-    if (!q.practiceScore) return;
-    stopAudio();
-    examNotationStore.setScore(q.practiceScore, questionIdx);
-    pendingNotationIndexRef.current = questionIdx;
-    navigatingToNotationRef.current = true;
-    navigation.navigate('NotationPractice', {
-      category: q.examQuestion.contentType,
-      difficulty: q.examQuestion.difficulty,
-      examMode: true,
-    });
-  }, [questions, navigation, stopAudio]);
+  const handleOpenNotation = useCallback(
+    (questionIdx: number) => {
+      const q = questions[questionIdx];
+      if (!q.practiceScore) return;
+      stopAudio();
+      examNotationStore.setScore(q.practiceScore, questionIdx);
+      pendingNotationIndexRef.current = questionIdx;
+      navigatingToNotationRef.current = true;
+      navigation.navigate('NotationPractice', {
+        category: q.examQuestion.contentType,
+        difficulty: q.examQuestion.difficulty,
+        examMode: true,
+      });
+    },
+    [questions, navigation, stopAudio],
+  );
 
   // NotationPractice에서 돌아올 때 결과 수신
   useFocusEffect(
@@ -192,7 +195,7 @@ export default function MockExamScreen() {
       if (idx === null) return;
       const result = examNotationStore.getResult();
       if (result !== null) {
-        setSelfRatings(prev => ({ ...prev, [idx]: result }));
+        setSelfRatings((prev) => ({ ...prev, [idx]: result }));
         examNotationStore.clear();
       }
       pendingNotationIndexRef.current = null;
@@ -202,10 +205,9 @@ export default function MockExamScreen() {
   const handleNext = () => {
     if (currentIndex < totalQuestions - 1) {
       stopAudio();
-      setCurrentIndex(prev => prev + 1);
+      setCurrentIndex((prev) => prev + 1);
     }
   };
-
 
   const handleSubmit = useCallback(async () => {
     if (submittedRef.current) return;
@@ -268,7 +270,17 @@ export default function MockExamScreen() {
       elapsedSeconds: 0,
       totalQuestions,
     });
-  }, [answers, selfRatings, questions, preset, totalQuestions, navigation, stopAudio, addBatchRecords, updateStreak]);
+  }, [
+    answers,
+    selfRatings,
+    questions,
+    preset,
+    totalQuestions,
+    navigation,
+    stopAudio,
+    addBatchRecords,
+    updateStreak,
+  ]);
 
   // 시험 진행 중 실수로 뒤로가기 방지
   useEffect(() => {
@@ -285,7 +297,11 @@ export default function MockExamScreen() {
         type: 'warning',
         buttons: [
           { text: t('exam:progress.continueExam'), style: 'cancel' },
-          { text: t('exam:progress.exit'), style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+          {
+            text: t('exam:progress.exit'),
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
         ],
       });
     });
@@ -305,16 +321,16 @@ export default function MockExamScreen() {
   };
 
   // 진행도
-  const answeredCount = questions.filter((_, idx) =>
-    answers[idx] || selfRatings[idx]
-  ).length;
+  const answeredCount = questions.filter((_, idx) => answers[idx] || selfRatings[idx]).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 상단 바 */}
       <View style={styles.topBar}>
         <View style={styles.topLeft}>
-          <Text style={styles.topTitle}>{t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}</Text>
+          <Text style={styles.topTitle}>
+            {t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}
+          </Text>
           <Text style={styles.topProgress}>
             {currentIndex + 1} / {totalQuestions}
           </Text>
@@ -339,29 +355,47 @@ export default function MockExamScreen() {
         />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      >
         {/* 문항 카테고리 표시 */}
         <View style={[styles.catChip, { backgroundColor: colors.bg }]}>
           <Text style={[styles.catChipText, { color: colors.main }]}>
             {t(`content:category.${currentQ.examQuestion.contentType}.name`)}
           </Text>
           <Text style={styles.catChipDiff}>
-            {t('content:difficulty.' + currentQ.examQuestion.contentType + '.' + currentQ.examQuestion.difficulty)}
+            {t(
+              'content:difficulty.' +
+                currentQ.examQuestion.contentType +
+                '.' +
+                currentQ.examQuestion.difficulty,
+            )}
           </Text>
         </View>
 
         {isChoiceType && currentQ.choiceQuestion ? (
           <>
             {/* 재생 카드 */}
-            <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+            <View
+              style={[
+                styles.playCard,
+                { backgroundColor: colors.bg, borderColor: colors.main + '30' },
+              ]}
+            >
               <TouchableOpacity
-                style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+                style={[
+                  styles.playBtn,
+                  { backgroundColor: isPlaying ? COLORS.slate400 : colors.main },
+                ]}
                 onPress={handlePlay}
                 activeOpacity={0.7}
               >
-                {isPlaying
-                  ? <VolumeX size={28} color="#fff" />
-                  : <Volume2 size={28} color="#fff" />}
+                {isPlaying ? (
+                  <VolumeX size={28} color="#fff" />
+                ) : (
+                  <Volume2 size={28} color="#fff" />
+                )}
               </TouchableOpacity>
               <Text style={[styles.playHint, { color: colors.text }]}>
                 {isPlaying ? t('exam:progress.playing') : t('exam:progress.tapToPlay')}
@@ -393,21 +427,24 @@ export default function MockExamScreen() {
                     onPress={() => handleSelectAnswer(choice)}
                     activeOpacity={0.7}
                   >
-                    <View style={[
-                      styles.choiceIndex,
-                      isSelected ? { backgroundColor: colors.main } : { backgroundColor: COLORS.slate200 },
-                    ]}>
-                      <Text style={[
-                        styles.choiceIndexText,
-                        isSelected && { color: '#fff' },
-                      ]}>
+                    <View
+                      style={[
+                        styles.choiceIndex,
+                        isSelected
+                          ? { backgroundColor: colors.main }
+                          : { backgroundColor: COLORS.slate200 },
+                      ]}
+                    >
+                      <Text style={[styles.choiceIndexText, isSelected && { color: '#fff' }]}>
                         {String.fromCharCode(65 + idx)}
                       </Text>
                     </View>
-                    <Text style={[
-                      styles.choiceText,
-                      isSelected && { color: colors.text, fontWeight: '700' },
-                    ]}>
+                    <Text
+                      style={[
+                        styles.choiceText,
+                        isSelected && { color: colors.text, fontWeight: '700' },
+                      ]}
+                    >
                       {choice}
                     </Text>
                     {isSelected && <Check size={18} color={colors.main} />}
@@ -421,7 +458,12 @@ export default function MockExamScreen() {
             {/* 기보형 문항 — 기보 입력 화면으로 이동 */}
             {selfRatings[currentIndex] ? (
               // 채점 완료된 문항
-              <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+              <View
+                style={[
+                  styles.playCard,
+                  { backgroundColor: colors.bg, borderColor: colors.main + '30' },
+                ]}
+              >
                 <View style={[styles.playBtn, { backgroundColor: colors.main }]}>
                   <Check size={28} color="#fff" />
                 </View>
@@ -431,7 +473,12 @@ export default function MockExamScreen() {
               </View>
             ) : (
               // 아직 미답변 문항
-              <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+              <View
+                style={[
+                  styles.playCard,
+                  { backgroundColor: colors.bg, borderColor: colors.main + '30' },
+                ]}
+              >
                 <TouchableOpacity
                   style={[styles.playBtn, { backgroundColor: colors.main }]}
                   onPress={() => handleOpenNotation(currentIndex)}
@@ -443,11 +490,16 @@ export default function MockExamScreen() {
                   {t('exam:progress.tapToNotate')}
                 </Text>
                 <TouchableOpacity
-                  style={[styles.notationBtn, { backgroundColor: colors.main, borderColor: colors.main }]}
+                  style={[
+                    styles.notationBtn,
+                    { backgroundColor: colors.main, borderColor: colors.main },
+                  ]}
                   onPress={() => handleOpenNotation(currentIndex)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.notationBtnText, { color: '#fff' }]}>{t('exam:progress.notate')}</Text>
+                  <Text style={[styles.notationBtnText, { color: '#fff' }]}>
+                    {t('exam:progress.notate')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -462,17 +514,15 @@ export default function MockExamScreen() {
             return (
               <View
                 key={idx}
-                style={[
-                  styles.dot,
-                  answered && styles.dotAnswered,
-                  isCurrent && styles.dotCurrent,
-                ]}
+                style={[styles.dot, answered && styles.dotAnswered, isCurrent && styles.dotCurrent]}
               >
-                <Text style={[
-                  styles.dotText,
-                  answered && { color: '#fff' },
-                  isCurrent && { color: '#fff' },
-                ]}>
+                <Text
+                  style={[
+                    styles.dotText,
+                    answered && { color: '#fff' },
+                    isCurrent && { color: '#fff' },
+                  ]}
+                >
                   {idx + 1}
                 </Text>
               </View>
@@ -485,7 +535,10 @@ export default function MockExamScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
         {currentIndex < totalQuestions - 1 ? (
           <TouchableOpacity
-            style={[styles.submitBtn, { backgroundColor: isCurrentAnswered ? colors.main : COLORS.slate300, flex: 1 }]}
+            style={[
+              styles.submitBtn,
+              { backgroundColor: isCurrentAnswered ? colors.main : COLORS.slate300, flex: 1 },
+            ]}
             onPress={handleNext}
             disabled={!isCurrentAnswered}
           >
@@ -496,7 +549,10 @@ export default function MockExamScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.submitBtn, { backgroundColor: isCurrentAnswered ? COLORS.amber500 : COLORS.slate300, flex: 1 }]}
+            style={[
+              styles.submitBtn,
+              { backgroundColor: isCurrentAnswered ? COLORS.amber500 : COLORS.slate300, flex: 1 },
+            ]}
             onPress={confirmSubmit}
             disabled={!isCurrentAnswered}
           >

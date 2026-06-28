@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { DEFAULT_MONTHLY_PRICE_STRING, getMonthlyPriceString } from '../lib/revenueCat';
 
 // ─────────────────────────────────────────────────────────────
 // 타입
@@ -28,10 +29,30 @@ interface LegalModalProps {
 
 export default function LegalModal({ visible, type, onClose }: LegalModalProps) {
   const { t } = useTranslation('legal');
+  const [priceString, setPriceString] = useState(DEFAULT_MONTHLY_PRICE_STRING);
 
-  const title = t(`${type}.title`);
-  const subtitle = t(`${type}.subtitle`);
-  const sections = t(`${type}.sections`, { returnObjects: true }) as Section[];
+  useEffect(() => {
+    if (!visible || type !== 'terms') return;
+
+    let isMounted = true;
+    getMonthlyPriceString()
+      .then(price => {
+        if (isMounted) setPriceString(price);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [type, visible]);
+
+  const interpolation = { price: priceString };
+  const title = t(`${type}.title`, interpolation);
+  const subtitle = t(`${type}.subtitle`, interpolation);
+  const sections = t(`${type}.sections`, {
+    ...interpolation,
+    returnObjects: true,
+  }) as Section[];
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>

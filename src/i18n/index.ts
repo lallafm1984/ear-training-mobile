@@ -2,6 +2,13 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_KEY,
+  SUPPORTED_LANGUAGES,
+  detectPreferredLanguage,
+  normalizeSupportedLanguage,
+} from './language';
 
 // ── ko ──
 import koCommon from './locales/ko/common.json';
@@ -45,30 +52,33 @@ import jaContent from './locales/ja/content.json';
 import jaMascot from './locales/ja/mascot.json';
 import jaLegal from './locales/ja/legal.json';
 
-const LANGUAGE_KEY = '@melodygen_language';
-const SUPPORTED_LANGS = ['ko', 'en', 'ja'];
-
 const languageDetector = {
   type: 'languageDetector' as const,
   async: true,
   detect: async (callback: (lng: string) => void) => {
     try {
       const saved = await AsyncStorage.getItem(LANGUAGE_KEY);
-      if (saved && SUPPORTED_LANGS.includes(saved)) {
-        callback(saved);
+      const savedLanguage = normalizeSupportedLanguage(saved);
+      if (savedLanguage) {
+        callback(savedLanguage);
         return;
       }
-    } catch {}
+    } catch {
+      // If storage is unavailable, fall back to the device locale.
+    }
 
-    const deviceLang = getLocales()[0]?.languageCode ?? 'en';
-    const matched = SUPPORTED_LANGS.includes(deviceLang) ? deviceLang : 'en';
-    callback(matched);
+    callback(detectPreferredLanguage(getLocales()));
   },
   init: () => {},
   cacheUserLanguage: async (lng: string) => {
+    const language = normalizeSupportedLanguage(lng);
+    if (!language) return;
+
     try {
-      await AsyncStorage.setItem(LANGUAGE_KEY, lng);
-    } catch {}
+      await AsyncStorage.setItem(LANGUAGE_KEY, language);
+    } catch {
+      // Language preference caching is best effort only.
+    }
   },
 };
 
@@ -76,8 +86,9 @@ i18n
   .use(languageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: 'en',
-    supportedLngs: SUPPORTED_LANGS,
+    fallbackLng: DEFAULT_LANGUAGE,
+    supportedLngs: [...SUPPORTED_LANGUAGES],
+    load: 'languageOnly',
     ns: ['common', 'home', 'auth', 'profile', 'practice', 'exam', 'subscription', 'stats', 'editor', 'content', 'mascot', 'legal'],
     defaultNS: 'common',
     resources: {

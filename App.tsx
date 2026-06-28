@@ -29,7 +29,14 @@ function AppNavigator() {
   if (loading || (session && profileLoading)) {
     const message = loading ? t('loading.appStart') : t('loading.accountInfo');
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#f8fafc',
+        }}
+      >
         <ActivityIndicator size="large" color="#6366f1" />
         <Text style={{ marginTop: 16, fontSize: 14, color: '#6b7280' }}>{message}</Text>
       </View>

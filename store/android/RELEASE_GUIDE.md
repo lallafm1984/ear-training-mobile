@@ -30,7 +30,7 @@ eas init
 1. Play Console → 수익 창출 → 상품 → 구독
 2. 구독 ID: `melodygen_pro_monthly`
 3. 구독 이름: "MelodyGen Pro"
-4. 가격: 5,500원/월
+4. 가격: 1,500원/월
 5. 혜택 기간: 없음 (또는 7일 무료 체험)
 6. 유예 기간: 3일
 

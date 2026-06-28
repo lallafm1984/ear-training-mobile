@@ -10,7 +10,17 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAlert, useSubscription, useAuth } from '../context';
 import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
-import { getOfferings, purchasePackage, isPro, restorePurchases, loginRevenueCat, logoutRevenueCat } from '../lib/revenueCat';
+import {
+  DEFAULT_MONTHLY_PRICE_STRING,
+  getOfferings,
+  getMonthlyPackage,
+  getPackagePriceString,
+  purchasePackage,
+  isPro,
+  restorePurchases,
+  loginRevenueCat,
+  logoutRevenueCat,
+} from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 interface PaywallScreenProps {
@@ -52,16 +62,13 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
-  const [priceString, setPriceString] = useState<string>('');
+  const [priceString, setPriceString] = useState<string>(DEFAULT_MONTHLY_PRICE_STRING);
 
   useEffect(() => {
     getOfferings()
       .then(pkgs => {
         setPackages(pkgs);
-        const monthly = pkgs.find(p => p.packageType === 'MONTHLY') ?? pkgs[0];
-        if (monthly) {
-          setPriceString(monthly.product.priceString);
-        }
+        setPriceString(getPackagePriceString(getMonthlyPackage(pkgs)));
       })
       .catch(() => {})
       .finally(() => setLoadingPackages(false));
@@ -73,7 +80,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       return;
     }
 
-    const pkg = packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
+    const pkg = getMonthlyPackage(packages);
     if (!pkg) {
       showAlert({
         title: t('subscription:paywall.loadFailTitle'),
@@ -119,7 +126,9 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
           });
           return;
-        } catch {}
+        } catch {
+          // Continue to the normal purchase error handling below.
+        }
       }
 
       // 취소/환불된 구독 토큰이 RC에 남아 "구독 변경"으로 잘못 처리되는 경우

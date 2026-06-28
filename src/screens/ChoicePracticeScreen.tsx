@@ -3,13 +3,16 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Volume2, VolumeX, Check, X, RotateCcw, ChevronRight,
+  ArrowLeft,
+  Volume2,
+  VolumeX,
+  Check,
+  X,
+  RotateCcw,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -84,7 +87,9 @@ export default function ChoicePracticeScreen() {
   // 화면 벗어날 때 오디오 정지
   useFocusEffect(
     useCallback(() => {
-      return () => { stopAudio(); };
+      return () => {
+        stopAudio();
+      };
     }, [stopAudio]),
   );
 
@@ -92,27 +97,30 @@ export default function ChoicePracticeScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  const handleSelect = useCallback((choice: string) => {
-    if (answerState !== 'waiting') return;
+  const handleSelect = useCallback(
+    (choice: string) => {
+      if (answerState !== 'waiting') return;
 
-    setSelectedChoice(choice);
-    const isCorrect = choice === question.correctAnswer;
-    setAnswerState(isCorrect ? 'correct' : 'wrong');
-    setStats(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-    }));
+      setSelectedChoice(choice);
+      const isCorrect = choice === question.correctAnswer;
+      setAnswerState(isCorrect ? 'correct' : 'wrong');
+      setStats((prev) => ({
+        correct: prev.correct + (isCorrect ? 1 : 0),
+        total: prev.total + 1,
+      }));
 
-    if (!isCorrect) {
-      // 틀렸을 때 흔들기 애니메이션
-      Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [answerState, question.correctAnswer, shakeAnim]);
+      if (!isCorrect) {
+        // 틀렸을 때 흔들기 애니메이션
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        ]).start();
+      }
+    },
+    [answerState, question.correctAnswer, shakeAnim],
+  );
 
   const handleNext = useCallback(() => {
     // 문제 전환 시 오디오 정지
@@ -120,13 +128,17 @@ export default function ChoicePracticeScreen() {
 
     // 페이드 아웃 → 새 문제 → 페이드 인
     Animated.timing(fadeAnim, {
-      toValue: 0, duration: 150, useNativeDriver: true,
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
     }).start(() => {
       setQuestion(generateChoiceQuestion(category, difficulty));
       setAnswerState('waiting');
       setSelectedChoice(null);
       Animated.timing(fadeAnim, {
-        toValue: 1, duration: 200, useNativeDriver: true,
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
       }).start();
     });
   }, [category, difficulty, fadeAnim]);
@@ -134,7 +146,8 @@ export default function ChoicePracticeScreen() {
   const handleFinish = useCallback(async () => {
     stopAudio();
 
-    const selfRating = stats.total > 0 ? Math.max(1, Math.round((stats.correct / stats.total) * 5)) : 3;
+    const selfRating =
+      stats.total > 0 ? Math.max(1, Math.round((stats.correct / stats.total) * 5)) : 3;
     const record: PracticeRecord = {
       id: `pr_${Date.now()}`,
       contentType: category,
@@ -184,7 +197,9 @@ export default function ChoicePracticeScreen() {
         <View style={styles.resultContainer}>
           <View style={[styles.resultCircle, { borderColor: colors.main }]}>
             <Text style={[styles.resultPct, { color: colors.main }]}>{pct}%</Text>
-            <Text style={styles.resultFraction}>{stats.correct}/{stats.total}</Text>
+            <Text style={styles.resultFraction}>
+              {stats.correct}/{stats.total}
+            </Text>
           </View>
 
           <Text style={styles.resultTitle}>{t('practice:choice.resultTitle')}</Text>
@@ -212,7 +227,9 @@ export default function ChoicePracticeScreen() {
               style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>{t('common:button.goBack')}</Text>
+              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
+                {t('common:button.goBack')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -229,7 +246,9 @@ export default function ChoicePracticeScreen() {
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.main }]}>{t('content:category.' + category + '.name')}</Text>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>
+            {t('content:category.' + category + '.name')}
+          </Text>
           <Text style={styles.headerDesc}>{diffLabel}</Text>
         </View>
         <View style={styles.statsChip}>
@@ -249,15 +268,21 @@ export default function ChoicePracticeScreen() {
           <Text style={styles.prompt}>{question.prompt}</Text>
 
           {/* 재생 버튼 + 숨겨진 AbcjsRenderer */}
-          <View style={[styles.playCard, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
+          <View
+            style={[
+              styles.playCard,
+              { backgroundColor: colors.bg, borderColor: colors.main + '30' },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
+              style={[
+                styles.playBtn,
+                { backgroundColor: isPlaying ? COLORS.slate400 : colors.main },
+              ]}
               onPress={handlePlay}
               activeOpacity={0.7}
             >
-              {isPlaying
-                ? <VolumeX size={28} color="#fff" />
-                : <Volume2 size={28} color="#fff" />}
+              {isPlaying ? <VolumeX size={28} color="#fff" /> : <Volume2 size={28} color="#fff" />}
             </TouchableOpacity>
             <Text style={[styles.playHint, { color: colors.text }]}>
               {isPlaying ? t('practice:choice.playing') : t('practice:choice.tapToPlay')}
@@ -277,10 +302,7 @@ export default function ChoicePracticeScreen() {
 
           {/* 보기 */}
           <Animated.View
-            style={[
-              styles.choicesContainer,
-              { transform: [{ translateX: shakeAnim }] },
-            ]}
+            style={[styles.choicesContainer, { transform: [{ translateX: shakeAnim }] }]}
           >
             {question.choices.map((choice, idx) => (
               <TouchableOpacity
@@ -291,20 +313,25 @@ export default function ChoicePracticeScreen() {
                 disabled={answerState !== 'waiting'}
               >
                 <View style={styles.choiceLeft}>
-                  <View style={[
-                    styles.choiceIndex,
-                    choice === question.correctAnswer && answerState !== 'waiting'
-                      ? { backgroundColor: '#10b981' }
-                      : choice === selectedChoice && answerState === 'wrong'
-                        ? { backgroundColor: '#ef4444' }
-                        : { backgroundColor: COLORS.slate200 },
-                  ]}>
-                    <Text style={[
-                      styles.choiceIndexText,
-                      (answerState !== 'waiting' && (choice === question.correctAnswer || choice === selectedChoice))
-                        ? { color: '#fff' }
-                        : { color: COLORS.slate500 },
-                    ]}>
+                  <View
+                    style={[
+                      styles.choiceIndex,
+                      choice === question.correctAnswer && answerState !== 'waiting'
+                        ? { backgroundColor: '#10b981' }
+                        : choice === selectedChoice && answerState === 'wrong'
+                          ? { backgroundColor: '#ef4444' }
+                          : { backgroundColor: COLORS.slate200 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceIndexText,
+                        answerState !== 'waiting' &&
+                        (choice === question.correctAnswer || choice === selectedChoice)
+                          ? { color: '#fff' }
+                          : { color: COLORS.slate500 },
+                      ]}
+                    >
                       {String.fromCharCode(65 + idx)}
                     </Text>
                   </View>
@@ -342,7 +369,9 @@ export default function ChoicePracticeScreen() {
                 style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
                 onPress={handleFinish}
               >
-                <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
+                <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>
+                  {t('practice:choice.finishPractice')}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -352,7 +381,9 @@ export default function ChoicePracticeScreen() {
               style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={handleFinish}
             >
-              <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>{t('practice:choice.finishPractice')}</Text>
+              <Text style={[styles.bottomBtnText, { color: COLORS.slate700 }]}>
+                {t('practice:choice.finishPractice')}
+              </Text>
             </TouchableOpacity>
           )
         )}

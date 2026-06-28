@@ -33,7 +33,7 @@
 
 ## 제5조 (유료 서비스)
 
-- Pro 구독은 월 5,500원이며, Apple App Store 또는 Google Play Store를 통해 결제됩니다.
+- Pro 구독은 월 1,500원이며, Apple App Store 또는 Google Play Store를 통해 결제됩니다.
 - 구독은 해지하지 않으면 자동 갱신됩니다.
 - 환불은 각 스토어의 환불 정책에 따릅니다.
 - 구독 해지 후에도 만료일까지 Pro 기능을 이용할 수 있습니다.

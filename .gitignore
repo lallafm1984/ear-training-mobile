@@ -53,11 +53,13 @@ yarn-error.*
 # Claude & OMC
 .claude/
 .omc/
+.codex/
 
 # Expo temp
 .expo-check-tmp/
 
 # Build artifacts
+build/
 *.apk
 *.aab
 
