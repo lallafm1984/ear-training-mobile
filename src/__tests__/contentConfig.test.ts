@@ -7,8 +7,8 @@ import {
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
 describe('CONTENT_CATEGORIES', () => {
-  it('8개 카테고리가 존재한다', () => {
-    expect(CONTENT_CATEGORIES).toHaveLength(8);
+  it('10개 카테고리가 존재한다', () => {
+    expect(CONTENT_CATEGORIES).toHaveLength(10);
   });
 
   it('각 카테고리가 필수 속성을 가진다', () => {
@@ -35,6 +35,8 @@ describe('CONTENT_CATEGORIES', () => {
       'progression',
       'key',
       'twoVoice',
+      'scale',
+      'rhythmTap',
     ]);
   });
 });
@@ -49,6 +51,8 @@ describe('getContentConfig', () => {
     ['progression', '화성 진행'],
     ['key', '조성 판별'],
     ['twoVoice', '2성부 받아쓰기'],
+    ['scale', '음계·선법 듣기'],
+    ['rhythmTap', '리듬 탭'],
   ];
 
   it.each(cases)('%s 카테고리의 이름이 올바르다', (id, expectedName) => {

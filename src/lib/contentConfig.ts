@@ -98,6 +98,28 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     maxLevel: 4,
     freeMaxLevel: 0, // Pro 전용
   },
+  {
+    id: 'scale',
+    name: '음계·선법 듣기',
+    icon: 'AudioLines',
+    color: '#ec4899', // pink
+    bgColor: '#fdf2f8',
+    description: '장·단음계와 교회선법 식별',
+    answerType: 'choice',
+    maxLevel: 4,
+    freeMaxLevel: 2,
+  },
+  {
+    id: 'rhythmTap',
+    name: '리듬 탭',
+    icon: 'Hand',
+    color: '#f97316', // orange
+    bgColor: '#fff7ed',
+    description: '들은 리듬을 탭으로 따라 치기',
+    answerType: 'tap',
+    maxLevel: 4,
+    freeMaxLevel: 2,
+  },
 ];
 
 /** 카테고리 ID로 설정 조회 */
@@ -166,6 +188,20 @@ export const TWO_VOICE_DIFF_LABELS: Record<string, string> = {
   bass_4: '4단계 · 복잡한 성부',
 };
 
+export const SCALE_DIFF_LABELS: Record<string, string> = {
+  scale_1: '1단계 · 장음계 / 자연단음계',
+  scale_2: '2단계 · + 화성·가락단음계',
+  scale_3: '3단계 · 교회선법 7종',
+  scale_4: '4단계 · + 펜타토닉·온음·블루스',
+};
+
+export const RHYTHM_TAP_DIFF_LABELS: Record<string, string> = {
+  tap_1: '1단계 · 4분/2분음표 1마디',
+  tap_2: '2단계 · 8분음표 + 쉼표',
+  tap_3: '3단계 · 점음표·당김음 2마디',
+  tap_4: '4단계 · 16분음표 2마디',
+};
+
 /** 카테고리별 난이도 라벨 맵 */
 export const CATEGORY_DIFF_LABELS: Record<ContentCategory, Record<string, string>> = {
   barMelody: BAR_MELODY_DIFFICULTY_LABELS,
@@ -176,6 +212,8 @@ export const CATEGORY_DIFF_LABELS: Record<ContentCategory, Record<string, string
   progression: PROGRESSION_DIFF_LABELS,
   key: KEY_DIFF_LABELS,
   twoVoice: TWO_VOICE_DIFF_LABELS,
+  scale: SCALE_DIFF_LABELS,
+  rhythmTap: RHYTHM_TAP_DIFF_LABELS,
 };
 
 /** 카테고리별 난이도 목록 */

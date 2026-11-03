@@ -27,6 +27,7 @@ import koBeginner from './locales/ko/beginner.json';
 import koLevelTest from './locales/ko/levelTest.json';
 import koWrongNotes from './locales/ko/wrongNotes.json';
 import koShare from './locales/ko/share.json';
+import koRhythmTap from './locales/ko/rhythmTap.json';
 
 // ── en ──
 import enCommon from './locales/en/common.json';
@@ -45,6 +46,7 @@ import enBeginner from './locales/en/beginner.json';
 import enLevelTest from './locales/en/levelTest.json';
 import enWrongNotes from './locales/en/wrongNotes.json';
 import enShare from './locales/en/share.json';
+import enRhythmTap from './locales/en/rhythmTap.json';
 
 // ── ja ──
 import jaCommon from './locales/ja/common.json';
@@ -63,6 +65,7 @@ import jaBeginner from './locales/ja/beginner.json';
 import jaLevelTest from './locales/ja/levelTest.json';
 import jaWrongNotes from './locales/ja/wrongNotes.json';
 import jaShare from './locales/ja/share.json';
+import jaRhythmTap from './locales/ja/rhythmTap.json';
 
 const languageDetector = {
   type: 'languageDetector' as const,
@@ -118,6 +121,7 @@ i18n
       'levelTest',
       'wrongNotes',
       'share',
+      'rhythmTap',
     ],
     defaultNS: 'common',
     resources: {
@@ -138,6 +142,7 @@ i18n
         levelTest: koLevelTest,
         wrongNotes: koWrongNotes,
         share: koShare,
+        rhythmTap: koRhythmTap,
       },
       en: {
         common: enCommon,
@@ -156,6 +161,7 @@ i18n
         levelTest: enLevelTest,
         wrongNotes: enWrongNotes,
         share: enShare,
+        rhythmTap: enRhythmTap,
       },
       ja: {
         common: jaCommon,
@@ -174,6 +180,7 @@ i18n
         levelTest: jaLevelTest,
         wrongNotes: jaWrongNotes,
         share: jaShare,
+        rhythmTap: jaRhythmTap,
       },
     },
     interpolation: {

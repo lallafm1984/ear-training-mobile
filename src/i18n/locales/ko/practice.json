@@ -50,6 +50,7 @@
     "cadencePrompt": "마지막 종지의 종류를 고르세요.",
     "keyModePrompt": "멜로디를 듣고 장조/단조를 맞추세요.",
     "keyPrompt": "멜로디를 듣고 조성을 맞추세요.",
+    "scalePrompt": "음계를 듣고 종류를 맞추세요.",
     "explainTitle": "해설",
     "listenCorrect": "정답 듣기",
     "listenMine": "내 답 듣기",

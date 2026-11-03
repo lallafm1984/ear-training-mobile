@@ -31,6 +31,14 @@
     "twoVoice": {
       "name": "Two-Part",
       "description": "Melody + bass staff"
+    },
+    "scale": {
+      "name": "Scales & Modes",
+      "description": "Identify major/minor scales and church modes"
+    },
+    "rhythmTap": {
+      "name": "Rhythm Tap",
+      "description": "Tap back the rhythm you hear"
     }
   },
   "difficulty": {
@@ -88,6 +96,18 @@
       "bass_2": "Level 2 · Rhythmic variation",
       "bass_3": "Level 3 · Counterpoint elements",
       "bass_4": "Level 4 · Complex parts"
+    },
+    "scale": {
+      "scale_1": "Level 1 · Major / natural minor",
+      "scale_2": "Level 2 · + harmonic & melodic minor",
+      "scale_3": "Level 3 · 7 church modes",
+      "scale_4": "Level 4 · + pentatonic, whole tone, blues"
+    },
+    "rhythmTap": {
+      "tap_1": "Level 1 · Quarter/half notes, 1 bar",
+      "tap_2": "Level 2 · Eighth notes + rests",
+      "tap_3": "Level 3 · Dotted & syncopated, 2 bars",
+      "tap_4": "Level 4 · Sixteenth notes, 2 bars"
     }
   },
   "track": {
@@ -178,6 +198,23 @@
     "Gb_major": "G♭ Major",
     "Eb_minor": "E♭ minor"
   },
+  "scale": {
+    "major": "Major",
+    "natural_minor": "Natural minor",
+    "harmonic_minor": "Harmonic minor",
+    "melodic_minor": "Melodic minor",
+    "ionian": "Ionian (major)",
+    "dorian": "Dorian",
+    "phrygian": "Phrygian",
+    "lydian": "Lydian",
+    "mixolydian": "Mixolydian",
+    "aeolian": "Aeolian (natural minor)",
+    "locrian": "Locrian",
+    "major_pentatonic": "Major pentatonic",
+    "minor_pentatonic": "Minor pentatonic",
+    "whole_tone": "Whole tone",
+    "blues": "Blues scale"
+  },
   "explain": {
     "interval": {
       "0": "A perfect unison is the same note played twice. If the pitch does not move at all, it is a unison.",
@@ -227,6 +264,23 @@
       "half": "A half cadence stops on V. It feels unfinished, waiting for more.",
       "plagal": "A plagal cadence ends IV to I, like 'Amen': soft and calm.",
       "deceptive": "A deceptive cadence goes V to vi instead of I. You expect an ending, and it slips away."
+    },
+    "scale": {
+      "major": "The major scale goes W-W-H-W-W-W-H. The raised 3rd and 7th make it sound bright and settled.",
+      "natural_minor": "The natural minor scale goes W-H-W-W-H-W-W. The lowered 3rd, 6th and 7th make it sound dark.",
+      "harmonic_minor": "Harmonic minor raises only the 7th of natural minor. The augmented 2nd between 6 and 7 gives an exotic tension.",
+      "melodic_minor": "Melodic minor (ascending) raises both the 6th and 7th. It starts minor and ends almost like major.",
+      "ionian": "Ionian is the same as the major scale: half steps between 3-4 and 7-8, bright and stable.",
+      "dorian": "Dorian is natural minor with a raised 6th. A minor mode with a bright 6th, common in jazz and folk.",
+      "phrygian": "Phrygian is natural minor with a lowered 2nd. The half step at the very start gives a dark, Spanish color.",
+      "lydian": "Lydian is major with a raised 4th. Whole steps all the way from 1 to 4 make it feel dreamy and floating.",
+      "mixolydian": "Mixolydian is major with a lowered 7th. Bright, but the ending feels less resolved, like blues and rock.",
+      "aeolian": "Aeolian is the same as natural minor: lowered 3rd, 6th and 7th, dark and calm.",
+      "locrian": "Locrian lowers the 2nd and 5th. With a diminished 5th above the tonic, it is the most unstable mode.",
+      "major_pentatonic": "Major pentatonic is the major scale without the 4th and 7th. No half steps, so it rests easily anywhere.",
+      "minor_pentatonic": "Minor pentatonic is natural minor without the 2nd and 6th. The basic material of rock and blues solos.",
+      "whole_tone": "The whole-tone scale moves only in whole steps. With no clear center it sounds dreamy and floating.",
+      "blues": "The blues scale adds a diminished 5th (blue note) to minor pentatonic. Listen for the chromatic slide."
     }
   }
 }

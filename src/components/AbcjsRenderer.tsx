@@ -20,11 +20,40 @@ import type {
 import { generateAbcScaleNotes } from '../lib';
 import { WEBVIEW_HTML } from './abcjsWebViewHtml';
 
+export interface ClickTrackOptions {
+  tempo: number;
+  /** 박자 분자 (기본 4) */
+  top?: number;
+  /** 박자 분모 (기본 4) */
+  btm?: number;
+  /** 카운트인 마디 수 (기본 1) */
+  countInBars?: number;
+  /** 카운트인 뒤 클릭을 이어갈 마디 수 */
+  bars: number;
+  freq?: number;
+  /** 마지막 클릭 뒤 종료까지 여유(ms) */
+  tailMs?: number;
+}
+
+export interface ClickTrackState {
+  isPlaying: boolean;
+  /** 메시지 수신 시점부터 첫 클릭까지 예약 지연(ms) */
+  leadMs?: number;
+  beatMs?: number;
+  beatsPerBar?: number;
+  countInBars?: number;
+  bars?: number;
+  error?: boolean;
+}
+
 export interface AbcjsRendererHandle {
   requestExportImage: () => void;
   requestExportAudio: () => void;
   togglePlay: () => void;
   stopPlay: () => void;
+  /** 악보 없이 메트로놈 클릭만 재생 (리듬 탭) */
+  playClickTrack: (options: ClickTrackOptions) => void;
+  stopClickTrack: () => void;
 }
 
 interface AbcjsRendererProps {
@@ -64,6 +93,7 @@ interface AbcjsRendererProps {
   renderScale?: number;
   staffWidth?: number;
   onScorePitchTap?: (payload: { index: number; degree: number; voice: 'treble' | 'bass' }) => void;
+  onClickTrackState?: (state: ClickTrackState) => void;
 }
 
 const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
@@ -102,6 +132,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
       renderScale = 1.2,
       staffWidth = 800,
       onScorePitchTap,
+      onClickTrackState,
     }: AbcjsRendererProps,
     ref: React.ForwardedRef<AbcjsRendererHandle>,
   ) {
@@ -372,6 +403,17 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
             case 'PLAY_STATE':
               onPlayStateChange?.(msg.isPlaying);
               break;
+            case 'CLICK_TRACK_STATE':
+              onClickTrackState?.({
+                isPlaying: !!msg.isPlaying,
+                leadMs: msg.leadMs,
+                beatMs: msg.beatMs,
+                beatsPerBar: msg.beatsPerBar,
+                countInBars: msg.countInBars,
+                bars: msg.bars,
+                error: !!msg.error,
+              });
+              break;
 
             case 'HEIGHT': {
               // 악보 전체 높이 + 하단 여유 (잘림 방지)
@@ -420,6 +462,7 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
         onNoteClick,
         onScorePitchTap,
         onPlayStateChange,
+        onClickTrackState,
         saveToDevice,
         onAudioSaveSuccess,
         showAlert,
@@ -434,6 +477,16 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
     const stopPlay = useCallback(() => {
       if (!webViewRef.current) return;
       webViewRef.current.postMessage(JSON.stringify({ type: 'STOP_AUDIO' }));
+    }, []);
+
+    const playClickTrack = useCallback((options: ClickTrackOptions) => {
+      if (!webViewRef.current) return;
+      webViewRef.current.postMessage(JSON.stringify({ type: 'PLAY_CLICK_TRACK', ...options }));
+    }, []);
+
+    const stopClickTrack = useCallback(() => {
+      if (!webViewRef.current) return;
+      webViewRef.current.postMessage(JSON.stringify({ type: 'STOP_CLICK_TRACK' }));
     }, []);
 
     const requestExportImage = useCallback(() => {
@@ -453,10 +506,19 @@ const AbcjsRendererBase = forwardRef<AbcjsRendererHandle, AbcjsRendererProps>(
       () => ({
         togglePlay,
         stopPlay,
+        playClickTrack,
+        stopClickTrack,
         requestExportImage,
         requestExportAudio,
       }),
-      [togglePlay, stopPlay, requestExportImage, requestExportAudio],
+      [
+        togglePlay,
+        stopPlay,
+        playClickTrack,
+        stopClickTrack,
+        requestExportImage,
+        requestExportAudio,
+      ],
     );
 
     return (

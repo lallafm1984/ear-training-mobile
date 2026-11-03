@@ -111,6 +111,7 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
   var displayVisualObj   = null;
   var timingCb           = null;
   var cursorLine         = null;
+  var clickTrackTimeout  = null;
 
   function postMsg(obj) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(obj)); } catch(e) {}
@@ -591,6 +592,46 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
     } else {
       try { timingCb.start(); } catch(e) {}
     }
+  }
+
+  /* ── 클릭 트랙 (리듬 탭: 카운트인 + N마디 메트로놈만 재생) ── */
+  function stopClickTrack(silent) {
+    if (clickTrackTimeout) { clearTimeout(clickTrackTimeout); clickTrackTimeout = null; }
+    if (!isPlayingState && audioCtx) {
+      try { audioCtx.close(); } catch(e) {}
+      audioCtx = null;
+    }
+    if (!silent) postMsg({ type:'CLICK_TRACK_STATE', isPlaying:false });
+  }
+  function playClickTrack(msg) {
+    if (isPlayingState) stopAudio();
+    stopClickTrack(true);
+    try {
+      if (!audioCtx || audioCtx.state === 'closed')
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { postMsg({ type:'CLICK_TRACK_STATE', isPlaying:false, error:true }); return; }
+    var resume = audioCtx.state === 'suspended' ? audioCtx.resume() : Promise.resolve();
+    resume.then(function() {
+      if (!audioCtx) return;
+      var top = msg.top || 4, btm = msg.btm || 4, tempo = msg.tempo || 80;
+      var sch = getMetronomeSchedule(tempo, top, btm);
+      var countInBars = msg.countInBars || 1, bars = msg.bars || 1;
+      var totalBeats = (countInBars + bars) * sch.count;
+      var lead = 0.08;
+      var start = audioCtx.currentTime + lead;
+      for (var i = 0; i < totalBeats; i++)
+        createMetronomeClick(audioCtx, start + i * sch.interval, i % sch.accentEvery === 0, msg.freq || 1000);
+      postMsg({
+        type:'CLICK_TRACK_STATE', isPlaying:true,
+        leadMs: lead * 1000, beatMs: sch.interval * 1000, beatsPerBar: sch.count,
+        countInBars: countInBars, bars: bars
+      });
+      var tailMs = msg.tailMs || 300;
+      clickTrackTimeout = setTimeout(function() {
+        clickTrackTimeout = null;
+        stopClickTrack(false);
+      }, (lead + totalBeats * sch.interval) * 1000 + tailMs);
+    }).catch(function() { postMsg({ type:'CLICK_TRACK_STATE', isPlaying:false, error:true }); });
   }
 
   /* ── 일반 재생 ── */
@@ -1350,6 +1391,10 @@ export const WEBVIEW_HTML = `<!DOCTYPE html>
         toggleAudioPlayback();
       } else if (msg.type === 'STOP_AUDIO') {
         if (isPlayingState) stopAudio();
+      } else if (msg.type === 'PLAY_CLICK_TRACK') {
+        playClickTrack(msg);
+      } else if (msg.type === 'STOP_CLICK_TRACK') {
+        stopClickTrack(false);
       } else if (msg.type === 'EXPORT_IMAGE') {
         exportImage();
       } else if (msg.type === 'EXPORT_AUDIO') {

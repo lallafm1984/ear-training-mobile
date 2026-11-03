@@ -50,6 +50,7 @@
     "cadencePrompt": "最後のカデンツの種類を選んでください。",
     "keyModePrompt": "メロディーを聴いて長調/短調を答えてください。",
     "keyPrompt": "メロディーを聴いて調性を答えてください。",
+    "scalePrompt": "音階を聴いて種類を当ててください。",
     "explainTitle": "解説",
     "listenCorrect": "正解を聴く",
     "listenMine": "自分の答えを聴く",

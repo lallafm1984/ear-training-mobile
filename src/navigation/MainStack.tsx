@@ -24,6 +24,7 @@ import BeginnerCourseScreen from '../screens/BeginnerCourseScreen';
 import BeginnerLessonScreen from '../screens/BeginnerLessonScreen';
 import LevelTestScreen from '../screens/LevelTestScreen';
 import WrongNotesScreen from '../screens/WrongNotesScreen';
+import RhythmTapScreen from '../screens/RhythmTapScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
@@ -84,6 +85,7 @@ export type MainStackParamList = {
   BeginnerLesson: { lessonId: string };
   LevelTest: undefined;
   WrongNotes: { category?: ContentCategory } | undefined;
+  RhythmTap: { difficulty: ContentDifficulty };
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -118,6 +120,7 @@ export default function MainStack() {
       <Stack.Screen name="BeginnerLesson" component={BeginnerLessonScreen} />
       <Stack.Screen name="LevelTest" component={LevelTestScreen} />
       <Stack.Screen name="WrongNotes" component={WrongNotesScreen} />
+      <Stack.Screen name="RhythmTap" component={RhythmTapScreen} />
       <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
         {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>

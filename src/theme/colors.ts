@@ -109,4 +109,6 @@ export const CATEGORY_COLORS: Record<
   progression: { main: '#0f766e', bg: '#ecfdf5', text: '#115e59' },
   key: { main: '#ef4444', bg: '#fef2f2', text: '#991b1b' },
   twoVoice: { main: '#0ea5e9', bg: '#f0f9ff', text: '#075985' },
+  scale: { main: '#ec4899', bg: '#fdf2f8', text: '#9d174d' },
+  rhythmTap: { main: '#f97316', bg: '#fff7ed', text: '#9a3412' },
 };

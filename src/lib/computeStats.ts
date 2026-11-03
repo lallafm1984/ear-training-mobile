@@ -23,6 +23,8 @@ const CATEGORIES: ContentCategory[] = [
   'progression',
   'key',
   'twoVoice',
+  'scale',
+  'rhythmTap',
 ];
 
 function emptyStats(): PracticeStats {

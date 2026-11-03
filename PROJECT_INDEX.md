@@ -20,6 +20,8 @@ src/
 │   ├── wrongNotes.ts             # 오답노트 저장 모델·병합·복습 문항 변환·약점 TOP 집계 (로컬 전용)
 │   ├── wrongNoteReviewStore.ts   # 오답노트 → 객관식 복습 모드 문항 전달
 │   ├── shareCard.ts              # 결과 공유 카드 데이터 모델·텍스트 공유 문구·파일명 (순수 함수)
+│   ├── scaleQuestions.ts         # 음계·선법 듣기 객관식 문제 생성 (템플릿·근음 철자·유사 보기)
+│   ├── rhythmTap.ts              # 리듬 탭 패턴 생성·예상 타점·탭 타이밍 채점 (순수 함수)
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   ├── oauthCallback.ts          # OAuth 딥링크 query/hash 파싱 + Supabase 세션 생성
 │   ├── promotionConfig.ts        # 서버 시간 기반 Pro 캠페인 RPC/공지 키
@@ -32,13 +34,13 @@ src/
 ├── i18n/                # 국제화 (i18next)
 │   ├── index.ts         # i18n 초기화 + 언어 감지
 │   ├── language.ts      # 지원 언어 정규화 + 기기 지역 매칭
-│   └── locales/         # 번역 파일 (ko/en/ja × 16 네임스페이스)
+│   └── locales/         # 번역 파일 (ko/en/ja × 17 네임스페이스)
 ├── navigation/          # 네비게이션 설정
-├── screens/             # 화면 컴포넌트 (18개 + ScoreEditor 서브모듈)
+├── screens/             # 화면 컴포넌트 (19개 + ScoreEditor 서브모듈)
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (25개)
+└── __tests__/           # Jest 테스트 (27개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -68,31 +70,32 @@ scripts/
 
 #### 화면 (Screens) — 로그인 → 메인 흐름에서 도달 가능
 
-| 화면             | 파일                                 | 진입 경로                                                                       |
-| ---------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
-| Login            | `screens/LoginScreen.tsx`            | App.tsx — 미로그인·게스트 아님 시. "로그인 없이 시작"으로 게스트 모드 진입      |
-| Onboarding       | `screens/OnboardingScreen.tsx`       | 최초 실행 시                                                                    |
-| Home             | `screens/HomeScreen.tsx`             | 로그인 후 메인                                                                  |
-| CategoryPractice | `screens/CategoryPracticeScreen.tsx` | Home → 카테고리 선택                                                            |
-| ChoicePractice   | `screens/ChoicePracticeScreen.tsx`   | CategoryPractice → 객관식 (WrongNotes → review 복습 모드)                       |
-| NotationPractice | `screens/NotationPracticeScreen.tsx` | CategoryPractice → 기보형                                                       |
-| MockExamSetup    | `screens/MockExamSetupScreen.tsx`    | Home → 모의시험                                                                 |
-| MockExam         | `screens/MockExamScreen.tsx`         | MockExamSetup → 시험 진행                                                       |
-| ExamResult       | `screens/ExamResultScreen.tsx`       | MockExam → 결과                                                                 |
-| Stats            | `screens/StatsScreen.tsx`            | Home → 통계                                                                     |
-| DailyGoal        | `screens/DailyGoalScreen.tsx`        | Home → 일일 목표                                                                |
-| BeginnerCourse   | `screens/BeginnerCourseScreen.tsx`   | Home → "처음이라면: 귀 열기 코스" 카드 (7일 레슨 목록·진행률)                   |
-| BeginnerLesson   | `screens/BeginnerLessonScreen.tsx`   | BeginnerCourse → Day 카드 (듣기 포인트 → 미니 문제 → 결과·EXP)                  |
-| LevelTest        | `screens/LevelTestScreen.tsx`        | Home → "3분 레벨 테스트" 카드 (계단식 12문항 → 영역별 시작 난이도 추천)         |
-| WrongNotes       | `screens/WrongNotesScreen.tsx`       | Stats/ExamResult/ChoicePractice 결과 → 오답노트 (약점 TOP3·필터·듣기·복습 시작) |
-| Paywall          | `screens/PaywallScreen.tsx`          | Home → 구독 (모달)                                                              |
-| Profile          | `screens/ProfileScreen.tsx`          | Home → 프로필 (모달)                                                            |
+| 화면             | 파일                                 | 진입 경로                                                                              |
+| ---------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| Login            | `screens/LoginScreen.tsx`            | App.tsx — 미로그인·게스트 아님 시. "로그인 없이 시작"으로 게스트 모드 진입             |
+| Onboarding       | `screens/OnboardingScreen.tsx`       | 최초 실행 시                                                                           |
+| Home             | `screens/HomeScreen.tsx`             | 로그인 후 메인                                                                         |
+| CategoryPractice | `screens/CategoryPracticeScreen.tsx` | Home → 카테고리 선택                                                                   |
+| ChoicePractice   | `screens/ChoicePracticeScreen.tsx`   | CategoryPractice → 객관식 (WrongNotes → review 복습 모드)                              |
+| NotationPractice | `screens/NotationPracticeScreen.tsx` | CategoryPractice → 기보형                                                              |
+| MockExamSetup    | `screens/MockExamSetupScreen.tsx`    | Home → 모의시험                                                                        |
+| MockExam         | `screens/MockExamScreen.tsx`         | MockExamSetup → 시험 진행                                                              |
+| ExamResult       | `screens/ExamResultScreen.tsx`       | MockExam → 결과                                                                        |
+| Stats            | `screens/StatsScreen.tsx`            | Home → 통계                                                                            |
+| DailyGoal        | `screens/DailyGoalScreen.tsx`        | Home → 일일 목표                                                                       |
+| BeginnerCourse   | `screens/BeginnerCourseScreen.tsx`   | Home → "처음이라면: 귀 열기 코스" 카드 (7일 레슨 목록·진행률)                          |
+| BeginnerLesson   | `screens/BeginnerLessonScreen.tsx`   | BeginnerCourse → Day 카드 (듣기 포인트 → 미니 문제 → 결과·EXP)                         |
+| LevelTest        | `screens/LevelTestScreen.tsx`        | Home → "3분 레벨 테스트" 카드 (계단식 12문항 → 영역별 시작 난이도 추천)                |
+| WrongNotes       | `screens/WrongNotesScreen.tsx`       | Stats/ExamResult/ChoicePractice 결과 → 오답노트 (약점 TOP3·필터·듣기·복습 시작)        |
+| RhythmTap        | `screens/RhythmTapScreen.tsx`        | CategoryPractice(리듬 탭) → 듣기 → 메트로놈 클릭 트랙에 맞춰 탭 → 타이밍 채점·타임라인 |
+| Paywall          | `screens/PaywallScreen.tsx`          | Home → 구독 (모달)                                                                     |
+| Profile          | `screens/ProfileScreen.tsx`          | Home → 프로필 (모달)                                                                   |
 
 #### 컴포넌트 (Components)
 
 | 컴포넌트                | 사용처                                                                                                                                               |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AbcjsRenderer`         | ChoicePractice, MockExam, NotationPractice, ScoreEditor, WrongNotes(듣기), BeginnerLesson, LevelTest                                                 |
+| `AbcjsRenderer`         | ChoicePractice, MockExam, NotationPractice, ScoreEditor, WrongNotes(듣기), BeginnerLesson, LevelTest, RhythmTap(클릭 트랙·정답 악보)                 |
 | `abcjsSource.ts`        | abcjsWebViewHtml 내부                                                                                                                                |
 | `abcjsWebViewHtml.ts`   | AbcjsRenderer 내부                                                                                                                                   |
 | `AppAlert`              | AlertContext                                                                                                                                         |
@@ -151,6 +154,8 @@ scripts/
 | `practiceScoreGenerator.ts` | NotationPractice, MockExam                                                                                                                                                                        |
 | `contentConfig.ts`          | 대부분의 화면 (8곳)                                                                                                                                                                               |
 | `questionGenerator.ts`      | ChoicePractice, MockExam                                                                                                                                                                          |
+| `scaleQuestions.ts`         | questionGenerator(scale 분기), ChoicePractice·MockExam을 통해 사용                                                                                                                                |
+| `rhythmTap.ts`              | RhythmTapScreen (패턴 생성·타점·채점)                                                                                                                                                             |
 | `grading.ts`                | NotationPractice, GradingResult                                                                                                                                                                   |
 | `examPresets.ts`            | MockExamSetup, MockExam                                                                                                                                                                           |
 | `examNotationStore.ts`      | MockExam, NotationPractice                                                                                                                                                                        |
@@ -170,7 +175,7 @@ scripts/
 | `revenueCat.ts`             | SubscriptionContext, PaywallScreen                                                                                                                                                                |
 | `melodyRhythmLevel.ts`      | scoreGenerator, twoVoice                                                                                                                                                                          |
 | `trebleRhythmFill.ts`       | scoreGenerator, twoVoice, rhythmEngine                                                                                                                                                            |
-| `rhythmEngine.ts`           | practiceScoreGenerator                                                                                                                                                                            |
+| `rhythmEngine.ts`           | practiceScoreGenerator, rhythmTap                                                                                                                                                                 |
 | `supabase.ts`               | AuthContext, useSkillProfile                                                                                                                                                                      |
 | `sessionContentLog.ts`      | SessionContentLogContext, 세션 컨텐츠 로그 테이블 insert 매핑 테스트                                                                                                                              |
 | `localDate.ts`              | useMascotExp (기기 시간대 기준 YYYY-MM-DD 날짜 키)                                                                                                                                                |
@@ -343,6 +348,8 @@ Login → Onboarding → Home
 | `levelTest.test.ts`              | 레벨 테스트 계단식 진행, 영역 레벨 추정·추천, 정규화·병합, 문항 생성                                  |
 | `reminder.test.ts`               | 리마인더 설정 정규화·시각 표시, 알림 권한 흐름·매일 예약/취소 호출 검증                               |
 | `wrongNotes.test.ts`             | 오답 누적·해결·삭제·정리, 병합, 복습 문항 변환·선택, 약점 TOP 집계                                    |
+| `scaleQuestions.test.ts`         | 음계 템플릿 무결성, 근음별 임시표 철자, 오답 보기 선택, 문제 생성                                     |
+| `rhythmTap.test.ts`              | 타점 계산(쉼표·붙임줄·잇단음표), 허용 오차, 탭 채점, 문제 생성, 점수 변환                             |
 | `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
 | `promotionConfig.test.ts`        | 서버 시간 RPC 판정 및 fail-closed 동작                                                                |
@@ -350,7 +357,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (332개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (364개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -365,6 +372,8 @@ Login → Onboarding → Home
 | 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드 | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
 | 오답노트 저장·복습 모드·약점 집중 연습              | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
 | 결과 공유 카드 (이미지/텍스트)                      | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
+| 음계·선법 듣기 (객관식 4단계)                       | `src/lib/scaleQuestions.ts`, `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale)                                                                                                                         |
+| 리듬 탭 (탭 타이밍 채점 4단계)                      | `src/lib/rhythmTap.ts`, `src/screens/RhythmTapScreen.tsx`, `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기)                            |
 
 ---
 

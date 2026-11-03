@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// 객관식 문제 생성기 (음정 / 화성 / 조성)
+// 객관식 문제 생성기 (음정 / 화성 / 화성 진행 / 조성 / 음계·선법)
 // ─────────────────────────────────────────────────────────────
 
 import i18n from '../i18n';
@@ -10,7 +10,9 @@ import type {
   ChordDifficulty,
   KeyDifficulty,
   ProgressionDifficulty,
+  ScaleDifficulty,
 } from '../types/content';
+import { generateScaleQuestion } from './scaleQuestions';
 
 // ─────────────────────────────────────────────────────────────
 // 공통 타입
@@ -1173,6 +1175,8 @@ export function generateChoiceQuestion(
       return generateProgressionQuestion(difficulty as ProgressionDifficulty);
     case 'key':
       return generateKeyQuestion(difficulty as KeyDifficulty);
+    case 'scale':
+      return generateScaleQuestion(difficulty as ScaleDifficulty);
     default:
       throw new Error(`Choice questions not supported for category: ${category}`);
   }

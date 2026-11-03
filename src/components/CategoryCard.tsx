@@ -12,6 +12,8 @@ import {
   GitBranch,
   Key,
   FileMusic,
+  AudioLines,
+  Hand,
   Lock,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +28,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: stri
   GitBranch,
   Key,
   FileMusic,
+  AudioLines,
+  Hand,
 };
 
 interface CategoryCardProps {

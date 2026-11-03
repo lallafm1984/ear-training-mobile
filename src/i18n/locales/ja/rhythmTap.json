@@ -1,0 +1,47 @@
+{
+  "title": "リズムタップ",
+  "round": "リズム {{n}}",
+  "listen": {
+    "title": "リズムを聴いてください",
+    "desc": "メトロノーム1小節のあとにリズムが鳴ります。何度でも聴き直せます。",
+    "play": "聴く",
+    "playing": "再生中...",
+    "start": "タップで再現",
+    "bars": "{{count}}小節 · ♩= {{tempo}}"
+  },
+  "tap": {
+    "countIn": "準備",
+    "go": "今！",
+    "pad": "ここをタップ",
+    "hint": "メトロノーム1小節のあと、聴いたリズムをそのままタップしてください。",
+    "cancel": "やめる"
+  },
+  "result": {
+    "title": "結果",
+    "score": "{{score}}点",
+    "matched": "{{matched}}/{{expected}} 的中",
+    "extra": "余分なタップ {{count}}",
+    "perfect": "正確",
+    "early": "早い",
+    "late": "遅い",
+    "miss": "ミス",
+    "msgGreat": "ほぼ完璧です！",
+    "msgGood": "いいですね、拍によく乗れています。",
+    "msgKeep": "休符や長い音を待つ練習をしてみましょう。",
+    "listenAnswer": "正解を聴く",
+    "retry": "同じリズムをもう一度",
+    "next": "次のリズム",
+    "finish": "練習終了",
+    "timeline": "タイミング"
+  },
+  "summary": {
+    "title": "練習完了！",
+    "avg": "平均 {{score}}点",
+    "rounds": "{{count}}個のリズム",
+    "retry": "もう一度練習",
+    "back": "戻る"
+  },
+  "error": {
+    "audio": "音を再生できませんでした。もう一度お試しください。"
+  }
+}

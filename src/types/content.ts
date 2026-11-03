@@ -11,10 +11,12 @@ export type ContentCategory =
   | 'chord'
   | 'progression'
   | 'key'
-  | 'twoVoice';
+  | 'twoVoice'
+  | 'scale'
+  | 'rhythmTap';
 
-/** 답안 형태: 기보형(악보 작성) vs 객관식 */
-export type AnswerType = 'notation' | 'choice';
+/** 답안 형태: 기보형(악보 작성) / 객관식 / 탭(리듬 따라 치기) */
+export type AnswerType = 'notation' | 'choice' | 'tap';
 
 /** 카테고리별 설정 */
 export interface ContentTypeConfig {
@@ -84,6 +86,12 @@ export type KeyDifficulty = 'key_1' | 'key_2' | 'key_3';
 /** 2성부 난이도 (기존 bass_1~4) */
 export type TwoVoiceDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4';
 
+/** 음계·선법 듣기 난이도 (4단계) */
+export type ScaleDifficulty = 'scale_1' | 'scale_2' | 'scale_3' | 'scale_4';
+
+/** 리듬 탭 난이도 (4단계) */
+export type RhythmTapDifficulty = 'tap_1' | 'tap_2' | 'tap_3' | 'tap_4';
+
 /** 통합 난이도 타입 */
 export type ContentDifficulty =
   | BarMelodyDifficulty
@@ -93,7 +101,9 @@ export type ContentDifficulty =
   | ChordDifficulty
   | ProgressionDifficulty
   | KeyDifficulty
-  | TwoVoiceDifficulty;
+  | TwoVoiceDifficulty
+  | ScaleDifficulty
+  | RhythmTapDifficulty;
 
 // ─────────────────────────────────────────────────────────────
 // 연습 기록

@@ -81,8 +81,10 @@ export default function CategoryPracticeScreen() {
       return;
     }
 
-    // 선율/2성부/리듬은 기보형 연습 전용 화면, 음정/화성/조성은 객관식 화면
-    if (isNotationCategory(category)) {
+    // 리듬 탭은 전용 탭 화면, 선율/2성부/리듬은 기보형 연습 화면, 나머지는 객관식 화면
+    if (config.answerType === 'tap') {
+      navigation.navigate('RhythmTap', { difficulty: selectedDiff });
+    } else if (isNotationCategory(category)) {
       navigation.navigate('NotationPractice', {
         category,
         difficulty: selectedDiff,
