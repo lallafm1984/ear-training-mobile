@@ -21,10 +21,12 @@ import MascotCharacter from '../components/MascotCharacter';
 import BeginnerLessonIcon from '../components/BeginnerLessonIcon';
 import { useMascotExp } from '../hooks/useMascotExp';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
 export default function BeginnerCourseScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['beginner', 'common']);
   const navigation = useNavigation<NavProp>();
   const { progress, loaded, nextLessonId, isComplete, reload } = useBeginnerCourseProgress();
@@ -58,7 +60,7 @@ export default function BeginnerCourseScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 진행 카드 */}

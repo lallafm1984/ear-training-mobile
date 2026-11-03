@@ -52,6 +52,7 @@ import {
 import type { ShareCardData } from '../lib/shareCard';
 import type { PracticeRecord, RhythmTapDifficulty } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'RhythmTap'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -69,6 +70,7 @@ export default function RhythmTapScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
   const difficulty = route.params.difficulty as RhythmTapDifficulty;
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['rhythmTap', 'content', 'common', 'share']);
   const { showAlert } = useAlert();
   const { trackContentRun } = useSessionContentLog();
@@ -563,6 +565,7 @@ export default function RhythmTapScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
+          layout.contentStyle,
           { paddingBottom: Math.max(insets.bottom, 16) + 16 },
         ]}
         showsVerticalScrollIndicator={false}

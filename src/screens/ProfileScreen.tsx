@@ -44,6 +44,7 @@ import {
   isSameReminderTime,
   shiftReminderHour,
 } from '../lib/reminder';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -255,6 +256,7 @@ function ReminderSection() {
 // ─────────────────────────────────────────────────────────────
 
 export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenProps) {
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['profile', 'common', 'subscription', 'home']);
   const {
     user,
@@ -411,7 +413,10 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, layout.contentStyle]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* ── 프로필 히어로 카드 ── */}
         <View style={styles.profileCard}>
           <View style={styles.profileCardAccent} />

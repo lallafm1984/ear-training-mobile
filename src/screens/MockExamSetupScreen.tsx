@@ -25,6 +25,7 @@ import { COLORS } from '../theme/colors';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import type { ExamPreset } from '../types/exam';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
@@ -37,6 +38,7 @@ const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
 };
 
 export default function MockExamSetupScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['exam', 'content', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
@@ -74,7 +76,7 @@ export default function MockExamSetupScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 프리셋 목록 */}

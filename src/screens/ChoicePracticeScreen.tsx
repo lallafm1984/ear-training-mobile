@@ -36,6 +36,7 @@ import ShareCardModal from '../components/ShareCardModal';
 import type { ShareCardData } from '../lib/shareCard';
 import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ChoicePractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -57,6 +58,7 @@ export default function ChoicePracticeScreen() {
   const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const [sessionWrong, setSessionWrong] = useState(0);
 
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['practice', 'content', 'common', 'wrongNotes', 'share']);
   const colors = CATEGORY_COLORS[category];
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
@@ -390,7 +392,7 @@ export default function ChoicePracticeScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.questionArea, { opacity: fadeAnim }]}>
@@ -580,7 +582,13 @@ export default function ChoicePracticeScreen() {
       </ScrollView>
 
       {/* 하단 버튼 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.contentStyle,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         {answerState !== 'waiting' ? (
           <View style={styles.bottomActions}>
             {!reviewDone && (

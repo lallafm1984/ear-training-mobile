@@ -44,6 +44,7 @@ import type { MainStackParamList } from '../navigation/MainStack';
 import CategoryCard from '../components/CategoryCard';
 import RecentActivityList from '../components/RecentActivityList';
 import MascotCharacter from '../components/MascotCharacter';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
@@ -59,6 +60,7 @@ const GOAL_CATEGORIES: ContentCategory[] = [
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 export default function HomeScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest', 'mascot']);
   const navigation = useNavigation<NavProp>();
   const { profile, isGuest, exitGuestMode } = useAuth();
@@ -166,7 +168,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 마스코트 인사 → 탭하면 갤러리 */}

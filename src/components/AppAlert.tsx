@@ -12,6 +12,8 @@ import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { AlertConfig } from '../context/AlertContext';
 
+import { modalCardWidth } from '../lib/layout';
+
 const { width: W } = Dimensions.get('window');
 
 interface Props {
@@ -165,7 +167,7 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   card: {
-    width: W - 56,
+    width: modalCardWidth(W, 56),
     backgroundColor: '#ffffff',
     borderRadius: 24,
     paddingHorizontal: 22,

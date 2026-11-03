@@ -3,15 +3,24 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import Svg, { Line, Circle, Polyline, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
+import { CONTENT_MAX_WIDTH } from '../lib/layout';
 import type { PracticeRecord, ContentCategory } from '../types/content';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_H_PAD = 32;
-const CHART_WIDTH = SCREEN_WIDTH - 40 - CHART_H_PAD * 2; // 화면 - 컨테이너패딩 - 차트패딩
+// 초기값: 화면 - 컨테이너패딩 - 차트패딩 (태블릿은 onLayout으로 실제 폭에 맞춘다)
+const DEFAULT_CHART_WIDTH = Math.min(SCREEN_WIDTH, CONTENT_MAX_WIDTH) - 40 - CHART_H_PAD * 2;
 const CHART_TOP_PAD = 10; // Y축 최상단 텍스트 잘림 방지
 
 const CATEGORIES: ContentCategory[] = [
@@ -43,6 +52,12 @@ export default function DailyScoreChart({ records }: Props) {
     { label: t('stats:chart.period30'), days: 30 },
   ];
   const [periodIndex, setPeriodIndex] = useState(0);
+  const [chartWidth, setChartWidth] = useState(DEFAULT_CHART_WIDTH);
+  const onChartLayout = (e: LayoutChangeEvent) => {
+    const w = Math.round(e.nativeEvent.layout.width - CHART_H_PAD * 2);
+    if (w > 100 && w !== chartWidth) setChartWidth(w);
+  };
+  const CHART_WIDTH = chartWidth;
   const [activeCategories, setActiveCategories] = useState<Set<ContentCategory>>(
     new Set(['melody', 'interval', 'chord']),
   );
@@ -117,7 +132,7 @@ export default function DailyScoreChart({ records }: Props) {
       </View>
 
       {/* SVG 차트 */}
-      <View style={{ marginVertical: 12, alignItems: 'center' }}>
+      <View style={{ marginVertical: 12, alignItems: 'center' }} onLayout={onChartLayout}>
         <Svg width={CHART_WIDTH + CHART_H_PAD * 2} height={chartHeight + CHART_TOP_PAD + 28}>
           {/* Y축 그리드 + 레이블 */}
           {[0, 1, 2, 3, 4, 5].map((v) => {

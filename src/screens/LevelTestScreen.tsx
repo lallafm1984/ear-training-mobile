@@ -52,6 +52,7 @@ import {
   type LevelTestSession,
 } from '../lib/levelTest';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 type Phase = 'intro' | 'question' | 'result';
@@ -62,6 +63,7 @@ const SILENT_ABC = 'X:1\nM:4/4\nL:1/4\nK:C\nz4 |]';
 const ADVANCE_DELAY_MS = 900;
 
 export default function LevelTestScreen() {
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['levelTest', 'content', 'beginner', 'common']);
   const navigation = useNavigation<NavProp>();
   const insets = useSafeAreaInsets();
@@ -451,7 +453,7 @@ export default function LevelTestScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {phase === 'intro' && renderIntro()}

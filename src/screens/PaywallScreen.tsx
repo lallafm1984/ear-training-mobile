@@ -27,6 +27,7 @@ import {
 } from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { logger } from '../lib/logger';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 interface PaywallScreenProps {
   onClose: () => void;
@@ -107,6 +108,7 @@ const CATEGORY_COMPARE_KEYS = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['subscription', 'content', 'common']);
   const { tier: currentTier, loading, refreshSubscription } = useSubscription();
   const { showAlert } = useAlert();
@@ -308,7 +310,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, layout.contentStyle]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 히어로 섹션 */}
         <View style={styles.hero}>
           <View style={styles.heroIconRow}>

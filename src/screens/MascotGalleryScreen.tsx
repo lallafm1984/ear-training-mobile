@@ -20,6 +20,7 @@ import {
 import { useMascotExp } from '../hooks/useMascotExp';
 import MascotCharacter from '../components/MascotCharacter';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
@@ -28,6 +29,7 @@ const ALL_LEVELS = Array.from({ length: MAX_MASCOT_LEVEL }, (_, i) => i + 1);
 export default function MascotGalleryScreen() {
   const navigation = useNavigation<NavProp>();
   const { level: currentLevel, totalExp, progress } = useMascotExp();
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['mascot', 'common']);
 
   return (
@@ -52,7 +54,7 @@ export default function MascotGalleryScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 현재 마스코트 요약 */}

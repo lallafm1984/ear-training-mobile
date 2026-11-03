@@ -35,6 +35,7 @@ import {
 import { wrongNoteReviewStore } from '../lib/wrongNoteReviewStore';
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 type Route = RouteProp<MainStackParamList, 'WrongNotes'>;
@@ -43,6 +44,7 @@ type Filter = 'all' | 'unresolved' | 'resolved';
 const SILENT_ABC = 'X:1\nM:4/4\nL:1/4\nK:C\nz4 |]';
 
 export default function WrongNotesScreen() {
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['wrongNotes', 'content', 'common']);
   const navigation = useNavigation<NavProp>();
   const route = useRoute<Route>();
@@ -147,7 +149,7 @@ export default function WrongNotesScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 약점 TOP 3 */}

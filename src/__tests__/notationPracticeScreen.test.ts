@@ -13,6 +13,7 @@ jest.mock('react-native', () => ({
   ScrollView: 'ScrollView',
   ActivityIndicator: 'ActivityIndicator',
   StyleSheet: { create: (styles: unknown) => styles },
+  useWindowDimensions: () => ({ width: 390, height: 844, scale: 2, fontScale: 1 }),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',

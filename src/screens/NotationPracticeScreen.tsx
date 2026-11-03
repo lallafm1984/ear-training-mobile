@@ -59,6 +59,7 @@ import {
   makeBarMelodyKeyboardNote,
   removeLastBarMelodyInput,
 } from '../lib/barMelody';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'NotationPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -312,6 +313,7 @@ function compactBarMelodyNotes(notes: (ScoreNote | null)[]): ScoreNote[] {
 }
 
 export default function NotationPracticeScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['practice', 'editor', 'content', 'common']);
   const DURATION_LABELS = getDurationLabels(t);
   const insets = useSafeAreaInsets();
@@ -887,6 +889,7 @@ export default function NotationPracticeScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
+          layout.contentStyle,
           melodySubmitted
             ? { paddingBottom: insets.bottom + 24, flexGrow: 1 }
             : { paddingBottom: insets.bottom + 120 },

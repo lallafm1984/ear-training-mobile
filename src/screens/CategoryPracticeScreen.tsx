@@ -22,6 +22,7 @@ import type { MainStackParamList, PracticeSettings } from '../navigation/MainSta
 import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
 import { useLevelTestResult } from '../hooks/useLevelTestResult';
 import { recommendedDifficultyFor } from '../lib/levelTest';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'CategoryPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -32,6 +33,7 @@ export default function CategoryPracticeScreen() {
   const route = useRoute<RouteProp>();
   const { category, initialDifficulty } = route.params;
   const { tier } = useSubscription();
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['practice', 'content', 'common', 'editor']);
 
   const config = getContentConfig(category);
@@ -118,7 +120,7 @@ export default function CategoryPracticeScreen() {
       {/* 스크롤 영역: 난이도 목록 */}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 난이도 선택 */}
@@ -267,7 +269,13 @@ export default function CategoryPracticeScreen() {
       </ScrollView>
 
       {/* 하단 고정 시작 버튼 (MockExamSetupScreen과 동일 패턴) */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.contentStyle,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.startBtn, { backgroundColor: isLocked ? COLORS.slate300 : colors.main }]}
           onPress={handleStart}

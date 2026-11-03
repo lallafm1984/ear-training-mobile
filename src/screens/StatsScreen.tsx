@@ -40,6 +40,7 @@ import type { ShareCardData } from '../lib/shareCard';
 import PracticeCalendar from '../components/PracticeCalendar';
 import DailyScoreChart from '../components/DailyScoreChart';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
@@ -53,6 +54,7 @@ interface ExamRecord {
 
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['stats', 'practice', 'common', 'wrongNotes', 'share']);
   const { storageUserId } = useAuth();
   const { records, stats, loaded, reload } = usePracticeHistory();
@@ -273,7 +275,7 @@ export default function StatsScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 요약 카드 */}

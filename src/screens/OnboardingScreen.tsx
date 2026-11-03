@@ -8,7 +8,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   FlatList,
   Animated,
 } from 'react-native';
@@ -30,8 +30,6 @@ import { COLORS } from '../theme/colors';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ONBOARDING_KEY = '@melodygen_onboarding_done';
 
@@ -80,6 +78,7 @@ const SLIDES: SlideData[] = [
 ];
 
 export default function OnboardingScreen() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { t } = useTranslation(['auth', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();

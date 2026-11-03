@@ -48,6 +48,7 @@ import BeginnerLessonIcon from '../components/BeginnerLessonIcon';
 import ShareCardModal from '../components/ShareCardModal';
 import type { ShareCardData } from '../lib/shareCard';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 type Route = RouteProp<MainStackParamList, 'BeginnerLesson'>;
@@ -66,6 +67,7 @@ interface LessonOutcome {
 }
 
 export default function BeginnerLessonScreen() {
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['beginner', 'content', 'common', 'share']);
   const navigation = useNavigation<NavProp>();
   const route = useRoute<Route>();
@@ -564,7 +566,7 @@ export default function BeginnerLessonScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {phase === 'intro' && renderIntro()}

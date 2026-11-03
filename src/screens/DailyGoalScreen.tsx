@@ -23,6 +23,7 @@ import MascotCharacter from '../components/MascotCharacter';
 import { getMascotStageIndex } from '../lib/mascotConfig';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
@@ -72,6 +73,7 @@ function computeGoalStreak(records: { practicedAt: string; contentType: string }
 export default function DailyGoalScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['practice', 'content', 'mascot', 'common', 'profile']);
   const { records, reload } = usePracticeHistory();
   const { storageUserId } = useAuth();
@@ -217,7 +219,11 @@ export default function DailyGoalScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[
+          styles.content,
+          layout.contentStyle,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 상단 진행 카드 */}

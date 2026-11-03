@@ -12,6 +12,8 @@ import { Crown, Lock, X, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { PLAN_COLOR } from '../types';
 
+import { modalCardWidth } from '../lib/layout';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export type UpgradeReason =
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   container: {
-    width: SCREEN_WIDTH - 48,
+    width: modalCardWidth(SCREEN_WIDTH, 48),
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 24,

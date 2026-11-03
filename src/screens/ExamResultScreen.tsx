@@ -28,6 +28,7 @@ import type { ShareCardData } from '../lib/shareCard';
 import { LOCAL_DATA_BASE_KEYS, MAX_EXAM_SESSIONS, localDataKey } from '../lib/localProfileStorage';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ExamResult'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -35,6 +36,7 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const layout = useResponsiveLayout();
   const { t, i18n } = useTranslation(['exam', 'content', 'common', 'wrongNotes', 'share']);
   const route = useRoute<RouteProp>();
   const { storageUserId } = useAuth();
@@ -125,7 +127,7 @@ export default function ExamResultScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 결과 헤더 */}
@@ -248,7 +250,13 @@ export default function ExamResultScreen() {
       <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
 
       {/* 하단 액션 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.contentStyle,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: COLORS.amber500 }]}
           onPress={() => navigation.replace('MockExamSetup')}

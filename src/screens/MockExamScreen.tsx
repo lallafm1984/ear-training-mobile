@@ -24,6 +24,7 @@ import { useAlert, useSessionContentLog } from '../context';
 import type { ExamQuestion } from '../types/exam';
 import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'MockExam'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -41,6 +42,7 @@ interface QuestionItem {
 }
 
 export default function MockExamScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['exam', 'content', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
@@ -358,7 +360,11 @@ export default function MockExamScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[
+          styles.content,
+          layout.contentStyle,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
       >
         {/* 문항 카테고리 표시 */}
         <View style={[styles.catChip, { backgroundColor: colors.bg }]}>
