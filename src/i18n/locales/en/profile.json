@@ -4,7 +4,8 @@
     "account": "Account",
     "legal": "Terms & Policies",
     "language": "Language",
-    "other": "Other"
+    "other": "Other",
+    "notifications": "Notifications"
   },
   "menu": {
     "planManage": "Manage Plan",
@@ -51,5 +52,19 @@
     "loginButton": "Sign in with Google",
     "loginMenu": "Sign in",
     "loginMenuValue": "Keep history · Subscribe"
+  },
+  "reminder": {
+    "title": "Daily practice reminder",
+    "desc": "One reminder a day at the time you choose. It only rings on this device.",
+    "time": "Reminder time",
+    "presets": "Quick picks",
+    "hour": "h",
+    "minute": "min",
+    "notificationTitle": "Time for today's ear training 🎧",
+    "notificationBody": "Even five minutes stick. Shall we fill today's goal?",
+    "channelName": "Daily practice reminder",
+    "permissionTitle": "Notification permission needed",
+    "permissionMessage": "Allow MelodyGen notifications in your device settings and we'll remind you at practice time every day.",
+    "scheduleFailed": "Could not schedule the reminder. Please try again in a moment."
   }
 }

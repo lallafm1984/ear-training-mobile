@@ -4,7 +4,8 @@
     "account": "계정",
     "legal": "약관 및 정책",
     "language": "언어",
-    "other": "기타"
+    "other": "기타",
+    "notifications": "알림"
   },
   "menu": {
     "planManage": "요금제 관리",
@@ -51,5 +52,19 @@
     "loginButton": "Google로 로그인",
     "loginMenu": "로그인",
     "loginMenuValue": "기록 보관 · 구독"
+  },
+  "reminder": {
+    "title": "매일 연습 알림",
+    "desc": "정한 시각에 하루 한 번 연습을 알려 드려요. 알림은 이 기기에서만 울려요.",
+    "time": "알림 시각",
+    "presets": "빠른 선택",
+    "hour": "시",
+    "minute": "분",
+    "notificationTitle": "오늘의 청음 연습 시간이에요 🎧",
+    "notificationBody": "5분만 들어도 귀는 기억해요. 오늘의 목표를 채워 볼까요?",
+    "channelName": "매일 연습 알림",
+    "permissionTitle": "알림 권한이 필요해요",
+    "permissionMessage": "기기 설정에서 MelodyGen 알림을 허용하면 매일 연습 시각에 알려 드릴 수 있어요.",
+    "scheduleFailed": "알림을 예약하지 못했어요. 잠시 후 다시 시도해 주세요."
   }
 }

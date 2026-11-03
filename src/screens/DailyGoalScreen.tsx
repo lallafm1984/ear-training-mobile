@@ -3,9 +3,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useMemo, useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, CheckCircle, Circle, Flame, Play } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Circle, Flame, Play, Bell } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,8 +15,10 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useMascotExp } from '../hooks/useMascotExp';
-import { useAuth } from '../context';
+import { useAuth, useAlert } from '../context';
 import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
+import { useReminderSettings } from '../hooks/useReminderSettings';
+import { REMINDER_NUDGE_DISMISSED_KEY } from '../lib/reminder';
 import MascotCharacter from '../components/MascotCharacter';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -61,9 +63,50 @@ function computeGoalStreak(records: { practicedAt: string; contentType: string }
 export default function DailyGoalScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['practice', 'content', 'mascot', 'common']);
+  const { t } = useTranslation(['practice', 'content', 'mascot', 'common', 'profile']);
   const { records, reload } = usePracticeHistory();
   const { storageUserId } = useAuth();
+  const { showAlert } = useAlert();
+
+  // 목표를 모두 채운 날, 리마인더가 꺼져 있으면 한 번만 켜기를 권한다.
+  const {
+    settings: reminder,
+    loaded: reminderLoaded,
+    setEnabled: setReminder,
+  } = useReminderSettings();
+  const [nudgeDismissed, setNudgeDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(REMINDER_NUDGE_DISMISSED_KEY)
+      .then((v) => setNudgeDismissed(v === '1'))
+      .catch(() => setNudgeDismissed(true));
+  }, []);
+  const dismissNudge = useCallback(() => {
+    setNudgeDismissed(true);
+    AsyncStorage.setItem(REMINDER_NUDGE_DISMISSED_KEY, '1').catch(() => {});
+  }, []);
+  const enableReminderFromNudge = useCallback(async () => {
+    const outcome = await setReminder(true);
+    if (outcome === 'saved') {
+      dismissNudge();
+      return;
+    }
+    if (outcome === 'permission_denied') {
+      showAlert({
+        title: t('profile:reminder.permissionTitle'),
+        message: t('profile:reminder.permissionMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('common:button.later'), style: 'cancel' },
+          {
+            text: t('common:button.goToSettings'),
+            onPress: () => {
+              Linking.openSettings().catch(() => {});
+            },
+          },
+        ],
+      });
+    }
+  }, [setReminder, dismissNudge, showAlert, t]);
   const { level, progress, addExp } = useMascotExp();
   const [rewardedCount, setRewardedCount] = useState<number | null>(null);
 
@@ -215,6 +258,34 @@ export default function DailyGoalScreen() {
             </View>
           )}
         </View>
+
+        {/* 리마인더 권유 (전부 달성 + 알림 꺼짐 + 아직 닫지 않음) */}
+        {allDone && reminderLoaded && !reminder.enabled && nudgeDismissed === false && (
+          <View style={styles.nudgeCard}>
+            <View style={styles.nudgeIcon}>
+              <Bell size={18} color="#4f46e5" />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.nudgeTitle}>{t('practice:dailyGoal.reminderNudge.title')}</Text>
+              <Text style={styles.nudgeDesc}>{t('practice:dailyGoal.reminderNudge.desc')}</Text>
+              <View style={styles.nudgeActions}>
+                <TouchableOpacity
+                  style={styles.nudgePrimary}
+                  onPress={() => void enableReminderFromNudge()}
+                >
+                  <Text style={styles.nudgePrimaryText}>
+                    {t('practice:dailyGoal.reminderNudge.enable')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nudgeGhost} onPress={dismissNudge}>
+                  <Text style={styles.nudgeGhostText}>
+                    {t('practice:dailyGoal.reminderNudge.later')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* 목표 목록 */}
         <Text style={styles.sectionTitle}>{t('practice:dailyGoal.sectionTitle')}</Text>
@@ -440,4 +511,37 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+
+  // 리마인더 권유
+  nudgeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  nudgeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeTitle: { fontSize: 14, fontWeight: '800', color: '#312e81' },
+  nudgeDesc: { fontSize: 12, lineHeight: 17, color: COLORS.slate600 },
+  nudgeActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  nudgePrimary: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  nudgePrimaryText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  nudgeGhost: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  nudgeGhostText: { color: COLORS.slate500, fontSize: 12, fontWeight: '700' },
 });

@@ -8,7 +8,7 @@
 src/
 ├── components/          # 재사용 가능 UI 컴포넌트 (21개, 미사용 2개)
 ├── context/             # React Context 프로바이더 (4개)
-├── hooks/               # 커스텀 React 훅 (7개)
+├── hooks/               # 커스텀 React 훅 (8개)
 ├── lib/                 # 비즈니스 로직 모듈
 │   ├── scoreUtils/      # 악보 유틸리티 (8개 모듈)
 │   ├── scoreGenerator/  # 악보 생성 엔진 (6개 모듈)
@@ -23,6 +23,8 @@ src/
 │   ├── appControl.ts             # 원격 버전 정책/공지 RPC 파싱·빌드 판정·노출 키
 │   ├── secureStoreAdapter.ts     # Supabase 세션 SecureStore 청크 저장/레거시 호환
 │   ├── logger.ts                 # 개발 빌드 전용 중앙 로그 경계
+│   ├── reminder.ts               # 매일 연습 리마인더 설정(기기 전역 키·시각 프리셋·정규화)
+│   ├── notifications.ts          # expo-notifications 래퍼 (권한 확인·매일 로컬 알림 예약/취소)
 │   └── ...              # 기타 라이브러리
 ├── i18n/                # 국제화 (i18next)
 │   ├── index.ts         # i18n 초기화 + 언어 감지
@@ -33,9 +35,10 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (22개)
+└── __tests__/           # Jest 테스트 (23개)
 assets/
-└── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
+├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
+└── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
 credentials/
 └── android/             # 로컬 Android 릴리스/upload key 키스토어 위치 (.jks는 Git 제외)
 build/                   # Android 릴리스 산출물 및 Play Console 제출용 인증서 (.apk/.aab/.pem, Git 제외)
@@ -109,15 +112,16 @@ scripts/
 
 #### 커스텀 훅
 
-| 훅                          | 사용처                                                                                       |
-| --------------------------- | -------------------------------------------------------------------------------------------- |
-| `useSkillProfile`           | HomeScreen, ChoicePractice, NotationPractice, MockExam, Stats                                |
-| `usePracticeHistory`        | HomeScreen, ChoicePractice, NotationPractice, MockExam, Stats, DailyGoal                     |
-| `useMascotExp`              | HomeScreen, DailyGoalScreen, MascotGalleryScreen, BeginnerLessonScreen                       |
-| `useBeginnerCourseProgress` | HomeScreen, BeginnerCourseScreen, BeginnerLessonScreen (로컬 진행 상태·EXP 중복 지급 방지)   |
-| `useLevelTestResult`        | HomeScreen, LevelTestScreen, CategoryPracticeScreen (레벨 테스트 결과 로컬 저장·추천 난이도) |
-| `useDownloadQuota`          | ScoreEditor                                                                                  |
-| `useNoteInput`              | NotationPracticeScreen — 새 악보 조건을 명시적으로 받는 안정된 reset 콜백                    |
+| 훅                          | 사용처                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `useSkillProfile`           | HomeScreen, ChoicePractice, NotationPractice, MockExam, Stats                                                    |
+| `usePracticeHistory`        | HomeScreen, ChoicePractice, NotationPractice, MockExam, Stats, DailyGoal                                         |
+| `useMascotExp`              | HomeScreen, DailyGoalScreen, MascotGalleryScreen, BeginnerLessonScreen                                           |
+| `useBeginnerCourseProgress` | HomeScreen, BeginnerCourseScreen, BeginnerLessonScreen (로컬 진행 상태·EXP 중복 지급 방지)                       |
+| `useLevelTestResult`        | HomeScreen, LevelTestScreen, CategoryPracticeScreen (레벨 테스트 결과 로컬 저장·추천 난이도)                     |
+| `useReminderSettings`       | ProfileScreen(알림 섹션), DailyGoalScreen(달성 후 권유) — 설정 저장 + 로컬 알림 예약 동기화, 언어 변경 시 재예약 |
+| `useDownloadQuota`          | ScoreEditor                                                                                                      |
+| `useNoteInput`              | NotationPracticeScreen — 새 악보 조건을 명시적으로 받는 안정된 reset 콜백                                        |
 
 #### Context 프로바이더
 
@@ -150,6 +154,8 @@ scripts/
 | `appControl.ts`             | AppControlGate (최신 빌드 강제/공지 RPC 검증 및 로컬 노출 상태)                                                                                                                    |
 | `secureStoreAdapter.ts`     | Supabase 인증 세션의 청크 암호화 저장 및 기존 단일 키 마이그레이션                                                                                                                 |
 | `logger.ts`                 | ErrorBoundary, 인증·구독·결제의 개발 빌드 전용 진단 로그                                                                                                                           |
+| `reminder.ts`               | useReminderSettings, ProfileScreen, DailyGoalScreen (리마인더 설정 순수 함수)                                                                                                      |
+| `notifications.ts`          | useReminderSettings (expo-notifications 권한·매일 알림 예약, 로컬 전용)                                                                                                            |
 | `trackConfig.ts`            | ScoreEditor, useSkillProfile, practiceScoreGenerator                                                                                                                               |
 | `revenueCat.ts`             | SubscriptionContext, PaywallScreen                                                                                                                                                 |
 | `melodyRhythmLevel.ts`      | scoreGenerator, twoVoice                                                                                                                                                           |
@@ -325,13 +331,14 @@ Login → Onboarding → Home
 | `localProfileStorage.test.ts`    | 게스트 데이터 병합 규칙과 계정 이관                                                                   |
 | `beginnerCourse.test.ts`         | 귀 열기 코스 문제 생성(보기 소리·정답 포함), 잠금·완료·병합                                           |
 | `levelTest.test.ts`              | 레벨 테스트 계단식 진행, 영역 레벨 추정·추천, 정규화·병합, 문항 생성                                  |
+| `reminder.test.ts`               | 리마인더 설정 정규화·시각 표시, 알림 권한 흐름·매일 예약/취소 호출 검증                               |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
 | `promotionConfig.test.ts`        | 서버 시간 RPC 판정 및 fail-closed 동작                                                                |
 | `appControl.test.ts`             | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키                                                      |
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (315개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (321개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 

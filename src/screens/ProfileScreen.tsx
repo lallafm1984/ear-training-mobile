@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   Image,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -26,12 +27,23 @@ import {
   Shield,
   FileText,
   Globe,
+  Bell,
+  Minus,
+  Plus,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
 import LegalModal from '../components/LegalModal';
 import type { LegalType } from '../components/LegalModal';
+import { useReminderSettings, type ReminderUpdateOutcome } from '../hooks/useReminderSettings';
+import {
+  REMINDER_MINUTE_OPTIONS,
+  REMINDER_PRESETS,
+  formatReminderTime,
+  isSameReminderTime,
+  shiftReminderHour,
+} from '../lib/reminder';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -103,6 +115,138 @@ function EditNameModal({
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 섹션: 매일 연습 알림
+// ─────────────────────────────────────────────────────────────
+
+function ReminderSection() {
+  const { t } = useTranslation(['profile', 'common']);
+  const { showAlert } = useAlert();
+  const { settings, loaded, setEnabled, setTime } = useReminderSettings();
+  const [busy, setBusy] = useState(false);
+
+  const handleOutcome = (outcome: ReminderUpdateOutcome) => {
+    if (outcome === 'permission_denied') {
+      showAlert({
+        title: t('profile:reminder.permissionTitle'),
+        message: t('profile:reminder.permissionMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('common:button.later'), style: 'cancel' },
+          {
+            text: t('common:button.goToSettings'),
+            onPress: () => {
+              Linking.openSettings().catch(() => {});
+            },
+          },
+        ],
+      });
+    } else if (outcome === 'schedule_failed') {
+      showAlert({
+        title: t('profile:alert.error'),
+        message: t('profile:reminder.scheduleFailed'),
+        type: 'warning',
+      });
+    }
+  };
+
+  const run = async (task: () => Promise<ReminderUpdateOutcome>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      handleOutcome(await task());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{t('profile:section.notifications')}</Text>
+      <View style={styles.sectionCard}>
+        <View style={styles.menuItem}>
+          <View style={styles.menuIconWrap}>
+            <Bell size={16} color="#64748b" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuLabel}>{t('profile:reminder.title')}</Text>
+            <Text style={styles.reminderDesc}>{t('profile:reminder.desc')}</Text>
+          </View>
+          <Switch
+            value={settings.enabled}
+            disabled={!loaded || busy}
+            onValueChange={(v) => void run(() => setEnabled(v))}
+            trackColor={{ false: '#e2e8f0', true: '#a5b4fc' }}
+            thumbColor={settings.enabled ? '#6366f1' : '#f8fafc'}
+          />
+        </View>
+
+        {settings.enabled && (
+          <View style={styles.reminderBody}>
+            <Text style={styles.reminderLabel}>{t('profile:reminder.time')}</Text>
+            <View style={styles.reminderTimeRow}>
+              <TouchableOpacity
+                style={styles.reminderStep}
+                onPress={() =>
+                  void run(() => setTime(shiftReminderHour(settings.hour, -1), settings.minute))
+                }
+                hitSlop={8}
+              >
+                <Minus size={16} color="#4f46e5" />
+              </TouchableOpacity>
+              <Text style={styles.reminderTime}>
+                {formatReminderTime(settings.hour, settings.minute)}
+              </Text>
+              <TouchableOpacity
+                style={styles.reminderStep}
+                onPress={() =>
+                  void run(() => setTime(shiftReminderHour(settings.hour, 1), settings.minute))
+                }
+                hitSlop={8}
+              >
+                <Plus size={16} color="#4f46e5" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.reminderChips}>
+              {REMINDER_MINUTE_OPTIONS.map((m) => {
+                const active = settings.minute === m;
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.reminderChip, active && styles.reminderChipActive]}
+                    onPress={() => void run(() => setTime(settings.hour, m))}
+                  >
+                    <Text style={[styles.reminderChipText, active && { color: '#fff' }]}>
+                      :{String(m).padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.reminderLabel}>{t('profile:reminder.presets')}</Text>
+            <View style={styles.reminderChips}>
+              {REMINDER_PRESETS.map((p) => {
+                const active = isSameReminderTime(p, settings);
+                return (
+                  <TouchableOpacity
+                    key={`${p.hour}-${p.minute}`}
+                    style={[styles.reminderChip, active && styles.reminderChipActive]}
+                    onPress={() => void run(() => setTime(p.hour, p.minute))}
+                  >
+                    <Text style={[styles.reminderChipText, active && { color: '#fff' }]}>
+                      {formatReminderTime(p.hour, p.minute)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -401,6 +545,9 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
           </View>
         </View>
 
+        {/* ── 알림 섹션 ── */}
+        <ReminderSection />
+
         {/* ── 언어 섹션 ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('profile:section.language')}</Text>
@@ -622,6 +769,42 @@ const styles = StyleSheet.create({
   menuValue: { fontSize: 12, color: '#94a3b8', maxWidth: 130 },
 
   versionText: { fontSize: 11, color: '#cbd5e1', textAlign: 'center', marginTop: 16 },
+
+  // 리마인더
+  reminderDesc: { fontSize: 11, color: '#94a3b8', marginTop: 3, lineHeight: 15 },
+  reminderBody: { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+  reminderLabel: { fontSize: 11, fontWeight: '700', color: '#64748b' },
+  reminderTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+  },
+  reminderStep: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reminderTime: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#1e293b',
+    fontVariant: ['tabular-nums'],
+    minWidth: 110,
+    textAlign: 'center',
+  },
+  reminderChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  reminderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#f1f5f9',
+  },
+  reminderChipActive: { backgroundColor: '#6366f1' },
+  reminderChipText: { fontSize: 12, fontWeight: '700', color: '#475569' },
 
   // 공통 모달
   modalOverlay: {

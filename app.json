@@ -25,9 +25,7 @@
       },
       "package": "com.melodygen.app",
       "versionCode": 62,
-      "permissions": [
-        "com.android.vending.BILLING"
-      ],
+      "permissions": ["com.android.vending.BILLING"],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -44,6 +42,13 @@
         "expo-navigation-bar",
         {
           "backgroundColor": "#f8fafc"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#6366f1"
         }
       ]
     ],

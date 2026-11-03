@@ -6,7 +6,13 @@
     "progress": "{{done}} / {{total}} complete",
     "streak": "{{days}}-day streak",
     "sectionTitle": "Goal List",
-    "tip": "Practice each category at least once to complete the goal.\nKeep it up daily to grow your streak!"
+    "tip": "Practice each category at least once to complete the goal.\nKeep it up daily to grow your streak!",
+    "reminderNudge": {
+      "title": "Turn on a reminder so tomorrow isn't missed?",
+      "desc": "One nudge a day at 20:00. You can change the time in your profile.",
+      "enable": "Turn on",
+      "later": "Later"
+    }
   },
   "selfEval": {
     "title": "How was your practice?",
