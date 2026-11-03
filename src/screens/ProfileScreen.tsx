@@ -46,6 +46,7 @@ import {
   shiftReminderHour,
 } from '../lib/reminder';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { MODAL_MAX_WIDTH } from '../lib/layout';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -293,7 +294,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
   const expiresLabel = (() => {
     if (tier === 'free') return null;
     if (!subscriptionState.expiresAt) return null;
-    return new Date(subscriptionState.expiresAt).toLocaleDateString('ko-KR', {
+    return new Date(subscriptionState.expiresAt).toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -827,6 +828,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
+    maxWidth: MODAL_MAX_WIDTH,
     backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 24,

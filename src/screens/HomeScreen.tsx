@@ -48,6 +48,9 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
+const CONTENT_H_PADDING = 20;
+const CATEGORY_GRID_GAP = 10;
+
 export default function HomeScreen() {
   const layout = useResponsiveLayout();
   const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest', 'mascot']);
@@ -84,6 +87,16 @@ export default function HomeScreen() {
 
   // 오늘 연습한 목표 카테고리 수 (DailyGoalScreen 과 같은 기준: 전체 기록)
   const todayGoalDone = useMemo(() => countGoalsDoneToday(records), [records]);
+
+  // 카테고리 카드 폭: 콘텐츠 폭(가로 패딩 20×2 제외)을 열 수와 간격(10)에 맞춰 나눈다
+  const categoryCardWidth = useMemo(() => {
+    const contentWidth =
+      (layout.contentMaxWidth ? Math.min(layout.width, layout.contentMaxWidth) : layout.width) -
+      CONTENT_H_PADDING * 2;
+    return Math.floor(
+      (contentWidth - CATEGORY_GRID_GAP * (layout.gridColumns - 1)) / layout.gridColumns,
+    );
+  }, [layout.width, layout.contentMaxWidth, layout.gridColumns]);
 
   const handleDailyGoal = () => {
     navigation.navigate('DailyGoal');
@@ -295,6 +308,7 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(config.id)}
                 locked={config.freeMaxLevel === 0 && tier === 'free'}
                 practiceCount={stats.totalByCategory[config.id] || 0}
+                width={categoryCardWidth}
               />
             ))}
           </View>
@@ -359,7 +373,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: CONTENT_H_PADDING,
     paddingTop: 12,
     gap: 20,
   },
@@ -487,6 +501,6 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: CATEGORY_GRID_GAP,
   },
 });

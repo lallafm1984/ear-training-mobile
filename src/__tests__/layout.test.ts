@@ -37,6 +37,7 @@ describe('getLayoutInfo', () => {
       maxWidth: SHEET_MAX_WIDTH,
       alignSelf: 'center',
     });
+    expect(portrait.gridColumns).toBe(5);
     expect(NARROW_MAX_WIDTH).toBeLessThan(SHEET_MAX_WIDTH);
     expect(SHEET_MAX_WIDTH).toBeLessThan(CONTENT_MAX_WIDTH);
     const landscape = getLayoutInfo(1280, 800);

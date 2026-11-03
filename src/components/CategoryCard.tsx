@@ -38,9 +38,11 @@ interface CategoryCardProps {
   locked?: boolean;
   /** 연습 횟수 (진도 표시용) */
   practiceCount?: number;
+  /** 카드 폭(dp). 그리드 열 수에 맞춰 부모가 계산해 넘긴다. 없으면 30% */
+  width?: number;
 }
 
-function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
+function CategoryCard({ config, onPress, locked, practiceCount, width }: CategoryCardProps) {
   const { t } = useTranslation(['common', 'content']);
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
@@ -48,6 +50,7 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
     <TouchableOpacity
       style={[
         styles.card,
+        width != null && { flexBasis: width },
         locked
           ? { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed' }
           : { backgroundColor: config.bgColor, borderColor: config.color + '30' },

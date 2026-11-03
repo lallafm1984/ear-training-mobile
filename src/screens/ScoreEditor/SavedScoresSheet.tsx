@@ -23,7 +23,7 @@ export default function SavedScoresSheet({
   onLoad,
   onDelete,
 }: SavedScoresSheetProps) {
-  const { t } = useTranslation('editor');
+  const { t, i18n } = useTranslation('editor');
   return (
     <BottomSheet open={open} onClose={onClose} title={t('savedScores.title')}>
       <TouchableOpacity
@@ -44,7 +44,7 @@ export default function SavedScoresSheet({
             <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1e293b' }}>{s.title}</Text>
             <Text style={{ fontSize: 11, color: '#94a3b8', marginVertical: 4 }}>
               {s.state.keySignature} · {s.state.timeSignature} · {s.state.tempo}BPM ·{' '}
-              {new Date(s.savedAt).toLocaleDateString('ko-KR')}
+              {new Date(s.savedAt).toLocaleDateString(i18n.language)}
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <TouchableOpacity

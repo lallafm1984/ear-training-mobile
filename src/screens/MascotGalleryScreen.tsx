@@ -16,6 +16,7 @@ import {
   MAX_MASCOT_LEVEL,
   STAGE_NAMES,
   getMascotParams,
+  getMascotStageIndex,
 } from '../lib/mascotConfig';
 import { useMascotExp } from '../hooks/useMascotExp';
 import MascotCharacter from '../components/MascotCharacter';
@@ -62,8 +63,7 @@ export default function MascotGalleryScreen() {
           <MascotCharacter size={96} level={currentLevel} happy />
           <View style={{ flex: 1, gap: 6 }}>
             <Text style={styles.heroTitle}>
-              Lv.{currentLevel}{' '}
-              {t('mascot:stage.' + Math.floor((currentLevel - 1) / LEVELS_PER_STAGE))}
+              Lv.{currentLevel} {t('mascot:stage.' + getMascotStageIndex(currentLevel))}
             </Text>
             <View style={styles.expBarBg}>
               <View style={[styles.expBarFill, { width: `${progress.progress * 100}%` }]} />

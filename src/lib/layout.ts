@@ -34,7 +34,7 @@ export interface LayoutInfo {
   narrowStyle: CenteredStyle;
   /** 바닥 시트 컨테이너에 합칠 스타일 (폰에서는 빈 객체) */
   sheetStyle: CenteredStyle;
-  /** 가로 그리드 열 수 (카테고리 카드 등) */
+  /** 가로 그리드 열 수 (카테고리 카드 등). 폰 3열, 태블릿 5열(10종이 2행에 맞음) */
   gridColumns: number;
 }
 
@@ -52,7 +52,7 @@ export function getLayoutInfo(width: number, height: number): LayoutInfo {
     contentStyle: centered(isTablet, CONTENT_MAX_WIDTH),
     narrowStyle: centered(isTablet, NARROW_MAX_WIDTH),
     sheetStyle: centered(isTablet, SHEET_MAX_WIDTH),
-    gridColumns: isTablet ? 4 : 3,
+    gridColumns: isTablet ? 5 : 3,
   };
 }
 
