@@ -26,10 +26,12 @@
       "package": "com.melodygen.app",
       "versionCode": 62,
       "permissions": [
-        "READ_MEDIA_AUDIO",
-        "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE",
         "com.android.vending.BILLING"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE"
       ],
       "predictiveBackGestureEnabled": false
     },
