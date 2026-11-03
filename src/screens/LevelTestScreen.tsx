@@ -255,6 +255,10 @@ export default function LevelTestScreen() {
             style={[styles.playBtn, { backgroundColor: isPlaying ? COLORS.slate400 : colors.main }]}
             onPress={handlePlay}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isPlaying ? t('levelTest:question.playing') : t('levelTest:question.listen')
+            }
           >
             {isPlaying ? <VolumeX size={30} color="#fff" /> : <Volume2 size={30} color="#fff" />}
           </TouchableOpacity>
@@ -432,7 +436,13 @@ export default function LevelTestScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={COLORS.primary600} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>

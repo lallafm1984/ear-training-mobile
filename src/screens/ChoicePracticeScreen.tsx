@@ -361,7 +361,13 @@ export default function ChoicePracticeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -413,6 +419,10 @@ export default function ChoicePracticeScreen() {
               ]}
               onPress={handlePlay}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPlaying ? t('practice:choice.playing') : t('practice:choice.tapToPlay')
+              }
             >
               {isPlaying ? <VolumeX size={28} color="#fff" /> : <Volume2 size={28} color="#fff" />}
             </TouchableOpacity>

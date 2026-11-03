@@ -58,7 +58,12 @@ export default function LegalModal({ visible, type, onClose }: LegalModalProps) 
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{title}</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('common:button.close')}
+          >
             <X size={18} color="#64748b" />
           </TouchableOpacity>
         </View>

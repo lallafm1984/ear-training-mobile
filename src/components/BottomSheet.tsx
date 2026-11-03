@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 interface BottomSheetProps {
@@ -22,6 +23,7 @@ interface BottomSheetProps {
 export default function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={open}
@@ -42,7 +44,12 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.sheetCloseBtn}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.sheetCloseBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('button.close')}
+            >
               <X size={16} color="#94a3b8" />
             </TouchableOpacity>
           </View>

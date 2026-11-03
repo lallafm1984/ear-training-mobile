@@ -303,7 +303,12 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.close')}
+        >
           <X size={18} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('subscription:paywall.title')}</Text>

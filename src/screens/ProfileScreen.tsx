@@ -410,7 +410,12 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.close')}
+        >
           <X size={18} color="#64748b" />
         </TouchableOpacity>
       </View>

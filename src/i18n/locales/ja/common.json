@@ -47,6 +47,11 @@
     "storeOpenError": "Google Playを開けませんでした。通信状態を確認して、もう一度お試しください。",
     "announcementOpenError": "リンク先を開けませんでした。しばらくしてからもう一度お試しください。"
   },
+  "errorBoundary": {
+    "title": "問題が発生しました",
+    "message": "アプリで予期しないエラーが発生しました。\n下のボタンを押してもう一度お試しください。",
+    "retry": "もう一度試す"
+  },
   "version": "MelodyGen v1.0.0",
   "versionFormat": "MelodyGen v{{version}}（ビルド {{build}}）"
 }

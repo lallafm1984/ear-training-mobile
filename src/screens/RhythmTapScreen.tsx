@@ -297,6 +297,8 @@ export default function RhythmTapScreen() {
         style={[styles.playCircle, { backgroundColor: isPlaying ? COLORS.slate700 : colors.main }]}
         onPress={handlePlay}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? t('rhythmTap:listen.playing') : t('rhythmTap:listen.play')}
       >
         {isPlaying ? (
           <Square size={34} color="#fff" fill="#fff" />
@@ -547,7 +549,13 @@ export default function RhythmTapScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>

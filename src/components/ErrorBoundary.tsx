@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AlertTriangle, RotateCcw } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { logger } from '../lib/logger';
+import i18n from '../i18n';
 
 interface Props {
   children: ReactNode;
@@ -37,19 +38,20 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <AlertTriangle size={48} color={COLORS.error} />
-          <Text style={styles.title}>문제가 발생했습니다</Text>
-          <Text style={styles.message}>
-            앱에서 예기치 않은 오류가 발생했습니다.{'\n'}
-            아래 버튼을 눌러 다시 시도해 주세요.
-          </Text>
+          <Text style={styles.title}>{i18n.t('common:errorBoundary.title')}</Text>
+          <Text style={styles.message}>{i18n.t('common:errorBoundary.message')}</Text>
           {__DEV__ && this.state.error && (
             <Text style={styles.errorDetail} numberOfLines={5}>
               {this.state.error.message}
             </Text>
           )}
-          <TouchableOpacity style={styles.retryBtn} onPress={this.handleReset}>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={this.handleReset}
+            accessibilityRole="button"
+          >
             <RotateCcw size={18} color="#fff" />
-            <Text style={styles.retryText}>다시 시도</Text>
+            <Text style={styles.retryText}>{i18n.t('common:errorBoundary.retry')}</Text>
           </TouchableOpacity>
         </View>
       );

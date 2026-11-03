@@ -117,7 +117,13 @@ export default function ShareCardModal({ data, onClose }: Props) {
               <Text style={styles.title}>{t('share:modal.title')}</Text>
               <Text style={styles.hint}>{t('share:modal.hint')}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={12}
+              style={styles.closeBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('common:button.close')}
+            >
               <X size={20} color={COLORS.slate500} />
             </TouchableOpacity>
           </View>

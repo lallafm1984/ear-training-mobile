@@ -63,7 +63,12 @@ export default function UpgradeModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.container}>
           {/* 닫기 버튼 */}
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('common:button.close')}
+          >
             <X size={16} color="#94a3b8" />
           </TouchableOpacity>
 

@@ -242,7 +242,13 @@ export default function BeginnerLessonScreen() {
   if (!lesson) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={COLORS.slate700} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -414,6 +420,12 @@ export default function BeginnerLessonScreen() {
             ]}
             onPress={handlePlayQuestion}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isPlaying && !compareTarget
+                ? t('beginner:lesson.playing')
+                : t('beginner:lesson.listen')
+            }
           >
             {isPlaying && !compareTarget ? (
               <VolumeX size={30} color="#fff" />
@@ -542,7 +554,13 @@ export default function BeginnerLessonScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={[styles.header, { backgroundColor: lesson.bgColor }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={lesson.color} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
