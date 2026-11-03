@@ -2,14 +2,10 @@
 // DailyGoalScreen — 오늘의 일일 목표 목록
 // ─────────────────────────────────────────────────────────────
 
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ArrowLeft, CheckCircle, Circle, Flame, Trophy, Play,
-} from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Circle, Flame, Play } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,11 +31,9 @@ interface GoalItem {
 }
 
 /** 연속 목표 달성일 계산 (5개 카테고리 모두 연습한 날) */
-function computeGoalStreak(
-  records: { practicedAt: string; contentType: string }[],
-): number {
+function computeGoalStreak(records: { practicedAt: string; contentType: string }[]): number {
   const byDate: Record<string, Set<string>> = {};
-  records.forEach(r => {
+  records.forEach((r) => {
     const d = new Date(r.practicedAt).toDateString();
     if (!byDate[d]) byDate[d] = new Set();
     byDate[d].add(r.contentType);
@@ -51,7 +45,7 @@ function computeGoalStreak(
   for (let i = 0; i < 365; i++) {
     const d = new Date(today.getTime() - i * 86400000).toDateString();
     const cats = byDate[d];
-    const done = cats ? GOAL_CATEGORIES.every(c => cats.has(c)) : false;
+    const done = cats ? GOAL_CATEGORIES.every((c) => cats.has(c)) : false;
     if (done) {
       streak++;
     } else {
@@ -67,9 +61,9 @@ export default function DailyGoalScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation(['practice', 'content', 'mascot', 'common']);
-  const { records, stats, reload } = usePracticeHistory();
+  const { records, reload } = usePracticeHistory();
   const { user } = useAuth();
-  const { level, progress, totalExp, addExp } = useMascotExp();
+  const { level, progress, addExp } = useMascotExp();
   const [rewardedCount, setRewardedCount] = useState<number | null>(null);
 
   const EXP_REWARD_KEY = user ? `@melodygen_daily_exp_rewarded_${user.id}` : null;
@@ -106,7 +100,7 @@ export default function DailyGoalScreen() {
   const todayCategories = useMemo(() => {
     const todayStr = new Date().toDateString();
     const cats = new Set<ContentCategory>();
-    records.forEach(r => {
+    records.forEach((r) => {
       if (new Date(r.practicedAt).toDateString() === todayStr) {
         cats.add(r.contentType);
       }
@@ -116,21 +110,18 @@ export default function DailyGoalScreen() {
 
   // 일일 목표 목록 생성 (고정 5개 카테고리)
   const goals: GoalItem[] = useMemo(() => {
-    return GOAL_CATEGORIES.map(cat => ({
+    return GOAL_CATEGORIES.map((cat) => ({
       category: cat,
       completed: todayCategories.has(cat),
     }));
   }, [todayCategories]);
 
-  const completedCount = goals.filter(g => g.completed).length;
+  const completedCount = goals.filter((g) => g.completed).length;
   const allDone = completedCount >= DAILY_GOAL_COUNT;
   const progressPct = Math.round((completedCount / DAILY_GOAL_COUNT) * 100);
 
   // 연속 달성일
-  const goalStreak = useMemo(
-    () => computeGoalStreak(records),
-    [records],
-  );
+  const goalStreak = useMemo(() => computeGoalStreak(records), [records]);
 
   // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (최대 30)
   // rewardedCount를 AsyncStorage에 저장하여 화면 재진입 시 중복 지급 방지
@@ -148,10 +139,13 @@ export default function DailyGoalScreen() {
 
     const newCount = completedCount;
     setRewardedCount(newCount);
-    AsyncStorage.setItem(EXP_REWARD_KEY, JSON.stringify({
-      date: new Date().toDateString(),
-      count: newCount,
-    })).catch(() => {});
+    AsyncStorage.setItem(
+      EXP_REWARD_KEY,
+      JSON.stringify({
+        date: new Date().toDateString(),
+        count: newCount,
+      }),
+    ).catch(() => {});
   }, [completedCount, rewardedCount, addExp, EXP_REWARD_KEY]);
 
   const handleGoalPress = (category: ContentCategory) => {
@@ -214,7 +208,9 @@ export default function DailyGoalScreen() {
           {goalStreak > 0 && (
             <View style={styles.streakBadge}>
               <Flame size={14} color="#f59e0b" />
-              <Text style={styles.streakText}>{t('practice:dailyGoal.streak', { days: goalStreak })}</Text>
+              <Text style={styles.streakText}>
+                {t('practice:dailyGoal.streak', { days: goalStreak })}
+              </Text>
             </View>
           )}
         </View>
@@ -228,10 +224,7 @@ export default function DailyGoalScreen() {
             return (
               <TouchableOpacity
                 key={`${goal.category}-${idx}`}
-                style={[
-                  styles.goalItem,
-                  goal.completed && styles.goalItemDone,
-                ]}
+                style={[styles.goalItem, goal.completed && styles.goalItemDone]}
                 onPress={() => !goal.completed && handleGoalPress(goal.category)}
                 activeOpacity={goal.completed ? 1 : 0.7}
               >
@@ -242,13 +235,20 @@ export default function DailyGoalScreen() {
                     <Circle size={24} color={COLORS.slate300} />
                   )}
                   <View style={styles.goalInfo}>
-                    <Text style={[
-                      styles.goalName,
-                      goal.completed && { color: COLORS.slate400, textDecorationLine: 'line-through' },
-                    ]}>
+                    <Text
+                      style={[
+                        styles.goalName,
+                        goal.completed && {
+                          color: COLORS.slate400,
+                          textDecorationLine: 'line-through',
+                        },
+                      ]}
+                    >
                       {t('content:category.' + goal.category + '.name')}
                     </Text>
-                    <Text style={styles.goalDesc}>{t('content:category.' + goal.category + '.description')}</Text>
+                    <Text style={styles.goalDesc}>
+                      {t('content:category.' + goal.category + '.description')}
+                    </Text>
                   </View>
                 </View>
 
@@ -264,9 +264,7 @@ export default function DailyGoalScreen() {
 
         {/* 안내 */}
         <View style={styles.tipCard}>
-          <Text style={styles.tipText}>
-            {t('practice:dailyGoal.tip')}
-          </Text>
+          <Text style={styles.tipText}>{t('practice:dailyGoal.tip')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

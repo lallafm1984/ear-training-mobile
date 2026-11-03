@@ -8,7 +8,14 @@ import { noteNumToNote, makeNote, SIXTEENTHS_TO_DUR } from '../scoreUtils';
 
 /** 분할 가능한 음가 (큰 것부터, greedy 분할용) */
 const SPLIT_DURATIONS: [number, NoteDuration][] = [
-  [16, '1'], [12, '2.'], [8, '2'], [6, '4.'], [4, '4'], [3, '8.'], [2, '8'], [1, '16'],
+  [16, '1'],
+  [12, '2.'],
+  [8, '2'],
+  [6, '4.'],
+  [4, '4'],
+  [3, '8.'],
+  [2, '8'],
+  [1, '16'],
 ];
 
 /**

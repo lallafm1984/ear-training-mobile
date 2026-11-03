@@ -3,11 +3,10 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AlertTriangle, RotateCcw } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { logger } from '../lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -26,7 +25,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (__DEV__) console.error('ErrorBoundary caught:', error, info.componentStack);
+    logger.error('ErrorBoundary caught:', error, info.componentStack);
   }
 
   handleReset = () => {

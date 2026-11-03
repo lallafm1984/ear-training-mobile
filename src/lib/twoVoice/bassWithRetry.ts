@@ -11,10 +11,7 @@ import { validateBass } from './validator';
  * Runs up to `maxRetries + 1` attempts, returning the result
  * with the fewest violations if none pass cleanly.
  */
-export function generateBassWithRetry(
-  opts: TwoVoiceBassOptions,
-  maxRetries = 3,
-): BassNote[] {
+export function generateBassWithRetry(opts: TwoVoiceBassOptions, maxRetries = 3): BassNote[] {
   let bestResult: { bass: BassNote[]; violations: number } | null = null;
 
   for (let i = 0; i <= maxRetries; i++) {

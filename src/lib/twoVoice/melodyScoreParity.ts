@@ -20,15 +20,15 @@ export interface MelodyMotionParams {
 
 // beginner_1 … advanced_3 와 동일 수치 (consonanceRatio는 별도 처리)
 export const MELODY_MOTION_BY_LEVEL: Record<number, MelodyMotionParams> = {
-  1: { stepwiseProb: 0.95, maxLeap: 3, maxInterval: 3, chordSnapStrong: 0.68, chordSnapWeak: 0.20 },
+  1: { stepwiseProb: 0.95, maxLeap: 3, maxInterval: 3, chordSnapStrong: 0.68, chordSnapWeak: 0.2 },
   2: { stepwiseProb: 0.88, maxLeap: 4, maxInterval: 4, chordSnapStrong: 0.66, chordSnapWeak: 0.22 },
   3: { stepwiseProb: 0.82, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.64, chordSnapWeak: 0.22 },
-  4: { stepwiseProb: 0.75, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.62, chordSnapWeak: 0.20 },
-  5: { stepwiseProb: 0.70, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.58, chordSnapWeak: 0.18 },
+  4: { stepwiseProb: 0.75, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.62, chordSnapWeak: 0.2 },
+  5: { stepwiseProb: 0.7, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.58, chordSnapWeak: 0.18 },
   6: { stepwiseProb: 0.65, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.55, chordSnapWeak: 0.18 },
-  7: { stepwiseProb: 0.60, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.52, chordSnapWeak: 0.16 },
-  8: { stepwiseProb: 0.55, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.50, chordSnapWeak: 0.15 },
-  9: { stepwiseProb: 0.50, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.48, chordSnapWeak: 0.15 },
+  7: { stepwiseProb: 0.6, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.52, chordSnapWeak: 0.16 },
+  8: { stepwiseProb: 0.55, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.5, chordSnapWeak: 0.15 },
+  9: { stepwiseProb: 0.5, maxLeap: 5, maxInterval: 5, chordSnapStrong: 0.48, chordSnapWeak: 0.15 },
 };
 
 export function getMelodyMotionParams(level: number): MelodyMotionParams {
@@ -61,7 +61,7 @@ export function inferChordDegreeFromBassMidi(
         const nn = deg + k * 7;
         const m = nnToMidi(nn, scale, bassBase, keySignature);
         const midiErr = Math.abs(m - bassMidi);
-        const pcErr = (m % 12) === targetPc ? 0 : 30;
+        const pcErr = m % 12 === targetPc ? 0 : 30;
         const metric = midiErr + pcErr;
         if (metric < bestMetric) {
           bestMetric = metric;

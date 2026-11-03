@@ -100,7 +100,10 @@ describe('buildGeneratorOptions', () => {
     let sawGrandStaff = false;
     for (let i = 0; i < 20; i++) {
       const opts = buildGeneratorOptions('comprehensive', 4);
-      if (opts.useGrandStaff) { sawGrandStaff = true; break; }
+      if (opts.useGrandStaff) {
+        sawGrandStaff = true;
+        break;
+      }
     }
     // 확률적이므로 반드시 나와야 하는 건 아니지만 20번이면 거의 확실
     expect(sawGrandStaff).toBe(true);
@@ -147,7 +150,7 @@ describe('TRACK_META', () => {
 
   it('Pro 필수 레벨이 올바르게 표시됨', () => {
     // partPractice L1-5 무료, L6-9 Pro
-    TRACK_META.partPractice.levels.forEach(l => {
+    TRACK_META.partPractice.levels.forEach((l) => {
       if (l.level <= 5) expect(l.requiresPro).toBe(false);
       else expect(l.requiresPro).toBe(true);
     });

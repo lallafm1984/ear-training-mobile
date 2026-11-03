@@ -73,7 +73,11 @@
     "examModeBenefits": ["試験モード再生", "区間待機時間の設定", "実際の試験環境の構成"],
     "difficultyTitle": "中級・上級難易度",
     "difficultyDesc": "初級以上の難易度はProでご利用いただけます。",
-    "difficultyBenefits": ["中級：8分音符・臨時記号・三連符", "上級：16分音符・アルペジオ", "すべての難易度を選択可能"],
+    "difficultyBenefits": [
+      "中級：8分音符・臨時記号・三連符",
+      "上級：16分音符・アルペジオ",
+      "すべての難易度を選択可能"
+    ],
     "measuresTitle": "8小節以上の生成",
     "measuresDesc": "4小節を超える楽譜の生成はProでご利用いただけます。",
     "measuresBenefits": ["8・12・16小節の楽譜生成", "長い聴音問題の出題", "多様な構成の練習"],
@@ -82,21 +86,45 @@
     "editNotesBenefits": ["音符の音程・長さの修正", "個別音符の削除", "細かい楽譜編集"],
     "downloadAudioTitle": "音源ダウンロード",
     "downloadAudioDesc": "聴音音源（MP3）のダウンロードはProプラン専用機能です。",
-    "downloadAudioBenefits": ["MP3音源の無制限ダウンロード", "音源・楽譜画像の無制限保存", "音符編集機能を含む"],
+    "downloadAudioBenefits": [
+      "MP3音源の無制限ダウンロード",
+      "音源・楽譜画像の無制限保存",
+      "音符編集機能を含む"
+    ],
     "downloadImageTitle": "楽譜画像の保存",
     "downloadImageDesc": "楽譜画像（PNG）の保存はProプラン専用機能です。",
-    "downloadImageBenefits": ["PNG画像の無制限ギャラリー保存", "MP3音源の無制限ダウンロード", "音符編集機能を含む"],
+    "downloadImageBenefits": [
+      "PNG画像の無制限ギャラリー保存",
+      "MP3音源の無制限ダウンロード",
+      "音符編集機能を含む"
+    ],
     "saveScoresTitle": "楽譜保存数の上限超過",
     "saveScoresDesc": "現在のプランの楽譜保存数の上限を超えました。\nFree：5件 · Pro：20件",
-    "saveScoresBenefits": ["Pro：最大20件の楽譜保存", "保存した楽譜をいつでも読み込み可能", "すべての機能のロック解除"],
+    "saveScoresBenefits": [
+      "Pro：最大20件の楽譜保存",
+      "保存した楽譜をいつでも読み込み可能",
+      "すべての機能のロック解除"
+    ],
     "keySignatureTitle": "多様な調性",
     "keySignatureDesc": "Freeプランではハ長調（C）のみ使用できます。\nProですべての長調・短調をご利用ください。",
-    "keySignatureBenefits": ["24の長調・短調をすべて使用可能", "五度圏全調性の練習", "実戦試験対策に必須"],
+    "keySignatureBenefits": [
+      "24の長調・短調をすべて使用可能",
+      "五度圏全調性の練習",
+      "実戦試験対策に必須"
+    ],
     "timeSignatureTitle": "多様な拍子",
     "timeSignatureDesc": "Freeプランでは4/4拍子のみ使用できます。\nProですべての拍子をご利用ください。",
-    "timeSignatureBenefits": ["3/4、6/8、12/8など全拍子", "複合拍子の練習", "多様なリズムパターントレーニング"],
+    "timeSignatureBenefits": [
+      "3/4、6/8、12/8など全拍子",
+      "複合拍子の練習",
+      "多様なリズムパターントレーニング"
+    ],
     "downloadLimitTitle": "ダウンロード上限超過",
     "downloadLimitDesc": "今月のダウンロード回数をすべて使用しました。\nProプランで無制限にダウンロードしましょう。",
-    "downloadLimitBenefits": ["MP3音源の無制限ダウンロード", "楽譜画像の無制限保存", "すべての機能のロック解除"]
+    "downloadLimitBenefits": [
+      "MP3音源の無制限ダウンロード",
+      "楽譜画像の無制限保存",
+      "すべての機能のロック解除"
+    ]
   }
 }

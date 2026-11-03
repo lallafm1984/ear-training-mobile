@@ -2,10 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../theme/colors';
 import type { ScoreNote } from '../lib/scoreUtils';
-import {
-  BAR_MELODY_SLOT_COUNT,
-  buildBarMelodyDisplayAbc,
-} from '../lib/barMelody';
+import { BAR_MELODY_SLOT_COUNT, buildBarMelodyDisplayAbc } from '../lib/barMelody';
 import AbcjsRenderer from './AbcjsRenderer';
 
 interface BarMelodyStaffInputProps {
@@ -13,10 +10,7 @@ interface BarMelodyStaffInputProps {
   accentColor: string;
 }
 
-export default function BarMelodyStaffInput({
-  notes,
-  accentColor,
-}: BarMelodyStaffInputProps) {
+export default function BarMelodyStaffInput({ notes, accentColor }: BarMelodyStaffInputProps) {
   const answeredCount = notes.filter(Boolean).length;
   const abcString = useMemo(() => buildBarMelodyDisplayAbc(notes), [notes]);
 

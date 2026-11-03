@@ -4,12 +4,22 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, TrendingUp, Calendar, Target, Award,
-  ChevronLeft, ChevronRight,
+  ArrowLeft,
+  TrendingUp,
+  Calendar,
+  Target,
+  Award,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -56,26 +66,31 @@ export default function StatsScreen() {
     setExamLoading(true);
     setExamError(false);
     const examKey = user ? `@melodygen_exam_sessions_${user.id}` : null;
-    if (!examKey) { setExamLoading(false); return; }
-    AsyncStorage.getItem(examKey).then(raw => {
-      if (raw) {
-        try {
-          setExamRecords(JSON.parse(raw) as ExamRecord[]);
-        } catch {
-          setExamError(true);
+    if (!examKey) {
+      setExamLoading(false);
+      return;
+    }
+    AsyncStorage.getItem(examKey)
+      .then((raw) => {
+        if (raw) {
+          try {
+            setExamRecords(JSON.parse(raw) as ExamRecord[]);
+          } catch {
+            setExamError(true);
+          }
         }
-      }
-      setExamLoading(false);
-    }).catch(() => {
-      setExamError(true);
-      setExamLoading(false);
-    });
-  }, []);
+        setExamLoading(false);
+      })
+      .catch(() => {
+        setExamError(true);
+        setExamLoading(false);
+      });
+  }, [user]);
 
   // 월별 필터된 시험 기록
   const filteredExams = useMemo(() => {
     if (!examMonth) return examRecords;
-    return examRecords.filter(e => {
+    return examRecords.filter((e) => {
       const d = new Date(e.completed_at);
       return d.getFullYear() === examMonth.year && d.getMonth() === examMonth.month;
     });
@@ -84,16 +99,18 @@ export default function StatsScreen() {
   // 시험 월 네비게이션
   const prevExamMonth = () => {
     if (!examMonth) return;
-    const m = examMonth.month === 0
-      ? { year: examMonth.year - 1, month: 11 }
-      : { year: examMonth.year, month: examMonth.month - 1 };
+    const m =
+      examMonth.month === 0
+        ? { year: examMonth.year - 1, month: 11 }
+        : { year: examMonth.year, month: examMonth.month - 1 };
     setExamMonth(m);
   };
   const nextExamMonth = () => {
     if (!examMonth) return;
-    const m = examMonth.month === 11
-      ? { year: examMonth.year + 1, month: 0 }
-      : { year: examMonth.year, month: examMonth.month + 1 };
+    const m =
+      examMonth.month === 11
+        ? { year: examMonth.year + 1, month: 0 }
+        : { year: examMonth.year, month: examMonth.month + 1 };
     setExamMonth(m);
   };
 
@@ -102,16 +119,25 @@ export default function StatsScreen() {
     if (filteredExams.length === 0) return null;
     const total = filteredExams.length;
     const avgPct = Math.round(
-      filteredExams.reduce((s, e) => s + (e.max_score > 0 ? (e.total_score / e.max_score) * 100 : 0), 0) / total,
+      filteredExams.reduce(
+        (s, e) => s + (e.max_score > 0 ? (e.total_score / e.max_score) * 100 : 0),
+        0,
+      ) / total,
     );
     const bestPct = Math.round(
-      Math.max(...filteredExams.map(e => e.max_score > 0 ? (e.total_score / e.max_score) * 100 : 0)),
+      Math.max(
+        ...filteredExams.map((e) => (e.max_score > 0 ? (e.total_score / e.max_score) * 100 : 0)),
+      ),
     );
 
-    const byPreset: Record<string, { title: string; count: number; totalPct: number; best: number }> = {};
-    filteredExams.forEach(e => {
+    const byPreset: Record<
+      string,
+      { title: string; count: number; totalPct: number; best: number }
+    > = {};
+    filteredExams.forEach((e) => {
       const pct = e.max_score > 0 ? (e.total_score / e.max_score) * 100 : 0;
-      if (!byPreset[e.title]) byPreset[e.title] = { title: e.title, count: 0, totalPct: 0, best: 0 };
+      if (!byPreset[e.title])
+        byPreset[e.title] = { title: e.title, count: 0, totalPct: 0, best: 0 };
       byPreset[e.title].count++;
       byPreset[e.title].totalPct += pct;
       byPreset[e.title].best = Math.max(byPreset[e.title].best, pct);
@@ -120,13 +146,30 @@ export default function StatsScreen() {
     return { total, avgPct, bestPct, byPreset };
   }, [filteredExams]);
 
-  const pctColor = (p: number) => p >= 70 ? COLORS.success : p >= 50 ? COLORS.amber600 : COLORS.error;
+  const pctColor = (p: number) =>
+    p >= 70 ? COLORS.success : p >= 50 ? COLORS.amber600 : COLORS.error;
 
   // ── DEV 전용: 테스트 데이터 주입 ──
   const seedTestData = async () => {
     if (!user) return;
-    const categories = ['melody', 'barMelody', 'rhythm', 'interval', 'chord', 'key', 'twoVoice'] as const;
-    const difficulties = ['beginner_1', 'beginner_1', 'rhythm_2', 'interval_1', 'chord_2', 'key_1', 'bass_1'];
+    const categories = [
+      'melody',
+      'barMelody',
+      'rhythm',
+      'interval',
+      'chord',
+      'key',
+      'twoVoice',
+    ] as const;
+    const difficulties = [
+      'beginner_1',
+      'beginner_1',
+      'rhythm_2',
+      'interval_1',
+      'chord_2',
+      'key_1',
+      'bass_1',
+    ];
     const now = Date.now();
 
     const practiceRecords = Array.from({ length: 200 }, (_, i) => ({
@@ -149,10 +192,7 @@ export default function StatsScreen() {
       max_score: 100,
       completed_at: new Date(now - Math.random() * 60 * 86400_000).toISOString(),
     }));
-    await AsyncStorage.setItem(
-      `@melodygen_exam_sessions_${user.id}`,
-      JSON.stringify(examRecords),
-    );
+    await AsyncStorage.setItem(`@melodygen_exam_sessions_${user.id}`, JSON.stringify(examRecords));
 
     // 스킬 프로필 — 연속 학습일 주입
     const skillRaw = await AsyncStorage.getItem(`@melodygen_skill_profile_${user.id}`);
@@ -172,7 +212,10 @@ export default function StatsScreen() {
 
   if (!loaded) {
     return (
-      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}
+        edges={['top', 'bottom']}
+      >
         <ActivityIndicator size="large" color={COLORS.primary500} />
       </SafeAreaView>
     );
@@ -202,21 +245,36 @@ export default function StatsScreen() {
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Calendar size={20} color={COLORS.primary500} />
-            <Text style={[styles.summaryValue, String(skillProfile.streakDays).length >= 4 && { fontSize: 18 }]}>
+            <Text
+              style={[
+                styles.summaryValue,
+                String(skillProfile.streakDays).length >= 4 && { fontSize: 18 },
+              ]}
+            >
               {skillProfile.streakDays}
             </Text>
             <Text style={styles.summaryLabel}>{t('stats:summary.streak')}</Text>
           </View>
           <View style={styles.summaryCard}>
             <Target size={20} color={COLORS.amber500} />
-            <Text style={[styles.summaryValue, String(stats.totalSessions).length >= 4 && { fontSize: 18 }]}>
+            <Text
+              style={[
+                styles.summaryValue,
+                String(stats.totalSessions).length >= 4 && { fontSize: 18 },
+              ]}
+            >
               {stats.totalSessions}
             </Text>
             <Text style={styles.summaryLabel}>{t('stats:summary.totalSessions')}</Text>
           </View>
           <View style={styles.summaryCard}>
             <TrendingUp size={20} color={COLORS.success} />
-            <Text style={[styles.summaryValue, String(stats.weeklyCount).length >= 4 && { fontSize: 18 }]}>
+            <Text
+              style={[
+                styles.summaryValue,
+                String(stats.weeklyCount).length >= 4 && { fontSize: 18 },
+              ]}
+            >
               {stats.weeklyCount}
             </Text>
             <Text style={styles.summaryLabel}>{t('stats:summary.thisWeek')}</Text>
@@ -250,7 +308,9 @@ export default function StatsScreen() {
         {examLoading && (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
             <ActivityIndicator size="small" color={COLORS.primary500} />
-            <Text style={{ fontSize: 13, color: COLORS.slate400, marginTop: 8 }}>{t('stats:exam.loading')}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.slate400, marginTop: 8 }}>
+              {t('stats:exam.loading')}
+            </Text>
           </View>
         )}
         {examError && !examLoading && (
@@ -297,10 +357,16 @@ export default function StatsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setExamMonth(examMonth ? null : (() => {
-                  const now = new Date();
-                  return { year: now.getFullYear(), month: now.getMonth() };
-                })())}
+                onPress={() =>
+                  setExamMonth(
+                    examMonth
+                      ? null
+                      : (() => {
+                          const now = new Date();
+                          return { year: now.getFullYear(), month: now.getMonth() };
+                        })(),
+                  )
+                }
                 style={[styles.allBtn, !examMonth && styles.allBtnActive]}
               >
                 <Text style={[styles.allBtnText, !examMonth && { color: '#fff' }]}>
@@ -319,20 +385,22 @@ export default function StatsScreen() {
                   </View>
                   <View style={styles.examSummaryCard}>
                     <Text style={[styles.examSummaryValue, { color: pctColor(examStats.avgPct) }]}>
-                      {examStats.avgPct}{t('common:unit.score')}
+                      {examStats.avgPct}
+                      {t('common:unit.score')}
                     </Text>
                     <Text style={styles.examSummaryLabel}>{t('stats:exam.avgScore')}</Text>
                   </View>
                   <View style={styles.examSummaryCard}>
                     <Text style={[styles.examSummaryValue, { color: pctColor(examStats.bestPct) }]}>
-                      {examStats.bestPct}{t('common:unit.score')}
+                      {examStats.bestPct}
+                      {t('common:unit.score')}
                     </Text>
                     <Text style={styles.examSummaryLabel}>{t('stats:exam.bestScore')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.examCard}>
-                  {Object.values(examStats.byPreset).map(p => {
+                  {Object.values(examStats.byPreset).map((p) => {
                     const avg = Math.round(p.totalPct / p.count);
                     const best = Math.round(p.best);
                     return (
@@ -341,14 +409,18 @@ export default function StatsScreen() {
                           <Award size={16} color={COLORS.amber500} />
                           <View>
                             <Text style={styles.examTitle}>{p.title}</Text>
-                            <Text style={styles.examDate}>{t('stats:exam.attemptCount', { count: p.count })}</Text>
+                            <Text style={styles.examDate}>
+                              {t('stats:exam.attemptCount', { count: p.count })}
+                            </Text>
                           </View>
                         </View>
                         <View style={styles.examRight}>
                           <Text style={[styles.examScore, { color: pctColor(avg) }]}>
                             {t('stats:exam.avgLabel', { score: avg })}
                           </Text>
-                          <Text style={styles.examBest}>{t('stats:exam.bestLabel', { score: best })}</Text>
+                          <Text style={styles.examBest}>
+                            {t('stats:exam.bestLabel', { score: best })}
+                          </Text>
                         </View>
                       </View>
                     );
@@ -359,7 +431,10 @@ export default function StatsScreen() {
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyDesc}>
                   {examMonth
-                    ? t('stats:exam.noRecords', { year: examMonth.year, month: examMonth.month + 1 })
+                    ? t('stats:exam.noRecords', {
+                        year: examMonth.year,
+                        month: examMonth.month + 1,
+                      })
                     : t('stats:exam.noRecordsAll')}
                 </Text>
               </View>

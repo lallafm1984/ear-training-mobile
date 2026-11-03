@@ -6,6 +6,7 @@ export { default as AbcjsRenderer } from './AbcjsRenderer';
 export type { AbcjsRendererHandle } from './AbcjsRenderer';
 
 export { default as AppAlert } from './AppAlert';
+export { default as AppControlGate } from './AppControlGate';
 
 export { default as UpgradeModal } from './UpgradeModal';
 export type { UpgradeReason } from './UpgradeModal';

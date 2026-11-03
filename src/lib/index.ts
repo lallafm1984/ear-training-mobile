@@ -6,6 +6,17 @@
 export { supabase } from './supabase';
 export type { Profile } from './supabase';
 
+// 원격 앱 버전 정책 & 공지 팝업
+export * from './appControl';
+
+// OAuth 딥링크 콜백 파싱 & Supabase 세션 생성
+export {
+  createOAuthCallbackProcessor,
+  establishSessionFromOAuthCallback,
+  parseOAuthCallbackUrl,
+} from './oauthCallback';
+export type { OAuthCallbackPayload, OAuthCallbackProcessor } from './oauthCallback';
+
 // 악보 유틸리티
 export * from './scoreUtils';
 

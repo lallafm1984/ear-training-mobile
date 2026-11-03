@@ -3,9 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -36,7 +34,9 @@ export default function MascotGalleryScreen() {
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>{t('mascot:gallery.title')}</Text>
-          <Text style={styles.headerSub}>{t('mascot:gallery.currentLevel', { level: currentLevel })} · {totalExp} EXP</Text>
+          <Text style={styles.headerSub}>
+            {t('mascot:gallery.currentLevel', { level: currentLevel })} · {totalExp} EXP
+          </Text>
         </View>
       </View>
 
@@ -67,25 +67,19 @@ export default function MascotGalleryScreen() {
 
               {/* 레벨 그리드 */}
               <View style={styles.grid}>
-                {stageLevels.map(lv => {
+                {stageLevels.map((lv) => {
                   const isUnlocked = lv <= currentLevel;
                   const isCurrent = lv === currentLevel;
-                  const params = getMascotParams(lv);
-
                   return (
-                    <View
-                      key={lv}
-                      style={[
-                        styles.card,
-                        isCurrent && styles.cardCurrent,
-                      ]}
-                    >
+                    <View key={lv} style={[styles.card, isCurrent && styles.cardCurrent]}>
                       <MascotCharacter size={56} level={lv} />
-                      <Text style={[
-                        styles.cardLevel,
-                        isCurrent && { color: COLORS.primary500, fontWeight: '900' },
-                        !isUnlocked && { color: COLORS.slate300 },
-                      ]}>
+                      <Text
+                        style={[
+                          styles.cardLevel,
+                          isCurrent && { color: COLORS.primary500, fontWeight: '900' },
+                          !isUnlocked && { color: COLORS.slate300 },
+                        ]}
+                      >
                         Lv.{lv}
                       </Text>
                     </View>

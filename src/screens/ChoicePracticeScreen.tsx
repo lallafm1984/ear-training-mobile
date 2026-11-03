@@ -19,13 +19,12 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { useTranslation } from 'react-i18next';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useSessionContentLog } from '../context';
-import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
+import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ChoicePractice'>['route'];
@@ -43,7 +42,6 @@ export default function ChoicePracticeScreen() {
   const { trackContentRun } = useSessionContentLog();
 
   const { t } = useTranslation(['practice', 'content', 'common']);
-  const config = getContentConfig(category);
   const colors = CATEGORY_COLORS[category];
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
@@ -141,7 +139,7 @@ export default function ChoicePracticeScreen() {
         useNativeDriver: true,
       }).start();
     });
-  }, [category, difficulty, fadeAnim]);
+  }, [category, difficulty, fadeAnim, stopAudio]);
 
   const handleFinish = useCallback(async () => {
     stopAudio();

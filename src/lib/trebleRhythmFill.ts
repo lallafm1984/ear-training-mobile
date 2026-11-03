@@ -129,9 +129,7 @@ export function fillRhythm(
   const syncopationProb = opts?.syncopationProb ?? 0;
   const timeSignature = opts?.timeSignature;
 
-  const boundaries = timeSignature
-    ? getBarMandatoryBoundaries(timeSignature, total)
-    : [];
+  const boundaries = timeSignature ? getBarMandatoryBoundaries(timeSignature, total) : [];
   const beatSize = (() => {
     if (!timeSignature) return 4;
     const [, bs] = timeSignature.split('/');
@@ -157,7 +155,7 @@ export function fillRhythm(
       const halfBeat = Math.max(1, Math.floor(beatSize / 2));
       const syncCell = [halfBeat, beatSize, halfBeat];
       const syncTotal = syncCell.reduce((a, b) => a + b, 0);
-      if (syncTotal <= rem && syncCell.every(d => SIXTEENTHS_TO_DUR[d])) {
+      if (syncTotal <= rem && syncCell.every((d) => SIXTEENTHS_TO_DUR[d])) {
         result.push(...syncCell);
         rem -= syncTotal;
         pos += syncTotal;
@@ -166,16 +164,16 @@ export function fillRhythm(
       }
     }
 
-    let avail = sorted.filter(d => d <= rem && d >= minDur);
+    let avail = sorted.filter((d) => d <= rem && d >= minDur);
 
     const prevDur = result.length > 0 ? result[result.length - 1] : lastDur;
     if (prevDur === 6) {
-      avail = avail.filter(d => d !== 6);
+      avail = avail.filter((d) => d !== 6);
     }
 
     if (boundaries.length > 0) {
       const onBeat = pos % beatSize === 0;
-      avail = avail.filter(d => {
+      avail = avail.filter((d) => {
         const noteEnd = pos + d;
         if (pos === 0 && noteEnd === total) return true;
         for (const b of boundaries) {
@@ -195,24 +193,26 @@ export function fillRhythm(
     }
 
     if (dottedProb < 1) {
-      const nonDotted = avail.filter(d => !DOTTED_SIXTEENTHS.has(d));
+      const nonDotted = avail.filter((d) => !DOTTED_SIXTEENTHS.has(d));
       if (nonDotted.length > 0 && Math.random() >= dottedProb) {
         avail = nonDotted;
       }
     }
 
     if (avail.length === 0) {
-      let fallback = Object.keys(SIXTEENTHS_TO_DUR).map(Number)
-        .filter(d => d <= rem && d >= minDur).sort((a, b) => b - a);
+      let fallback = Object.keys(SIXTEENTHS_TO_DUR)
+        .map(Number)
+        .filter((d) => d <= rem && d >= minDur)
+        .sort((a, b) => b - a);
 
       const prevDurFallback = result.length > 0 ? result[result.length - 1] : lastDur;
       if (prevDurFallback === 6) {
-        fallback = fallback.filter(d => d !== 6);
+        fallback = fallback.filter((d) => d !== 6);
       }
 
       if (boundaries.length > 0) {
         const onBeat = pos % beatSize === 0;
-        fallback = fallback.filter(d => {
+        fallback = fallback.filter((d) => {
           const noteEnd = pos + d;
           if (pos === 0 && noteEnd === total) return true;
           for (const b of boundaries) {

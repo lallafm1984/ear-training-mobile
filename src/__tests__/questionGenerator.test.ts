@@ -80,9 +80,14 @@ describe('generateChoiceQuestion', () => {
   });
 
   describe('progression', () => {
-    const difficulties = ['progression_1', 'progression_2', 'progression_3', 'progression_4'] as const;
+    const difficulties = [
+      'progression_1',
+      'progression_2',
+      'progression_3',
+      'progression_4',
+    ] as const;
 
-    difficulties.forEach(diff => {
+    difficulties.forEach((diff) => {
       it(`${diff}: 보기 + 정답 포함 + ABC chord notation 존재`, () => {
         const q = generateChoiceQuestion('progression', diff);
         expect(q.choices.length).toBeGreaterThanOrEqual(2);
@@ -118,7 +123,7 @@ describe('generateChoiceQuestion', () => {
 
         expect(q.correctAnswer).toBe('ii-V-I');
         expect(q.choices).toHaveLength(4);
-        expect(q.choices.map(choice => choice.split('-').length)).toEqual(
+        expect(q.choices.map((choice) => choice.split('-').length)).toEqual(
           q.choices.map(() => correctChordCount),
         );
       } finally {

@@ -2,22 +2,24 @@
 // Melody generation engine — internal helpers for generateScore
 // ────────────────────────────────────────────────────────────────
 
-import type { ScoreNote, NoteDuration, PitchName, Accidental, TupletType } from '../scoreUtils';
+import type { ScoreNote, NoteDuration, PitchName, Accidental } from '../scoreUtils';
 import {
-  getSixteenthsPerBar, durationToSixteenths, getTupletActualSixteenths,
-  noteToMidiWithKey, getKeySigAlteration, getKeySignatureAccidentalCount,
-  getScaleDegrees, SIXTEENTHS_TO_DUR, splitAtBeatBoundaries,
-  nnToMidi, getMidiInterval, isForbiddenMelodicInterval,
-  PITCH_ORDER, getBassBaseOctave, CHORD_TONES,
-  uid, makeNote, makeRest, noteNumToNote, scaleNoteToNn,
-  buildTrebleAttackMidiMap, passesBassSpacing,
-  chordToneBnnCandidates, snapToChordTone,
-  generateProgression, getStrongBeatOffsets,
+  durationToSixteenths,
+  getTupletActualSixteenths,
+  noteToMidiWithKey,
+  getKeySigAlteration,
+  SIXTEENTHS_TO_DUR,
+  getMidiInterval,
+  isForbiddenMelodicInterval,
+  uid,
+  makeNote,
+  makeRest,
+  noteNumToNote,
+  scaleNoteToNn,
 } from '../scoreUtils';
 import type { BassLevel } from '../twoVoice';
-import type { Difficulty, BassDifficulty, GeneratorOptions } from './types';
-import { difficultyLevel, DURATION_POOL, BASS_LEVEL_PARAMS } from './types';
-import type { BassLevelParams } from './types';
+import type { Difficulty, BassDifficulty } from './types';
+import { difficultyLevel } from './types';
 
 // ────────────────────────────────────────────────────────────────
 // 단조 화성 지원
@@ -32,7 +34,10 @@ export function isMinorKey(keySignature: string): boolean {
  * 화성단음계: 7음을 반음 올림 → 이끔음(leading tone) 생성.
  * 예: Am에서 G→G#, Dm에서 C→C#, Gm에서 F→F#
  */
-export function getMinorLeadingToneAccidental(keySignature: string, seventhDegree: PitchName): Accidental {
+export function getMinorLeadingToneAccidental(
+  keySignature: string,
+  seventhDegree: PitchName,
+): Accidental {
   const keyAlt = getKeySigAlteration(keySignature, seventhDegree);
   // 조표에서 이미 b가 붙은 음이면 내추럴로 올림, 아니면 #
   if (keyAlt === 'b') return 'n';
@@ -74,134 +79,214 @@ export function buildBassAttackMidiMap(
   return map;
 }
 
-
 // ────────────────────────────────────────────────────────────────
 // 난이도별 파라미터 테이블 (문서 기반)
 // ────────────────────────────────────────────────────────────────
 
 export interface LevelParams {
   // 선율
-  maxInterval: number;          // 최대 음정 (도 단위)
-  stepwiseProb: number;         // 순차진행 확률
-  maxLeap: number;              // 허용 도약 (도)
+  maxInterval: number; // 최대 음정 (도 단위)
+  stepwiseProb: number; // 순차진행 확률
+  maxLeap: number; // 허용 도약 (도)
   chromaticBudget: [number, number]; // 반음계 임시표 [min, max]
-  chromaticProb: number;        // 노트당 임시표 확률
+  chromaticProb: number; // 노트당 임시표 확률
   // 리듬
-  syncopationProb: number;      // 당김음 확률
+  syncopationProb: number; // 당김음 확률
   tripletBudget: [number, number]; // 셋잇단 [min, max]
-  tripletProb: number;          // 셋잇단 삽입 확률
+  tripletProb: number; // 셋잇단 삽입 확률
   /** 붙임줄(같은 음·타이): 직전 음과 높이가 같을 때만 적용 */
   tieProb: number;
-  restProb: number;             // 쉼표 확률
-  dottedProb: number;           // 점음표 확률
+  restProb: number; // 쉼표 확률
+  dottedProb: number; // 점음표 확률
   // 2성부
-  contraryMotionRatio: number;  // 반진행 비율
-  bassIndependence: number;     // 베이스 리듬 독립도 (0~1)
-  voiceCrossingMax: number;     // 성부 교차 최대 횟수
-  consonanceRatio: number;      // 협화음 비율
+  contraryMotionRatio: number; // 반진행 비율
+  bassIndependence: number; // 베이스 리듬 독립도 (0~1)
+  voiceCrossingMax: number; // 성부 교차 최대 횟수
+  consonanceRatio: number; // 협화음 비율
   // 종지
-  cadenceType: string[];        // 사용 가능한 종지 유형
+  cadenceType: string[]; // 사용 가능한 종지 유형
   // 함정
-  maxTraps: number;             // 연습 1회당 최대 함정 수
+  maxTraps: number; // 연습 1회당 최대 함정 수
 }
 
 export const LEVEL_PARAMS: Record<Difficulty, LevelParams> = {
   // ── L1: 온·2분·4분 ──
   beginner_1: {
-    maxInterval: 3, stepwiseProb: 0.95, maxLeap: 3,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0, dottedProb: 0,
-    contraryMotionRatio: 0.30, bassIndependence: 0,
-    voiceCrossingMax: 0, consonanceRatio: 1.0,
+    maxInterval: 3,
+    stepwiseProb: 0.95,
+    maxLeap: 3,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0,
+    restProb: 0,
+    dottedProb: 0,
+    contraryMotionRatio: 0.3,
+    bassIndependence: 0,
+    voiceCrossingMax: 0,
+    consonanceRatio: 1.0,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
   // ── L2: 점2분·쉼표 ──
   beginner_2: {
-    maxInterval: 4, stepwiseProb: 0.88, maxLeap: 4,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.20, dottedProb: 0.35,
-    contraryMotionRatio: 0.30, bassIndependence: 0,
-    voiceCrossingMax: 0, consonanceRatio: 1.0,
+    maxInterval: 4,
+    stepwiseProb: 0.88,
+    maxLeap: 4,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0,
+    restProb: 0.2,
+    dottedProb: 0.35,
+    contraryMotionRatio: 0.3,
+    bassIndependence: 0,
+    voiceCrossingMax: 0,
+    consonanceRatio: 1.0,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
   // ── L3: 8분·8분쉼표 ──
   beginner_3: {
-    maxInterval: 5, stepwiseProb: 0.82, maxLeap: 5,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.20, dottedProb: 0.25,
-    contraryMotionRatio: 0.40, bassIndependence: 0.2,
-    voiceCrossingMax: 0, consonanceRatio: 0.95,
+    maxInterval: 5,
+    stepwiseProb: 0.82,
+    maxLeap: 5,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0,
+    restProb: 0.2,
+    dottedProb: 0.25,
+    contraryMotionRatio: 0.4,
+    bassIndependence: 0.2,
+    voiceCrossingMax: 0,
+    consonanceRatio: 0.95,
     cadenceType: ['perfect'],
     maxTraps: 0,
   },
   // ── L4: 점4분 ──
   intermediate_1: {
-    maxInterval: 5, stepwiseProb: 0.75, maxLeap: 5,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0, restProb: 0.15, dottedProb: 0.80,
-    contraryMotionRatio: 0.50, bassIndependence: 0.3,
-    voiceCrossingMax: 0, consonanceRatio: 0.92,
+    maxInterval: 5,
+    stepwiseProb: 0.75,
+    maxLeap: 5,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0,
+    restProb: 0.15,
+    dottedProb: 0.8,
+    contraryMotionRatio: 0.5,
+    bassIndependence: 0.3,
+    voiceCrossingMax: 0,
+    consonanceRatio: 0.92,
     cadenceType: ['perfect', 'half'],
     maxTraps: 0,
   },
   // ── L5: 붙임줄 당김음 ──
   intermediate_2: {
-    maxInterval: 5, stepwiseProb: 0.70, maxLeap: 5,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0.30, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.30, restProb: 0.15, dottedProb: 0.22,
-    contraryMotionRatio: 0.50, bassIndependence: 0.45,
-    voiceCrossingMax: 0, consonanceRatio: 0.88,
+    maxInterval: 5,
+    stepwiseProb: 0.7,
+    maxLeap: 5,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0.3,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0.3,
+    restProb: 0.15,
+    dottedProb: 0.22,
+    contraryMotionRatio: 0.5,
+    bassIndependence: 0.45,
+    voiceCrossingMax: 0,
+    consonanceRatio: 0.88,
     cadenceType: ['perfect', 'half', 'plagal'],
     maxTraps: 1,
   },
   // ── L6: 16분·16분쉼표 ──
   intermediate_3: {
-    maxInterval: 5, stepwiseProb: 0.65, maxLeap: 5,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0.26, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.20, restProb: 0.20, dottedProb: 0.22,
-    contraryMotionRatio: 0.55, bassIndependence: 0.55,
-    voiceCrossingMax: 1, consonanceRatio: 0.85,
+    maxInterval: 5,
+    stepwiseProb: 0.65,
+    maxLeap: 5,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0.26,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0.2,
+    restProb: 0.2,
+    dottedProb: 0.22,
+    contraryMotionRatio: 0.55,
+    bassIndependence: 0.55,
+    voiceCrossingMax: 1,
+    consonanceRatio: 0.85,
     cadenceType: ['perfect', 'half', 'plagal'],
     maxTraps: 1,
   },
   // ── L7: 점8분 ──
   advanced_1: {
-    maxInterval: 5, stepwiseProb: 0.60, maxLeap: 5,
-    chromaticBudget: [0, 0], chromaticProb: 0,
-    syncopationProb: 0.22, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.25, restProb: 0.20, dottedProb: 0.38,
-    contraryMotionRatio: 0.60, bassIndependence: 0.65,
-    voiceCrossingMax: 1, consonanceRatio: 0.82,
+    maxInterval: 5,
+    stepwiseProb: 0.6,
+    maxLeap: 5,
+    chromaticBudget: [0, 0],
+    chromaticProb: 0,
+    syncopationProb: 0.22,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0.25,
+    restProb: 0.2,
+    dottedProb: 0.38,
+    contraryMotionRatio: 0.6,
+    bassIndependence: 0.65,
+    voiceCrossingMax: 1,
+    consonanceRatio: 0.82,
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
   // ── L8: 임시표 ──
   advanced_2: {
-    maxInterval: 5, stepwiseProb: 0.55, maxLeap: 5,
-    chromaticBudget: [2, 4], chromaticProb: 0.15,
-    syncopationProb: 0.22, tripletBudget: [0, 0], tripletProb: 0,
-    tieProb: 0.25, restProb: 0.20, dottedProb: 0.30,
-    contraryMotionRatio: 0.65, bassIndependence: 0.75,
-    voiceCrossingMax: 2, consonanceRatio: 0.80,
+    maxInterval: 5,
+    stepwiseProb: 0.55,
+    maxLeap: 5,
+    chromaticBudget: [2, 4],
+    chromaticProb: 0.15,
+    syncopationProb: 0.22,
+    tripletBudget: [0, 0],
+    tripletProb: 0,
+    tieProb: 0.25,
+    restProb: 0.2,
+    dottedProb: 0.3,
+    contraryMotionRatio: 0.65,
+    bassIndependence: 0.75,
+    voiceCrossingMax: 2,
+    consonanceRatio: 0.8,
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive'],
     maxTraps: 2,
   },
   // ── L9: 셋잇단 ──
   advanced_3: {
-    maxInterval: 5, stepwiseProb: 0.50, maxLeap: 5,
-    chromaticBudget: [2, 4], chromaticProb: 0.15,
-    syncopationProb: 0.26, tripletBudget: [1, 3], tripletProb: 0.50,
-    tieProb: 0.25, restProb: 0.20, dottedProb: 0.30,
-    contraryMotionRatio: 0.65, bassIndependence: 0.85,
-    voiceCrossingMax: 2, consonanceRatio: 0.78,
+    maxInterval: 5,
+    stepwiseProb: 0.5,
+    maxLeap: 5,
+    chromaticBudget: [2, 4],
+    chromaticProb: 0.15,
+    syncopationProb: 0.26,
+    tripletBudget: [1, 3],
+    tripletProb: 0.5,
+    tieProb: 0.25,
+    restProb: 0.2,
+    dottedProb: 0.3,
+    contraryMotionRatio: 0.65,
+    bassIndependence: 0.85,
+    voiceCrossingMax: 2,
+    consonanceRatio: 0.78,
     cadenceType: ['perfect', 'half', 'plagal', 'deceptive', 'cadential64'],
     maxTraps: 3,
   },
@@ -225,7 +310,12 @@ export function lastNonRestMelody(notes: ScoreNote[]): ScoreNote | null {
   return null;
 }
 
-export function samePitchHeight(a: ScoreNote, pitch: PitchName, octave: number, accidental: Accidental): boolean {
+export function samePitchHeight(
+  a: ScoreNote,
+  pitch: PitchName,
+  octave: number,
+  accidental: Accidental,
+): boolean {
   return a.pitch === pitch && a.octave === octave && a.accidental === accidental;
 }
 
@@ -245,8 +335,12 @@ export function tryInsertTriplet(
   for (let k = 0; k < 3; k++) {
     const { pitch, octave } = pitchFn(k);
     notes.push({
-      id: uid(), pitch, octave, accidental: '' as Accidental,
-      duration: '8', tie: false,
+      id: uid(),
+      pitch,
+      octave,
+      accidental: '' as Accidental,
+      duration: '8',
+      tie: false,
       // tupletNoteDur: [2, 1, 1] — 합계 4 (4분음표 span)
       ...(k === 0
         ? { tuplet: '3' as const, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
@@ -276,7 +370,13 @@ export function cleanupBrokenAccidentals(
 ): void {
   // §2.3 베이스 협화 검사용: 오프셋 → 베이스 MIDI 매핑
   const trebleOffsets: number[] = [];
-  { let off = 0; for (const tn of notes) { trebleOffsets.push(off); off += tn.tupletNoteDur ?? durationToSixteenths(tn.duration); } }
+  {
+    let off = 0;
+    for (const tn of notes) {
+      trebleOffsets.push(off);
+      off += tn.tupletNoteDur ?? durationToSixteenths(tn.duration);
+    }
+  }
 
   let bassMidiAt: ((off: number) => number) | null = null;
   if (bassNotes && bassNotes.length > 0) {
@@ -291,7 +391,8 @@ export function cleanupBrokenAccidentals(
     bassMidiAt = (tOff: number) => {
       let best = 0;
       for (const e of bassEntries) {
-        if (e.off <= tOff) best = e.midi; else break;
+        if (e.off <= tOff) best = e.midi;
+        else break;
       }
       return best;
     };
@@ -305,8 +406,7 @@ export function cleanupBrokenAccidentals(
     // ── 인접 동일 임시표: 직전 음과 같은 음+임시표면 두 번째 제거 ──
     if (i > 0) {
       const prev = notes[i - 1];
-      if (prev.pitch === n.pitch && prev.octave === n.octave &&
-          prev.accidental === n.accidental) {
+      if (prev.pitch === n.pitch && prev.octave === n.octave && prev.accidental === n.accidental) {
         notes[i] = { ...n, accidental: '' as Accidental };
         continue;
       }
@@ -318,7 +418,7 @@ export function cleanupBrokenAccidentals(
     if (bassMidiAt) {
       const bassMidi = bassMidiAt(trebleOffsets[i]);
       if (bassMidi > 0) {
-        const iv = ((curMidi - bassMidi) % 12 + 12) % 12;
+        const iv = (((curMidi - bassMidi) % 12) + 12) % 12;
         const absDist = Math.abs(curMidi - bassMidi);
         if (iv === 1 || iv === 11 || absDist === 13) {
           notes[i] = { ...n, accidental: '' as Accidental };
@@ -445,9 +545,17 @@ export function fixTritoneleaps(
       const candNn = curNn + delta;
       if (candNn < 0) continue;
       const cand = noteNumToNote(candNn, scale, baseOctave);
-      const candMidi = noteToMidiWithKey(makeNote(cand.pitch, cand.octave, cur.duration), keySignature);
+      const candMidi = noteToMidiWithKey(
+        makeNote(cand.pitch, cand.octave, cur.duration),
+        keySignature,
+      );
       if (Math.abs(candMidi - prevMidi) !== 6 && cand.octave >= 2 && cand.octave <= 6) {
-        notes[i] = { ...cur, pitch: cand.pitch as PitchName, octave: cand.octave, accidental: '' as Accidental };
+        notes[i] = {
+          ...cur,
+          pitch: cand.pitch as PitchName,
+          octave: cand.octave,
+          accidental: '' as Accidental,
+        };
         break;
       }
     }
@@ -468,7 +576,10 @@ export function fixConsecutiveRepeats(
   // 종지 마디 마지막 음은 으뜸음이므로 교체 금지
   let lastMelodicIdx = -1;
   for (let k = notes.length - 1; k >= 0; k--) {
-    if (notes[k].pitch !== 'rest') { lastMelodicIdx = k; break; }
+    if (notes[k].pitch !== 'rest') {
+      lastMelodicIdx = k;
+      break;
+    }
   }
 
   const MAX_REPEAT = 2; // 최대 허용 연속 동일음 (2 = 타이 1쌍)
@@ -476,8 +587,10 @@ export function fixConsecutiveRepeats(
   for (let i = 1; i <= notes.length; i++) {
     const prev = notes[i - 1];
     const cur = i < notes.length ? notes[i] : null;
-    const same = cur &&
-      cur.pitch !== 'rest' && prev.pitch !== 'rest' &&
+    const same =
+      cur &&
+      cur.pitch !== 'rest' &&
+      prev.pitch !== 'rest' &&
       noteToMidiWithKey(cur, keySignature) === noteToMidiWithKey(prev, keySignature);
     if (same) continue;
 
@@ -502,9 +615,18 @@ export function fixConsecutiveRepeats(
         const upMidi = noteToMidiWithKey(makeNote(up.pitch, up.octave, n.duration), keySignature);
         const dnMidi = noteToMidiWithKey(makeNote(dn.pitch, dn.octave, n.duration), keySignature);
         // 이전 음과 다른 방향 우선
-        const target = (upMidi !== baseMidi && up.octave <= 5) ? up
-          : (dnMidi !== baseMidi && dn.octave >= 2) ? dn : up;
-        notes[j] = { ...n, pitch: target.pitch as PitchName, octave: target.octave, accidental: '' as Accidental };
+        const target =
+          upMidi !== baseMidi && up.octave <= 5
+            ? up
+            : dnMidi !== baseMidi && dn.octave >= 2
+              ? dn
+              : up;
+        notes[j] = {
+          ...n,
+          pitch: target.pitch as PitchName,
+          octave: target.octave,
+          accidental: '' as Accidental,
+        };
       }
     }
     runStart = i;
@@ -522,9 +644,14 @@ export function fixConsecutiveRepeats(
  * 해당 베이스 음을 근음(1도)으로 교체하여 해결.
  */
 export function fixMinorCrossRelation(
-  treble: ScoreNote[], bass: ScoreNote[],
-  scale: PitchName[], seventhDeg: PitchName, leadingAcc: Accidental,
-  bassBase: number, keySignature: string, sixteenthsPerBar: number,
+  treble: ScoreNote[],
+  bass: ScoreNote[],
+  scale: PitchName[],
+  seventhDeg: PitchName,
+  leadingAcc: Accidental,
+  bassBase: number,
+  keySignature: string,
+  sixteenthsPerBar: number,
 ): void {
   if (!leadingAcc || bass.length === 0) return;
 
@@ -557,7 +684,7 @@ export function fixMinorCrossRelation(
     if (ba.note.pitch !== seventhDeg || ba.note.accidental !== '') continue;
     // 동시 또는 인접 박자 확인
     const beatLen = sixteenthsPerBar >= 12 ? 6 : 4; // 복합박자 6, 단순박자 4
-    const hasCrossRelation = [...raisedOffsets].some(ro => Math.abs(ro - ba.offset) <= beatLen);
+    const hasCrossRelation = [...raisedOffsets].some((ro) => Math.abs(ro - ba.offset) <= beatLen);
     if (!hasCrossRelation) continue;
     // 근음으로 교체
     const { octave } = noteNumToNote(0, scale, bassBase);
@@ -578,11 +705,12 @@ export function generateCadenceMeasure(
   keySignature: string,
 ): { treble: ScoreNote[]; bass: ScoreNote[] } {
   const tonicPitch = scale[0];
-  const bassDeg    = noteNumToNote(0, scale, bassBase);
+  const bassDeg = noteNumToNote(0, scale, bassBase);
   let bassOctave = Math.max(2, Math.min(3, bassDeg.octave));
 
-  const canUsePatternB = sixteenthsPerBar >= 16 && !!SIXTEENTHS_TO_DUR[12] && !!SIXTEENTHS_TO_DUR[4];
-  const usePatternB    = canUsePatternB && Math.random() < 0.5;
+  const canUsePatternB =
+    sixteenthsPerBar >= 16 && !!SIXTEENTHS_TO_DUR[12] && !!SIXTEENTHS_TO_DUR[4];
+  const usePatternB = canUsePatternB && Math.random() < 0.5;
 
   // 종지 음가 선택: 음표+쉼표 모두 SIXTEENTHS_TO_DUR에 매핑 가능해야 함
   let noteSixteenths: number;
@@ -593,7 +721,11 @@ export function generateCadenceMeasure(
     noteSixteenths = Math.min(8, sixteenthsPerBar);
     const candidateNotes = [8, 6, 4, 12];
     for (const c of candidateNotes) {
-      if (c <= sixteenthsPerBar && SIXTEENTHS_TO_DUR[c] && SIXTEENTHS_TO_DUR[sixteenthsPerBar - c]) {
+      if (
+        c <= sixteenthsPerBar &&
+        SIXTEENTHS_TO_DUR[c] &&
+        SIXTEENTHS_TO_DUR[sixteenthsPerBar - c]
+      ) {
         noteSixteenths = c;
         break;
       }
@@ -626,8 +758,15 @@ export function generateCadenceMeasure(
   }
 
   // 쉼표 분할 헬퍼: SIXTEENTHS_TO_DUR에 없는 길이를 여러 쉼표로 분할
-  const SPLIT_RESTS: [number, string][] = [
-    [16, '1'], [12, '2.'], [8, '2'], [6, '4.'], [4, '4'], [3, '8.'], [2, '8'], [1, '16'],
+  const SPLIT_RESTS: [number, NoteDuration][] = [
+    [16, '1'],
+    [12, '2.'],
+    [8, '2'],
+    [6, '4.'],
+    [4, '4'],
+    [3, '8.'],
+    [2, '8'],
+    [1, '16'],
   ];
   function makeRests(totalSixteenths: number): ScoreNote[] {
     if (totalSixteenths <= 0) return [];
@@ -639,7 +778,7 @@ export function generateCadenceMeasure(
     while (rem > 0) {
       const entry = SPLIT_RESTS.find(([s]) => s <= rem);
       if (!entry) break;
-      rests.push(makeRest(entry[1] as any));
+      rests.push(makeRest(entry[1]));
       rem -= entry[0];
     }
     return rests;
@@ -729,14 +868,21 @@ export function applyInternalRests(
   // 쉼표 예산: L1=0, L2~L4=최대1, L5+=최대2
   const maxBudget = lvl === 1 ? 0 : lvl <= 4 ? 1 : 2;
   // 0~maxBudget 범위 (0이면 쉼표 없음 → ~50% 확률로 쉼표 삽입)
-  const budget = maxBudget === 0 || params.restProb === 0
-    ? 0
-    : Math.floor(Math.random() * (maxBudget + 1));
+  const budget =
+    maxBudget === 0 || params.restProb === 0 ? 0 : Math.floor(Math.random() * (maxBudget + 1));
   if (budget === 0) return;
 
   type NotePos = { noteIdx: number; bar: number; offset: number; dur: number };
   const sizMap: Record<NoteDuration, number> = {
-    '1': 16, '1.': 24, '2': 8, '2.': 12, '4': 4, '4.': 6, '8': 2, '8.': 3, '16': 1,
+    '1': 16,
+    '1.': 24,
+    '2': 8,
+    '2.': 12,
+    '4': 4,
+    '4.': 6,
+    '8': 2,
+    '8.': 3,
+    '16': 1,
   };
 
   const timeline: NotePos[] = [];
@@ -744,14 +890,13 @@ export function applyInternalRests(
   let tupletRemain = 0;
   let tupletActualTotal = 0;
   let tupletNoteIdx = 0;
-  let tupletCount = 0;
   for (let i = 0; i < treble.length; i++) {
     const note = treble[i];
     let dur: number;
 
     if (note.tuplet) {
       // 셋잇단 그룹 시작: 실제 재생 시간으로 계산
-      tupletCount = parseInt(note.tuplet, 10);
+      const tupletCount = parseInt(note.tuplet, 10);
       const spanDur = note.tupletSpan || note.duration;
       tupletActualTotal = getTupletActualSixteenths(note.tuplet, spanDur);
       tupletRemain = tupletCount;
@@ -768,7 +913,12 @@ export function applyInternalRests(
       dur = sizMap[note.duration] ?? 4;
     }
 
-    timeline.push({ noteIdx: i, bar: Math.floor(pos / sixteenthsPerBar), offset: pos % sixteenthsPerBar, dur });
+    timeline.push({
+      noteIdx: i,
+      bar: Math.floor(pos / sixteenthsPerBar),
+      offset: pos % sixteenthsPerBar,
+      dur,
+    });
     pos += dur;
   }
 
@@ -795,26 +945,29 @@ export function applyInternalRests(
 
   const isRest = (idx: number) => treble[idx]?.pitch === 'rest';
 
-  let candidates: NotePos[] = [];
+  let candidates: NotePos[];
 
   if (lvl <= 2) {
     // L2: 4분음표 + 점4분음표, 약박 위치
-    candidates = timeline.filter((p, idx) =>
-      (p.dur === 4 || p.dur === 6) &&
-      (p.offset === 4 || p.offset === 12) &&
-      !isRest(p.noteIdx) &&
-      !inTuplet.has(p.noteIdx) &&
-      !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&
-      !isRest(timeline[idx + 1]?.noteIdx ?? -1)
+    candidates = timeline.filter(
+      (p, idx) =>
+        (p.dur === 4 || p.dur === 6) &&
+        (p.offset === 4 || p.offset === 12) &&
+        !isRest(p.noteIdx) &&
+        !inTuplet.has(p.noteIdx) &&
+        !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&
+        !isRest(timeline[idx + 1]?.noteIdx ?? -1),
     );
   } else {
     // 중급·고급: 4분 쉼표 + 점4분 쉼표 + 8분 쉼표 (정박만)
-    const quarterCandidates = timeline.filter((p, idx) =>
-      (p.dur === 4 || p.dur === 6) &&
-      (p.offset === 4 || p.offset === 12) &&
-      !isRest(p.noteIdx) && !inTuplet.has(p.noteIdx) &&
-      !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&
-      !isRest(timeline[idx + 1]?.noteIdx ?? -1)
+    const quarterCandidates = timeline.filter(
+      (p, idx) =>
+        (p.dur === 4 || p.dur === 6) &&
+        (p.offset === 4 || p.offset === 12) &&
+        !isRest(p.noteIdx) &&
+        !inTuplet.has(p.noteIdx) &&
+        !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&
+        !isRest(timeline[idx + 1]?.noteIdx ?? -1),
     );
     // 8분 쉼표: 정박(박 머리) 위치에서만 허용 — 엇박 8분 쉼표 방지
     const eighthCandidates = timeline.filter((p, idx) => {
@@ -823,16 +976,19 @@ export function applyInternalRests(
       if (p.bar === 0 && p.offset === 0) return false; // 첫 마디 첫 박 제외
       const next = timeline[idx + 1];
       if (!next || next.dur !== 2) return false;
-      return !isRest(p.noteIdx) && !inTuplet.has(p.noteIdx) &&
-        !isRest(timeline[idx - 1]?.noteIdx ?? -1) && !isRest(next.noteIdx);
+      return (
+        !isRest(p.noteIdx) &&
+        !inTuplet.has(p.noteIdx) &&
+        !isRest(timeline[idx - 1]?.noteIdx ?? -1) &&
+        !isRest(next.noteIdx)
+      );
     });
     // 8분 쉼표 비중을 높여 실제 선택 확률 확보 (1:2)
     candidates = [...quarterCandidates, ...eighthCandidates, ...eighthCandidates];
   }
 
-  candidates = candidates.filter(p =>
-    p.bar < measures - 1 &&
-    !bassRestAt.has(`${p.bar}_${p.offset}`)
+  candidates = candidates.filter(
+    (p) => p.bar < measures - 1 && !bassRestAt.has(`${p.bar}_${p.offset}`),
   );
 
   if (candidates.length === 0) return;
@@ -866,9 +1022,13 @@ export function applyInternalRests(
  * 금지 음정이면 nn을 ±1 조정하여 회피.
  */
 export function fixForbiddenInterval(
-  nn: number, prevNn: number,
-  scale: PitchName[], baseOctave: number, keySignature: string,
-  rangeMin: number, rangeMax: number,
+  nn: number,
+  prevNn: number,
+  scale: PitchName[],
+  baseOctave: number,
+  keySignature: string,
+  rangeMin: number,
+  rangeMax: number,
 ): number {
   const nnDist = Math.abs(nn - prevNn);
   if (nnDist === 0) return nn;
@@ -900,9 +1060,13 @@ export function fixForbiddenInterval(
  * isInTriadChain이면 예외 (Rule 3 트라이어드 진행 중).
  */
 export function applyGapFill(
-  nn: number, prevNn: number, prevInterval: number, prevDir: number,
+  nn: number,
+  prevNn: number,
+  prevInterval: number,
+  prevDir: number,
   isInTriadChain: boolean,
-  rangeMin: number, rangeMax: number,
+  rangeMin: number,
+  rangeMax: number,
 ): number {
   if (isInTriadChain) return nn;
   if (Math.abs(prevInterval) < 4) return nn;
@@ -915,11 +1079,16 @@ export function applyGapFill(
 export function isTriadSubset(degrees: number[]): boolean {
   // 7개 온음계 3화음: I(0,2,4) ii(1,3,5) iii(2,4,6) IV(3,5,0) V(4,6,1) vi(5,0,2) vii°(6,1,3)
   const triads = [
-    [0, 2, 4], [1, 3, 5], [2, 4, 6],
-    [0, 3, 5], [1, 4, 6], [0, 2, 5], [1, 3, 6],
+    [0, 2, 4],
+    [1, 3, 5],
+    [2, 4, 6],
+    [0, 3, 5],
+    [1, 4, 6],
+    [0, 2, 5],
+    [1, 3, 6],
   ];
-  const degSet = new Set(degrees.map(d => ((d % 7) + 7) % 7));
-  return triads.some(t => {
+  const degSet = new Set(degrees.map((d) => ((d % 7) + 7) % 7));
+  return triads.some((t) => {
     const ts = new Set(t);
     for (const d of degSet) {
       if (!ts.has(d)) return false;
@@ -933,7 +1102,9 @@ export function isTriadSubset(degrees: number[]): boolean {
  * 트라이어드 미형성 시 순차로 전환.
  */
 export function checkConsecutiveLeapTriad(
-  nn: number, prevNn: number, interval: number,
+  nn: number,
+  prevNn: number,
+  interval: number,
   leapNotes: number[],
 ): { nn: number; isTriadChain: boolean; leapNotes: number[] } {
   const isLeap = Math.abs(interval) >= 2;
@@ -958,7 +1129,9 @@ export function checkConsecutiveLeapTriad(
  * Rule 4: 경향음 해결 — 이끔음(7도)→으뜸음, 버금딸림음(4도)→가온음.
  */
 export function applyTendencyResolution(
-  nn: number, prevNn: number, isCadenceContext: boolean,
+  nn: number,
+  prevNn: number,
+  isCadenceContext: boolean,
 ): number {
   const prevDeg = ((prevNn % 7) + 7) % 7;
   // 이끔음 (스케일 7도 = deg index 6) → 으뜸음으로 상행
@@ -968,7 +1141,7 @@ export function applyTendencyResolution(
   }
   // 버금딸림음 (스케일 4도 = deg index 3) → 가온음으로 하행
   if (prevDeg === 3) {
-    if (Math.random() < 0.60) return prevNn - 1;
+    if (Math.random() < 0.6) return prevNn - 1;
   }
   return nn;
 }
@@ -977,7 +1150,9 @@ export function applyTendencyResolution(
  * Rule 5: 단일 정점 — 4마디 프레이즈 내 최고음은 정점 위치에서만 허용.
  */
 export function enforcePeakNote(
-  nn: number, bar: number, barPos: number,
+  nn: number,
+  bar: number,
+  barPos: number,
   peak: { bar: number; peakNn: number },
 ): number {
   const atPeak = bar === peak.bar && barPos === 0;
@@ -991,4 +1166,3 @@ export function enforcePeakNote(
   }
   return nn;
 }
-

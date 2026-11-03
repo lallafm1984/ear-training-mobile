@@ -3,13 +3,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useEffect, useRef } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  RotateCcw, Home, Trophy, TrendingUp,
-} from 'lucide-react-native';
+import { RotateCcw, Home, Trophy, TrendingUp } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -44,10 +40,9 @@ export default function ExamResultScreen() {
   const categoryScores: Record<string, { score: number; max: number; count: number }> =
     JSON.parse(categoryScoresStr);
 
-
   // AsyncStorage에 시험 결과 저장 (1회)
   useEffect(() => {
-    if (savedRef.current) return;
+    if (!user || savedRef.current) return;
     savedRef.current = true;
 
     const record = {
@@ -62,14 +57,13 @@ export default function ExamResultScreen() {
       completed_at: new Date().toISOString(),
     };
 
-    if (!user) return;
     const examKey = `@melodygen_exam_sessions_${user.id}`;
-    AsyncStorage.getItem(examKey).then(raw => {
+    AsyncStorage.getItem(examKey).then((raw) => {
       const existing = raw ? JSON.parse(raw) : [];
       const updated = [record, ...existing].slice(0, 50);
       AsyncStorage.setItem(examKey, JSON.stringify(updated));
     });
-  }, [user]);
+  }, [categoryScores, elapsedSeconds, maxScore, presetId, title, totalQuestions, totalScore, user]);
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
@@ -101,7 +95,10 @@ export default function ExamResultScreen() {
         {/* 점수 원형 */}
         <View style={[styles.scoreCircle, { borderColor: grade.color }]}>
           <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}{t('common:unit.score')}</Text>
+          <Text style={[styles.scorePercent, { color: grade.color }]}>
+            {percentage}
+            {t('common:unit.score')}
+          </Text>
           <Text style={styles.scoreFraction}>{t('exam:result.totalScore')}</Text>
         </View>
 
@@ -110,7 +107,10 @@ export default function ExamResultScreen() {
         {/* 통계 요약 */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalQuestions}{t('exam:result.questions')}</Text>
+            <Text style={styles.statValue}>
+              {totalQuestions}
+              {t('exam:result.questions')}
+            </Text>
             <Text style={styles.statLabel}>{t('exam:result.totalQuestions')}</Text>
           </View>
           <View style={[styles.statItem, styles.statBorder]}>
@@ -133,7 +133,10 @@ export default function ExamResultScreen() {
                   <View style={[styles.catDot, { backgroundColor: colors.main }]} />
                   <View>
                     <Text style={styles.catName}>{t('content:category.' + cat + '.name')}</Text>
-                    <Text style={styles.catCount}>{data.count}{t('exam:result.questions')}</Text>
+                    <Text style={styles.catCount}>
+                      {data.count}
+                      {t('exam:result.questions')}
+                    </Text>
                   </View>
                 </View>
 
@@ -163,12 +166,11 @@ export default function ExamResultScreen() {
               <Text style={styles.tipTitle}>{t('exam:result.tipTitle')}</Text>
               <Text style={styles.tipText}>
                 {(() => {
-                  const weakest = Object.entries(categoryScores)
-                    .sort(([, a], [, b]) => {
-                      const diff = (a.score / a.max) - (b.score / b.max);
-                      if (diff !== 0) return diff;
-                      return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
-                    })[0];
+                  const weakest = Object.entries(categoryScores).sort(([, a], [, b]) => {
+                    const diff = a.score / a.max - b.score / b.max;
+                    if (diff !== 0) return diff;
+                    return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
+                  })[0];
                   if (!weakest) return t('exam:result.tipDefault');
                   const catName = t('content:category.' + weakest[0] + '.name');
                   return t('exam:result.tipWeak', { category: catName });
@@ -194,7 +196,9 @@ export default function ExamResultScreen() {
           onPress={() => navigation.navigate('Home')}
         >
           <Home size={18} color={COLORS.slate700} />
-          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>{t('exam:result.goHome')}</Text>
+          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>
+            {t('exam:result.goHome')}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

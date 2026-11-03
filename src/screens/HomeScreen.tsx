@@ -4,12 +4,16 @@
 
 import React, { useMemo, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  UserCircle, Flame, Target, Crown, BarChart3, Trophy,
-} from 'lucide-react-native';
+import { UserCircle, Flame, Target, Crown, BarChart3, Trophy } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +27,6 @@ import { COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
-
 import CategoryCard from '../components/CategoryCard';
 import RecentActivityList from '../components/RecentActivityList';
 import MascotCharacter from '../components/MascotCharacter';
@@ -33,13 +36,12 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
-
 export default function HomeScreen() {
   const { t } = useTranslation(['home', 'common']);
   const navigation = useNavigation<NavProp>();
   const { profile } = useAuth();
   const { tier } = useSubscription();
-  const { profile: skillProfile } = useSkillProfile();
+  const { profile: _skillProfile } = useSkillProfile();
   const { stats, loaded, reload } = usePracticeHistory();
   const { level: mascotLevel } = useMascotExp();
 
@@ -62,8 +64,11 @@ export default function HomeScreen() {
   const todayGoalDone = useMemo(() => {
     const todayStr = new Date().toDateString();
     const cats = new Set<ContentCategory>();
-    stats.recentRecords.forEach(r => {
-      if (new Date(r.practicedAt).toDateString() === todayStr && GOAL_CATEGORIES.includes(r.contentType)) {
+    stats.recentRecords.forEach((r) => {
+      if (
+        new Date(r.practicedAt).toDateString() === todayStr &&
+        GOAL_CATEGORIES.includes(r.contentType)
+      ) {
         cats.add(r.contentType);
       }
     });
@@ -79,7 +84,10 @@ export default function HomeScreen() {
 
   if (!loaded) {
     return (
-      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}
+        edges={['top', 'bottom']}
+      >
         <ActivityIndicator size="large" color={COLORS.primary500} />
       </SafeAreaView>
     );
@@ -91,9 +99,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { paddingTop: 4 }]}>
         <View>
           <Text style={styles.appName}>MelodyGen</Text>
-          <Text style={styles.greeting}>
-            {t('home:greeting.hello', { name: displayName })}
-          </Text>
+          <Text style={styles.greeting}>{t('home:greeting.hello', { name: displayName })}</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
@@ -107,22 +113,18 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <Crown size={12} color={tier === 'pro' ? COLORS.primary500 : COLORS.slate400} />
-            <Text style={[
-              styles.tierText,
-              { color: tier === 'pro' ? COLORS.primary500 : COLORS.slate500 },
-            ]}>
+            <Text
+              style={[
+                styles.tierText,
+                { color: tier === 'pro' ? COLORS.primary500 : COLORS.slate500 },
+              ]}
+            >
               {tier === 'pro' ? 'Pro' : 'Free'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Profile')}
-            hitSlop={8}
-          >
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} hitSlop={8}>
             {profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_url }}
-                style={styles.avatarImage}
-              />
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
             ) : (
               <UserCircle size={32} color={COLORS.slate500} />
             )}
@@ -162,9 +164,7 @@ export default function HomeScreen() {
             onPress={handleDailyGoal}
             activeOpacity={0.7}
           >
-            {dailyDone
-              ? <Trophy size={24} color="#f59e0b" />
-              : <Flame size={24} color="#ea580c" />}
+            {dailyDone ? <Trophy size={24} color="#f59e0b" /> : <Flame size={24} color="#ea580c" />}
             <Text style={[styles.actionTitle, { color: dailyDone ? '#065f46' : '#9a3412' }]}>
               {dailyDone ? t('home:action.dailyDone') : t('home:action.dailyGoal')}
             </Text>
@@ -179,7 +179,9 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <Target size={24} color={COLORS.amber600} />
-            <Text style={[styles.actionTitle, { color: COLORS.amber800 }]}>{t('home:action.mockExam')}</Text>
+            <Text style={[styles.actionTitle, { color: COLORS.amber800 }]}>
+              {t('home:action.mockExam')}
+            </Text>
             <Text style={styles.actionDesc}>{t('home:action.mockExamDesc')}</Text>
           </TouchableOpacity>
 

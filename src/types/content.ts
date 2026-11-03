@@ -43,38 +43,46 @@ export interface ContentTypeConfig {
 
 /** 선율 난이도 (기존 9단계) */
 export type MelodyDifficulty =
-  | 'beginner_1' | 'beginner_2' | 'beginner_3'
-  | 'intermediate_1' | 'intermediate_2' | 'intermediate_3'
-  | 'advanced_1' | 'advanced_2' | 'advanced_3';
+  | 'beginner_1'
+  | 'beginner_2'
+  | 'beginner_3'
+  | 'intermediate_1'
+  | 'intermediate_2'
+  | 'intermediate_3'
+  | 'advanced_1'
+  | 'advanced_2'
+  | 'advanced_3';
 
 /** 마디 받아쓰기 난이도 (음정 폭/반음 기준 6단계) */
-export type BarMelodyDifficulty =
-  | 'bar_1' | 'bar_2' | 'bar_3' | 'bar_4' | 'bar_5' | 'bar_6';
+export type BarMelodyDifficulty = 'bar_1' | 'bar_2' | 'bar_3' | 'bar_4' | 'bar_5' | 'bar_6';
 
 /** 리듬 난이도 (6단계) */
 export type RhythmDifficulty =
-  | 'rhythm_1' | 'rhythm_2' | 'rhythm_3'
-  | 'rhythm_4' | 'rhythm_5' | 'rhythm_6';
+  | 'rhythm_1'
+  | 'rhythm_2'
+  | 'rhythm_3'
+  | 'rhythm_4'
+  | 'rhythm_5'
+  | 'rhythm_6';
 
 /** 음정 듣기 난이도 (4단계) */
-export type IntervalDifficulty =
-  | 'interval_1' | 'interval_2' | 'interval_3' | 'interval_4';
+export type IntervalDifficulty = 'interval_1' | 'interval_2' | 'interval_3' | 'interval_4';
 
 /** 화성 듣기 난이도 (3단계) */
-export type ChordDifficulty =
-  | 'chord_2' | 'chord_3' | 'chord_4';
+export type ChordDifficulty = 'chord_2' | 'chord_3' | 'chord_4';
 
 /** 화성 진행 난이도 (4단계) */
 export type ProgressionDifficulty =
-  | 'progression_1' | 'progression_2' | 'progression_3' | 'progression_4';
+  | 'progression_1'
+  | 'progression_2'
+  | 'progression_3'
+  | 'progression_4';
 
 /** 조성 판별 난이도 (3단계) */
-export type KeyDifficulty =
-  | 'key_1' | 'key_2' | 'key_3';
+export type KeyDifficulty = 'key_1' | 'key_2' | 'key_3';
 
 /** 2성부 난이도 (기존 bass_1~4) */
-export type TwoVoiceDifficulty =
-  | 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4';
+export type TwoVoiceDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4';
 
 /** 통합 난이도 타입 */
 export type ContentDifficulty =

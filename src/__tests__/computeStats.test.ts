@@ -60,10 +60,10 @@ describe('computeStats', () => {
 
   it('주간/월간 카운트: 오래된 기록 제외', () => {
     const records = [
-      makeRecord('melody', 3, 0),   // 오늘 → 주간O 월간O
-      makeRecord('melody', 3, 5),   // 5일 전 → 주간O 월간O
-      makeRecord('melody', 3, 10),  // 10일 전 → 주간X 월간O
-      makeRecord('melody', 3, 40),  // 40일 전 → 주간X 월간X
+      makeRecord('melody', 3, 0), // 오늘 → 주간O 월간O
+      makeRecord('melody', 3, 5), // 5일 전 → 주간O 월간O
+      makeRecord('melody', 3, 10), // 10일 전 → 주간X 월간O
+      makeRecord('melody', 3, 40), // 40일 전 → 주간X 월간X
     ];
     const stats = computeStats(records);
     expect(stats.weeklyCount).toBe(2);
@@ -71,9 +71,7 @@ describe('computeStats', () => {
   });
 
   it('recentRecords: 최대 20개', () => {
-    const records = Array.from({ length: 30 }, (_, i) =>
-      makeRecord('melody', 3, i),
-    );
+    const records = Array.from({ length: 30 }, (_, i) => makeRecord('melody', 3, i));
     const stats = computeStats(records);
     expect(stats.recentRecords).toHaveLength(20);
   });

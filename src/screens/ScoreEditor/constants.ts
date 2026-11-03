@@ -1,9 +1,5 @@
-import type {
-  NoteDuration, Accidental, PitchName,
-} from '../../lib';
-import type {
-  Difficulty, DifficultyCategory, BassDifficulty,
-} from '../../lib';
+import type { NoteDuration, Accidental, PitchName } from '../../lib';
+import type { Difficulty, DifficultyCategory, BassDifficulty } from '../../lib';
 
 // ── 음표 길이 ──
 export const DURATIONS: { value: NoteDuration; label: string }[] = [
@@ -26,7 +22,13 @@ export const ACCIDENTALS: { value: Accidental; label: string }[] = [
 export const PITCHES: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
 export const PITCH_LABELS: Record<string, string> = {
-  C: '도', D: '레', E: '미', F: '파', G: '솔', A: '라', B: '시',
+  C: '도',
+  D: '레',
+  E: '미',
+  F: '파',
+  G: '솔',
+  A: '라',
+  B: '시',
 };
 
 export const PITCH_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -41,9 +43,15 @@ export const PITCH_STYLES: Record<string, { bg: string; text: string; border: st
 
 // ── 난이도 라벨 ──
 export const DIFF_LABELS: Record<Difficulty, string> = {
-  beginner_1: '초급 1', beginner_2: '초급 2', beginner_3: '초급 3',
-  intermediate_1: '중급 1', intermediate_2: '중급 2', intermediate_3: '중급 3',
-  advanced_1: '고급 1', advanced_2: '고급 2', advanced_3: '고급 3',
+  beginner_1: '초급 1',
+  beginner_2: '초급 2',
+  beginner_3: '초급 3',
+  intermediate_1: '중급 1',
+  intermediate_2: '중급 2',
+  intermediate_3: '중급 3',
+  advanced_1: '고급 1',
+  advanced_2: '고급 2',
+  advanced_3: '고급 3',
 };
 
 export const DIFF_DESC: Record<Difficulty, string> = {
@@ -59,32 +67,64 @@ export const DIFF_DESC: Record<Difficulty, string> = {
 };
 
 export const DIFF_CATEGORY_LABELS: Record<DifficultyCategory, string> = {
-  beginner: '초급', intermediate: '중급', advanced: '고급',
+  beginner: '초급',
+  intermediate: '중급',
+  advanced: '고급',
 };
 
-export const DIFF_CATEGORY_COLORS: Record<DifficultyCategory, { bg: string; text: string; activeBg: string }> = {
+export const DIFF_CATEGORY_COLORS: Record<
+  DifficultyCategory,
+  { bg: string; text: string; activeBg: string }
+> = {
   beginner: { bg: '#ecfdf5', text: '#065f46', activeBg: '#10b981' },
   intermediate: { bg: '#fef9c3', text: '#854d0e', activeBg: '#f59e0b' },
   advanced: { bg: '#fee2e2', text: '#991b1b', activeBg: '#ef4444' },
 };
 
 export const ALL_DIFFICULTIES: Difficulty[] = [
-  'beginner_1', 'beginner_2', 'beginner_3',
-  'intermediate_1', 'intermediate_2', 'intermediate_3',
-  'advanced_1', 'advanced_2', 'advanced_3',
+  'beginner_1',
+  'beginner_2',
+  'beginner_3',
+  'intermediate_1',
+  'intermediate_2',
+  'intermediate_3',
+  'advanced_1',
+  'advanced_2',
+  'advanced_3',
 ];
 
-export const ALL_BASS_DIFFICULTIES: BassDifficulty[] = [
-  'bass_1', 'bass_2', 'bass_3', 'bass_4',
-];
+export const ALL_BASS_DIFFICULTIES: BassDifficulty[] = ['bass_1', 'bass_2', 'bass_3', 'bass_4'];
 
 // ── 조성 데이터 (types에서 재공급) ──
-export { MAJOR_KEY_SIGNATURES as MAJOR_KEYS, MINOR_KEY_SIGNATURES as MINOR_KEYS, ALL_TIME_SIGNATURES as TIME_SIGNATURES } from '../../types';
+export {
+  MAJOR_KEY_SIGNATURES as MAJOR_KEYS,
+  MINOR_KEY_SIGNATURES as MINOR_KEYS,
+  ALL_TIME_SIGNATURES as TIME_SIGNATURES,
+} from '../../types';
 
 export const KEY_ACCIDENTAL: Record<string, string> = {
-  'C': '', 'G': '♯', 'D': '♯♯', 'A': '♯♯♯', 'E': '4♯', 'B': '5♯', 'F#': '6♯',
-  'F': '♭', 'Bb': '♭♭', 'Eb': '♭♭♭', 'Ab': '4♭', 'Db': '5♭',
-  'Am': '', 'Em': '♯', 'Bm': '♯♯', 'F#m': '♯♯♯', 'C#m': '4♯', 'G#m': '5♯',
-  'Dm': '♭', 'Gm': '♭♭', 'Cm': '♭♭♭', 'Fm': '4♭', 'Bbm': '5♭', 'Ebm': '6♭',
+  C: '',
+  G: '♯',
+  D: '♯♯',
+  A: '♯♯♯',
+  E: '4♯',
+  B: '5♯',
+  'F#': '6♯',
+  F: '♭',
+  Bb: '♭♭',
+  Eb: '♭♭♭',
+  Ab: '4♭',
+  Db: '5♭',
+  Am: '',
+  Em: '♯',
+  Bm: '♯♯',
+  'F#m': '♯♯♯',
+  'C#m': '4♯',
+  'G#m': '5♯',
+  Dm: '♭',
+  Gm: '♭♭',
+  Cm: '♭♭♭',
+  Fm: '4♭',
+  Bbm: '5♭',
+  Ebm: '6♭',
 };
-

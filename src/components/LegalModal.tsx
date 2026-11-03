@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView,
-} from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MONTHLY_PRICE_STRING, getMonthlyPriceString } from '../lib/revenueCat';
@@ -36,7 +34,7 @@ export default function LegalModal({ visible, type, onClose }: LegalModalProps) 
 
     let isMounted = true;
     getMonthlyPriceString()
-      .then(price => {
+      .then((price) => {
         if (isMounted) setPriceString(price);
       })
       .catch(() => {});
@@ -72,12 +70,13 @@ export default function LegalModal({ visible, type, onClose }: LegalModalProps) 
         >
           <Text style={styles.subtitle}>{subtitle}</Text>
 
-          {Array.isArray(sections) && sections.map((s, i) => (
-            <View key={i} style={styles.section}>
-              <Text style={styles.sectionTitle}>{s.title}</Text>
-              <Text style={styles.sectionBody}>{s.body}</Text>
-            </View>
-          ))}
+          {Array.isArray(sections) &&
+            sections.map((s, i) => (
+              <View key={i} style={styles.section}>
+                <Text style={styles.sectionTitle}>{s.title}</Text>
+                <Text style={styles.sectionBody}>{s.body}</Text>
+              </View>
+            ))}
         </ScrollView>
       </View>
     </Modal>

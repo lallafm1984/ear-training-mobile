@@ -2,38 +2,56 @@
 // scoreGenerator barrel — 악보 생성 엔진 진입점
 // ────────────────────────────────────────────────────────────────
 
-export type { Difficulty, BassDifficulty, DifficultyCategory, GeneratorOptions, GeneratedScore } from './types';
+export type {
+  Difficulty,
+  BassDifficulty,
+  DifficultyCategory,
+  GeneratorOptions,
+  GeneratedScore,
+} from './types';
 export { getDifficultyCategory, BASS_DIFF_LABELS, BASS_DIFF_DESC } from './types';
 
-import type { ScoreNote, PitchName, Accidental, NoteDuration } from '../scoreUtils';
+import type { ScoreNote, PitchName, Accidental } from '../scoreUtils';
 import {
-  getSixteenthsPerBar, durationToSixteenths,
-  getKeySigAlteration, getKeySignatureAccidentalCount,
-  getScaleDegrees, SIXTEENTHS_TO_DUR, splitAtBeatBoundaries,
-  nnToMidi, getMidiInterval, isForbiddenMelodicInterval,
-  PITCH_ORDER, getBassBaseOctave, CHORD_TONES,
-  DISSONANT_PC, IMPERFECT_CONSONANT_PC, MIN_TREBLE_BASS_SEMITONES,
-  uid, makeNote, makeRest, noteNumToNote, scaleNoteToNn,
-  buildTrebleAttackMidiMap, passesBassSpacing,
-  chordToneBnnCandidates, snapToChordTone,
-  generateProgression, getStrongBeatOffsets,
-  noteToMidiWithKey, getTupletActualSixteenths,
+  getSixteenthsPerBar,
+  durationToSixteenths,
+  getScaleDegrees,
+  splitAtBeatBoundaries,
+  nnToMidi,
+  PITCH_ORDER,
+  getBassBaseOctave,
+  DISSONANT_PC,
+  IMPERFECT_CONSONANT_PC,
+  MIN_TREBLE_BASS_SEMITONES,
+  makeNote,
+  noteNumToNote,
+  generateProgression,
+  getStrongBeatOffsets,
+  noteToMidiWithKey,
 } from '../scoreUtils';
 
 import type { BassLevel, TimeSignature as TVTimeSignature } from '../twoVoice';
 import { applyCounterpointCorrections, generateTwoVoiceStack } from '../twoVoice';
-import { applyMelodyAccidentals, ensureMinAccidentalBars } from '../twoVoice/chromaticAccidental';
-import { fillRhythm } from '../trebleRhythmFill';
+import { ensureMinAccidentalBars } from '../twoVoice/chromaticAccidental';
 
-import type { Difficulty, BassDifficulty, GeneratorOptions, GeneratedScore } from './types';
-import { difficultyLevel, DURATION_POOL, BASS_LEVEL_PARAMS, LEVEL_PARAMS } from './types';
-import type { LevelParams } from './types';
+import type { GeneratorOptions, GeneratedScore } from './types';
+import { difficultyLevel } from './types';
 
 // Import internal helpers from sub-modules
-import { isMinorKey, getMinorLeadingToneAccidental, mapBassDifficultyToLevel, buildBassAttackMidiMap } from './melodyEngine';
-import { rand, lastNonRestMelody, samePitchHeight, tryInsertTriplet, cleanupBrokenAccidentals, fixTritoneleaps, fixConsecutiveRepeats, fixMinorCrossRelation, generateCadenceMeasure, forceGrandStaffFinalTonic, applyInternalRests, fixForbiddenInterval, applyGapFill, isTriadSubset, checkConsecutiveLeapTriad, applyTendencyResolution, enforcePeakNote } from './melodyEngine';
-import { reviewAndFixScore } from './postProcessing';
-import { generateBassForBar } from './bassEngine';
+import {
+  isMinorKey,
+  getMinorLeadingToneAccidental,
+  mapBassDifficultyToLevel,
+} from './melodyEngine';
+import {
+  cleanupBrokenAccidentals,
+  fixTritoneleaps,
+  fixConsecutiveRepeats,
+  fixMinorCrossRelation,
+  generateCadenceMeasure,
+  forceGrandStaffFinalTonic,
+  applyInternalRests,
+} from './melodyEngine';
 
 // ────────────────────────────────────────────────────────────────
 // Main generator
@@ -44,35 +62,39 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   const bassDifficulty = opts.bassDifficulty;
 
   if (measures < 1) throw new Error('measures must be >= 1');
-  if (!timeSignature || !timeSignature.includes('/')) throw new Error(`Invalid timeSignature: ${timeSignature}`);
-  const scale             = getScaleDegrees(keySignature);
-  const sixteenthsPerBar  = getSixteenthsPerBar(timeSignature);
-  const isMinor           = isMinorKey(keySignature);
-  const progression       = generateProgression(measures, isMinor);
+  if (!timeSignature || !timeSignature.includes('/'))
+    throw new Error(`Invalid timeSignature: ${timeSignature}`);
+  const scale = getScaleDegrees(keySignature);
+  const sixteenthsPerBar = getSixteenthsPerBar(timeSignature);
+  const isMinor = isMinorKey(keySignature);
+  const progression = generateProgression(measures, isMinor);
   /** 단조 7음 (이끔음 올림 대상) — scale[6] */
-  const minorSeventhDeg   = isMinor ? scale[6] : null;
-  const minorLeadingAcc   = isMinor && minorSeventhDeg
-    ? getMinorLeadingToneAccidental(keySignature, minorSeventhDeg) : '' as Accidental;
-  const lvl               = difficultyLevel(difficulty);
+  const minorSeventhDeg = isMinor ? scale[6] : null;
+  const minorLeadingAcc =
+    isMinor && minorSeventhDeg
+      ? getMinorLeadingToneAccidental(keySignature, minorSeventhDeg)
+      : ('' as Accidental);
+  const lvl = difficultyLevel(difficulty);
 
   const trebleNotes: ScoreNote[] = [];
-  const bassNotes:   ScoreNote[] = [];
+  const bassNotes: ScoreNote[] = [];
 
   // 루트가 높은 조(G,A,B 등)에서 wrap 편향으로 옥타브5에 음이 몰리는 현상 보정
   // 1성부: wrapCount >= 4이면 TREBLE_BASE를 3으로 낮춰 한 옥타브 아래에서 시작
   // 2성부: 항상 TREBLE_BASE=4로 고정 (베이스와 충분한 간격 확보)
   const rootIdx = PITCH_ORDER.indexOf(scale[0]);
   const wrapCount = rootIdx;
-  const TREBLE_BASE = useGrandStaff ? 4 : (wrapCount >= 4 ? 3 : 4);
-  const BASS_BASE   = getBassBaseOctave(scale);
+  const TREBLE_BASE = useGrandStaff ? 4 : wrapCount >= 4 ? 3 : 4;
+  const BASS_BASE = getBassBaseOctave(scale);
 
   // 조표의 wrap 보정을 반영한 트레블 실효 최대 nn 계산
   // 2성부: trebleRangeMin이 높아지므로 rawTrebleMax를 확장하여 충분한 음역 확보
-  const rawTrebleMax = useGrandStaff
-    ? (lvl <= 2 ? 11 : 14)
-    : (lvl <= 2 ? 8 : 12);
+  const rawTrebleMax = useGrandStaff ? (lvl <= 2 ? 11 : 14) : lvl <= 2 ? 8 : 12;
   let effectiveTrebleMax = rawTrebleMax;
-  while (effectiveTrebleMax > 0 && noteNumToNote(effectiveTrebleMax, scale, TREBLE_BASE).octave > 5) {
+  while (
+    effectiveTrebleMax > 0 &&
+    noteNumToNote(effectiveTrebleMax, scale, TREBLE_BASE).octave > 5
+  ) {
     effectiveTrebleMax--;
   }
 
@@ -93,11 +115,9 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
   // ── Step A: 베이스 선생성 + 멜로디 생성 (1성부/2성부 공통) ──
   // 1성부도 2성부와 동일하게 베이스를 내부 생성하여 멜로디 품질 향상 후 베이스 제거
-  const bassLevel: BassLevel = bassDifficulty
-    ? mapBassDifficultyToLevel(bassDifficulty)
-    : 1; // 1성부: 기본 베이스(온음표 루트)로 화성 컨텍스트 제공
+  const bassLevel: BassLevel = bassDifficulty ? mapBassDifficultyToLevel(bassDifficulty) : 1; // 1성부: 기본 베이스(온음표 루트)로 화성 컨텍스트 제공
   const tvTimeSig = timeSignature as TVTimeSignature;
-  const tvMeasures = ([4, 8, 12, 16] as const).find(m => m >= measures - 1) ?? 16;
+  const tvMeasures = ([4, 8, 12, 16] as const).find((m) => m >= measures - 1) ?? 16;
   const stack = generateTwoVoiceStack({
     keySignature,
     mode: isMinor ? 'harmonic_minor' : 'major',
@@ -137,7 +157,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   }
 
   const cadence = generateCadenceMeasure(
-    scale, TREBLE_BASE, BASS_BASE, sixteenthsPerBar, useGrandStaff, keySignature,
+    scale,
+    TREBLE_BASE,
+    BASS_BASE,
+    sixteenthsPerBar,
+    useGrandStaff,
+    keySignature,
   );
   trebleNotes.push(...cadence.treble);
   bassNotes.push(...cadence.bass);
@@ -162,7 +187,11 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
       for (const bn of bassNotes) {
         const dur = bn.tupletNoteDur ?? durationToSixteenths(bn.duration);
         if (bn.pitch !== 'rest') {
-          bassTimeline.push({ start: bPos, end: bPos + dur, midi: noteToMidiWithKey(bn, keySignature) });
+          bassTimeline.push({
+            start: bPos,
+            end: bPos + dur,
+            midi: noteToMidiWithKey(bn, keySignature),
+          });
         }
         bPos += dur;
       }
@@ -185,16 +214,16 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         if (!strongOffsets16.includes(barOff)) continue;
 
         // 이 위치에서 울리는 트레블 찾기
-        const te = trebleTimeline.find(t => t.start <= absPos && t.end > absPos);
+        const te = trebleTimeline.find((t) => t.start <= absPos && t.end > absPos);
         if (!te) continue;
         const tn = trebleNotes[te.idx];
 
         // 이 위치에서 울리는 베이스 찾기
-        const be = bassTimeline.find(b => b.start <= absPos && b.end > absPos);
+        const be = bassTimeline.find((b) => b.start <= absPos && b.end > absPos);
         if (!be) continue;
 
         const tMidi = noteToMidiWithKey(tn, keySignature);
-        const pc = ((tMidi - be.midi) % 12 + 12) % 12;
+        const pc = (((tMidi - be.midi) % 12) + 12) % 12;
         if (!DISSONANT_PC.has(pc)) continue;
 
         // 불협화 → 가까운 스케일 음으로 교체
@@ -210,7 +239,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
             const cNote = makeNote(sp, oct, tn.duration);
             const cMidi = noteToMidiWithKey(cNote, keySignature);
             if (cMidi - be.midi < MIN_TREBLE_BASS_SEMITONES) continue;
-            const cPc = ((cMidi - be.midi) % 12 + 12) % 12;
+            const cPc = (((cMidi - be.midi) % 12) + 12) % 12;
             if (DISSONANT_PC.has(cPc)) continue;
 
             // 이 음이 다른 강박에서도 울릴 때 그 베이스와도 협화해야 함
@@ -218,19 +247,27 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
             for (let checkPos = te.start; checkPos < te.end; checkPos++) {
               const checkBarOff = checkPos % sixteenthsPerBar;
               if (!strongOffsets16.includes(checkBarOff)) continue;
-              const checkBass = bassTimeline.find(b => b.start <= checkPos && b.end > checkPos);
+              const checkBass = bassTimeline.find((b) => b.start <= checkPos && b.end > checkPos);
               if (!checkBass) continue;
-              const checkPc = ((cMidi - checkBass.midi) % 12 + 12) % 12;
-              if (DISSONANT_PC.has(checkPc)) { allConsonant = false; break; }
+              const checkPc = (((cMidi - checkBass.midi) % 12) + 12) % 12;
+              if (DISSONANT_PC.has(checkPc)) {
+                allConsonant = false;
+                break;
+              }
             }
             if (!allConsonant) continue;
 
             const dist = Math.abs(cMidi - tMidi);
             const imperfect = IMPERFECT_CONSONANT_PC.has(cPc);
             if (imperfect && !bestIsImperfect) {
-              bestPitch = sp; bestOct = oct; bestDist = dist; bestIsImperfect = true;
+              bestPitch = sp;
+              bestOct = oct;
+              bestDist = dist;
+              bestIsImperfect = true;
             } else if (imperfect === bestIsImperfect && dist < bestDist) {
-              bestPitch = sp; bestOct = oct; bestDist = dist;
+              bestPitch = sp;
+              bestOct = oct;
+              bestDist = dist;
             }
           }
         }
@@ -251,14 +288,22 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   }
 
   // ── 후처리: 내부 쉼표 ──
-  applyInternalRests(trebleNotes, bassNotes, difficulty, measures, sixteenthsPerBar, useGrandStaff, timeSignature);
+  applyInternalRests(
+    trebleNotes,
+    bassNotes,
+    difficulty,
+    measures,
+    sixteenthsPerBar,
+    useGrandStaff,
+    timeSignature,
+  );
 
   // ── 후처리: 박자 경계 분할 (중급 2단계 이상에서만) ──
-  const finalTreble = lvl >= 5
-    ? splitAtBeatBoundaries(trebleNotes, timeSignature)
-    : trebleNotes;
+  const finalTreble = lvl >= 5 ? splitAtBeatBoundaries(trebleNotes, timeSignature) : trebleNotes;
   const finalBass = useGrandStaff
-    ? (lvl >= 5 ? splitAtBeatBoundaries(bassNotes, timeSignature) : bassNotes)
+    ? lvl >= 5
+      ? splitAtBeatBoundaries(bassNotes, timeSignature)
+      : bassNotes
     : bassNotes;
 
   // ── 후처리: 연속 붙임줄 2회 제한 — 연속된 2개의 tie 중 마지막 제거 ──
@@ -283,7 +328,16 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
   // 트레블이 올린 7음(이끔음, e.g. G#)을 쓰는 동시에 베이스가 내린 7음(G♮)을 연주하면
   // 귀에 거슬리는 대사(cross-relation) 발생 → 베이스 음을 근음이나 5음으로 교체
   if (isMinor && useGrandStaff && minorSeventhDeg) {
-    fixMinorCrossRelation(finalTreble, finalBass, scale, minorSeventhDeg, minorLeadingAcc, BASS_BASE, keySignature, sixteenthsPerBar);
+    fixMinorCrossRelation(
+      finalTreble,
+      finalBass,
+      scale,
+      minorSeventhDeg,
+      minorLeadingAcc,
+      BASS_BASE,
+      keySignature,
+      sixteenthsPerBar,
+    );
   }
 
   if (useGrandStaff) {
@@ -302,9 +356,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
   // ── 임시표 난이도(L9): cleanup 이후 최소 2마디 보장 ──
   if (opts.partPracticeLevel === 9 || lvl >= 9) {
-    ensureMinAccidentalBars(finalTreble, keySignature, isMinor ? 'harmonic_minor' : 'major', sixteenthsPerBar);
+    ensureMinAccidentalBars(
+      finalTreble,
+      keySignature,
+      isMinor ? 'harmonic_minor' : 'major',
+      sixteenthsPerBar,
+    );
   }
 
   return { trebleNotes: finalTreble, bassNotes: finalBass };
 }
-

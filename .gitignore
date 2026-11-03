@@ -5,6 +5,9 @@ node_modules/
 
 # Secrets
 google-service-account.json
+credentials.json
+credentials/**/*.json
+!credentials/**/*.example.json
 *.keystore
 *.jks
 
@@ -35,9 +38,6 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
-
 # typescript
 *.tsbuildinfo
 
@@ -48,7 +48,8 @@ yarn-error.*
 # local config & secrets
 .env
 .env.*
-!.env*.local
+!.env.example
+!.env.*.example
 
 # Claude & OMC
 .claude/

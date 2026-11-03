@@ -9,27 +9,53 @@ import type { NoteDuration, TupletType } from './types';
  */
 export function durationToSixteenths(dur: NoteDuration): number {
   switch (dur) {
-    case '1': return 16;
-    case '1.': return 24;
-    case '2': return 8;
-    case '2.': return 12;
-    case '4': return 4;
-    case '4.': return 6;
-    case '8': return 2;
-    case '8.': return 3;
-    case '16': return 1;
-    default: return 4;
+    case '1':
+      return 16;
+    case '1.':
+      return 24;
+    case '2':
+      return 8;
+    case '2.':
+      return 12;
+    case '4':
+      return 4;
+    case '4.':
+      return 6;
+    case '8':
+      return 2;
+    case '8.':
+      return 3;
+    case '16':
+      return 1;
+    default:
+      return 4;
   }
 }
 
 /** 16분음표 수 -> NoteDuration (잇단음표용 쉼표 생성 등) */
 export const SIXTEENTHS_TO_DURATION: [number, NoteDuration][] = [
-  [24, '1.'], [16, '1'], [12, '2.'], [8, '2'], [6, '4.'], [4, '4'], [3, '8.'], [2, '8'], [1, '16'],
+  [24, '1.'],
+  [16, '1'],
+  [12, '2.'],
+  [8, '2'],
+  [6, '4.'],
+  [4, '4'],
+  [3, '8.'],
+  [2, '8'],
+  [1, '16'],
 ];
 
 /** 16분음표 수 → NoteDuration Record (빠른 조회용) */
 export const SIXTEENTHS_TO_DUR: Record<number, NoteDuration> = {
-  24: '1.', 16: '1', 12: '2.', 8: '2', 6: '4.', 4: '4', 3: '8.', 2: '8', 1: '16',
+  24: '1.',
+  16: '1',
+  12: '2.',
+  8: '2',
+  6: '4.',
+  4: '4',
+  3: '8.',
+  2: '8',
+  1: '16',
 };
 
 export function sixteenthsToDuration(sixteenths: number): NoteDuration {
@@ -83,9 +109,8 @@ export function computeBarLengthsFromTotal(
 
   if (remClass === P) {
     const lengths: number[] = [];
-    let pos = 0;
     lengths.push(P);
-    pos = P;
+    let pos = P;
     while (pos < totalSixteenths) {
       const r = totalSixteenths - pos;
       const next = r >= B ? B : r;
@@ -135,7 +160,10 @@ export function barGlobalStarts(barLengths: number[]): number[] {
   return s;
 }
 
-export function getBarIndexAndLocal(globalPos: number, barLengths: number[]): { bi: number; local: number } {
+export function getBarIndexAndLocal(
+  globalPos: number,
+  barLengths: number[],
+): { bi: number; local: number } {
   let g = 0;
   for (let i = 0; i < barLengths.length; i++) {
     const L = barLengths[i];
@@ -160,25 +188,36 @@ export function getTupletNoteDuration(tupletType: TupletType, spanDuration: Note
   const isDotted = (spanDuration as string).includes('.');
 
   switch (tupletType) {
-    case '2': return Math.max(1, Math.floor(spanSixteenths / 3));
-    case '3': return Math.max(1, Math.floor(spanSixteenths / 2));
-    case '4': return Math.max(1, Math.floor(spanSixteenths / 6));
-    case '5': return isDotted
-      ? Math.max(1, Math.floor(spanSixteenths / 6))
-      : Math.max(1, Math.floor(spanSixteenths / 4));
-    case '6': return Math.max(1, Math.floor(spanSixteenths / 4));
-    case '7': return isDotted
-      ? Math.max(1, Math.floor(spanSixteenths / 6))
-      : Math.max(1, Math.floor(spanSixteenths / 4));
-    case '8': return Math.max(1, Math.floor(spanSixteenths / 6));
-    default:  return spanSixteenths;
+    case '2':
+      return Math.max(1, Math.floor(spanSixteenths / 3));
+    case '3':
+      return Math.max(1, Math.floor(spanSixteenths / 2));
+    case '4':
+      return Math.max(1, Math.floor(spanSixteenths / 6));
+    case '5':
+      return isDotted
+        ? Math.max(1, Math.floor(spanSixteenths / 6))
+        : Math.max(1, Math.floor(spanSixteenths / 4));
+    case '6':
+      return Math.max(1, Math.floor(spanSixteenths / 4));
+    case '7':
+      return isDotted
+        ? Math.max(1, Math.floor(spanSixteenths / 6))
+        : Math.max(1, Math.floor(spanSixteenths / 4));
+    case '8':
+      return Math.max(1, Math.floor(spanSixteenths / 6));
+    default:
+      return spanSixteenths;
   }
 }
 
 /**
  * 잇단음표의 실제 차지하는 시간(16분음표 기준)을 계산합니다.
  */
-export function getTupletActualSixteenths(tupletType: TupletType, spanDuration: NoteDuration): number {
+export function getTupletActualSixteenths(
+  tupletType: TupletType,
+  spanDuration: NoteDuration,
+): number {
   return durationToSixteenths(spanDuration);
 }
 
@@ -263,16 +302,16 @@ export function findExactDuration(sixteenths: number): NoteDuration | null {
 }
 
 /** 음표 스트림 총 길이(16분음표). 잇단음표는 span 기준. */
-export function sumScoreNotesSixteenths(notes: { duration: NoteDuration; tuplet?: TupletType; tupletSpan?: NoteDuration }[]): number {
+export function sumScoreNotesSixteenths(
+  notes: { duration: NoteDuration; tuplet?: TupletType; tupletSpan?: NoteDuration }[],
+): number {
   let sum = 0;
   let tupletRemaining = 0;
   let tupletSpanAcc = 0;
   for (const note of notes) {
     if (note.tuplet && tupletRemaining === 0) {
       tupletRemaining = parseInt(note.tuplet, 10);
-      tupletSpanAcc = getTupletActualSixteenths(
-        note.tuplet, note.tupletSpan || note.duration,
-      );
+      tupletSpanAcc = getTupletActualSixteenths(note.tuplet, note.tupletSpan || note.duration);
     }
     if (tupletRemaining > 0) {
       tupletRemaining--;

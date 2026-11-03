@@ -79,7 +79,7 @@ function buildTimeline(notes: ScoreNote[], keySignature: string): NoteEvent[] {
  */
 function pitchClassInterval(midiA: number, midiB: number): number {
   if (midiA < 0 || midiB < 0) return -1;
-  return ((midiB - midiA) % 12 + 12) % 12;
+  return (((midiB - midiA) % 12) + 12) % 12;
 }
 
 function getStrongBeatSixteenthOffsets(timeSig: TimeSignature): Set<number> {
@@ -110,21 +110,32 @@ function findVerticalPairs(
   }> = [];
 
   // For each strong beat position in the score, find which treble/bass notes are sounding
-  const totalBars = trebleEvents.length > 0
-    ? Math.ceil((trebleEvents[trebleEvents.length - 1].startSixteenths + trebleEvents[trebleEvents.length - 1].durationSixteenths) / barLength)
-    : 0;
+  const totalBars =
+    trebleEvents.length > 0
+      ? Math.ceil(
+          (trebleEvents[trebleEvents.length - 1].startSixteenths +
+            trebleEvents[trebleEvents.length - 1].durationSixteenths) /
+            barLength,
+        )
+      : 0;
 
   for (let bar = 0; bar < totalBars; bar++) {
     for (const beatOff of strongBeats) {
       const absOff = bar * barLength + beatOff;
 
       // Find the treble note sounding at this offset
-      const tEvent = trebleEvents.find(e =>
-        !e.isRest && e.startSixteenths <= absOff && e.startSixteenths + e.durationSixteenths > absOff,
+      const tEvent = trebleEvents.find(
+        (e) =>
+          !e.isRest &&
+          e.startSixteenths <= absOff &&
+          e.startSixteenths + e.durationSixteenths > absOff,
       );
       // Find the bass note sounding at this offset
-      const bEvent = bassEvents.find(e =>
-        !e.isRest && e.startSixteenths <= absOff && e.startSixteenths + e.durationSixteenths > absOff,
+      const bEvent = bassEvents.find(
+        (e) =>
+          !e.isRest &&
+          e.startSixteenths <= absOff &&
+          e.startSixteenths + e.durationSixteenths > absOff,
       );
 
       if (tEvent && bEvent) {
@@ -148,8 +159,10 @@ function findConsecutiveOnsetPairs(
   trebleEvents: NoteEvent[],
   bassEvents: NoteEvent[],
 ): Array<{
-  prevTreble: NoteEvent; prevBass: NoteEvent;
-  curTreble: NoteEvent; curBass: NoteEvent;
+  prevTreble: NoteEvent;
+  prevBass: NoteEvent;
+  curTreble: NoteEvent;
+  curBass: NoteEvent;
 }> {
   // Build a list of time points where both voices attack simultaneously
   const trebleOnsets = new Map<number, NoteEvent>();
@@ -173,8 +186,10 @@ function findConsecutiveOnsetPairs(
 
   // Build consecutive pairs
   const result: Array<{
-    prevTreble: NoteEvent; prevBass: NoteEvent;
-    curTreble: NoteEvent; curBass: NoteEvent;
+    prevTreble: NoteEvent;
+    prevBass: NoteEvent;
+    curTreble: NoteEvent;
+    curBass: NoteEvent;
   }> = [];
   for (let i = 1; i < simultaneousPoints.length; i++) {
     result.push({
@@ -374,9 +389,11 @@ export function validateNonHarmonicTones(
     if (strongBeats.has(beatInBar)) continue; // Strong beat — checked elsewhere
 
     // Find bass note sounding at this treble onset
-    const bEvent = bassEvents.find(e =>
-      !e.isRest && e.startSixteenths <= tEvent.startSixteenths &&
-      e.startSixteenths + e.durationSixteenths > tEvent.startSixteenths,
+    const bEvent = bassEvents.find(
+      (e) =>
+        !e.isRest &&
+        e.startSixteenths <= tEvent.startSixteenths &&
+        e.startSixteenths + e.durationSixteenths > tEvent.startSixteenths,
     );
     if (!bEvent) continue;
 
@@ -402,9 +419,11 @@ export function validateNonHarmonicTones(
     const leaveInterval = next.midi - tEvent.midi;
     const approachStep = Math.abs(approachInterval) <= 2; // semitone or whole tone
     const leaveStep = Math.abs(leaveInterval) <= 2;
-    const sameDirection = (approachInterval > 0 && leaveInterval > 0) || (approachInterval < 0 && leaveInterval < 0);
+    const sameDirection =
+      (approachInterval > 0 && leaveInterval > 0) || (approachInterval < 0 && leaveInterval < 0);
     const returnToOriginal = next.midi === prev.midi;
-    const oppositeDirection = (approachInterval > 0 && leaveInterval < 0) || (approachInterval < 0 && leaveInterval > 0);
+    const oppositeDirection =
+      (approachInterval > 0 && leaveInterval < 0) || (approachInterval < 0 && leaveInterval > 0);
 
     // Passing tone: step approach, step leave, same direction
     if (approachStep && leaveStep && sameDirection) continue;
@@ -445,9 +464,11 @@ export function validateVoiceSpacing(
   // Check at each bass onset for the sounding treble note
   for (const bEvent of bassEvents) {
     if (bEvent.isRest) continue;
-    const tEvent = trebleEvents.find(e =>
-      !e.isRest && e.startSixteenths <= bEvent.startSixteenths &&
-      e.startSixteenths + e.durationSixteenths > bEvent.startSixteenths,
+    const tEvent = trebleEvents.find(
+      (e) =>
+        !e.isRest &&
+        e.startSixteenths <= bEvent.startSixteenths &&
+        e.startSixteenths + e.durationSixteenths > bEvent.startSixteenths,
     );
     if (!tEvent) continue;
 
@@ -487,10 +508,16 @@ export function validateFinalInterval(
   let lastTreble: ScoreNote | undefined;
   let lastBass: ScoreNote | undefined;
   for (let i = treble.length - 1; i >= 0; i--) {
-    if (treble[i].pitch !== 'rest') { lastTreble = treble[i]; break; }
+    if (treble[i].pitch !== 'rest') {
+      lastTreble = treble[i];
+      break;
+    }
   }
   for (let i = bass.length - 1; i >= 0; i--) {
-    if (bass[i].pitch !== 'rest') { lastBass = bass[i]; break; }
+    if (bass[i].pitch !== 'rest') {
+      lastBass = bass[i];
+      break;
+    }
   }
 
   if (!lastTreble || !lastBass) return violations;
@@ -514,11 +541,7 @@ export function validateFinalInterval(
 // ────────────────────────────────────────────────────────────────
 
 /** 조표만 반영한 음계 음의 MIDI (임시표 없음) */
-function diatonicMidiForScalePitch(
-  pitch: PitchName,
-  octave: number,
-  keySignature: string,
-): number {
+function diatonicMidiForScalePitch(pitch: PitchName, octave: number, keySignature: string): number {
   return noteToMidiWithKey(
     {
       id: '',
@@ -635,7 +658,13 @@ function fixTrebleDissonance(
 
   // Find the scale pitch closest to this semitone value
   const PITCH_SEMITONES: Record<string, number> = {
-    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
+    C: 0,
+    D: 2,
+    E: 4,
+    F: 5,
+    G: 7,
+    A: 9,
+    B: 11,
   };
   let bestPitch: PitchName = note.pitch;
   let bestDist = Infinity;
@@ -699,7 +728,7 @@ function fixParallelPerfectCorrection(
     const origMidi = diatonicMidiForScalePitch(note.pitch, note.octave, keySignature);
 
     for (const shift of shifts) {
-      const candScaleIdx = ((scaleIdx + shift) % scale.length + scale.length) % scale.length;
+      const candScaleIdx = (((scaleIdx + shift) % scale.length) + scale.length) % scale.length;
       const candPitch = scale[candScaleIdx] as PitchName;
       let candOctave = note.octave;
       let candMidi = diatonicMidiForScalePitch(candPitch, candOctave, keySignature);
@@ -750,21 +779,34 @@ function fixParallelPerfectAtStrongBeats(
 
   // Collect (trebleEvent, bassEvent) at each strong beat
   const beatPairs: Array<{
-    trebleEvent: NoteEvent; bassEvent: NoteEvent; absOff: number;
+    trebleEvent: NoteEvent;
+    bassEvent: NoteEvent;
+    absOff: number;
   }> = [];
 
-  const totalBars = trebleEvents.length > 0
-    ? Math.ceil((trebleEvents[trebleEvents.length - 1].startSixteenths + trebleEvents[trebleEvents.length - 1].durationSixteenths) / barLength)
-    : 0;
+  const totalBars =
+    trebleEvents.length > 0
+      ? Math.ceil(
+          (trebleEvents[trebleEvents.length - 1].startSixteenths +
+            trebleEvents[trebleEvents.length - 1].durationSixteenths) /
+            barLength,
+        )
+      : 0;
 
   for (let bar = 0; bar < totalBars; bar++) {
     for (const beatOff of strongBeats) {
       const absOff = bar * barLength + beatOff;
-      const tEvent = trebleEvents.find(e =>
-        !e.isRest && e.startSixteenths <= absOff && e.startSixteenths + e.durationSixteenths > absOff,
+      const tEvent = trebleEvents.find(
+        (e) =>
+          !e.isRest &&
+          e.startSixteenths <= absOff &&
+          e.startSixteenths + e.durationSixteenths > absOff,
       );
-      const bEvent = bassEvents.find(e =>
-        !e.isRest && e.startSixteenths <= absOff && e.startSixteenths + e.durationSixteenths > absOff,
+      const bEvent = bassEvents.find(
+        (e) =>
+          !e.isRest &&
+          e.startSixteenths <= absOff &&
+          e.startSixteenths + e.durationSixteenths > absOff,
       );
       if (tEvent && bEvent) beatPairs.push({ trebleEvent: tEvent, bassEvent: bEvent, absOff });
     }
@@ -798,11 +840,18 @@ function fixParallelPerfectAtStrongBeats(
 
     // 반대 방향 우선, 양방향 ±1~3 스케일도수 탐색
     const primaryDir = trebleDir > 0 ? -1 : 1;
-    const shifts = [primaryDir, -primaryDir, primaryDir * 2, -primaryDir * 2, primaryDir * 3, -primaryDir * 3];
+    const shifts = [
+      primaryDir,
+      -primaryDir,
+      primaryDir * 2,
+      -primaryDir * 2,
+      primaryDir * 3,
+      -primaryDir * 3,
+    ];
     let fixed = false;
 
     for (const shift of shifts) {
-      const candScaleIdx = ((scaleIdx + shift) % scale.length + scale.length) % scale.length;
+      const candScaleIdx = (((scaleIdx + shift) % scale.length) + scale.length) % scale.length;
       const candPitch = scale[candScaleIdx] as PitchName;
 
       let candOctave = note.octave;
@@ -883,12 +932,12 @@ function fixHiddenPerfectCorrection(
 
     // Step one scale degree in the same direction as the original motion
     const stepDir = trebleDir > 0 ? 1 : -1;
-    const newScaleIdx = ((prevScaleIdx + stepDir) % scale.length + scale.length) % scale.length;
+    const newScaleIdx = (((prevScaleIdx + stepDir) % scale.length) + scale.length) % scale.length;
     const newPitch = scale[newScaleIdx] as PitchName;
 
     const prevMidi = diatonicMidiForScalePitch(prevNote.pitch, prevNote.octave, keySignature);
     let newOctave = prevNote.octave;
-    let newMidiCheck = diatonicMidiForScalePitch(newPitch, newOctave, keySignature);
+    const newMidiCheck = diatonicMidiForScalePitch(newPitch, newOctave, keySignature);
     if (stepDir > 0 && newMidiCheck <= prevMidi) newOctave++;
     if (stepDir < 0 && newMidiCheck >= prevMidi) newOctave--;
     if (newOctave < 3) continue;
@@ -923,7 +972,7 @@ export function applyCounterpointCorrections(
   timeSig: TimeSignature,
   keySignature: string,
   /** 1~9 멜로디 단계. 생략 시 기존과 같이 임시표 보정 허용. 고급 2(8) 이상만 임시표로 불협화 보정. */
-  melodyLevel?: number,
+  _melodyLevel?: number,
 ): void {
   const scale = getScaleDegrees(keySignature);
   const barLength = getSixteenthsPerBar(timeSig);
@@ -941,14 +990,17 @@ export function applyCounterpointCorrections(
     for (const pair of pairs) {
       const pc = pitchClassInterval(pair.bassEvent.midi, pair.trebleEvent.midi);
       if (pc >= 0 && DISSONANT_PC.has(pc)) {
-        if (fixTrebleDissonance(
-          treble,
-          pair.trebleEvent.index,
-          pair.bassEvent.midi,
-          keySignature,
-          scale,
-          allowWrittenAccidentals,
-        )) fixCount++;
+        if (
+          fixTrebleDissonance(
+            treble,
+            pair.trebleEvent.index,
+            pair.bassEvent.midi,
+            keySignature,
+            scale,
+            allowWrittenAccidentals,
+          )
+        )
+          fixCount++;
       }
     }
 
@@ -957,7 +1009,14 @@ export function applyCounterpointCorrections(
 
     // Step 2b: Fix parallel perfect intervals at ALL beats (약박 포함)
     const allBeats = allBeatOffsetsSixteenths0(timeSig);
-    fixCount += fixParallelPerfectAtStrongBeats(treble, bass, timeSig, keySignature, scale, allBeats);
+    fixCount += fixParallelPerfectAtStrongBeats(
+      treble,
+      bass,
+      timeSig,
+      keySignature,
+      scale,
+      allBeats,
+    );
 
     // Step 3: Fix parallel perfect intervals (simultaneous onsets — legacy)
     fixCount += fixParallelPerfectCorrection(treble, bass, keySignature, scale);

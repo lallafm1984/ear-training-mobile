@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  getLevel,
-  getExpForNextLevel,
-  getMascotParams,
-} from '../lib/mascotConfig';
+import { getLevel, getExpForNextLevel, getMascotParams } from '../lib/mascotConfig';
 import { useAuth } from '../context';
 
 const BASE_KEY = '@melodygen_mascot_exp';
@@ -23,7 +19,10 @@ export function useMascotExp() {
 
   // AsyncStorage에서 로드
   useEffect(() => {
-    if (!storageKey) { setLoaded(true); return; }
+    if (!storageKey) {
+      setLoaded(true);
+      return;
+    }
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(storageKey);

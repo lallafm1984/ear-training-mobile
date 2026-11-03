@@ -63,9 +63,7 @@ export function generateTwoVoiceStack(input: TwoVoiceStackInput): TwoVoiceStackR
     bassLevel,
   };
 
-  const bassLine = generateBassWithRetry(bassOpts).filter(
-    bn => bn.measure < measures - 1,
-  );
+  const bassLine = generateBassWithRetry(bassOpts).filter((bn) => bn.measure < measures - 1);
 
   const scale = getScaleDegrees(keySignature);
   const bassBase = getBassBaseOctave(scale);

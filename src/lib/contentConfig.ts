@@ -14,7 +14,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'barMelody',
     name: '마디 받아쓰기',
     icon: 'Music',
-    color: '#14b8a6',   // teal
+    color: '#14b8a6', // teal
     bgColor: '#f0fdfa',
     description: '한 마디 선율을 듣고 음정 간격 기보',
     answerType: 'notation',
@@ -25,7 +25,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'melody',
     name: '선율 받아쓰기',
     icon: 'Music',
-    color: '#6366f1',   // indigo
+    color: '#6366f1', // indigo
     bgColor: '#eef2ff',
     description: '멜로디를 듣고 악보로 기보',
     answerType: 'notation',
@@ -36,7 +36,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'rhythm',
     name: '리듬 받아쓰기',
     icon: 'Drum',
-    color: '#f59e0b',   // amber
+    color: '#f59e0b', // amber
     bgColor: '#fffbeb',
     description: '리듬 패턴을 듣고 기보',
     answerType: 'notation',
@@ -47,7 +47,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'interval',
     name: '음정 듣기',
     icon: 'ArrowUpDown',
-    color: '#10b981',   // emerald
+    color: '#10b981', // emerald
     bgColor: '#ecfdf5',
     description: '두 음 사이의 음정 식별',
     answerType: 'choice',
@@ -58,7 +58,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'chord',
     name: '화성 듣기',
     icon: 'Layers',
-    color: '#8b5cf6',   // violet
+    color: '#8b5cf6', // violet
     bgColor: '#f5f3ff',
     description: '화음의 종류 식별',
     answerType: 'choice',
@@ -69,7 +69,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'progression',
     name: '화성 진행',
     icon: 'GitBranch',
-    color: '#0f766e',   // teal green
+    color: '#0f766e', // teal green
     bgColor: '#ecfdf5',
     description: '화음의 흐름과 종지 판별',
     answerType: 'choice',
@@ -80,7 +80,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'key',
     name: '조성 판별',
     icon: 'Key',
-    color: '#ef4444',   // red
+    color: '#ef4444', // red
     bgColor: '#fef2f2',
     description: '선율의 조성과 장/단조 판별',
     answerType: 'choice',
@@ -91,23 +91,22 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     id: 'twoVoice',
     name: '2성부 받아쓰기',
     icon: 'FileMusic',
-    color: '#0ea5e9',   // sky
+    color: '#0ea5e9', // sky
     bgColor: '#f0f9ff',
     description: '선율+베이스 큰보표 기보',
     answerType: 'notation',
     maxLevel: 4,
-    freeMaxLevel: 0,    // Pro 전용
+    freeMaxLevel: 0, // Pro 전용
   },
 ];
 
 /** 카테고리 ID로 설정 조회 */
 export function getContentConfig(id: ContentCategory): ContentTypeConfig {
-  return CONTENT_CATEGORIES.find(c => c.id === id)!;
+  return CONTENT_CATEGORIES.find((c) => c.id === id)!;
 }
 
 /** 전체 카테고리 ID 목록 */
-export const ALL_CONTENT_CATEGORIES: ContentCategory[] =
-  CONTENT_CATEGORIES.map(c => c.id);
+export const ALL_CONTENT_CATEGORIES: ContentCategory[] = CONTENT_CATEGORIES.map((c) => c.id);
 
 // ─────────────────────────────────────────────────────────────
 // 카테고리별 난이도 라벨
@@ -186,6 +185,9 @@ export function getDifficultyList(category: ContentCategory): ContentDifficulty[
 }
 
 /** 난이도 라벨 조회 */
-export function getDifficultyLabel(category: ContentCategory, difficulty: ContentDifficulty): string {
+export function getDifficultyLabel(
+  category: ContentCategory,
+  difficulty: ContentDifficulty,
+): string {
   return CATEGORY_DIFF_LABELS[category][difficulty] ?? difficulty;
 }

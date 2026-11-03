@@ -5,14 +5,27 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
-  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic, Lock,
+  Music,
+  Drum,
+  ArrowUpDown,
+  Layers,
+  GitBranch,
+  Key,
+  FileMusic,
+  Lock,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic,
+  Music,
+  Drum,
+  ArrowUpDown,
+  Layers,
+  GitBranch,
+  Key,
+  FileMusic,
 };
 
 interface CategoryCardProps {
@@ -38,10 +51,15 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconWrap, { backgroundColor: locked ? '#b0bccc' : config.color + '18' }]}>
+      <View
+        style={[styles.iconWrap, { backgroundColor: locked ? '#b0bccc' : config.color + '18' }]}
+      >
         <IconComponent size={24} color={locked ? '#6b7a8d' : config.color} />
       </View>
-      <Text style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]} numberOfLines={1}>
+      <Text
+        style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]}
+        numberOfLines={1}
+      >
         {t('content:category.' + config.id + '.name')}
       </Text>
       <Text style={[styles.desc, locked && { color: COLORS.slate400 }]} numberOfLines={1}>
@@ -56,7 +74,8 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
       {!locked && practiceCount != null && practiceCount > 0 && (
         <View style={[styles.countBadge, { backgroundColor: config.color + '20' }]}>
           <Text style={[styles.countText, { color: config.color }]}>
-            {practiceCount}{t('common:unit.count')}
+            {practiceCount}
+            {t('common:unit.count')}
           </Text>
         </View>
       )}

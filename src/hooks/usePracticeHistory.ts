@@ -33,7 +33,9 @@ export function usePracticeHistory() {
         recordsRef.current = parsed;
         setRecords(parsed);
         setStats(computeStats(parsed));
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     } else {
       recordsRef.current = [];
       setRecords([]);
@@ -50,24 +52,30 @@ export function usePracticeHistory() {
   }, [load]);
 
   // ── 기록 추가 ──
-  const addRecord = useCallback(async (record: PracticeRecord) => {
-    if (!storageKey) return;
-    const updated = [record, ...recordsRef.current].slice(0, MAX_LOCAL);
-    recordsRef.current = updated;
-    setRecords(updated);
-    setStats(computeStats(updated));
-    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
-  }, [storageKey]);
+  const addRecord = useCallback(
+    async (record: PracticeRecord) => {
+      if (!storageKey) return;
+      const updated = [record, ...recordsRef.current].slice(0, MAX_LOCAL);
+      recordsRef.current = updated;
+      setRecords(updated);
+      setStats(computeStats(updated));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+    },
+    [storageKey],
+  );
 
   // ── 기록 배치 추가 (모의시험용 — AsyncStorage 동시 쓰기 방지) ──
-  const addBatchRecords = useCallback(async (newRecords: PracticeRecord[]) => {
-    if (!storageKey) return;
-    const updated = [...newRecords, ...recordsRef.current].slice(0, MAX_LOCAL);
-    recordsRef.current = updated;
-    setRecords(updated);
-    setStats(computeStats(updated));
-    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
-  }, [storageKey]);
+  const addBatchRecords = useCallback(
+    async (newRecords: PracticeRecord[]) => {
+      if (!storageKey) return;
+      const updated = [...newRecords, ...recordsRef.current].slice(0, MAX_LOCAL);
+      recordsRef.current = updated;
+      setRecords(updated);
+      setStats(computeStats(updated));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+    },
+    [storageKey],
+  );
 
   return { records, stats, loaded, addRecord, addBatchRecords, reload: load };
 }

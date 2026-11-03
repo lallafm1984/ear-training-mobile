@@ -55,4 +55,9 @@ export type { TwoVoiceStackInput, TwoVoiceStackResult } from './twoVoiceStack';
 
 export { generateBassWithRetry } from './bassWithRetry';
 
-export { ALL_BASS_PATTERNS, getApplicablePatterns, getPatternById, selectRandomPattern } from './bassPatterns';
+export {
+  ALL_BASS_PATTERNS,
+  getApplicablePatterns,
+  getPatternById,
+  selectRandomPattern,
+} from './bassPatterns';

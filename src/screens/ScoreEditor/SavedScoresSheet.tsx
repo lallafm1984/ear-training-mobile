@@ -39,11 +39,9 @@ export default function SavedScoresSheet({
           {t('savedScores.empty')}
         </Text>
       ) : (
-        savedScores.map(s => (
+        savedScores.map((s) => (
           <View key={s.id} style={styles.savedCard}>
-            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1e293b' }}>
-              {s.title}
-            </Text>
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1e293b' }}>{s.title}</Text>
             <Text style={{ fontSize: 11, color: '#94a3b8', marginVertical: 4 }}>
               {s.state.keySignature} · {s.state.timeSignature} · {s.state.tempo}BPM ·{' '}
               {new Date(s.savedAt).toLocaleDateString('ko-KR')}
@@ -53,7 +51,9 @@ export default function SavedScoresSheet({
                 onPress={() => onLoad(s)}
                 style={[styles.savedBtn, { flex: 1, backgroundColor: '#eef2ff' }]}
               >
-                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#6366f1' }}>{t('savedScores.open')}</Text>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#6366f1' }}>
+                  {t('savedScores.open')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => onDelete(s.id)}

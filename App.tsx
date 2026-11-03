@@ -15,6 +15,7 @@ import {
 } from './src/context';
 import { LoginScreen } from './src/screens';
 import MainStack from './src/navigation/MainStack';
+import AppControlGate from './src/components/AppControlGate';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
 // ─────────────────────────────────────────────────────────────
@@ -74,13 +75,15 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar style="dark" backgroundColor="#f8fafc" />
-        <NavigationContainer>
-          <AlertProvider>
-            <AuthProvider>
-              <AppNavigator />
-            </AuthProvider>
-          </AlertProvider>
-        </NavigationContainer>
+        <AppControlGate>
+          <NavigationContainer>
+            <AlertProvider>
+              <AuthProvider>
+                <AppNavigator />
+              </AuthProvider>
+            </AlertProvider>
+          </NavigationContainer>
+        </AppControlGate>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

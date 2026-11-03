@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { NoteDuration } from '../lib/scoreUtils';
 
+type MaterialCommunityIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+
 interface DurationToolbarProps {
   selectedDuration: NoteDuration;
   isDotted: boolean;
@@ -23,7 +25,11 @@ interface DurationToolbarProps {
   onToggleTriplet?: () => void;
 }
 
-const DURATION_BUTTONS: { dur: NoteDuration; icon: string; labelKey: string }[] = [
+const DURATION_BUTTONS: {
+  dur: NoteDuration;
+  icon: MaterialCommunityIconName;
+  labelKey: string;
+}[] = [
   { dur: '1', icon: 'music-note-whole', labelKey: 'editor:duration.whole' },
   { dur: '2', icon: 'music-note-half', labelKey: 'editor:duration.half' },
   { dur: '4', icon: 'music-note-quarter', labelKey: 'editor:duration.quarter' },
@@ -31,15 +37,15 @@ const DURATION_BUTTONS: { dur: NoteDuration; icon: string; labelKey: string }[] 
   { dur: '16', icon: 'music-note-sixteenth', labelKey: 'editor:duration.sixteenth' },
 ];
 
-const REST_ICON_MAP: Record<string, string> = {
-  '1':   'music-rest-whole',
-  '2':   'music-rest-half',
-  '2.':  'music-rest-half',       // 점2분쉼표 (전용 아이콘 없어 기본 사용)
-  '4':   'music-rest-quarter',
-  '4.':  'music-rest-quarter',    // 점4분쉼표
-  '8':   'music-rest-eighth',
-  '8.':  'music-rest-eighth',     // 점8분쉼표
-  '16':  'music-rest-sixteenth',
+const REST_ICON_MAP: Record<string, MaterialCommunityIconName> = {
+  '1': 'music-rest-whole',
+  '2': 'music-rest-half',
+  '2.': 'music-rest-half', // 점2분쉼표 (전용 아이콘 없어 기본 사용)
+  '4': 'music-rest-quarter',
+  '4.': 'music-rest-quarter', // 점4분쉼표
+  '8': 'music-rest-eighth',
+  '8.': 'music-rest-eighth', // 점8분쉼표
+  '16': 'music-rest-sixteenth',
 };
 
 export default function DurationToolbar({
@@ -53,7 +59,7 @@ export default function DurationToolbar({
   onAccidentalMode,
   onToggleTie,
   onAddRest,
-  onUndo,
+  onUndo: _onUndo,
   onClear,
   accentColor,
   tripletMode,
@@ -63,7 +69,8 @@ export default function DurationToolbar({
   const isSelected = (dur: NoteDuration) => selectedDuration === dur;
 
   const effectiveDurKey = isDotted ? `${selectedDuration}.` : selectedDuration;
-  const restIcon = REST_ICON_MAP[effectiveDurKey] ?? REST_ICON_MAP[selectedDuration] ?? 'music-rest-quarter';
+  const restIcon =
+    REST_ICON_MAP[effectiveDurKey] ?? REST_ICON_MAP[selectedDuration] ?? 'music-rest-quarter';
 
   return (
     <View style={styles.container}>
@@ -88,7 +95,7 @@ export default function DurationToolbar({
               accessibilityLabel={t(labelKey)}
             >
               <MaterialCommunityIcons
-                name={icon as any}
+                name={icon}
                 size={20}
                 color={selected ? accentColor : COLORS.slate600}
               />
@@ -100,10 +107,11 @@ export default function DurationToolbar({
         <TouchableOpacity
           style={[
             styles.durationBtn,
-            isDotted && selectedDuration !== '16' && {
-              backgroundColor: accentColor + '20',
-              borderColor: accentColor,
-            },
+            isDotted &&
+              selectedDuration !== '16' && {
+                backgroundColor: accentColor + '20',
+                borderColor: accentColor,
+              },
             selectedDuration === '16' && styles.disabled,
           ]}
           disabled={selectedDuration === '16'}
@@ -113,7 +121,14 @@ export default function DurationToolbar({
           <Text
             style={[
               styles.durationBtnText,
-              { color: selectedDuration === '16' ? COLORS.slate300 : isDotted ? accentColor : COLORS.slate600 },
+              {
+                color:
+                  selectedDuration === '16'
+                    ? COLORS.slate300
+                    : isDotted
+                      ? accentColor
+                      : COLORS.slate600,
+              },
             ]}
           >
             {t('practice:notation.dot')}
@@ -132,13 +147,21 @@ export default function DurationToolbar({
           onPress={onAddRest}
           accessibilityLabel={t('practice:notation.restTab')}
         >
-          <MaterialCommunityIcons
-            name={restIcon as any}
-            size={20}
-            color="#d97706"
-          />
+          <MaterialCommunityIcons name={restIcon} size={20} color="#d97706" />
           {isDotted && (
-            <Text style={{ position: 'absolute', top: '25%', right: 3, fontSize: 16, fontWeight: '900', color: '#d97706', lineHeight: 16 }}>•</Text>
+            <Text
+              style={{
+                position: 'absolute',
+                top: '25%',
+                right: 3,
+                fontSize: 16,
+                fontWeight: '900',
+                color: '#d97706',
+                lineHeight: 16,
+              }}
+            >
+              •
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -147,38 +170,22 @@ export default function DurationToolbar({
       <View style={styles.row}>
         {/* Sharp */}
         <TouchableOpacity
-          style={[
-            styles.toolBtn,
-            accidentalMode === '#' && styles.toolBtnActive,
-          ]}
+          style={[styles.toolBtn, accidentalMode === '#' && styles.toolBtnActive]}
           onPress={() => onAccidentalMode(accidentalMode === '#' ? null : '#')}
           accessibilityLabel={t('editor:accidental.sharp')}
         >
-          <Text
-            style={[
-              styles.toolBtnText,
-              accidentalMode === '#' && styles.toolBtnTextActive,
-            ]}
-          >
+          <Text style={[styles.toolBtnText, accidentalMode === '#' && styles.toolBtnTextActive]}>
             ♯
           </Text>
         </TouchableOpacity>
 
         {/* Flat */}
         <TouchableOpacity
-          style={[
-            styles.toolBtn,
-            accidentalMode === 'b' && styles.toolBtnActive,
-          ]}
+          style={[styles.toolBtn, accidentalMode === 'b' && styles.toolBtnActive]}
           onPress={() => onAccidentalMode(accidentalMode === 'b' ? null : 'b')}
           accessibilityLabel={t('editor:accidental.flat')}
         >
-          <Text
-            style={[
-              styles.toolBtnText,
-              accidentalMode === 'b' && styles.toolBtnTextActive,
-            ]}
-          >
+          <Text style={[styles.toolBtnText, accidentalMode === 'b' && styles.toolBtnTextActive]}>
             ♭
           </Text>
         </TouchableOpacity>
@@ -189,14 +196,7 @@ export default function DurationToolbar({
           onPress={onToggleTie}
           accessibilityLabel={t('practice:notation.tie')}
         >
-          <Text
-            style={[
-              styles.toolBtnText,
-              tieMode && styles.toolBtnTextActive,
-            ]}
-          >
-            ⌒
-          </Text>
+          <Text style={[styles.toolBtnText, tieMode && styles.toolBtnTextActive]}>⌒</Text>
         </TouchableOpacity>
 
         {/* Triplet */}
@@ -211,7 +211,15 @@ export default function DurationToolbar({
               size={14}
               color={tripletMode ? '#fff' : COLORS.slate600}
             />
-            <Text style={[styles.toolBtnText, tripletMode && styles.toolBtnTextActive, { marginLeft: 2 }]}>{t('practice:notation.triplet')}</Text>
+            <Text
+              style={[
+                styles.toolBtnText,
+                tripletMode && styles.toolBtnTextActive,
+                { marginLeft: 2 },
+              ]}
+            >
+              {t('practice:notation.triplet')}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -222,11 +230,7 @@ export default function DurationToolbar({
             onPress={onClear}
             accessibilityLabel={t('practice:notation.reset')}
           >
-            <MaterialCommunityIcons
-              name="delete-outline"
-              size={14}
-              color={COLORS.slate600}
-            />
+            <MaterialCommunityIcons name="delete-outline" size={14} color={COLORS.slate600} />
           </TouchableOpacity>
         )}
       </View>

@@ -9,9 +9,8 @@
 // level-specific rules (L1/L2/L3), key rules, cadence, range.
 // ────────────────────────────────────────────────────────────────
 
-import type { BassNote, BassLevel, TwoVoiceBassOptions, ValidationResult, Violation } from './types';
-import { MEASURE_TOTAL, BASS_RANGE, BASS_DURATION_MAP, getScaleInfo } from './scales';
-import type { TimeSignature } from './types';
+import type { BassNote, TwoVoiceBassOptions, ValidationResult, Violation } from './types';
+import { MEASURE_TOTAL, BASS_RANGE, BASS_DURATION_MAP } from './scales';
 
 // ────────────────────────────────────────────────────────────────
 // Internal helpers
@@ -88,7 +87,7 @@ function isAugmentedSecond(noteNumA: number, noteNumB: number): boolean {
   const degA = ((noteNumA % 7) + 7) % 7;
   const degB = ((noteNumB % 7) + 7) % 7;
   // 6th to #7th (scale indices 5→6) ascending
-  return (degA === 5 && degB === 6 && noteNumB > noteNumA);
+  return degA === 5 && degB === 6 && noteNumB > noteNumA;
 }
 
 /**
@@ -259,7 +258,10 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       }
 
       // No augmented 2nd
-      if (opts.mode === 'harmonic_minor' && isAugmentedSecond(bass[i - 1].noteNum, bass[i].noteNum)) {
+      if (
+        opts.mode === 'harmonic_minor' &&
+        isAugmentedSecond(bass[i - 1].noteNum, bass[i].noteNum)
+      ) {
         violations.push({
           type: 'l2_augmented_second',
           message: `L2: Augmented 2nd (6→#7) at note ${i + 1}`,
@@ -283,7 +285,8 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
     for (let i = 1; i < bass.length; i++) {
       const interval = scaleDegreeInterval(bass[i].noteNum, bass[i - 1].noteNum);
       const semitones = estimateSemitones(bass[i - 1].noteNum, bass[i].noteNum, opts.mode);
-      const direction = bass[i].noteNum > bass[i - 1].noteNum ? 1 : (bass[i].noteNum < bass[i - 1].noteNum ? -1 : 0);
+      const direction =
+        bass[i].noteNum > bass[i - 1].noteNum ? 1 : bass[i].noteNum < bass[i - 1].noteNum ? -1 : 0;
       const isLeap = interval >= 2;
 
       // Max span: 5th (scale step 4)
@@ -338,8 +341,10 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       if (opts.mode === 'harmonic_minor') {
         const degA = ((bass[i - 1].noteNum % 7) + 7) % 7;
         const degB = ((bass[i].noteNum % 7) + 7) % 7;
-        if ((degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
-            (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)) {
+        if (
+          (degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
+          (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)
+        ) {
           violations.push({
             type: 'l3_augmented_second',
             message: `L3: Augmented 2nd at note ${i + 1}`,
@@ -366,7 +371,12 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       const interval = scaleDegreeInterval(bass[i].noteNum, bass[i - 1].noteNum);
       if (interval >= 3) {
         const leapDir = bass[i].noteNum > bass[i - 1].noteNum ? 1 : -1;
-        const nextDir = bass[i + 1].noteNum > bass[i].noteNum ? 1 : (bass[i + 1].noteNum < bass[i].noteNum ? -1 : 0);
+        const nextDir =
+          bass[i + 1].noteNum > bass[i].noteNum
+            ? 1
+            : bass[i + 1].noteNum < bass[i].noteNum
+              ? -1
+              : 0;
         if (nextDir !== 0 && nextDir !== -leapDir) {
           violations.push({
             type: 'l3_no_compensation',
@@ -410,8 +420,10 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       if (opts.mode === 'harmonic_minor') {
         const degA = ((bass[i - 1].noteNum % 7) + 7) % 7;
         const degB = ((bass[i].noteNum % 7) + 7) % 7;
-        if ((degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
-            (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)) {
+        if (
+          (degA === 5 && degB === 6 && bass[i].noteNum > bass[i - 1].noteNum) ||
+          (degA === 6 && degB === 5 && bass[i].noteNum < bass[i - 1].noteNum)
+        ) {
           violations.push({
             type: 'l4_augmented_second',
             message: `L4: Augmented 2nd at note ${i + 1}`,
@@ -466,10 +478,10 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
       const patternSignatures = new Set<string>();
       for (let m = blockStart; m < blockEnd; m++) {
         const mNotes = measures.get(m) ?? [];
-        const sig = mNotes.map(n => n.duration).join(',');
+        const sig = mNotes.map((n) => n.duration).join(',');
         patternSignatures.add(sig);
       }
-      if (patternSignatures.size < 3 && (blockEnd - blockStart) >= 4) {
+      if (patternSignatures.size < 3 && blockEnd - blockStart >= 4) {
         violations.push({
           type: 'l4_rhythm_diversity',
           message: `L4: Only ${patternSignatures.size} rhythm patterns in bars ${blockStart + 1}-${blockEnd} (min 3)`,
@@ -571,11 +583,11 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
     const lastMeasureNotes = measures.get(opts.measures - 1) ?? [];
     const penultimateMeasureNotes = measures.get(opts.measures - 2) ?? [];
 
-    const hasDominantInPenultimate = penultimateMeasureNotes.some(n => {
+    const hasDominantInPenultimate = penultimateMeasureNotes.some((n) => {
       const deg = ((n.noteNum % 7) + 7) % 7;
       return deg === 4; // V degree
     });
-    const hasTonicInLast = lastMeasureNotes.some(n => isTonic(n.noteNum));
+    const hasTonicInLast = lastMeasureNotes.some((n) => isTonic(n.noteNum));
 
     if (!hasDominantInPenultimate || !hasTonicInLast) {
       violations.push({
@@ -614,7 +626,7 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
   }
 
   return {
-    passed: violations.filter(v => v.severity === 'error').length === 0,
+    passed: violations.filter((v) => v.severity === 'error').length === 0,
     violationCount: violations.length,
     violations,
   };

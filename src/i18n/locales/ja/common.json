@@ -39,5 +39,13 @@
     "daysAgo": "{{days}}日前",
     "weeksAgo": "{{weeks}}週間前"
   },
+  "appControl": {
+    "currentBuild": "現在のビルド {{build}}",
+    "requiredBuild": "必須ビルド {{build}}",
+    "openingStore": "ストアを開いています...",
+    "retryButton": "更新を確認",
+    "storeOpenError": "Google Playを開けませんでした。通信状態を確認して、もう一度お試しください。",
+    "announcementOpenError": "リンク先を開けませんでした。しばらくしてからもう一度お試しください。"
+  },
   "version": "MelodyGen v1.0.0"
 }

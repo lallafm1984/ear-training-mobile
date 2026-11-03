@@ -46,11 +46,7 @@ function pTie(slots: RhythmSlot[], tieIndices: number[]): RhythmPattern {
 }
 
 /** Shorthand: create a pattern with a triplet */
-function pTriplet(
-  slots: RhythmSlot[],
-  startIndex: number,
-  span: number,
-): RhythmPattern {
+function pTriplet(slots: RhythmSlot[], startIndex: number, span: number): RhythmPattern {
   return { slots, triplet: { startIndex, count: 3, span } };
 }
 
@@ -81,16 +77,26 @@ const L1: Record<TimeSignature, RhythmPattern[]> = {
 
 const L2: Record<TimeSignature, RhythmPattern[]> = {
   '4/4': [
-    p([6, 2]), p([2, 6]), p([2, 2, 4]), p([4, 2, 2]),
-    p([2, 2, 2, 2]), p([4, 2, -2]), p([6, -2]), p([-2, 6]),
+    p([6, 2]),
+    p([2, 6]),
+    p([2, 2, 4]),
+    p([4, 2, 2]),
+    p([2, 2, 2, 2]),
+    p([4, 2, -2]),
+    p([6, -2]),
+    p([-2, 6]),
   ],
-  '3/4': [
-    p([4, 2]), p([2, 4]), p([2, 2, 2]), p([4, -2]), p([2, 2, -2]),
-  ],
+  '3/4': [p([4, 2]), p([2, 4]), p([2, 2, 2]), p([4, -2]), p([2, 2, -2])],
   '2/4': [p([2, 2]), p([2, -2])],
   '2/2': [
-    p([6, 2]), p([2, 6]), p([2, 2, 4]), p([4, 2, 2]),
-    p([2, 2, 2, 2]), p([4, 2, -2]), p([6, -2]), p([-2, 6]),
+    p([6, 2]),
+    p([2, 6]),
+    p([2, 2, 4]),
+    p([4, 2, 2]),
+    p([2, 2, 2, 2]),
+    p([4, 2, -2]),
+    p([6, -2]),
+    p([-2, 6]),
   ],
   '6/8': [p([3, 3]), p([4, 2]), p([2, 4])],
   '9/8': [p([3, 3, 3]), p([6, 3]), p([3, 6]), p([6, -2, -1])],
@@ -99,28 +105,34 @@ const L2: Record<TimeSignature, RhythmPattern[]> = {
 
 const L3: Record<TimeSignature, RhythmPattern[]> = {
   '4/4': [
-    p([1, 1, 2, 4]), p([4, 1, 1, 2]), p([2, 1, 1, 2, 2]),
-    p([1, 1, 1, 1, 4]), p([-1, 1, 2, 4]),
+    p([1, 1, 2, 4]),
+    p([4, 1, 1, 2]),
+    p([2, 1, 1, 2, 2]),
+    p([1, 1, 1, 1, 4]),
+    p([-1, 1, 2, 4]),
   ],
-  '3/4': [
-    p([1, 1, 2, 2]), p([2, 1, 1, 2]), p([2, 2, 1, 1]), p([1, 1, 4]),
-  ],
+  '3/4': [p([1, 1, 2, 2]), p([2, 1, 1, 2]), p([2, 2, 1, 1]), p([1, 1, 4])],
   '2/4': [p([1, 1, 2]), p([2, 1, 1]), p([-1, 1, 2])],
   '2/2': [
-    p([1, 1, 2, 4]), p([4, 1, 1, 2]), p([2, 1, 1, 2, 2]),
-    p([1, 1, 1, 1, 4]), p([-1, 1, 2, 4]),
+    p([1, 1, 2, 4]),
+    p([4, 1, 1, 2]),
+    p([2, 1, 1, 2, 2]),
+    p([1, 1, 1, 1, 4]),
+    p([-1, 1, 2, 4]),
   ],
-  '6/8': [
-    p([1, 1, 1, 3]), p([3, 1, 1, 1]), p([1, 1, 1, 1, 1, 1]),
-    p([-1, 1, 1, 3]),
-  ],
+  '6/8': [p([1, 1, 1, 3]), p([3, 1, 1, 1]), p([1, 1, 1, 1, 1, 1]), p([-1, 1, 1, 3])],
   '9/8': [
-    p([1, 1, 1, 3, 3]), p([3, 1, 1, 1, 3]), p([3, 3, 1, 1, 1]),
-    p([1, 1, 1, 1, 1, 1, 3]), p([1, 1, 1, 1, 1, 1, 1, 1, 1]),
+    p([1, 1, 1, 3, 3]),
+    p([3, 1, 1, 1, 3]),
+    p([3, 3, 1, 1, 1]),
+    p([1, 1, 1, 1, 1, 1, 3]),
+    p([1, 1, 1, 1, 1, 1, 1, 1, 1]),
   ],
   '12/8': [
-    p([1, 1, 1, 3, 3, 3]), p([3, 1, 1, 1, 3, 3]),
-    p([3, 3, 1, 1, 1, 3]), p([3, 3, 3, 1, 1, 1]),
+    p([1, 1, 1, 3, 3, 3]),
+    p([3, 1, 1, 1, 3, 3]),
+    p([3, 3, 1, 1, 1, 3]),
+    p([3, 3, 3, 1, 1, 1]),
     p([1, 1, 1, 1, 1, 1, 6]),
   ],
 };
@@ -137,91 +149,49 @@ const L4: Record<TimeSignature, RhythmPattern[]> = {
 
 const L5: Record<TimeSignature, RhythmPattern[]> = {
   '4/4': [
-    pTie([2, 2, 2, 2], [1]),  // tie on 2nd note (syncopation)
-    p([1, 2, 1, 4]),          // syncopation pattern
+    pTie([2, 2, 2, 2], [1]), // tie on 2nd note (syncopation)
+    p([1, 2, 1, 4]), // syncopation pattern
   ],
   '3/4': [
-    pTie([2, 2, 2], [1]),     // tie on 2nd note
+    pTie([2, 2, 2], [1]), // tie on 2nd note
     p([1, 2, 1, 2]),
   ],
   '2/4': [],
-  '2/2': [
-    pTie([2, 2, 2, 2], [1]),
-    p([1, 2, 1, 4]),
-  ],
+  '2/2': [pTie([2, 2, 2, 2], [1]), p([1, 2, 1, 4])],
   '6/8': [p([1, 2, 1, 2])],
   '9/8': [p([1, 2, 3, 3]), p([3, 1, 2, 3])],
-  '12/8': [
-    p([1, 2, 3, 3, 3]),
-    p([3, 1, 2, 3, 3]),
-    p([3, 3, 1, 2, 3]),
-  ],
+  '12/8': [p([1, 2, 3, 3, 3]), p([3, 1, 2, 3, 3]), p([3, 3, 1, 2, 3])],
 };
 
 const L6: Record<TimeSignature, RhythmPattern[]> = {
-  '4/4': [
-    p([0.5, 0.5, 0.5, 0.5, 2, 4]),
-    p([4, 0.5, 0.5, 0.5, 0.5, 2]),
-    p([1, 0.5, 0.5, 2, 4]),
-  ],
-  '3/4': [
-    p([0.5, 0.5, 0.5, 0.5, 2, 2]),
-    p([2, 0.5, 0.5, 0.5, 0.5, 2]),
-  ],
+  '4/4': [p([0.5, 0.5, 0.5, 0.5, 2, 4]), p([4, 0.5, 0.5, 0.5, 0.5, 2]), p([1, 0.5, 0.5, 2, 4])],
+  '3/4': [p([0.5, 0.5, 0.5, 0.5, 2, 2]), p([2, 0.5, 0.5, 0.5, 0.5, 2])],
   '2/4': [],
-  '2/2': [
-    p([0.5, 0.5, 0.5, 0.5, 2, 4]),
-    p([4, 0.5, 0.5, 0.5, 0.5, 2]),
-    p([1, 0.5, 0.5, 2, 4]),
-  ],
-  '6/8': [
-    p([0.5, 0.5, 1, 1, 1, 3]),
-    p([3, 0.5, 0.5, 1, 1, 1]),
-  ],
-  '9/8': [
-    p([3, 0.5, 0.5, 1, 1, 3]),
-    p([0.5, 0.5, 1, 1, 3, 3]),
-  ],
-  '12/8': [
-    p([3, 0.5, 0.5, 1, 1, 3, 3]),
-    p([3, 3, 3, 0.5, 0.5, 1, 1]),
-  ],
+  '2/2': [p([0.5, 0.5, 0.5, 0.5, 2, 4]), p([4, 0.5, 0.5, 0.5, 0.5, 2]), p([1, 0.5, 0.5, 2, 4])],
+  '6/8': [p([0.5, 0.5, 1, 1, 1, 3]), p([3, 0.5, 0.5, 1, 1, 1])],
+  '9/8': [p([3, 0.5, 0.5, 1, 1, 3]), p([0.5, 0.5, 1, 1, 3, 3])],
+  '12/8': [p([3, 0.5, 0.5, 1, 1, 3, 3]), p([3, 3, 3, 0.5, 0.5, 1, 1])],
 };
 
 const L7: Record<TimeSignature, RhythmPattern[]> = {
-  '4/4': [
-    p([1.5, 0.5, 2, 4]),
-    p([4, 1.5, 0.5, 2]),
-    p([1.5, 0.5, 1.5, 0.5, 4]),
-  ],
-  '3/4': [
-    p([1.5, 0.5, 2, 2]),
-    p([2, 1.5, 0.5, 2]),
-  ],
+  '4/4': [p([1.5, 0.5, 2, 4]), p([4, 1.5, 0.5, 2]), p([1.5, 0.5, 1.5, 0.5, 4])],
+  '3/4': [p([1.5, 0.5, 2, 2]), p([2, 1.5, 0.5, 2])],
   '2/4': [],
-  '2/2': [
-    p([1.5, 0.5, 2, 4]),
-    p([4, 1.5, 0.5, 2]),
-    p([1.5, 0.5, 1.5, 0.5, 4]),
-  ],
-  '6/8': [
-    p([1.5, 0.5, 1, 3]),
-    p([3, 1.5, 0.5, 1]),
-  ],
-  '9/8': [
-    p([1.5, 0.5, 1, 3, 3]),
-    p([3, 1.5, 0.5, 1, 3]),
-  ],
-  '12/8': [
-    p([1.5, 0.5, 1, 3, 3, 3]),
-    p([3, 3, 1.5, 0.5, 1, 3]),
-  ],
+  '2/2': [p([1.5, 0.5, 2, 4]), p([4, 1.5, 0.5, 2]), p([1.5, 0.5, 1.5, 0.5, 4])],
+  '6/8': [p([1.5, 0.5, 1, 3]), p([3, 1.5, 0.5, 1])],
+  '9/8': [p([1.5, 0.5, 1, 3, 3]), p([3, 1.5, 0.5, 1, 3])],
+  '12/8': [p([1.5, 0.5, 1, 3, 3, 3]), p([3, 3, 1.5, 0.5, 1, 3])],
 };
 
 // Level 8: No new rhythm patterns (accidentals are pitch-level only)
 const L8: Record<TimeSignature, RhythmPattern[]> = {
-  '4/4': [], '3/4': [], '2/4': [], '2/2': [],
-  '6/8': [], '9/8': [], '12/8': [],
+  '4/4': [],
+  '3/4': [],
+  '2/4': [],
+  '2/2': [],
+  '6/8': [],
+  '9/8': [],
+  '12/8': [],
 };
 
 const L9: Record<TimeSignature, RhythmPattern[]> = {
@@ -274,7 +244,15 @@ const L9: Record<TimeSignature, RhythmPattern[]> = {
 
 const LEVEL_PATTERN_ADDITIONS: Record<TimeSignature, RhythmPattern[]>[] = [
   /* index 0 unused */ {} as Record<TimeSignature, RhythmPattern[]>,
-  L1, L2, L3, L4, L5, L6, L7, L8, L9,
+  L1,
+  L2,
+  L3,
+  L4,
+  L5,
+  L6,
+  L7,
+  L8,
+  L9,
 ];
 
 // ────────────────────────────────────────────────────────────────
@@ -298,8 +276,10 @@ function buildCumulativePatterns(): Record<number, Record<TimeSignature, RhythmP
 }
 
 /** All rhythm patterns available at each level (cumulative), keyed by level then time signature */
-export const MELODY_PATTERNS: Record<number, Record<TimeSignature, RhythmPattern[]>> =
-  buildCumulativePatterns();
+export const MELODY_PATTERNS: Record<
+  number,
+  Record<TimeSignature, RhythmPattern[]>
+> = buildCumulativePatterns();
 
 // ────────────────────────────────────────────────────────────────
 // Level descriptions
@@ -361,10 +341,7 @@ export const LEVEL_NEW_ELEMENTS: LevelNewElement[] = [
  * Get all rhythm patterns available at a given level (cumulative).
  * Levels 1-9 are supported.
  */
-export function getPatternsForLevel(
-  level: number,
-  timeSig: TimeSignature,
-): RhythmPattern[] {
+export function getPatternsForLevel(level: number, timeSig: TimeSignature): RhythmPattern[] {
   const clamped = Math.max(1, Math.min(9, level));
   return MELODY_PATTERNS[clamped][timeSig] ?? [];
 }
@@ -374,10 +351,7 @@ export function getPatternsForLevel(
  * Biases 30-50% toward patterns newly introduced at the current level
  * so that students encounter new material while still reviewing old.
  */
-export function selectMelodyPattern(
-  level: number,
-  timeSig: TimeSignature,
-): RhythmPattern {
+export function selectMelodyPattern(level: number, timeSig: TimeSignature): RhythmPattern {
   const clamped = Math.max(1, Math.min(9, level));
   const allPatterns = getPatternsForLevel(clamped, timeSig);
 
@@ -388,9 +362,7 @@ export function selectMelodyPattern(
 
   // Determine which patterns are "new" at this level
   const newPatterns = LEVEL_PATTERN_ADDITIONS[clamped][timeSig] ?? [];
-  const oldPatterns = clamped > 1
-    ? (MELODY_PATTERNS[clamped - 1]?.[timeSig] ?? [])
-    : [];
+  const oldPatterns = clamped > 1 ? (MELODY_PATTERNS[clamped - 1]?.[timeSig] ?? []) : [];
 
   // If no new patterns at this level (e.g., L8), pick from all
   if (newPatterns.length === 0 || oldPatterns.length === 0) {

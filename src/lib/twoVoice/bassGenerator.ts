@@ -7,7 +7,6 @@ import { getScaleInfo, BASS_DURATION_MAP, MEASURE_TOTAL, BASS_RANGE } from './sc
 import { getPatternById, selectRandomPattern } from './bassPatterns';
 import {
   generateProgression,
-  CHORD_TONES,
   nnToMidi,
   getMidiInterval,
   getScaleDegrees,
@@ -26,9 +25,7 @@ interface BassGenContext {
 }
 
 function buildContext(key: string, mode: 'major' | 'harmonic_minor'): BassGenContext {
-  const keySignature = mode === 'harmonic_minor'
-    ? (key.endsWith('m') ? key : key + 'm')
-    : key;
+  const keySignature = mode === 'harmonic_minor' ? (key.endsWith('m') ? key : key + 'm') : key;
   const scale = getScaleDegrees(keySignature);
   const baseOctave = getBassBaseOctave(scale);
   return { scale, baseOctave, keySignature };
@@ -88,8 +85,8 @@ function isForbiddenLeap(fromNN: number, toNN: number, ctx: BassGenContext): boo
   if (interval > MAX_BASS_SCALE_STEP) return true;
 
   const semitones = getSemitoneInterval(fromNN, toNN, ctx);
-  if (semitones === 6) return true;  // tritone
-  if (semitones === 8) return true;  // augmented 5th
+  if (semitones === 6) return true; // tritone
+  if (semitones === 8) return true; // augmented 5th
   return false;
 }
 
@@ -98,22 +95,6 @@ function isForbiddenLeap(fromNN: number, toNN: number, ctx: BassGenContext): boo
  * Uses scale degree indices directly since nnToMidi uses natural minor
  * and can't detect the raised 7th.
  */
-/** 현재 마디 코드 근음(구조도)에 가장 가까운 허용 nn (옥타브 시프트) */
-function nearestChordRootNn(rootDeg: number, nearNN: number, ctx: BassGenContext): number {
-  let best = rootDeg;
-  let bestDist = Infinity;
-  for (const off of [-21, -14, -7, 0, 7, 14, 21]) {
-    const nn = rootDeg + off;
-    if (!isInRange(nn, 2, ctx)) continue;
-    const d = Math.abs(nn - nearNN);
-    if (d < bestDist) {
-      bestDist = d;
-      best = nn;
-    }
-  }
-  return clampToRange(best, 2, ctx);
-}
-
 function isAugmentedSecond(fromNN: number, toNN: number, _ctx: BassGenContext): boolean {
   const degFrom = ((fromNN % 7) + 7) % 7;
   const degTo = ((toNN % 7) + 7) % 7;
@@ -129,7 +110,10 @@ function isAugmentedSecond(fromNN: number, toNN: number, _ctx: BassGenContext): 
  * prevNN에 머무는(같은음 반복) 대신 항상 이동을 보장한다.
  */
 function resolveAugSecond(
-  prevNN: number, currentNN: number, level: BassLevel, ctx: BassGenContext,
+  prevNN: number,
+  currentNN: number,
+  level: BassLevel,
+  ctx: BassGenContext,
 ): number {
   const dir = currentNN > prevNN ? 1 : -1;
   // Option 1: 같은 방향 2도 건너뛰기 (예: deg5→deg0′, deg6→deg4)
@@ -172,7 +156,10 @@ function nearestDominant(from: number, level: BassLevel, ctx: BassGenContext): n
   for (const c of candidates) {
     if (isInRange(c, level, ctx)) {
       const d = Math.abs(from - c);
-      if (d < bestDist) { bestDist = d; best = c; }
+      if (d < bestDist) {
+        bestDist = d;
+        best = c;
+      }
     }
   }
   return best;
@@ -199,17 +186,13 @@ function isPrimaryBassRootDegree(noteNum: number): boolean {
 /**
  * 인접 마디 |Δ|≤3. `upTo` = 마지막으로 수정할 인덱스(포함).
  */
-function fixL1AdjacentSpansUpTo(
-  notes: BassNote[],
-  ctx: BassGenContext,
-  upTo: number,
-): void {
+function fixL1AdjacentSpansUpTo(notes: BassNote[], ctx: BassGenContext, upTo: number): void {
   const maxPass = notes.length + 2;
   for (let pass = 0; pass < maxPass; pass++) {
     let changed = false;
     for (let i = 1; i <= upTo && i < notes.length; i++) {
       const prev = notes[i - 1].noteNum;
-      let nn = notes[i].noteNum;
+      const nn = notes[i].noteNum;
       if (getScaleInterval(prev, nn) <= MAX_BASS_SCALE_STEP) continue;
       const sign = nn > prev ? 1 : -1;
       let best = prev + sign * MAX_BASS_SCALE_STEP;
@@ -226,10 +209,7 @@ function fixL1AdjacentSpansUpTo(
  * 마지막 마디 으뜸음과 직전 마디 사이 |Δ|≤3 이 되도록 직전 근음을 조정.
  * (항상 noteNum=0만 쓰면 이전 마디가 높은 옥타브일 때 5도 이상 벌어질 수 있음)
  */
-function fixL1CadenceLeap(
-  notes: BassNote[],
-  ctx: BassGenContext,
-): void {
+function fixL1CadenceLeap(notes: BassNote[], ctx: BassGenContext): void {
   if (notes.length < 2) return;
   const li = notes.length - 1;
   const pi = li - 1;
@@ -265,7 +245,7 @@ function enforceBassL1PrimaryRootShare(
   mode: 'major' | 'harmonic_minor',
   ctx: BassGenContext,
 ): void {
-  const countPrimary = () => notes.filter(n => isPrimaryBassRootDegree(n.noteNum)).length;
+  const countPrimary = () => notes.filter((n) => isPrimaryBassRootDegree(n.noteNum)).length;
   let primary = countPrimary();
   const target = Math.ceil(0.6 * measures);
   if (primary >= target) return;
@@ -303,7 +283,11 @@ function enforceBassL1PrimaryRootShare(
 // Level 1: One note per bar (sustained)
 // ────────────────────────────────────────────────────────────────
 
-function generateBassLevel1(opts: TwoVoiceBassOptions, structure: number[], ctx: BassGenContext): BassNote[] {
+function generateBassLevel1(
+  opts: TwoVoiceBassOptions,
+  structure: number[],
+  ctx: BassGenContext,
+): BassNote[] {
   const { timeSig, measures, mode } = opts;
   const duration = BASS_DURATION_MAP[timeSig].level1;
   const notes: BassNote[] = [];
@@ -370,15 +354,21 @@ function generateBassLevel2(
   // 초기 방향은 패턴의 첫 non-hold contour에서 결정
   let direction: 1 | -1 = -1; // default: descending
   for (const c of pattern.contour) {
-    if (c === 'asc') { direction = 1; break; }
-    if (c === 'desc') { direction = -1; break; }
+    if (c === 'asc') {
+      direction = 1;
+      break;
+    }
+    if (c === 'desc') {
+      direction = -1;
+      break;
+    }
   }
 
   // 첫 마디 두 번째 음에서 도약할지 결정 (패턴 다양성)
   const useInitialLeap = Math.random() < 0.5;
 
   // ── 반종지 목표 (8마디 이상: 4마디 프레이즈 경계에서 V) ──
-  const halfCadenceNotes = getHalfCadenceBars(measures).map(b => b * notesPerBar);
+  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => b * notesPerBar);
 
   // 가장 가까운 으뜸음 찾기
   function nearestTonic(from: number): number {
@@ -388,7 +378,10 @@ function generateBassLevel2(
     for (const c of candidates) {
       if (isInRange(c, 2, ctx)) {
         const d = Math.abs(from - c);
-        if (d < bestDist) { bestDist = d; best = c; }
+        if (d < bestDist) {
+          bestDist = d;
+          best = c;
+        }
       }
     }
     return best;
@@ -407,8 +400,7 @@ function generateBassLevel2(
         currentNN = 0;
       } else if (noteIndex === 1 && useInitialLeap) {
         // ── 첫 마디 도약: IV(3·-4) / V(4·-3) 근음으로 점프 ──
-        const leapTargets = [3, 4, -3, -4]
-          .filter(t => isInRange(t, 2, ctx));
+        const leapTargets = [3, 4, -3, -4].filter((t) => isInRange(t, 2, ctx));
         if (leapTargets.length > 0) {
           currentNN = rand(leapTargets);
           // 도약 후 sweep 방향: 도약 방향과 같은 쪽으로 계속 진행
@@ -422,7 +414,7 @@ function generateBassLevel2(
       } else {
         // ── 프레이즈 목표: 반종지(V) 또는 종지(I) ──
         const targetTonic = nearestTonic(currentNN);
-        const nextHCIdx = halfCadenceNotes.find(idx => idx >= noteIndex);
+        const nextHCIdx = halfCadenceNotes.find((idx) => idx >= noteIndex);
         let phraseTarget: number;
         let notesToTarget: number;
 
@@ -520,37 +512,10 @@ function generateBassLevel2(
 /** 5도 도약 허용 최대 음계도 차이 (완전5도 = 4칸) */
 const MAX_L3_SCALE_STEP = 4;
 
-function isForbiddenLeapL3(fromNN: number, toNN: number, ctx: BassGenContext): boolean {
-  const interval = Math.abs(toNN - fromNN);
-  if (interval <= 1) return false;
-  if (interval > MAX_L3_SCALE_STEP) return true;
-  const semitones = getSemitoneInterval(fromNN, toNN, ctx);
-  if (semitones === 6) return true;  // tritone (증4도)
-  if (semitones === 8) return true;  // augmented 5th
-  return false;
-}
-
-/** 최근 음들의 같은 방향 연속 이동 횟수 (방향 무관, 실제 음 기준) */
-function countConsecutiveSameDirection(notes: BassNote[]): number {
-  if (notes.length < 2) return 0;
-  const lastDiff = notes[notes.length - 1].noteNum - notes[notes.length - 2].noteNum;
-  if (lastDiff === 0) return 0;
-  const lastDir = lastDiff > 0 ? 1 : -1;
-  let count = 1;
-  for (let i = notes.length - 2; i >= 1; i--) {
-    const diff = notes[i].noteNum - notes[i - 1].noteNum;
-    if (diff === 0) break;
-    const dir = diff > 0 ? 1 : -1;
-    if (dir === lastDir) count++;
-    else break;
-  }
-  return count;
-}
-
 function generateBassLevel3(
   opts: TwoVoiceBassOptions,
   structure: number[],
-  pattern: BassPatternDef,
+  _pattern: BassPatternDef,
   ctx: BassGenContext,
 ): BassNote[] {
   const { timeSig, measures, mode } = opts;
@@ -572,18 +537,6 @@ function generateBassLevel3(
     }
   }
 
-  let sameDirCount = 0;   // 같은 방향 연속 이동 카운터
-  let lastMoveDir = 0;    // 직전 이동 방향 (1=상행, -1=하행, 0=동음)
-  // 방향 전환 임계값을 2~4로 랜덤화 → 마디 경계와 불일치시켜 기계적 지그재그 방지
-  let sameDirLimit = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
-
-  // ── Sweep 방향 (50% 확률로 상행/하행) ──
-  let direction: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
-  for (const c of pattern.contour) {
-    if (c === 'asc') { direction = 1; break; }
-    if (c === 'desc') { direction = -1; break; }
-  }
-
   // ── 4마디당 일반 도약(3도/4도) 1회 위치 + 5도 도약 최대 1회 위치 결정 ──
   const leapPositions = new Set<number>();
   const fifthLeapPositions = new Set<number>();
@@ -601,7 +554,7 @@ function generateBassLevel3(
       if (Math.random() < 0.6) {
         const fifthIdx = rand(candidates);
         fifthLeapPositions.add(fifthIdx);
-        const remaining = candidates.filter(c => c !== fifthIdx);
+        const remaining = candidates.filter((c) => c !== fifthIdx);
         if (remaining.length > 0) {
           leapPositions.add(rand(remaining));
         }
@@ -621,7 +574,10 @@ function generateBassLevel3(
       const midi = noteNumToMidi(c, ctx);
       const distFromCenter = Math.abs(midi - rangeMidMidi3);
       const score = distFromPrev + distFromCenter * 0.3;
-      if (score < bestScore) { bestScore = score; best = c; }
+      if (score < bestScore) {
+        bestScore = score;
+        best = c;
+      }
     }
     return best;
   }
@@ -638,13 +594,16 @@ function generateBassLevel3(
       const midi = noteNumToMidi(nn, ctx);
       const distFromCenter = Math.abs(midi - rangeMidMidi3);
       const score = distFromPrev + distFromCenter * 0.3;
-      if (score < bestScore) { bestScore = score; best = nn; }
+      if (score < bestScore) {
+        bestScore = score;
+        best = nn;
+      }
     }
     return isInRange(best, 3, ctx) ? best : clampToRange(best, 3, ctx);
   }
 
   // ── 반종지 목표 (8마디 이상: 4마디 프레이즈 경계에서 V) ──
-  const halfCadenceNotes = getHalfCadenceBars(measures).map(b => b * notesPerBar);
+  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => b * notesPerBar);
 
   for (let m = 0; m < measures; m++) {
     for (let n = 0; n < notesPerBar; n++) {
@@ -652,13 +611,9 @@ function generateBassLevel3(
       const noteIndex = m * notesPerBar + n;
       const isFirstNote = noteIndex === 0;
       const isLastNote = noteIndex === totalNotes - 1;
-      const notesRemaining = totalNotes - noteIndex - 1;
-      let didLeap = false;
-
       if (isFirstNote) {
         // ── 첫 음: structure[0] 코드 근음 ──
         currentNN = nearestRootInRange(structure[0], currentNN);
-        didLeap = true;
       } else if (isLastNote) {
         // 종지: 으뜸음 복귀 (5도 이내 접근 보장)
         const tonic = nearestTonic(currentNN);
@@ -670,7 +625,6 @@ function generateBassLevel3(
           const approach = currentNN + dir * Math.min(3, Math.abs(tonic - currentNN));
           currentNN = isInRange(approach, 3, ctx) ? approach : tonic;
         }
-        didLeap = true;
       } else if (n === 0) {
         // ── 마디 첫 박 (downbeat): 코드 근음 또는 전위음 ──
         const isHalfCadenceBar = halfCadenceNotes.includes(noteIndex);
@@ -698,7 +652,7 @@ function generateBassLevel3(
         }
 
         // 20% 확률로 코드 3도(+2) 또는 5도(+4)로 전위 (첫/마지막 마디 제외)
-        if (!isHalfCadenceBar && m > 0 && m < measures - 1 && Math.random() < 0.20) {
+        if (!isHalfCadenceBar && m > 0 && m < measures - 1 && Math.random() < 0.2) {
           const inversionOffset = Math.random() < 0.6 ? 2 : 4; // 3도 60%, 5도 40%
           const invNN = chordRoot + inversionOffset;
           const invNNdown = chordRoot - (7 - inversionOffset); // 아래 전위
@@ -730,7 +684,6 @@ function generateBassLevel3(
             // 그래도 안 되면 현재값 유지 (희귀 케이스)
           }
         }
-        didLeap = true;
       } else {
         // ── 마디 둘째 박 (upbeat): 다양한 경과음 전략 ──
         const root = notes[notes.length - 1].noteNum; // 이 마디의 근음
@@ -738,9 +691,7 @@ function generateBassLevel3(
         // 반종지 마디인 경우 structure 대신 V도(4) 사용
         const nextNoteIndex = noteIndex + 1;
         const nextIsHalfCadence = halfCadenceNotes.includes(nextNoteIndex);
-        const nextStructDeg = (m + 1 < measures)
-          ? (nextIsHalfCadence ? 4 : structure[m + 1])
-          : 0;
+        const nextStructDeg = m + 1 < measures ? (nextIsHalfCadence ? 4 : structure[m + 1]) : 0;
         const nextRootDeg = ((nextStructDeg % 7) + 7) % 7;
 
         // 경과음 유효성 검사 (동음 및 다음 근음 도달 방지)
@@ -752,32 +703,33 @@ function generateBassLevel3(
         };
 
         // 방향 계산용: 다음 마디 근음의 대략적 위치
-        const approxNextRoot = (m + 1 < measures)
-          ? nearestRootInRange(structure[m + 1], root)
-          : nearestTonic(root);
+        const approxNextRoot =
+          m + 1 < measures ? nearestRootInRange(structure[m + 1], root) : nearestTonic(root);
 
         // 경과음 전략을 랜덤 선택
         const strategy = Math.random();
         const passingOptions: number[] = [];
 
-        if (strategy < 0.40) {
+        if (strategy < 0.4) {
           // 전략1 (40%): 다음 근음 방향 순차/도약
-          const dirToNext = approxNextRoot > root ? 1 : approxNextRoot < root ? -1 : (Math.random() < 0.5 ? 1 : -1);
+          const dirToNext =
+            approxNextRoot > root ? 1 : approxNextRoot < root ? -1 : Math.random() < 0.5 ? 1 : -1;
           for (const size of [1, 2, 3]) {
             const nn = root + dirToNext * size;
             if (isValidPassing(nn)) {
               passingOptions.push(nn);
             }
           }
-        } else if (strategy < 0.70) {
+        } else if (strategy < 0.7) {
           // 전략2 (30%): 현재 코드의 3도/5도 음 (화성음)
           for (const offset of [2, 4, -2, -3]) {
             const nn = root + offset;
             if (isValidPassing(nn)) passingOptions.push(nn);
           }
-        } else if (strategy < 0.90) {
+        } else if (strategy < 0.9) {
           // 전략3 (20%): 반대 방향 이웃음 (neighbor tone)
-          const dirToNext = approxNextRoot > root ? 1 : approxNextRoot < root ? -1 : (Math.random() < 0.5 ? 1 : -1);
+          const dirToNext =
+            approxNextRoot > root ? 1 : approxNextRoot < root ? -1 : Math.random() < 0.5 ? 1 : -1;
           for (const size of [1, 2]) {
             const nn = root - dirToNext * size;
             if (isValidPassing(nn)) passingOptions.push(nn);
@@ -792,20 +744,18 @@ function generateBassLevel3(
 
         if (passingOptions.length > 0) {
           currentNN = rand(passingOptions);
-          didLeap = Math.abs(currentNN - root) >= 2;
         } else {
           // 폴백: ±1~3 전체에서 선택 (다음 근음 동음은 여전히 회피)
           const allOptions = [1, -1, 2, -2, 3, -3]
-            .map(d => root + d)
-            .filter(nn => isValidPassing(nn));
+            .map((d) => root + d)
+            .filter((nn) => isValidPassing(nn));
           if (allOptions.length > 0) {
             currentNN = rand(allOptions);
-            didLeap = Math.abs(currentNN - root) >= 2;
           } else {
             // 최후 폴백: ±1 중 유효한 것 선택
             const stepUp = root + 1;
             const stepDown = root - 1;
-            const lastOptions = [stepUp, stepDown].filter(nn => isValidPassing(nn));
+            const lastOptions = [stepUp, stepDown].filter((nn) => isValidPassing(nn));
             if (lastOptions.length > 0) {
               currentNN = rand(lastOptions);
             } else {
@@ -836,21 +786,6 @@ function generateBassLevel3(
       }
 
       notes.push({ noteNum: currentNN, duration: noteDuration, measure: m, beatPosition: beatPos });
-
-      // ── 같은 방향 연속 이동 추적 ──
-      if (notes.length >= 2) {
-        const diff = notes[notes.length - 1].noteNum - notes[notes.length - 2].noteNum;
-        const moveDir = diff > 0 ? 1 : diff < 0 ? -1 : 0;
-        if (moveDir !== 0 && moveDir === lastMoveDir) {
-          sameDirCount++;
-        } else if (moveDir !== 0) {
-          sameDirCount = 1;
-          lastMoveDir = moveDir;
-        } else {
-          sameDirCount = 0;
-          lastMoveDir = 0;
-        }
-      }
     }
   }
 
@@ -997,60 +932,72 @@ function isCompoundMeter(timeSig: TimeSignature): boolean {
  * 5. 8마디당 최소 3종류 패턴
  * 6. 8분음표 4연속 이상인 패턴은 primary에서 제외 (동음 반복 방지)
  */
-function selectRhythmPatterns(
-  measures: number,
-  timeSig: TimeSignature,
-): RhythmPattern[] {
+function selectRhythmPatterns(measures: number, timeSig: TimeSignature): RhythmPattern[] {
   const allPatterns = RHYTHM_PATTERNS_MAP[timeSig];
   const compound = isCompoundMeter(timeSig);
   const result: RhythmPattern[] = [];
 
   // 패턴 분류
-  const cadencePatterns = allPatterns.filter(p => endsWithLongNote(p, compound));
-  const longStartPatterns = allPatterns.filter(p => startsWithLongNote(p, compound));
+  const cadencePatterns = allPatterns.filter((p) => endsWithLongNote(p, compound));
+  const longStartPatterns = allPatterns.filter((p) => startsWithLongNote(p, compound));
 
   // 8분 연속 4개 이상인 패턴 제외 (동음 반복 방지)
   const countConsecutiveEighths = (p: RhythmPattern): number => {
-    let max = 0, cur = 0;
+    let max = 0,
+      cur = 0;
     for (const d of p.durations) {
-      if (d === 1) { cur++; max = Math.max(max, cur); }
-      else cur = 0;
+      if (d === 1) {
+        cur++;
+        max = Math.max(max, cur);
+      } else cur = 0;
     }
     return max;
   };
 
   // primary: 강박 안정 + 3음 이상(혼합리듬 보장) + 8분 연속 2개 이하
-  const mixedLongStart = longStartPatterns.filter(p =>
-    p.durations.length >= 3 && countConsecutiveEighths(p) <= 2,
+  const mixedLongStart = longStartPatterns.filter(
+    (p) => p.durations.length >= 3 && countConsecutiveEighths(p) <= 2,
   );
-  const primaryPool = mixedLongStart.length > 0 ? mixedLongStart
-    : longStartPatterns.filter(p => p.durations.length >= 3);
-  const primary = primaryPool.length > 0 ? rand(primaryPool)
-    : longStartPatterns.length > 0 ? rand(longStartPatterns)
-    : rand(allPatterns);
+  const primaryPool =
+    mixedLongStart.length > 0
+      ? mixedLongStart
+      : longStartPatterns.filter((p) => p.durations.length >= 3);
+  const primary =
+    primaryPool.length > 0
+      ? rand(primaryPool)
+      : longStartPatterns.length > 0
+        ? rand(longStartPatterns)
+        : rand(allPatterns);
 
   // secondary: primary와 다른 것 + 시작 음가와 노트 수 모두 달라야 함
-  const secondaryPool = allPatterns.filter(p =>
-    p.id !== primary.id &&
-    p.durations.length !== primary.durations.length &&
-    p.durations[0] !== primary.durations[0],
+  const secondaryPool = allPatterns.filter(
+    (p) =>
+      p.id !== primary.id &&
+      p.durations.length !== primary.durations.length &&
+      p.durations[0] !== primary.durations[0],
   );
-  const secondaryFallback = allPatterns.filter(p =>
-    p.id !== primary.id && p.durations.length !== primary.durations.length,
+  const secondaryFallback = allPatterns.filter(
+    (p) => p.id !== primary.id && p.durations.length !== primary.durations.length,
   );
-  const secondary = secondaryPool.length > 0 ? rand(secondaryPool)
-    : secondaryFallback.length > 0 ? rand(secondaryFallback)
-    : rand(allPatterns.filter(p => p.id !== primary.id)) || primary;
+  const secondary =
+    secondaryPool.length > 0
+      ? rand(secondaryPool)
+      : secondaryFallback.length > 0
+        ? rand(secondaryFallback)
+        : rand(allPatterns.filter((p) => p.id !== primary.id)) || primary;
 
   // contrast: primary, secondary 모두 아닌 것
-  const contrastPool = allPatterns.filter(p => p.id !== primary.id && p.id !== secondary.id);
+  const contrastPool = allPatterns.filter((p) => p.id !== primary.id && p.id !== secondary.id);
   const contrast = contrastPool.length > 0 ? rand(contrastPool) : secondary;
 
   // cadence: 긴 음가로 끝나는 것 (primary와 다른 것 우선)
-  const cadencePool = cadencePatterns.filter(p => p.id !== primary.id);
-  const cadence = cadencePool.length > 0 ? rand(cadencePool)
-    : cadencePatterns.length > 0 ? rand(cadencePatterns)
-    : primary;
+  const cadencePool = cadencePatterns.filter((p) => p.id !== primary.id);
+  const cadence =
+    cadencePool.length > 0
+      ? rand(cadencePool)
+      : cadencePatterns.length > 0
+        ? rand(cadencePatterns)
+        : primary;
 
   // ── 4마디 프레이즈 단위 모티브 배치 ──
   // [primary, secondary, primary, contrast] → 리듬 모티브 재현(1=3마디)이면서 다양성 확보
@@ -1107,8 +1054,8 @@ function selectRhythmPatterns(
  */
 
 /** 화성 근음 목록 (음계도): I=0, ii=1, iii=2, IV=3, V=4, vi=5, vii°=6 */
-const PRIMARY_CHORD_ROOTS = [0, 3, 4];     // I, IV, V
-const SECONDARY_CHORD_ROOTS = [5, 1, 2];   // vi, ii, iii
+const PRIMARY_CHORD_ROOTS = [0, 3, 4]; // I, IV, V
+const SECONDARY_CHORD_ROOTS = [5, 1, 2]; // vi, ii, iii
 
 /**
  * 주어진 코드 근음(음계도)에 가장 가까운 범위 내 nn 반환.
@@ -1127,7 +1074,10 @@ function nearestChordRoot(rootDeg: number, nearNN: number, ctx: BassGenContext):
     const distFromPrev = Math.abs(nn - nearNN);
     const distFromCenter = Math.abs(midi - rangeMidMidi);
     const score = distFromPrev + distFromCenter * 1.5;
-    if (score < bestScore) { bestScore = score; best = nn; }
+    if (score < bestScore) {
+      bestScore = score;
+      best = nn;
+    }
   }
   return clampToRange(best, 4, ctx);
 }
@@ -1193,7 +1143,7 @@ function generateBassLevel4(
   }
 
   // ── 3. 총 음 수 계산 및 매핑 ──
-  const noteCountPerMeasure = rhythmPatterns.map(rp => rp.durations.length);
+  const noteCountPerMeasure = rhythmPatterns.map((rp) => rp.durations.length);
   const totalNotes = noteCountPerMeasure.reduce((s, c) => s + c, 0);
 
   const noteMap: { measure: number; inMeasureIdx: number }[] = [];
@@ -1206,8 +1156,14 @@ function generateBassLevel4(
   // ── 4. Sweep 방향 ──
   let direction: 1 | -1 = -1;
   for (const c of pattern.contour) {
-    if (c === 'asc') { direction = 1; break; }
-    if (c === 'desc') { direction = -1; break; }
+    if (c === 'asc') {
+      direction = 1;
+      break;
+    }
+    if (c === 'desc') {
+      direction = -1;
+      break;
+    }
   }
 
   let currentNN = 0;
@@ -1246,7 +1202,10 @@ function generateBassLevel4(
       // 마디 내 다음 긴 음가(>=2) 찾기
       let nextLongNoteIdx = -1;
       for (let k = n + 1; k < noteCountPerMeasure[m]; k++) {
-        if (rp.durations[k] >= 2) { nextLongNoteIdx = k; break; }
+        if (rp.durations[k] >= 2) {
+          nextLongNoteIdx = k;
+          break;
+        }
       }
 
       if (notesLeftInMeasure === 0 && m + 1 < measures) {
@@ -1305,31 +1264,36 @@ function generateBassLevel4(
         const dirToNext = nextMeasureRoot > currentNN ? 1 : nextMeasureRoot < currentNN ? -1 : 0;
 
         // 1차: 화성음 후보 (I, IV, V, vi, ii, iii)
-        const chordTones = candidates.filter(nn => {
+        const chordTones = candidates.filter((nn) => {
           const deg = ((nn % 7) + 7) % 7;
           return PRIMARY_CHORD_ROOTS.includes(deg) || SECONDARY_CHORD_ROOTS.includes(deg);
         });
 
         // 2차: 다음 근음 방향에 맞는 후보
-        const filterByDir = (pool: number[]) => pool.filter(nn => {
-          if (dirToNext === 0) return true;
-          return (nn > prevNN ? 1 : -1) === dirToNext;
-        });
+        const filterByDir = (pool: number[]) =>
+          pool.filter((nn) => {
+            if (dirToNext === 0) return true;
+            return (nn > prevNN ? 1 : -1) === dirToNext;
+          });
 
         const directedChord = filterByDir(chordTones);
         const directedAll = filterByDir(candidates);
 
         // 우선순위: 방향+화성 > 화성 > 방향 > 전체
-        const pool = directedChord.length > 0 ? directedChord
-          : chordTones.length > 0 ? chordTones
-          : directedAll.length > 0 ? directedAll
-          : candidates;
+        const pool =
+          directedChord.length > 0
+            ? directedChord
+            : chordTones.length > 0
+              ? chordTones
+              : directedAll.length > 0
+                ? directedAll
+                : candidates;
 
         // 왕복(A-B-A) 패턴 방지
         let finalPool = pool;
         if (notes.length >= 2) {
           const twoBack = notes[notes.length - 2].noteNum;
-          const filtered = pool.filter(nn => nn !== twoBack);
+          const filtered = pool.filter((nn) => nn !== twoBack);
           if (filtered.length > 0) finalPool = filtered;
         }
         currentNN = rand(finalPool);
@@ -1361,7 +1325,11 @@ function generateBassLevel4(
     }
 
     // ── 동음 3연속 최종 안전장치 ──
-    if (notes.length >= 2 && isRepeatedNote(notes, 2) && currentNN === notes[notes.length - 1].noteNum) {
+    if (
+      notes.length >= 2 &&
+      isRepeatedNote(notes, 2) &&
+      currentNN === notes[notes.length - 1].noteNum
+    ) {
       const step = isInRange(currentNN + 1, 4, ctx) ? 1 : -1;
       currentNN = currentNN + step;
     }
@@ -1395,8 +1363,11 @@ function generateBassLevel4(
 
   // ── 동음 8분음표 쌍 보정 ──
   for (let i = 1; i < notes.length; i++) {
-    if (notes[i].duration === 1 && notes[i - 1].duration === 1 &&
-        notes[i].noteNum === notes[i - 1].noteNum) {
+    if (
+      notes[i].duration === 1 &&
+      notes[i - 1].duration === 1 &&
+      notes[i].noteNum === notes[i - 1].noteNum
+    ) {
       // 다음 음 방향으로 순차 이동
       const target = i + 1 < notes.length ? notes[i + 1].noteNum : notes[i].noteNum + 1;
       const dir = target > notes[i].noteNum ? 1 : target < notes[i].noteNum ? -1 : 1;
@@ -1419,7 +1390,9 @@ function generateBassLevel4(
  * 위반 지점의 음을 직전 음과 동일하게(유지) 설정하여 방향 체인을 끊는다.
  */
 function fixConsecutiveSameDirection(
-  notes: BassNote[], maxMoves: number, _ctx: BassGenContext,
+  notes: BassNote[],
+  maxMoves: number,
+  _ctx: BassGenContext,
 ): void {
   for (let pass = 0; pass < 3; pass++) {
     let fixed = false;
@@ -1532,7 +1505,7 @@ function validateDurations(notes: BassNote[], opts: TwoVoiceBassOptions): void {
   for (let m = 0; m < opts.measures; m++) {
     const total = byMeasure.get(m) || 0;
     if (total !== expectedTotal) {
-      const measureNotes = notes.filter(n => n.measure === m);
+      const measureNotes = notes.filter((n) => n.measure === m);
       if (measureNotes.length > 0) {
         const last = measureNotes[measureNotes.length - 1];
         const others = measureNotes.slice(0, -1);

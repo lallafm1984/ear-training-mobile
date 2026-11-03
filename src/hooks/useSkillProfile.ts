@@ -23,12 +23,17 @@ export function useSkillProfile() {
 
   // ── 로컬 로드 ──
   useEffect(() => {
-    if (!storageKey) { setLoaded(true); return; }
-    AsyncStorage.getItem(storageKey).then(raw => {
+    if (!storageKey) {
+      setLoaded(true);
+      return;
+    }
+    AsyncStorage.getItem(storageKey).then((raw) => {
       if (raw) {
         try {
           setProfile({ ...DEFAULT_SKILL_PROFILE, ...JSON.parse(raw) });
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       } else {
         setProfile(DEFAULT_SKILL_PROFILE);
       }
@@ -37,47 +42,53 @@ export function useSkillProfile() {
   }, [storageKey]);
 
   // ── 저장 헬퍼 ──
-  const persist = useCallback(async (updated: UserSkillProfile) => {
-    if (!storageKey) return;
-    setProfile(updated);
-    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
-  }, [storageKey]);
+  const persist = useCallback(
+    async (updated: UserSkillProfile) => {
+      if (!storageKey) return;
+      setProfile(updated);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+    },
+    [storageKey],
+  );
 
   // ── 자기 평가 반영 ──
-  const applyEvaluation = useCallback(async (
-    track: TrackType,
-    level: number,
-    rating: 'easy' | 'normal' | 'hard',
-  ) => {
-    const updated = { ...profile };
+  const applyEvaluation = useCallback(
+    async (track: TrackType, level: number, rating: 'easy' | 'normal' | 'hard') => {
+      const updated = { ...profile };
 
-    // 정확도 업데이트 (이동 평균)
-    const ratingScore = { easy: 0.9, normal: 0.65, hard: 0.35 }[rating];
-    updated.recentAccuracy = updated.recentAccuracy * 0.7 + ratingScore * 0.3;
+      // 정확도 업데이트 (이동 평균)
+      const ratingScore = { easy: 0.9, normal: 0.65, hard: 0.35 }[rating];
+      updated.recentAccuracy = updated.recentAccuracy * 0.7 + ratingScore * 0.3;
 
-    // 레벨 조정
-    const trackLevelKey = {
-      partPractice: 'partPracticeLevel',
-      comprehensive: 'comprehensiveLevel',
-    }[track] as keyof UserSkillProfile;
+      // 레벨 조정
+      const trackLevelKey = {
+        partPractice: 'partPracticeLevel',
+        comprehensive: 'comprehensiveLevel',
+      }[track] as keyof UserSkillProfile;
 
-    const maxLevels: Record<TrackType, number> = { partPractice: 9, comprehensive: 4 };
-    const currentLevel = updated[trackLevelKey] as number;
+      const maxLevels: Record<TrackType, number> = { partPractice: 9, comprehensive: 4 };
+      const currentLevel = updated[trackLevelKey] as number;
 
-    if (rating === 'easy' && currentLevel === level && level < maxLevels[track]) {
-      (updated as any)[trackLevelKey] = level + 1;
-    }
+      if (rating === 'easy' && currentLevel === level && level < maxLevels[track]) {
+        if (trackLevelKey === 'partPracticeLevel') {
+          updated.partPracticeLevel = level + 1;
+        } else {
+          updated.comprehensiveLevel = level + 1;
+        }
+      }
 
-    // 퀵스타트 트랙 순환 추적
-    if (updated.lastQuickTrack === track) {
-      updated.sameTrackCount += 1;
-    } else {
-      updated.lastQuickTrack = track;
-      updated.sameTrackCount = 1;
-    }
+      // 퀵스타트 트랙 순환 추적
+      if (updated.lastQuickTrack === track) {
+        updated.sameTrackCount += 1;
+      } else {
+        updated.lastQuickTrack = track;
+        updated.sameTrackCount = 1;
+      }
 
-    await persist(updated);
-  }, [profile, persist]);
+      await persist(updated);
+    },
+    [profile, persist],
+  );
 
   // ── 스트릭 업데이트 ──
   const updateStreak = useCallback(async () => {
@@ -97,7 +108,7 @@ export function useSkillProfile() {
 
     await AsyncStorage.setItem(lastDateKey, today);
     await persist(updated);
-  }, [profile, persist]);
+  }, [lastDateKey, profile, persist]);
 
   return { profile, loaded, applyEvaluation, updateStreak };
 }

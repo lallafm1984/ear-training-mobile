@@ -32,12 +32,18 @@ describe('getDifficultyCategory', () => {
 
 describe('generateScore', () => {
   const difficulties: Difficulty[] = [
-    'beginner_1', 'beginner_2', 'beginner_3',
-    'intermediate_1', 'intermediate_2', 'intermediate_3',
-    'advanced_1', 'advanced_2', 'advanced_3',
+    'beginner_1',
+    'beginner_2',
+    'beginner_3',
+    'intermediate_1',
+    'intermediate_2',
+    'intermediate_3',
+    'advanced_1',
+    'advanced_2',
+    'advanced_3',
   ];
 
-  difficulties.forEach(diff => {
+  difficulties.forEach((diff) => {
     it(`${diff}: trebleNotes 배열 반환 + 길이 > 0`, () => {
       const score = generateScore(makeOpts({ difficulty: diff }));
       expect(score.trebleNotes).toBeDefined();
@@ -49,22 +55,30 @@ describe('generateScore', () => {
   it('4/4 + 4마디: 올바른 총 길이', () => {
     const score = generateScore(makeOpts({ measures: 4, timeSignature: '4/4' }));
     // 4마디 * 4/4 = 16 16분음표 단위 per bar = 64 총 sixteenths
-    const totalSixteenths = score.trebleNotes.reduce((sum, n) => sum + durationToSixteenths(n.duration), 0);
+    const totalSixteenths = score.trebleNotes.reduce(
+      (sum, n) => sum + durationToSixteenths(n.duration),
+      0,
+    );
     expect(totalSixteenths).toBe(64);
   });
 
   it('3/4 박자: 올바른 총 길이', () => {
     const score = generateScore(makeOpts({ measures: 4, timeSignature: '3/4' }));
     // 4마디 * 3/4 = 12 16분음표 단위 per bar = 48 총 sixteenths
-    const totalSixteenths = score.trebleNotes.reduce((sum, n) => sum + durationToSixteenths(n.duration), 0);
+    const totalSixteenths = score.trebleNotes.reduce(
+      (sum, n) => sum + durationToSixteenths(n.duration),
+      0,
+    );
     expect(totalSixteenths).toBe(48);
   });
 
   it('useGrandStaff: bassNotes도 반환', () => {
-    const score = generateScore(makeOpts({
-      useGrandStaff: true,
-      bassDifficulty: 'bass_1',
-    }));
+    const score = generateScore(
+      makeOpts({
+        useGrandStaff: true,
+        bassDifficulty: 'bass_1',
+      }),
+    );
     expect(score.bassNotes).toBeDefined();
     expect(score.bassNotes.length).toBeGreaterThan(0);
   });
@@ -76,14 +90,14 @@ describe('generateScore', () => {
 
   it('다양한 조성에서 에러 없이 생성', () => {
     const keys = ['C', 'G', 'F', 'D', 'Bb', 'A', 'Eb'];
-    keys.forEach(key => {
+    keys.forEach((key) => {
       expect(() => generateScore(makeOpts({ keySignature: key }))).not.toThrow();
     });
   });
 
   it('trebleNotes의 각 노트가 필수 필드 포함', () => {
     const score = generateScore(makeOpts());
-    score.trebleNotes.forEach(note => {
+    score.trebleNotes.forEach((note) => {
       expect(note).toHaveProperty('id');
       expect(note).toHaveProperty('duration');
       expect(typeof note.duration).toBe('string');

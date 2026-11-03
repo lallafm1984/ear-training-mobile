@@ -10,12 +10,7 @@ interface LoadingModalProps {
 const LoadingModal: React.FC<LoadingModalProps> = ({ visible }) => {
   const { t } = useTranslation('editor');
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-    >
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.aiLoadingOverlay}>
         <View style={styles.aiLoadingContainer}>
           <ActivityIndicator size="large" color="#6366f1" />

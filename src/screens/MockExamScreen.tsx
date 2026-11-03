@@ -3,15 +3,14 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Volume2, VolumeX, ChevronRight, Check, X } from 'lucide-react-native';
+import { Volume2, VolumeX, ChevronRight, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
 import { EXAM_PRESETS } from '../lib/examPresets';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import { generateAbc } from '../lib';
@@ -21,8 +20,8 @@ import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRend
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useAlert, useSessionContentLog } from '../context';
-import type { ExamQuestion, MockExamSession, ExamSection } from '../types/exam';
-import type { ContentCategory, PracticeRecord } from '../types/content';
+import type { ExamQuestion } from '../types/exam';
+import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'MockExam'>['route'];
@@ -150,19 +149,11 @@ export default function MockExamScreen() {
   const currentQ = questions[currentIndex];
   const isChoiceType = !!currentQ.choiceQuestion;
   const isCurrentAnswered = isChoiceType ? !!answers[currentIndex] : !!selfRatings[currentIndex];
-  const catConfig = getContentConfig(currentQ.examQuestion.contentType);
   const colors = CATEGORY_COLORS[currentQ.examQuestion.contentType];
 
   const handleSelectAnswer = useCallback(
     (choice: string) => {
       setAnswers((prev) => ({ ...prev, [currentIndex]: choice }));
-    },
-    [currentIndex],
-  );
-
-  const handleSelfRate = useCallback(
-    (rating: number) => {
-      setSelfRatings((prev) => ({ ...prev, [currentIndex]: rating }));
     },
     [currentIndex],
   );
@@ -280,11 +271,12 @@ export default function MockExamScreen() {
     stopAudio,
     addBatchRecords,
     updateStreak,
+    t,
   ]);
 
   // 시험 진행 중 실수로 뒤로가기 방지
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (submittedRef.current) return;
       if (navigatingToNotationRef.current) {
         navigatingToNotationRef.current = false;
@@ -306,7 +298,7 @@ export default function MockExamScreen() {
       });
     });
     return unsubscribe;
-  }, [navigation, showAlert]);
+  }, [navigation, showAlert, t]);
 
   const confirmSubmit = () => {
     showAlert({

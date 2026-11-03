@@ -1,12 +1,12 @@
 # MelodyGen — 프로젝트 구조 인덱스
 
-> 마지막 업데이트: 2026-05-18
+> 마지막 업데이트: 2026-08-31
 
 ## 디렉토리 구조
 
 ```
 src/
-├── components/          # 재사용 가능 UI 컴포넌트 (19개, 미사용 2개)
+├── components/          # 재사용 가능 UI 컴포넌트 (20개, 미사용 2개)
 ├── context/             # React Context 프로바이더 (4개)
 ├── hooks/               # 커스텀 React 훅 (5개)
 ├── lib/                 # 비즈니스 로직 모듈
@@ -16,6 +16,11 @@ src/
 │   ├── practiceScoreGenerator.ts  # 기보형 악보 생성 (공유)
 │   ├── examNotationStore.ts      # 모의시험↔기보연습 데이터 전달
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
+│   ├── oauthCallback.ts          # OAuth 딥링크 query/hash 파싱 + Supabase 세션 생성
+│   ├── promotionConfig.ts        # 서버 시간 기반 Pro 캠페인 RPC/공지 키
+│   ├── appControl.ts             # 원격 버전 정책/공지 RPC 파싱·빌드 판정·노출 키
+│   ├── secureStoreAdapter.ts     # Supabase 세션 SecureStore 청크 저장/레거시 호환
+│   ├── logger.ts                 # 개발 빌드 전용 중앙 로그 경계
 │   └── ...              # 기타 라이브러리
 ├── i18n/                # 국제화 (i18next)
 │   ├── index.ts         # i18n 초기화 + 언어 감지
@@ -26,7 +31,23 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (12개)
+└── __tests__/           # Jest 테스트 (18개)
+assets/
+└── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
+credentials/
+└── android/             # 로컬 Android 릴리스/upload key 키스토어 위치 (.jks는 Git 제외)
+build/                   # Android 릴리스 산출물 및 Play Console 제출용 인증서 (.apk/.aab/.pem, Git 제외)
+docs/
+├── LOCAL_ANDROID_BUILD_MAC.md                # Mac 로컬 Android 릴리스 빌드 절차
+├── APP_CONTROL_SUPABASE.md                   # 강제 업데이트/원격 공지 Supabase 운영 절차
+├── APP_CONTROL_RELEASE_HANDOFF_20260822.md    # 빌드 61·라이브 DB·구버전 경계 인수인계
+└── NOTATION_SCREEN_FIX_20260831.md            # 선율/2성부 회귀 원인·실기기 검증·62 (1.1.3) AAB
+scripts/
+├── androidLocalBuildEnv.mjs            # 로컬 Android 빌드 환경 변수/경로 유틸
+├── checkMacAndroidBuildEnv.mjs         # Mac Android 빌드 필수 도구 점검
+├── createAndroidLocalCredentials.mjs   # EAS credentials.json 생성
+├── verifyAndroidReleaseKeystore.mjs    # JKS alias/비밀번호 검증
+└── buildAndroidReleaseLocal.mjs        # versionCode 증가 + EAS local AAB 빌드
 ```
 
 ---
@@ -61,6 +82,7 @@ src/
 | `abcjsSource.ts`        | abcjsWebViewHtml 내부                                        |
 | `abcjsWebViewHtml.ts`   | AbcjsRenderer 내부                                           |
 | `AppAlert`              | AlertContext                                                 |
+| `AppControlGate`        | App.tsx (로그인 전 강제 업데이트 및 전역 공지)               |
 | `BottomSheet`           | ScoreEditor (PlaybackSheet, SavedScoresSheet, SettingsSheet) |
 | `CategoryCard`          | HomeScreen                                                   |
 | `DailyScoreChart`       | StatsScreen                                                  |
@@ -85,7 +107,7 @@ src/
 | `usePracticeHistory` | HomeScreen, ChoicePractice, NotationPractice, MockExam, Stats, DailyGoal |
 | `useMascotExp`       | HomeScreen, DailyGoalScreen, MascotGalleryScreen                         |
 | `useDownloadQuota`   | ScoreEditor                                                              |
-| `useNoteInput`       | NotationPracticeScreen                                                   |
+| `useNoteInput`       | NotationPracticeScreen — 새 악보 조건을 명시적으로 받는 안정된 reset 콜백 |
 
 #### Context 프로바이더
 
@@ -111,6 +133,11 @@ src/
 | `examNotationStore.ts`      | MockExam, NotationPractice                                           |
 | `computeStats.ts`           | StatsScreen                                                          |
 | `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen                                 |
+| `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)              |
+| `promotionConfig.ts`        | SubscriptionContext (서버 시간 프로모션 권한 판정)                   |
+| `appControl.ts`             | AppControlGate (최신 빌드 강제/공지 RPC 검증 및 로컬 노출 상태)      |
+| `secureStoreAdapter.ts`     | Supabase 인증 세션의 청크 암호화 저장 및 기존 단일 키 마이그레이션   |
+| `logger.ts`                 | ErrorBoundary, 인증·구독·결제의 개발 빌드 전용 진단 로그             |
 | `trackConfig.ts`            | ScoreEditor, useSkillProfile, practiceScoreGenerator                 |
 | `revenueCat.ts`             | SubscriptionContext, PaywallScreen                                   |
 | `melodyRhythmLevel.ts`      | scoreGenerator, twoVoice                                             |
@@ -131,9 +158,14 @@ src/
 
 ## Supabase Migrations
 
-| 마이그레이션                                     | 역할                                       |
-| ------------------------------------------------ | ------------------------------------------ |
-| `20260518060000_create_session_content_logs.sql` | 세션 컨텐츠 실행 요약 로그 테이블/RLS 생성 |
+| 마이그레이션                                           | 역할                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `20260518060000_create_session_content_logs.sql`       | 세션 컨텐츠 실행 요약 로그 테이블/RLS 생성              |
+| `20260818083000_create_server_timed_promotions.sql`    | 서버 시간 기반 프로모션 테이블/RPC 생성                 |
+| `20260822090000_create_app_control.sql`                | 플랫폼별 버전 정책·원격 공지 테이블과 제한 RPC 생성     |
+| `20260822153000_extend_admissions_promotion.sql`       | 무료 이용 9월 30일 연장·빌드 59+ 원격 공지 활성화       |
+| `20260822182000_add_daily_announcement_mode.sql`       | 하루 1회 공지 모드 추가·기존 모드 호환 유지             |
+| `20260822183000_set_admissions_announcement_daily.sql` | 무료 이용 공지를 빌드 60+ 하루 1회로 전환·종료일 동기화 |
 
 ---
 
@@ -240,26 +272,53 @@ Login → Onboarding → Home
 - **Prettier**: `.prettierrc` (singleQuote, trailingComma, printWidth 100)
 - 실행: `npm run lint` / `npm run format` / `npm run format:check`
 
+## 빌드/배포 설정
+
+| 항목                              | 파일                                        | 역할                                                     |
+| --------------------------------- | ------------------------------------------- | -------------------------------------------------------- |
+| Mac 로컬 Android 릴리스 빌드 문서 | `docs/LOCAL_ANDROID_BUILD_MAC.md`           | Windows 키스토어를 Mac 로컬 EAS 빌드에서 재사용하는 절차 |
+| Android 서명 키스토어 위치        | `credentials/android/melodygen-release.jks` | Git 제외된 로컬 릴리스 서명 키스토어                     |
+| Android 로컬 환경 예시            | `.env.local.example`                        | 키스토어 경로, 비밀번호, alias 환경 변수 템플릿          |
+| Mac 로컬 빌드 환경 점검           | `scripts/checkMacAndroidBuildEnv.mjs`       | Node/npm/Java/Android SDK/adb 상태 점검                  |
+| EAS credentials 생성              | `scripts/createAndroidLocalCredentials.mjs` | `.env.local` 기반 `credentials.json` 생성                |
+| 키스토어 검증                     | `scripts/verifyAndroidReleaseKeystore.mjs`  | `keytool`로 JKS/alias 검증                               |
+| Android 로컬 릴리스 빌드          | `scripts/buildAndroidReleaseLocal.mjs`      | `versionCode` 증가 후 `eas build --local` AAB 생성       |
+| 앱 버전/공지 운영 문서            | `docs/APP_CONTROL_SUPABASE.md`              | Supabase 원격 정책 필드·안전한 배포 순서·장애 동작       |
+
 ---
 
 ## 테스트
 
-| 테스트 파일                 | 대상                                        |
-| --------------------------- | ------------------------------------------- |
-| `grading.test.ts`           | `normalizeNotes`, `gradeNotes`              |
-| `questionGenerator.test.ts` | 객관식 문제 생성                            |
-| `scoreGenerator.test.ts`    | 악보 생성 엔진                              |
-| `computeStats.test.ts`      | 통계 집계                                   |
-| `skillProfile.test.ts`      | 스킬 레벨 계산                              |
-| `contentConfig.test.ts`     | 카테고리 설정/난이도 라벨                   |
-| `duration.test.ts`          | 음가 변환/박자 계산                         |
-| `keySignature.test.ts`      | 조성/음계/임시표                            |
-| `melodyRhythmLevel.test.ts` | 레벨별 리듬 파라미터                        |
-| `examPresets.test.ts`       | 시험 프리셋 구조 검증                       |
-| `i18nLanguage.test.ts`      | 기기 지역 감지/지원 언어 정규화             |
-| `sessionContentLog.test.ts` | 세션 컨텐츠 실행 카운트 요약/DB insert 매핑 |
+| 테스트 파일                  | 대상                                                        |
+| ---------------------------- | ----------------------------------------------------------- |
+| `grading.test.ts`            | `normalizeNotes`, `gradeNotes`                              |
+| `questionGenerator.test.ts`  | 객관식 문제 생성                                            |
+| `scoreGenerator.test.ts`     | 악보 생성 엔진                                              |
+| `computeStats.test.ts`       | 통계 집계                                                   |
+| `skillProfile.test.ts`       | 스킬 레벨 계산                                              |
+| `contentConfig.test.ts`      | 카테고리 설정/난이도 라벨                                   |
+| `duration.test.ts`           | 음가 변환/박자 계산                                         |
+| `keySignature.test.ts`       | 조성/음계/임시표                                            |
+| `melodyRhythmLevel.test.ts`  | 레벨별 리듬 파라미터                                        |
+| `examPresets.test.ts`        | 시험 프리셋 구조 검증                                       |
+| `i18nLanguage.test.ts`       | 기기 지역 감지/지원 언어 정규화                             |
+| `sessionContentLog.test.ts`  | 세션 컨텐츠 실행 카운트 요약/DB insert 매핑                 |
+| `oauthCallback.test.ts`      | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리 |
+| `promotionConfig.test.ts`    | 서버 시간 RPC 판정 및 fail-closed 동작                      |
+| `appControl.test.ts`         | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키            |
+| `secureStoreAdapter.test.ts` | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리    |
+| `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (196개 테스트)
+실행: `npm test` (269개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+
+## 기능별 파일 매핑
+
+| 기능 | 파일 |
+| ---- | ---- |
+| 선율/2성부 받아쓰기 문제 생성·진입·생성 예약 취소 | `src/screens/NotationPracticeScreen.tsx` |
+| 새 문제의 첫 음·마디·성부 조건으로 답안 초기화 | `src/hooks/useNoteInput.ts` |
+| 기보형 문제의 클라이언트 동적 생성 | `src/lib/practiceScoreGenerator.ts` |
+| 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증 | `src/__tests__/notationPracticeScreen.test.ts` |
 
 ---
 
@@ -267,5 +326,6 @@ Login → Onboarding → Home
 
 | 파일                                         | 설명                                       |
 | -------------------------------------------- | ------------------------------------------ |
+| `docs/NOTATION_SCREEN_FIX_20260831.md` | 8월 22일 회귀 원인·빌드 58~62 대조·실기기 검증·62 (1.1.3) AAB 및 서명 검증 |
 | `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md` | 초급자용 “귀 열기 코스” 신규 콘텐츠 설계안 |
 | `AD_COPY.md`                                 | 페이지별 광고 문구 모음 (13개 활성 화면)   |

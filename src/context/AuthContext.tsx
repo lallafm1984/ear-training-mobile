@@ -1,14 +1,23 @@
 import React, {
-  createContext, useContext, useEffect, useState, useCallback, ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  ReactNode,
 } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../lib';
+import { Linking } from 'react-native';
+import { createOAuthCallbackProcessor, supabase } from '../lib';
 import type { Profile } from '../lib';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
 import { logoutRevenueCat } from '../lib/revenueCat';
+import { logger } from '../lib/logger';
+import { useAlert } from './AlertContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -18,22 +27,22 @@ WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthContextValue {
   /** 현재 세션 (null = 미로그인) */
-  session:  Session | null;
+  session: Session | null;
   /** 현재 유저 */
-  user:     User | null;
+  user: User | null;
   /** profiles 테이블 데이터 */
-  profile:  Profile | null;
+  profile: Profile | null;
   /** 초기 세션 로딩 중 */
-  loading:  boolean;
+  loading: boolean;
   /** 프로필 갱신 중 */
   profileLoading: boolean;
 
   /** 이메일+비밀번호 로그인 */
-  signIn:   (email: string, password: string) => Promise<AuthError | null>;
+  signIn: (email: string, password: string) => Promise<AuthError | null>;
   /** 이메일+비밀번호 회원가입 */
-  signUp:   (email: string, password: string, displayName: string) => Promise<AuthError | null>;
+  signUp: (email: string, password: string, displayName: string) => Promise<AuthError | null>;
   /** 로그아웃 */
-  signOut:  () => Promise<void>;
+  signOut: () => Promise<void>;
   /** 비밀번호 변경 */
   updatePassword: (newPassword: string) => Promise<AuthError | null>;
   /** Google OAuth 로그인 */
@@ -53,21 +62,18 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session,        setSession]        = useState<Session | null>(null);
-  const [user,           setUser]           = useState<User | null>(null);
-  const [profile,        setProfile]        = useState<Profile | null>(null);
-  const [loading,        setLoading]        = useState(true);
+  const { showAlert } = useAlert();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
   // ── 프로필 로드 (없으면 자동 생성) ──────────────────────
   const loadProfile = useCallback(async (uid: string) => {
     setProfileLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
-        .single();
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
 
       if (data) {
         setProfile(data as Profile);
@@ -76,12 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 프로필이 없으면 생성 (탈퇴 후 재가입 등)
       if (error?.code === 'PGRST116') {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
         if (!authUser) return;
 
         const meta = authUser.user_metadata ?? {};
-        const displayName = meta.display_name || meta.full_name
-          || authUser.email?.split('@')[0] || '';
+        const displayName =
+          meta.display_name || meta.full_name || authUser.email?.split('@')[0] || '';
 
         const { data: created, error: insertErr } = await supabase
           .from('profiles')
@@ -95,12 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single();
 
         if (insertErr) {
-          if (__DEV__) console.warn('[AuthContext] 프로필 생성 실패:', insertErr.message);
+          logger.warn('[AuthContext] 프로필 생성 실패:', insertErr.message);
         } else {
           setProfile(created as Profile);
         }
       } else if (error) {
-        if (__DEV__) console.warn('[AuthContext] 프로필 로드 실패:', error.message);
+        logger.warn('[AuthContext] 프로필 로드 실패:', error.message);
       }
     } finally {
       setProfileLoading(false);
@@ -111,17 +119,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await loadProfile(user.id);
   }, [user, loadProfile]);
 
-  // ── 세션 초기화 + onAuthStateChange 리스너 ────────────────
+  const showGoogleSignInError = useCallback(
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('[Google OAuth] 로그인 실패:', message);
+      showAlert({
+        title: i18n.t('auth:login.googleErrorTitle'),
+        message: i18n.t('auth:login.googleErrorMessage'),
+        type: 'error',
+      });
+    },
+    [showAlert],
+  );
+
+  // Android에서는 Custom Tab 복귀(AppState)와 딥링크 이벤트가 경합할 수 있다.
+  // WebBrowser 결과와 무관하게 앱 전역에서 콜백을 처리하고, 동일 URL은 한 번만 교환한다.
+  const oauthCallbackProcessor = useMemo(
+    () => createOAuthCallbackProcessor(supabase.auth, showGoogleSignInError),
+    [showGoogleSignInError],
+  );
+
+  // ── 세션 초기화 + OAuth 딥링크 + onAuthStateChange 리스너 ─
   useEffect(() => {
-    // 앱 시작 시 기존 세션 복원
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) loadProfile(s.user.id);
-      setLoading(false);
-    });
+    let mounted = true;
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, s) => {
+      if (!mounted) return;
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
@@ -134,8 +157,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => listener.subscription.unsubscribe();
-  }, [loadProfile]);
+    const linkingListener = Linking.addEventListener('url', ({ url }) => {
+      void oauthCallbackProcessor.process(url);
+    });
+
+    const initializeSession = async () => {
+      try {
+        // 앱이 OAuth 콜백으로 새로 시작된 경우 세션 복원보다 먼저 교환한다.
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) await oauthCallbackProcessor.process(initialUrl);
+
+        const {
+          data: { session: s },
+        } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) loadProfile(s.user.id);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    void initializeSession();
+
+    return () => {
+      mounted = false;
+      linkingListener.remove();
+      listener.subscription.unsubscribe();
+    };
+  }, [loadProfile, oauthCallbackProcessor]);
 
   // ── 로그인 ───────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string) => {
@@ -144,9 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── 회원가입 ─────────────────────────────────────────────
-  const signUp = useCallback(async (
-    email: string, password: string, displayName: string,
-  ) => {
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -164,39 +213,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Google OAuth 로그인 ──────────────────────────────────
   const signInWithGoogle = useCallback(async () => {
     const redirectTo = AuthSession.makeRedirectUri({ scheme: 'melodygen' });
+    oauthCallbackProcessor.reset();
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
 
-    if (error || !data.url) {
-      if (__DEV__) console.warn('[Google OAuth] URL 생성 실패:', error?.message);
-      return;
-    }
+      if (error) throw error;
+      if (!data.url) throw new Error('Google OAuth URL was not created');
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-    if (result.type === 'success') {
-      const url = result.url;
-      // PKCE flow: code 파라미터 추출
-      const qs = url.includes('?') ? url.split('?')[1] : url.split('#')[1] ?? '';
-      const params = new URLSearchParams(qs);
-      const code = params.get('code');
-
-      if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
-      } else {
-        // Implicit flow fallback: hash에서 토큰 추출
-        const hash = new URLSearchParams(url.split('#')[1] ?? '');
-        const accessToken  = hash.get('access_token');
-        const refreshToken = hash.get('refresh_token');
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        }
+      // success는 즉시 처리한다. Android에서 dismiss가 먼저 반환되더라도
+      // 전역 Linking 리스너가 동일 콜백을 처리하므로 로그인 결과가 유실되지 않는다.
+      if (result.type === 'success') {
+        await oauthCallbackProcessor.process(result.url);
       }
+    } catch (error) {
+      showGoogleSignInError(error);
     }
-  }, []);
+  }, [oauthCallbackProcessor, showGoogleSignInError]);
 
   // ── 비밀번호 변경 ─────────────────────────────────────────
   const updatePassword = useCallback(async (newPassword: string) => {
@@ -205,26 +243,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── 프로필 업데이트 ───────────────────────────────────────
-  const updateProfile = useCallback(async (data: { display_name?: string }) => {
-    if (!user) return i18n.t('common:error.loginRequired');
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...data, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
-    if (error) return error.message;
-    await loadProfile(user.id);
-    return null;
-  }, [user, loadProfile]);
+  const updateProfile = useCallback(
+    async (data: { display_name?: string }) => {
+      if (!user) return i18n.t('common:error.loginRequired');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ...data, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      if (error) return error.message;
+      await loadProfile(user.id);
+      return null;
+    },
+    [user, loadProfile],
+  );
 
   // ── 회원 탈퇴 ────────────────────────────────────────────
   const deleteAccount = useCallback(async () => {
     if (!user) return i18n.t('common:error.loginRequired');
 
     // profiles 레코드 삭제 (CASCADE로 auth.users도 삭제됨)
-    const { error: delError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', user.id);
+    const { error: delError } = await supabase.from('profiles').delete().eq('id', user.id);
 
     if (delError) return delError.message;
 
@@ -241,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // auth.users 삭제 (security definer DB Function)
     const { error: authDelError } = await supabase.rpc('delete_own_account');
-    if (__DEV__ && authDelError) console.warn('auth.users 삭제 실패:', authDelError.message);
+    if (authDelError) logger.warn('auth.users 삭제 실패:', authDelError.message);
 
     // RevenueCat 사용자 초기화 — 탈퇴 후 재가입 시 이전 구매 토큰이
     // oldPurchaseToken으로 사용되어 "구독 변경 불가" 오류가 나는 것을 방지
@@ -252,9 +290,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const value: AuthContextValue = {
-    session, user, profile, loading, profileLoading,
-    signIn, signUp, signOut, signInWithGoogle,
-    updatePassword, updateProfile, deleteAccount, reloadProfile,
+    session,
+    user,
+    profile,
+    loading,
+    profileLoading,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle,
+    updatePassword,
+    updateProfile,
+    deleteAccount,
+    reloadProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

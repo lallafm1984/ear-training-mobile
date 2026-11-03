@@ -1,10 +1,16 @@
 import React from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, StyleSheet, Pressable, Dimensions,
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Pressable,
+  Dimensions,
 } from 'react-native';
 import { Crown, Lock, X, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { PLAN_NAME, PLAN_COLOR } from '../types';
+import { PLAN_COLOR } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -21,7 +27,6 @@ export type UpgradeReason =
   | 'time_signature'
   | 'download_limit';
 
-
 interface UpgradeModalProps {
   visible: boolean;
   reason: UpgradeReason;
@@ -30,7 +35,12 @@ interface UpgradeModalProps {
   onGoToPaywall: () => void;
 }
 
-export default function UpgradeModal({ visible, reason, onClose, onGoToPaywall }: UpgradeModalProps) {
+export default function UpgradeModal({
+  visible,
+  reason,
+  onClose,
+  onGoToPaywall,
+}: UpgradeModalProps) {
   const { t } = useTranslation('subscription');
   const reasonKey = reason.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase());
   const info = {
@@ -83,12 +93,13 @@ export default function UpgradeModal({ visible, reason, onClose, onGoToPaywall }
           {/* CTA 버튼 */}
           <TouchableOpacity
             style={[styles.ctaBtn, { backgroundColor: tierColor }]}
-            onPress={() => { onClose(); onGoToPaywall(); }}
+            onPress={() => {
+              onClose();
+              onGoToPaywall();
+            }}
           >
             <Crown size={15} color="#fff" />
-            <Text style={styles.ctaBtnText}>
-              {t('subscription:upgrade.ctaButton')}
-            </Text>
+            <Text style={styles.ctaBtnText}>{t('subscription:upgrade.ctaButton')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>

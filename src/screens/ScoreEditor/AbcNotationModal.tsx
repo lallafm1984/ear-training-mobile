@@ -50,9 +50,7 @@ const AbcNotationModal: React.FC<AbcNotationModalProps> = ({
               <X size={18} color="#64748b" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.abcModalHint}>
-            {t('abcNotation.hint')}
-          </Text>
+          <Text style={styles.abcModalHint}>{t('abcNotation.hint')}</Text>
           <ScrollView
             style={styles.abcModalScroll}
             contentContainerStyle={styles.abcModalScrollContent}
@@ -62,11 +60,7 @@ const AbcNotationModal: React.FC<AbcNotationModalProps> = ({
               {abcString}
             </Text>
           </ScrollView>
-          <TouchableOpacity
-            style={styles.abcModalCopyBtn}
-            onPress={onCopy}
-            activeOpacity={0.85}
-          >
+          <TouchableOpacity style={styles.abcModalCopyBtn} onPress={onCopy} activeOpacity={0.85}>
             <Copy size={16} color="#ffffff" />
             <Text style={styles.abcModalCopyBtnText}>{t('abcNotation.copyAll')}</Text>
           </TouchableOpacity>

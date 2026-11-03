@@ -1,7 +1,12 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, Pressable,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -34,7 +39,10 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
             </TouchableOpacity>
           </View>
           <ScrollView
-            contentContainerStyle={[styles.sheetInner, { paddingBottom: Math.max(insets.bottom, 24) }]}
+            contentContainerStyle={[
+              styles.sheetInner,
+              { paddingBottom: Math.max(insets.bottom, 24) },
+            ]}
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
           >
@@ -59,17 +67,29 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   sheetHandle: {
-    width: 40, height: 4, backgroundColor: '#e2e8f0',
-    borderRadius: 2, alignSelf: 'center', marginTop: 8, marginBottom: 4,
+    width: 40,
+    height: 4,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 4,
   },
   sheetHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   sheetTitle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
   sheetCloseBtn: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#f8fafc',
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sheetInner: { paddingHorizontal: 16, paddingBottom: 24 },
 });

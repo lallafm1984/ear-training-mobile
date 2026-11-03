@@ -1,16 +1,20 @@
 import { fillRhythm } from './trebleRhythmFill';
-import { getSixteenthsPerBar, SIXTEENTHS_TO_DURATION, SIXTEENTHS_TO_DUR } from './scoreUtils';
-import type { ScoreNote, NoteDuration } from './scoreUtils';
+import { getSixteenthsPerBar, SIXTEENTHS_TO_DUR } from './scoreUtils';
+import type { ScoreNote, PitchName } from './scoreUtils';
 
 function uid(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
-function makeRhythmNote(dur16ths: number, isRest: boolean = false, pitch: string = 'B'): ScoreNote {
+function makeRhythmNote(
+  dur16ths: number,
+  isRest: boolean = false,
+  pitch: PitchName = 'B',
+): ScoreNote {
   const durStr = SIXTEENTHS_TO_DUR[dur16ths] || '4';
   return {
     id: uid(),
-    pitch: isRest ? 'rest' : pitch as any,
+    pitch: isRest ? 'rest' : pitch,
     octave: 4,
     accidental: '',
     duration: durStr,
@@ -21,11 +25,20 @@ function makeRhythmNote(dur16ths: number, isRest: boolean = false, pitch: string
 /**
  * Returns triplets replacing a quarter note (duration 4).
  */
-function makeTriplets(pitch: string = 'B'): ScoreNote[] {
+function makeTriplets(pitch: PitchName = 'B'): ScoreNote[] {
   return [
-    { id: uid(), pitch: pitch as any, octave: 4, accidental: '', duration: '8', tuplet: '3', tupletSpan: '4', tupletNoteDur: 2 },
-    { id: uid(), pitch: pitch as any, octave: 4, accidental: '', duration: '8', tupletNoteDur: 1 },
-    { id: uid(), pitch: pitch as any, octave: 4, accidental: '', duration: '8', tupletNoteDur: 1 },
+    {
+      id: uid(),
+      pitch,
+      octave: 4,
+      accidental: '',
+      duration: '8',
+      tuplet: '3',
+      tupletSpan: '4',
+      tupletNoteDur: 2,
+    },
+    { id: uid(), pitch, octave: 4, accidental: '', duration: '8', tupletNoteDur: 1 },
+    { id: uid(), pitch, octave: 4, accidental: '', duration: '8', tupletNoteDur: 1 },
   ];
 }
 
@@ -33,9 +46,15 @@ function makeTriplets(pitch: string = 'B'): ScoreNote[] {
  * Ensures the duration array contains at least one target element, or applies triplet.
  * Returns array of ScoreNotes.
  */
-function generateRhythmBar(level: number, timeSignature: string, forceElement: boolean, initialWasRest: boolean = false, pitch: string = 'B'): ScoreNote[] {
+function generateRhythmBar(
+  level: number,
+  timeSignature: string,
+  forceElement: boolean,
+  initialWasRest: boolean = false,
+  pitch: PitchName = 'B',
+): ScoreNote[] {
   const B = getSixteenthsPerBar(timeSignature);
-  let durList: number[] = [];
+  let durList: number[];
 
   while (true) {
     if (level === 1) {
@@ -50,7 +69,11 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
       if (durList.includes(2)) break;
     } else if (level === 3) {
       // Level 3: Dotted notes & Syncopation.
-      durList = fillRhythm(B, [6, 4, 4, 2], { timeSignature, dottedProb: 0.8, syncopationProb: 0.8 });
+      durList = fillRhythm(B, [6, 4, 4, 2], {
+        timeSignature,
+        dottedProb: 0.8,
+        syncopationProb: 0.8,
+      });
       if (!forceElement) break;
       if (durList.includes(6) || durList.includes(3)) break;
       if (isSyncopated(durList, timeSignature)) break;
@@ -69,7 +92,11 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
     } else if (level >= 6) {
       // Level 6: Mix of 2~5 (excluding very long notes like 16, 12, potentially 8 unless syncopated).
       // Pool [6, 4, 4, 2, 1].
-      durList = fillRhythm(B, [6, 4, 4, 2, 1], { timeSignature, dottedProb: 0.5, syncopationProb: 0.4 });
+      durList = fillRhythm(B, [6, 4, 4, 2, 1], {
+        timeSignature,
+        dottedProb: 0.5,
+        syncopationProb: 0.4,
+      });
       if (!forceElement) break;
       // Force mix: just ensure not too simple. E.g. don't allow just [4, 4, 4, 4].
       if (durList.includes(1) || durList.includes(6) || isSyncopated(durList, timeSignature)) break;
@@ -97,7 +124,7 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
     }
     // 트리플렛 주입 대상(첫 번째 dur=4)은 제외
     const tripletTargetIdx = shouldInjectTriplet ? durList.indexOf(4) : -1;
-    const filtered = eligible.filter(i => i !== tripletTargetIdx);
+    const filtered = eligible.filter((i) => i !== tripletTargetIdx);
     if (filtered.length > 0) {
       const forcedIdx = filtered[Math.floor(Math.random() * filtered.length)];
       durList = durList.slice(); // 원본 보호
@@ -131,7 +158,7 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
 
     // 쉼표가 박 경계를 넘으면 ABC 변환 시 분할되어 연속 쉼표가 됨 → 허용 안 함
     const posInBeat = pos % beatSize;
-    const fitsInBeat = posInBeat === 0 || dur <= (beatSize - posInBeat);
+    const fitsInBeat = posInBeat === 0 || dur <= beatSize - posInBeat;
 
     // Introduce rests (8분 쉼표만 확률적으로 추가)
     let isRest = false;
@@ -150,7 +177,7 @@ function generateRhythmBar(level: number, timeSignature: string, forceElement: b
 }
 
 /**
- * Basic heuristic to detect syncopation: 
+ * Basic heuristic to detect syncopation:
  * e.g., a note starts on off-beat and extends across a beat boundary.
  */
 function isSyncopated(durations: number[], timeSignature: string): boolean {
@@ -159,7 +186,7 @@ function isSyncopated(durations: number[], timeSignature: string): boolean {
   let pos = 0;
   for (const d of durations) {
     const noteEnd = pos + d;
-    const isOffBeat = (pos % beatSize) !== 0;
+    const isOffBeat = pos % beatSize !== 0;
     const crossesBeat = Math.floor(noteEnd / beatSize) > Math.floor(pos / beatSize);
     if (isOffBeat && crossesBeat && noteEnd % beatSize !== 0) {
       // Exception for dotted rhythms which cross beats but aren't always seen as classical syncopation context depending on definition, but for ear training rhythmic variations, it counts.
@@ -172,7 +199,15 @@ function isSyncopated(durations: number[], timeSignature: string): boolean {
 
 /** duration 문자열 → 16분음표 수 역방향 맵 */
 const DUR_TO_SIXTEENTHS: Record<string, number> = {
-  '1.': 24, '1': 16, '2.': 12, '2': 8, '4.': 6, '4': 4, '8.': 3, '8': 2, '16': 1,
+  '1.': 24,
+  '1': 16,
+  '2.': 12,
+  '2': 8,
+  '4.': 6,
+  '4': 4,
+  '8.': 3,
+  '8': 2,
+  '16': 1,
 };
 
 function noteToSixteenths(note: ScoreNote): number {
@@ -208,7 +243,7 @@ function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreN
   }
 
   for (const { start, end } of measures) {
-    const hasRest = result.slice(start, end).some(n => n.pitch === 'rest');
+    const hasRest = result.slice(start, end).some((n) => n.pitch === 'rest');
     if (hasRest) continue;
 
     // 후보: 정박 위치의 4분음표 중 앞뒤 음표가 쉼표가 아닌 것
@@ -216,11 +251,7 @@ function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreN
     const candidates: number[] = [];
     for (let j = start; j < end; j++) {
       const n = result[j];
-      if (
-        n.pitch !== 'rest' &&
-        n.tuplet == null &&
-        localPos % beatSize === 0
-      ) {
+      if (n.pitch !== 'rest' && n.tuplet == null && localPos % beatSize === 0) {
         const prevIsRest = j > 0 && result[j - 1].pitch === 'rest';
         const nextIsRest = j < result.length - 1 && result[j + 1].pitch === 'rest';
         if (!prevIsRest && !nextIsRest) candidates.push(j);
@@ -230,7 +261,7 @@ function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreN
 
     if (candidates.length > 0) {
       const targetIdx = candidates[Math.floor(Math.random() * candidates.length)];
-      result[targetIdx] = { ...result[targetIdx], pitch: 'rest' as any };
+      result[targetIdx] = { ...result[targetIdx], pitch: 'rest' };
     }
   }
 
@@ -240,7 +271,12 @@ function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreN
 /**
  * Main generator entry point for rhythm dictation tests.
  */
-export function generateRhythmDictation(level: number, measures: number, timeSignature: string = '4/4', pitch: string = 'B'): ScoreNote[] {
+export function generateRhythmDictation(
+  level: number,
+  measures: number,
+  timeSignature: string = '4/4',
+  pitch: PitchName = 'B',
+): ScoreNote[] {
   // We want to force the specific rhythmic element in AT LEAST two measures.
   const requiredCount = Math.min(2, measures);
   const enforcedIndices = new Set<number>();

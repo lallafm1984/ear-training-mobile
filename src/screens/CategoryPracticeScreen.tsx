@@ -3,9 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Lock, Play, Settings2 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -15,9 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { CATEGORY_COLORS } from '../theme/colors';
-import {
-  getContentConfig, getDifficultyList,
-} from '../lib/contentConfig';
+import { getContentConfig, getDifficultyList } from '../lib/contentConfig';
 import { isNotationCategory } from '../lib/notationPractice';
 import { isCompoundMeter } from '../lib/scoreUtils/duration';
 
@@ -77,16 +73,16 @@ export default function CategoryPracticeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          hitSlop={12}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.main }]}>{t('content:category.' + category + '.name')}</Text>
-          <Text style={styles.headerDesc}>{t('content:category.' + category + '.description')}</Text>
+          <Text style={[styles.headerTitle, { color: colors.main }]}>
+            {t('content:category.' + category + '.name')}
+          </Text>
+          <Text style={styles.headerDesc}>
+            {t('content:category.' + category + '.description')}
+          </Text>
         </View>
       </View>
 
@@ -106,29 +102,46 @@ export default function CategoryPracticeScreen() {
               hitSlop={8}
             >
               <Settings2 size={16} color={colors.main} />
-              <Text style={[styles.settingsBtnText, { color: colors.main }]}>{t('common:button.settings')}</Text>
+              <Text style={[styles.settingsBtnText, { color: colors.main }]}>
+                {t('common:button.settings')}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {showSettings && (
-          practiceSettings.timeSignature !== '4/4' ||
-          practiceSettings.keySignature !== 'C' ||
-          practiceSettings.tempo !== 80 ||
-          (category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B')
-        ) && (
-          <View style={[styles.settingsSummary, { backgroundColor: colors.bg, borderColor: colors.main + '30' }]}>
-            <Text style={[styles.settingsSummaryText, { color: colors.main }]}>
-              {[
-                practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
-                category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
-                category === 'rhythm' && practiceSettings.rhythmPitch && practiceSettings.rhythmPitch !== 'B' &&
-                  `${t('editor:pitch.' + practiceSettings.rhythmPitch, { defaultValue: practiceSettings.rhythmPitch })}`,
-                practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo * 2}` : `♩=${practiceSettings.tempo}`),
-              ].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-        )}
+        {showSettings &&
+          (practiceSettings.timeSignature !== '4/4' ||
+            practiceSettings.keySignature !== 'C' ||
+            practiceSettings.tempo !== 80 ||
+            (category === 'rhythm' &&
+              practiceSettings.rhythmPitch &&
+              practiceSettings.rhythmPitch !== 'B')) && (
+            <View
+              style={[
+                styles.settingsSummary,
+                { backgroundColor: colors.bg, borderColor: colors.main + '30' },
+              ]}
+            >
+              <Text style={[styles.settingsSummaryText, { color: colors.main }]}>
+                {[
+                  practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
+                  category !== 'rhythm' &&
+                    practiceSettings.keySignature !== 'C' &&
+                    practiceSettings.keySignature,
+                  category === 'rhythm' &&
+                    practiceSettings.rhythmPitch &&
+                    practiceSettings.rhythmPitch !== 'B' &&
+                    `${t('editor:pitch.' + practiceSettings.rhythmPitch, { defaultValue: practiceSettings.rhythmPitch })}`,
+                  practiceSettings.tempo !== 80 &&
+                    (isCompoundMeter(practiceSettings.timeSignature ?? '4/4')
+                      ? `♪=${practiceSettings.tempo * 2}`
+                      : `♩=${practiceSettings.tempo}`),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            </View>
+          )}
 
         <View style={styles.diffList}>
           {difficulties.map((diff, index) => {
@@ -146,42 +159,53 @@ export default function CategoryPracticeScreen() {
                 activeOpacity={locked ? 1 : 0.7}
               >
                 <View style={styles.diffLeft}>
-                  <View style={[
-                    styles.levelBadge,
-                    active
-                      ? { backgroundColor: 'rgba(255,255,255,0.25)' }
-                      : { backgroundColor: colors.bg },
-                  ]}>
-                    <Text style={[
-                      styles.levelText,
-                      active ? { color: '#fff' } : { color: colors.main },
-                    ]}>
+                  <View
+                    style={[
+                      styles.levelBadge,
+                      active
+                        ? { backgroundColor: 'rgba(255,255,255,0.25)' }
+                        : { backgroundColor: colors.bg },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.levelText,
+                        active ? { color: '#fff' } : { color: colors.main },
+                      ]}
+                    >
                       {index + 1}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.diffLabel,
-                        active && { color: '#fff' },
-                      ]}
-                      numberOfLines={1}
-                    >
+                    <Text style={[styles.diffLabel, active && { color: '#fff' }]} numberOfLines={1}>
                       {t('content:difficulty.' + category + '.' + diff)}
                     </Text>
-                    {showSettings && (
-                      practiceSettings.timeSignature !== '4/4' ||
-                      practiceSettings.keySignature !== 'C' ||
-                      practiceSettings.tempo !== 80
-                    ) && (
-                      <Text style={[styles.diffSettingsHint, active && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
-                        {[
-                          category !== 'rhythm' && practiceSettings.keySignature !== 'C' && practiceSettings.keySignature,
-                          practiceSettings.timeSignature !== '4/4' && practiceSettings.timeSignature,
-                          practiceSettings.tempo !== 80 && (isCompoundMeter(practiceSettings.timeSignature ?? '4/4') ? `♪=${practiceSettings.tempo * 2}` : `♩=${practiceSettings.tempo}`),
-                        ].filter(Boolean).join(' · ')}
-                      </Text>
-                    )}
+                    {showSettings &&
+                      (practiceSettings.timeSignature !== '4/4' ||
+                        practiceSettings.keySignature !== 'C' ||
+                        practiceSettings.tempo !== 80) && (
+                        <Text
+                          style={[
+                            styles.diffSettingsHint,
+                            active && { color: 'rgba(255,255,255,0.7)' },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {[
+                            category !== 'rhythm' &&
+                              practiceSettings.keySignature !== 'C' &&
+                              practiceSettings.keySignature,
+                            practiceSettings.timeSignature !== '4/4' &&
+                              practiceSettings.timeSignature,
+                            practiceSettings.tempo !== 80 &&
+                              (isCompoundMeter(practiceSettings.timeSignature ?? '4/4')
+                                ? `♪=${practiceSettings.tempo * 2}`
+                                : `♩=${practiceSettings.tempo}`),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                      )}
                   </View>
                 </View>
                 {locked && <Lock size={14} color={active ? '#fff' : '#64748b'} />}
@@ -189,16 +213,12 @@ export default function CategoryPracticeScreen() {
             );
           })}
         </View>
-
       </ScrollView>
 
       {/* 하단 고정 시작 버튼 (MockExamSetupScreen과 동일 패턴) */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TouchableOpacity
-          style={[
-            styles.startBtn,
-            { backgroundColor: isLocked ? COLORS.slate300 : colors.main },
-          ]}
+          style={[styles.startBtn, { backgroundColor: isLocked ? COLORS.slate300 : colors.main }]}
           onPress={handleStart}
           activeOpacity={0.8}
         >
@@ -225,7 +245,10 @@ export default function CategoryPracticeScreen() {
           accentColor={colors.main}
           accentBg={colors.bg}
           tier={tier}
-          onUpgrade={() => { setSettingsOpen(false); navigation.navigate('Paywall'); }}
+          onUpgrade={() => {
+            setSettingsOpen(false);
+            navigation.navigate('Paywall');
+          }}
           category={category}
         />
       )}

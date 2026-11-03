@@ -25,7 +25,7 @@ describe('CONTENT_CATEGORIES', () => {
   });
 
   it('카테고리 ID 목록이 올바르다', () => {
-    const ids = CONTENT_CATEGORIES.map(c => c.id);
+    const ids = CONTENT_CATEGORIES.map((c) => c.id);
     expect(ids).toEqual([
       'barMelody',
       'melody',

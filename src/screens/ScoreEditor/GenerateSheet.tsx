@@ -13,10 +13,9 @@ import { Music2, Sparkles, Lock, Eye, EyeOff, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { TRACK_META } from '../../lib/trackConfig';
-import type { TrackType } from '../../theme/colors';
 import { BASS_DIFF_DESC } from '../../lib';
 import type { BassDifficulty } from '../../lib';
+import { TRACK_META } from '../../lib/trackConfig';
 import type { UpgradeReason } from '../../components';
 import type { PlanLimits } from '../../types';
 import { ALL_BASS_DIFFICULTIES } from './constants';
@@ -101,14 +100,20 @@ export default function GenerateSheet({
               onPress={() => setGenTab('melody')}
             >
               <Music2 size={12} color={genTab === 'melody' ? '#6366f1' : '#94a3b8'} />
-              <Text style={[styles.genTabText, genTab === 'melody' && styles.genTabTextActive]}>{t('generate.melody')}</Text>
+              <Text style={[styles.genTabText, genTab === 'melody' && styles.genTabTextActive]}>
+                {t('generate.melody')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.genTabItem, genTab === 'grand' && styles.genTabItemActive]}
               onPress={() => setGenTab('grand')}
             >
               <Music2 size={12} color={genTab === 'grand' ? '#7c3aed' : '#94a3b8'} />
-              <Text style={[styles.genTabText, genTab === 'grand' && styles.genTabTextActivePurple]}>{t('generate.grand')}</Text>
+              <Text
+                style={[styles.genTabText, genTab === 'grand' && styles.genTabTextActivePurple]}
+              >
+                {t('generate.grand')}
+              </Text>
               {useGrandStaff && <View style={styles.genTabActiveDot} />}
             </TouchableOpacity>
           </View>
@@ -123,8 +128,7 @@ export default function GenerateSheet({
               <>
                 {/* 연습 모드 선택 탭 */}
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                  {(['partPractice', 'comprehensive'] as const).map(mode => {
-                    const meta = TRACK_META[mode];
+                  {(['partPractice', 'comprehensive'] as const).map((mode) => {
                     const isActive = genPracticeMode === mode;
                     const modeColor = mode === 'partPractice' ? '#6366f1' : '#f59e0b';
                     return (
@@ -144,21 +148,25 @@ export default function GenerateSheet({
                           },
                         ]}
                       >
-                        <Text style={[
-                          styles.genCatChipText,
-                          {
-                            color: isActive ? '#fff' : '#475569',
-                            fontWeight: isActive ? '700' : '600',
-                            fontSize: 13,
-                          },
-                        ]}>
+                        <Text
+                          style={[
+                            styles.genCatChipText,
+                            {
+                              color: isActive ? '#fff' : '#475569',
+                              fontWeight: isActive ? '700' : '600',
+                              fontSize: 13,
+                            },
+                          ]}
+                        >
                           {t(`editor:generate.${mode}`)}
                         </Text>
-                        <Text style={{
-                          color: isActive ? 'rgba(255,255,255,0.8)' : '#94a3b8',
-                          fontSize: 10,
-                          marginTop: 2,
-                        }}>
+                        <Text
+                          style={{
+                            color: isActive ? 'rgba(255,255,255,0.8)' : '#94a3b8',
+                            fontSize: 10,
+                            marginTop: 2,
+                          }}
+                        >
                           {t(`editor:generate.${mode}Desc`)}
                         </Text>
                       </TouchableOpacity>
@@ -171,14 +179,18 @@ export default function GenerateSheet({
                   <>
                     <Text style={styles.genSectionLabel}>{t('generate.levelSelect')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {TRACK_META.partPractice.levels.map(lv => {
+                      {TRACK_META.partPractice.levels.map((lv) => {
                         const isActive = genPartLevel === lv.level;
                         const allowed = !lv.requiresPro || limits.canUseGrandStaff;
                         return (
                           <TouchableOpacity
                             key={lv.level}
                             onPress={() => {
-                              if (!allowed) { onClose(); openUpgrade('difficulty'); return; }
+                              if (!allowed) {
+                                onClose();
+                                openUpgrade('difficulty');
+                                return;
+                              }
                               setGenPartLevel(lv.level);
                             }}
                             style={[
@@ -196,12 +208,27 @@ export default function GenerateSheet({
                             ]}
                           >
                             {!allowed && (
-                              <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#4338ca99'} style={{ marginBottom: 1 }} />
+                              <Lock
+                                size={8}
+                                color={isActive ? 'rgba(255,255,255,0.7)' : '#4338ca99'}
+                                style={{ marginBottom: 1 }}
+                              />
                             )}
-                            <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#4338ca' }]}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnLabel,
+                                { color: isActive ? '#fff' : '#4338ca' },
+                              ]}
+                            >
                               {`${lv.level}${t('common:unit.level')}`}
                             </Text>
-                            <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#4338cacc' }]} numberOfLines={2}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnDesc,
+                                { color: isActive ? 'rgba(255,255,255,0.85)' : '#4338cacc' },
+                              ]}
+                              numberOfLines={2}
+                            >
                               {t(`content:track.part_${lv.level}`)}
                             </Text>
                           </TouchableOpacity>
@@ -210,7 +237,16 @@ export default function GenerateSheet({
                     </View>
 
                     {/* 부분연습 안내 */}
-                    <View style={{ marginTop: 10, padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                    <View
+                      style={{
+                        marginTop: 10,
+                        padding: 10,
+                        backgroundColor: '#f8fafc',
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#e2e8f0',
+                      }}
+                    >
                       <Text style={{ fontSize: 11, color: '#64748b', lineHeight: 16 }}>
                         {t('generate.partPracticeNote')}
                       </Text>
@@ -220,14 +256,18 @@ export default function GenerateSheet({
                   <>
                     <Text style={styles.genSectionLabel}>{t('generate.levelSelect')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {TRACK_META.comprehensive.levels.map(lv => {
+                      {TRACK_META.comprehensive.levels.map((lv) => {
                         const isActive = genCompLevel === lv.level;
                         const allowed = !lv.requiresPro || limits.canUseGrandStaff;
                         return (
                           <TouchableOpacity
                             key={lv.level}
                             onPress={() => {
-                              if (!allowed) { onClose(); openUpgrade('difficulty'); return; }
+                              if (!allowed) {
+                                onClose();
+                                openUpgrade('difficulty');
+                                return;
+                              }
                               setGenCompLevel(lv.level);
                             }}
                             style={[
@@ -245,12 +285,27 @@ export default function GenerateSheet({
                             ]}
                           >
                             {!allowed && (
-                              <Lock size={8} color={isActive ? 'rgba(255,255,255,0.7)' : '#b4530999'} style={{ marginBottom: 1 }} />
+                              <Lock
+                                size={8}
+                                color={isActive ? 'rgba(255,255,255,0.7)' : '#b4530999'}
+                                style={{ marginBottom: 1 }}
+                              />
                             )}
-                            <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#b45309' }]}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnLabel,
+                                { color: isActive ? '#fff' : '#b45309' },
+                              ]}
+                            >
                               {`${lv.level}${t('common:unit.level')}`}
                             </Text>
-                            <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#b45309cc' }]} numberOfLines={2}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnDesc,
+                                { color: isActive ? 'rgba(255,255,255,0.85)' : '#b45309cc' },
+                              ]}
+                              numberOfLines={2}
+                            >
                               {t(`content:track.comp_${lv.level}`)}
                             </Text>
                           </TouchableOpacity>
@@ -259,7 +314,16 @@ export default function GenerateSheet({
                     </View>
 
                     {/* 종합연습 안내 */}
-                    <View style={{ marginTop: 10, padding: 10, backgroundColor: '#fffbeb', borderRadius: 8, borderWidth: 1, borderColor: '#fde68a' }}>
+                    <View
+                      style={{
+                        marginTop: 10,
+                        padding: 10,
+                        backgroundColor: '#fffbeb',
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#fde68a',
+                      }}
+                    >
                       <Text style={{ fontSize: 11, color: '#92400e', lineHeight: 16 }}>
                         {t('generate.comprehensiveNote')}
                       </Text>
@@ -268,16 +332,36 @@ export default function GenerateSheet({
                 )}
 
                 {/* 음표 숨기기 */}
-                <View style={[styles.genOptionRow, { marginTop: 14 }, genHideNotes && { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
-                  <View style={[styles.genCardIconWrap, { backgroundColor: genHideNotes ? '#fef3c7' : '#f1f5f9' }]}>
-                    {genHideNotes
-                      ? <EyeOff size={13} color="#d97706" />
-                      : <Eye size={13} color="#64748b" />
-                    }
+                <View
+                  style={[
+                    styles.genOptionRow,
+                    { marginTop: 14 },
+                    genHideNotes && { backgroundColor: '#fffbeb', borderColor: '#fde68a' },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.genCardIconWrap,
+                      { backgroundColor: genHideNotes ? '#fef3c7' : '#f1f5f9' },
+                    ]}
+                  >
+                    {genHideNotes ? (
+                      <EyeOff size={13} color="#d97706" />
+                    ) : (
+                      <Eye size={13} color="#64748b" />
+                    )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.genCardTitle, genHideNotes && { color: '#92400e' }]}>{t('generate.hideNotes')}</Text>
-                    <Text style={[styles.genCardSubtitle, { marginLeft: 0 }, genHideNotes && { color: '#d97706' }]}>
+                    <Text style={[styles.genCardTitle, genHideNotes && { color: '#92400e' }]}>
+                      {t('generate.hideNotes')}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.genCardSubtitle,
+                        { marginLeft: 0 },
+                        genHideNotes && { color: '#d97706' },
+                      ]}
+                    >
                       {t('generate.hideNotesDesc')}
                     </Text>
                   </View>
@@ -292,13 +376,27 @@ export default function GenerateSheet({
             ) : (
               <>
                 {/* 큰보표 토글 */}
-                <View style={[styles.genOptionRow, useGrandStaff && { backgroundColor: '#faf5ff', borderColor: '#ddd6fe' }]}>
-                  <View style={[styles.genCardIconWrap, { backgroundColor: useGrandStaff ? '#ede9fe' : '#f1f5f9' }]}>
+                <View
+                  style={[
+                    styles.genOptionRow,
+                    useGrandStaff && { backgroundColor: '#faf5ff', borderColor: '#ddd6fe' },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.genCardIconWrap,
+                      { backgroundColor: useGrandStaff ? '#ede9fe' : '#f1f5f9' },
+                    ]}
+                  >
                     <Music2 size={13} color={useGrandStaff ? '#7c3aed' : '#64748b'} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.genCardTitle, useGrandStaff && { color: '#5b21b6' }]}>{t('generate.grandStaff')}</Text>
-                    <Text style={[styles.genCardSubtitle, { marginLeft: 0 }]}>{t('generate.grandStaffDesc')}</Text>
+                    <Text style={[styles.genCardTitle, useGrandStaff && { color: '#5b21b6' }]}>
+                      {t('generate.grandStaff')}
+                    </Text>
+                    <Text style={[styles.genCardSubtitle, { marginLeft: 0 }]}>
+                      {t('generate.grandStaffDesc')}
+                    </Text>
                   </View>
                   {limits.canUseGrandStaff ? (
                     <Switch
@@ -309,7 +407,10 @@ export default function GenerateSheet({
                     />
                   ) : (
                     <TouchableOpacity
-                      onPress={() => { onClose(); openUpgrade('grand_staff'); }}
+                      onPress={() => {
+                        onClose();
+                        openUpgrade('grand_staff');
+                      }}
                       style={styles.genProBadge}
                     >
                       <Lock size={11} color="#7c3aed" />
@@ -320,18 +421,20 @@ export default function GenerateSheet({
 
                 {/* 베이스 난이도 — 항상 표시, 큰보표 OFF면 비활성 */}
                 <View style={{ marginTop: 14, opacity: useGrandStaff ? 1 : 0.4 }}>
-                  <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>{t('generate.bassDifficulty')}</Text>
-                  {[
-                    ALL_BASS_DIFFICULTIES,
-                  ].map((row, rowIdx) => (
+                  <Text style={[styles.genSectionLabel, { color: '#7c3aed' }]}>
+                    {t('generate.bassDifficulty')}
+                  </Text>
+                  {[ALL_BASS_DIFFICULTIES].map((row, rowIdx) => (
                     <View key={rowIdx} style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
-                      {row.map(bd => {
+                      {row.map((bd) => {
                         const isActive = genBassDifficulty === bd && useGrandStaff;
                         const levelNum = bd.split('_')[1];
                         return (
                           <TouchableOpacity
                             key={bd}
-                            onPress={() => { if (useGrandStaff) setGenBassDifficulty(bd); }}
+                            onPress={() => {
+                              if (useGrandStaff) setGenBassDifficulty(bd);
+                            }}
                             disabled={!useGrandStaff}
                             style={[
                               styles.genBassBtn,
@@ -346,10 +449,21 @@ export default function GenerateSheet({
                               },
                             ]}
                           >
-                            <Text style={[styles.genDiffBtnLabel, { color: isActive ? '#fff' : '#5b21b6' }]}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnLabel,
+                                { color: isActive ? '#fff' : '#5b21b6' },
+                              ]}
+                            >
                               {t('generate.bassLevel', { level: levelNum })}
                             </Text>
-                            <Text style={[styles.genDiffBtnDesc, { color: isActive ? 'rgba(255,255,255,0.85)' : '#7c3aedcc' }]} numberOfLines={2}>
+                            <Text
+                              style={[
+                                styles.genDiffBtnDesc,
+                                { color: isActive ? 'rgba(255,255,255,0.85)' : '#7c3aedcc' },
+                              ]}
+                              numberOfLines={2}
+                            >
                               {BASS_DIFF_DESC[bd]}
                             </Text>
                           </TouchableOpacity>
@@ -365,18 +479,15 @@ export default function GenerateSheet({
           {/* 고정 하단 - 생성 버튼 */}
           <View style={[styles.genSheetFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TouchableOpacity
-              style={styles.genPrimaryBtn}
+              style={[styles.genPrimaryBtn, isGenerating && { opacity: 0.6 }]}
               onPress={onGenerate}
+              disabled={isGenerating}
               activeOpacity={0.85}
             >
               <Sparkles size={16} color="#fff" />
-              <Text style={styles.genPrimaryBtnText}>
-                {t('generate.generateBtn')}
-              </Text>
+              <Text style={styles.genPrimaryBtnText}>{t('generate.generateBtn')}</Text>
             </TouchableOpacity>
-            <Text style={styles.genFooter}>
-              {t('generate.generateNote')}
-            </Text>
+            <Text style={styles.genFooter}>{t('generate.generateNote')}</Text>
           </View>
         </View>
       </View>

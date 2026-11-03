@@ -9,20 +9,20 @@ export type PlanTier = 'free' | 'pro';
 
 /** 플랜별 가격 (표시용) */
 export const PLAN_PRICE: Record<PlanTier, string> = {
-  free:    '무료',
-  pro:     '1,500원 / 월',
+  free: '무료',
+  pro: '1,500원 / 월',
 };
 
 /** 플랜별 한국어 이름 */
 export const PLAN_NAME: Record<PlanTier, string> = {
-  free:    'Free',
-  pro:     'Pro',
+  free: 'Free',
+  pro: 'Pro',
 };
 
 /** 플랜별 색상 */
 export const PLAN_COLOR: Record<PlanTier, string> = {
-  free:    '#94a3b8',
-  pro:     '#6366f1',
+  free: '#94a3b8',
+  pro: '#6366f1',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -65,46 +65,74 @@ export interface PlanLimits {
 }
 
 export const ALL_KEY_SIGNATURES = [
-  'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'F', 'Bb', 'Eb', 'Ab', 'Db',
-  'Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm',
+  'C',
+  'G',
+  'D',
+  'A',
+  'E',
+  'B',
+  'F#',
+  'F',
+  'Bb',
+  'Eb',
+  'Ab',
+  'Db',
+  'Am',
+  'Em',
+  'Bm',
+  'F#m',
+  'C#m',
+  'G#m',
+  'Dm',
+  'Gm',
+  'Cm',
+  'Fm',
+  'Bbm',
+  'Ebm',
 ];
 
 export const ALL_TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '9/8', '5/4', '7/8'];
 
 /** 장조 조성 목록 (5도권 순서) */
-export const MAJOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter(k => !k.includes('m'));
+export const MAJOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter((k) => !k.includes('m'));
 /** 단조 조성 목록 (5도권 순서) */
-export const MINOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter(k => k.includes('m'));
+export const MINOR_KEY_SIGNATURES = ALL_KEY_SIGNATURES.filter((k) => k.includes('m'));
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
-    canUseGrandStaff:      false,
-    canUseExamMode:        false,
-    allowedDifficulties:   ['beginner_1', 'beginner_2', 'beginner_3'],
-    maxMeasures:           4,
-    canEditNotes:          false,
-    canDownloadAudio:      false,
-    canDownloadImage:      true,
-    canSaveScores:         true,
-    maxSavedScores:        5,
-    allowedKeySignatures:  ['C'],
+    canUseGrandStaff: false,
+    canUseExamMode: false,
+    allowedDifficulties: ['beginner_1', 'beginner_2', 'beginner_3'],
+    maxMeasures: 4,
+    canEditNotes: false,
+    canDownloadAudio: false,
+    canDownloadImage: true,
+    canSaveScores: true,
+    maxSavedScores: 5,
+    allowedKeySignatures: ['C'],
     allowedTimeSignatures: ['4/4'],
   },
   pro: {
-    canUseGrandStaff:      true,
-    canUseExamMode:        true,
-    allowedDifficulties:   [
-      'beginner_1', 'beginner_2', 'beginner_3',
-      'intermediate_1', 'intermediate_2', 'intermediate_3',
-      'advanced_1', 'advanced_2', 'advanced_3',
+    canUseGrandStaff: true,
+    canUseExamMode: true,
+    allowedDifficulties: [
+      'beginner_1',
+      'beginner_2',
+      'beginner_3',
+      'intermediate_1',
+      'intermediate_2',
+      'intermediate_3',
+      'advanced_1',
+      'advanced_2',
+      'advanced_3',
     ],
-    maxMeasures:           9999,
-    canEditNotes:          true,
-    canDownloadAudio:      true,
-    canDownloadImage:      true,
-    canSaveScores:         true,
-    maxSavedScores:        20,
-    allowedKeySignatures:  ALL_KEY_SIGNATURES,
+    maxMeasures: 9999,
+    canEditNotes: true,
+    canDownloadAudio: true,
+    canDownloadImage: true,
+    canSaveScores: true,
+    maxSavedScores: 20,
+    allowedKeySignatures: ALL_KEY_SIGNATURES,
     allowedTimeSignatures: ALL_TIME_SIGNATURES,
   },
 };

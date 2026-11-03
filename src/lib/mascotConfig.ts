@@ -11,8 +11,16 @@ const MAX_LEVEL = 60;
 
 /** 10단계 스테이지 이름 */
 export const STAGE_NAMES: string[] = [
-  '뉴비', '초보', '학생', '연습생', '연주자',
-  '음악가', '전문가', '마스터', '거장', '전설',
+  '뉴비',
+  '초보',
+  '학생',
+  '연습생',
+  '연주자',
+  '음악가',
+  '전문가',
+  '마스터',
+  '거장',
+  '전설',
 ];
 
 /** 총 EXP로 현재 레벨 계산 (1-100) */
@@ -42,9 +50,9 @@ export interface MascotParams {
   blushColor: string;
   headphoneColor: string;
   headphoneInner: string;
-  eyeStyle: number;   // 0-9
+  eyeStyle: number; // 0-9
   mouthStyle: number; // 0-9
-  earType: number;    // 0=none, 1=round, 2=cat, 3=bunny, 4=bear
+  earType: number; // 0=none, 1=round, 2=cat, 3=bunny, 4=bear
   cheekDecor: number; // 0=none, 1=dot, 2=star, 3=heart, 4=sparkle, 5=music
   accessory:
     | 'none'
@@ -75,8 +83,16 @@ export function getMascotParams(level: number): MascotParams {
   const EAR_BY_TIER = [0, 0, 1, 2, 1, 3, 4, 2, 4, 3];
   // 악세서리: 티어별
   const ACC_BY_TIER: MascotParams['accessory'][] = [
-    'none', 'none', 'none', 'scarf', 'none',
-    'crown', 'smallWings', 'bigWings', 'halo', 'fire',
+    'none',
+    'none',
+    'none',
+    'scarf',
+    'none',
+    'crown',
+    'smallWings',
+    'bigWings',
+    'halo',
+    'fire',
   ];
 
   const BODY_COLORS = [

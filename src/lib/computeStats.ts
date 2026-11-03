@@ -28,7 +28,7 @@ const CATEGORIES: ContentCategory[] = [
 function emptyStats(): PracticeStats {
   const totalByCategory = {} as Record<ContentCategory, number>;
   const avgRatingByCategory = {} as Record<ContentCategory, number>;
-  CATEGORIES.forEach(c => {
+  CATEGORIES.forEach((c) => {
     totalByCategory[c] = 0;
     avgRatingByCategory[c] = 0;
   });
@@ -56,7 +56,7 @@ export function computeStats(records: PracticeRecord[]): PracticeStats {
   const ratingSum: Record<string, number> = {};
   const ratingCount: Record<string, number> = {};
 
-  records.forEach(r => {
+  records.forEach((r) => {
     const cat = r.contentType;
     stats.totalByCategory[cat] = (stats.totalByCategory[cat] || 0) + 1;
 
@@ -70,7 +70,7 @@ export function computeStats(records: PracticeRecord[]): PracticeStats {
     if (ts >= monthAgo) stats.monthlyCount++;
   });
 
-  CATEGORIES.forEach(c => {
+  CATEGORIES.forEach((c) => {
     stats.avgRatingByCategory[c] = ratingCount[c]
       ? Math.round((ratingSum[c] / ratingCount[c]) * 10) / 10
       : 0;

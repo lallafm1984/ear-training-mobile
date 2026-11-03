@@ -27,7 +27,7 @@ export interface PracticeSettings {
   timeSignature: string;
   keySignature: string;
   tempo: number;
-  rhythmPitch?: string;   // 리듬 받아쓰기 음이름 (기본 'B' = 시)
+  rhythmPitch?: string; // 리듬 받아쓰기 음이름 (기본 'B' = 시)
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -39,13 +39,20 @@ export type MainStackParamList = {
   Home: undefined;
   CategoryPractice: { category: ContentCategory };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
-  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty; practiceSettings?: PracticeSettings; examMode?: boolean };
-  ScoreEditor: {
-    category?: ContentCategory;
-    difficulty?: ContentDifficulty;
-    practiceMode?: 'partPractice' | 'comprehensive';
-    level?: number;
-  } | undefined;
+  NotationPractice: {
+    category: ContentCategory;
+    difficulty: ContentDifficulty;
+    practiceSettings?: PracticeSettings;
+    examMode?: boolean;
+  };
+  ScoreEditor:
+    | {
+        category?: ContentCategory;
+        difficulty?: ContentDifficulty;
+        practiceMode?: 'partPractice' | 'comprehensive';
+        level?: number;
+      }
+    | undefined;
   MockExamSetup: undefined;
   MockExam: { presetId: string };
   ExamResult: {
@@ -70,7 +77,7 @@ export default function MainStack() {
   const [initialRoute, setInitialRoute] = useState<keyof MainStackParamList | null>(null);
 
   useEffect(() => {
-    hasCompletedOnboarding().then(done => {
+    hasCompletedOnboarding().then((done) => {
       setInitialRoute(done ? 'Home' : 'Onboarding');
     });
   }, []);
@@ -79,10 +86,7 @@ export default function MainStack() {
   if (!initialRoute) return <SplashScreen />;
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{ headerShown: false }}
-    >
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
@@ -95,18 +99,10 @@ export default function MainStack() {
       <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen name="DailyGoal" component={DailyGoalScreen} />
       <Stack.Screen name="MascotGallery" component={MascotGalleryScreen} />
-      <Stack.Screen
-        name="Paywall"
-        options={{ presentation: 'modal' }}
-      >
-        {({ navigation }) => (
-          <PaywallScreen onClose={() => navigation.goBack()} />
-        )}
+      <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
+        {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen
-        name="Profile"
-        options={{ presentation: 'modal' }}
-      >
+      <Stack.Screen name="Profile" options={{ presentation: 'modal' }}>
         {({ navigation }) => (
           <ProfileScreen
             onClose={() => navigation.goBack()}

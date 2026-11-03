@@ -34,7 +34,7 @@ describe('getDurationPoolForMelodyLevel', () => {
   it('모든 풀의 값은 양수이다', () => {
     for (let level = 1; level <= 9; level++) {
       const pool = getDurationPoolForMelodyLevel(level);
-      pool.forEach(v => expect(v).toBeGreaterThan(0));
+      pool.forEach((v) => expect(v).toBeGreaterThan(0));
     }
   });
 });

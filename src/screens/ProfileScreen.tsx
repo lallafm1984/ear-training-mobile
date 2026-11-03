@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Modal, Pressable, Linking, Platform, Image,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  Linking,
+  Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  User, Mail, Crown, LogOut, Trash2, ChevronRight,
-  X, Shield, FileText, Globe,
+  User,
+  Mail,
+  Crown,
+  LogOut,
+  Trash2,
+  ChevronRight,
+  X,
+  Shield,
+  FileText,
+  Globe,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlert, useAuth, useSubscription } from '../context';
@@ -24,7 +42,10 @@ interface ProfileScreenProps {
 // ─────────────────────────────────────────────────────────────
 
 function EditNameModal({
-  visible, currentName, onSave, onClose,
+  visible,
+  currentName,
+  onSave,
+  onClose,
 }: {
   visible: boolean;
   currentName: string;
@@ -59,7 +80,9 @@ function EditNameModal({
             returnKeyType="done"
             onSubmitEditing={handle}
           />
-          <Text style={styles.modalHint}>{t('profile:editName.charCount', { count: name.trim().length })}</Text>
+          <Text style={styles.modalHint}>
+            {t('profile:editName.charCount', { count: name.trim().length })}
+          </Text>
           <View style={styles.modalBtnRow}>
             <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
               <Text style={styles.modalCancelText}>{t('common:button.cancel')}</Text>
@@ -69,9 +92,11 @@ function EditNameModal({
               onPress={handle}
               disabled={name.trim().length < 2 || saving}
             >
-              {saving
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.modalSaveText}>{t('common:button.save')}</Text>}
+              {saving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.modalSaveText}>{t('common:button.save')}</Text>
+              )}
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -79,7 +104,6 @@ function EditNameModal({
     </Modal>
   );
 }
-
 
 // ─────────────────────────────────────────────────────────────
 // 메인 ProfileScreen
@@ -105,7 +129,9 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
     if (tier === 'free') return null;
     if (!subscriptionState.expiresAt) return null;
     return new Date(subscriptionState.expiresAt).toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   })();
 
@@ -117,12 +143,16 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
       type: 'warning',
       buttons: [
         { text: t('common:button.cancel'), style: 'cancel' },
-        { text: t('profile:alert.signOutButton'), style: 'destructive', onPress: async () => {
-          setSigningOut(true);
-          await signOut();
-          setSigningOut(false);
-          onClose();
-        }},
+        {
+          text: t('profile:alert.signOutButton'),
+          style: 'destructive',
+          onPress: async () => {
+            setSigningOut(true);
+            await signOut();
+            setSigningOut(false);
+            onClose();
+          },
+        },
       ],
     });
   };
@@ -137,15 +167,23 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         type: 'warning',
         buttons: [
           { text: t('common:button.cancel'), style: 'cancel' },
-          { text: t('profile:alert.goToCancelSub'), onPress: () => {
-            const url = Platform.OS === 'ios'
-              ? 'https://apps.apple.com/account/subscriptions'
-              : 'https://play.google.com/store/account/subscriptions';
-            Linking.openURL(url);
-          }},
-          { text: t('profile:alert.alreadyCancelled'), style: 'destructive', onPress: () => {
-            confirmDeleteAccount();
-          }},
+          {
+            text: t('profile:alert.goToCancelSub'),
+            onPress: () => {
+              const url =
+                Platform.OS === 'ios'
+                  ? 'https://apps.apple.com/account/subscriptions'
+                  : 'https://play.google.com/store/account/subscriptions';
+              Linking.openURL(url);
+            },
+          },
+          {
+            text: t('profile:alert.alreadyCancelled'),
+            style: 'destructive',
+            onPress: () => {
+              confirmDeleteAccount();
+            },
+          },
         ],
       });
     } else {
@@ -160,18 +198,27 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
       type: 'warning',
       buttons: [
         { text: t('common:button.cancel'), style: 'cancel' },
-        { text: t('profile:alert.deleteButton'), style: 'destructive', onPress: async () => {
-          const err = await deleteAccount();
-          if (err) showAlert({ title: t('profile:alert.error'), message: err, type: 'error' });
-          else onClose();
-        }},
+        {
+          text: t('profile:alert.deleteButton'),
+          style: 'destructive',
+          onPress: async () => {
+            const err = await deleteAccount();
+            if (err) showAlert({ title: t('profile:alert.error'), message: err, type: 'error' });
+            else onClose();
+          },
+        },
       ],
     });
   };
 
   // ─── 섹션 아이템 헬퍼 ─────────────────────────────────────
   const MenuItem = ({
-    icon, label, value, onPress, danger = false, disabled = false,
+    icon,
+    label,
+    value,
+    onPress,
+    danger = false,
+    disabled = false,
   }: {
     icon: React.ReactNode;
     label: string;
@@ -186,9 +233,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
       disabled={disabled}
       activeOpacity={0.7}
     >
-      <View style={[styles.menuIconWrap, danger && { backgroundColor: '#fef2f2' }]}>
-        {icon}
-      </View>
+      <View style={[styles.menuIconWrap, danger && { backgroundColor: '#fef2f2' }]}>{icon}</View>
       <Text style={[styles.menuLabel, danger && { color: '#ef4444' }]}>{label}</Text>
       {value && <Text style={styles.menuValue}>{value}</Text>}
       {onPress && <ChevronRight size={14} color={danger ? '#ef4444' : '#cbd5e1'} />}
@@ -205,7 +250,6 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
         {/* ── 프로필 히어로 카드 ── */}
         <View style={styles.profileCard}>
           <View style={styles.profileCardAccent} />
@@ -215,10 +259,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
             <View style={styles.profileCardBody}>
               <View style={styles.profileInitialBadge}>
                 {profile?.avatar_url ? (
-                  <Image
-                    source={{ uri: profile.avatar_url }}
-                    style={styles.profileAvatar}
-                  />
+                  <Image source={{ uri: profile.avatar_url }} style={styles.profileAvatar} />
                 ) : (
                   <Text style={styles.profileInitialText}>
                     {displayName.charAt(0).toUpperCase()}
@@ -229,17 +270,23 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
                 <Text style={styles.profileName}>{displayName}</Text>
                 <Text style={styles.profileEmail}>{email}</Text>
                 <TouchableOpacity
-                  style={[styles.planBadge, { backgroundColor: `${tierColor}18`, borderColor: `${tierColor}40` }]}
+                  style={[
+                    styles.planBadge,
+                    { backgroundColor: `${tierColor}18`, borderColor: `${tierColor}40` },
+                  ]}
                   onPress={tier === 'free' ? onGoToPaywall : undefined}
                   activeOpacity={tier === 'free' ? 0.7 : 1}
                 >
                   <Crown size={11} color={tierColor} />
                   <Text style={[styles.planBadgeText, { color: tierColor }]}>
-                    {PLAN_NAME[tier]}{isExpired ? ` ${t('profile:expired')}` : ''}
+                    {PLAN_NAME[tier]}
+                    {isExpired ? ` ${t('profile:expired')}` : ''}
                   </Text>
                 </TouchableOpacity>
                 {expiresLabel && (
-                  <Text style={styles.expiresText}>{t('profile:expires', { date: expiresLabel })}</Text>
+                  <Text style={styles.expiresText}>
+                    {t('profile:expires', { date: expiresLabel })}
+                  </Text>
                 )}
               </View>
             </View>
@@ -254,18 +301,23 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
               icon={<Crown size={16} color={tierColor} />}
               label={t('profile:menu.planManage')}
               value={PLAN_NAME[tier]}
-              onPress={() => { onClose(); onGoToPaywall(); }}
+              onPress={() => {
+                onClose();
+                onGoToPaywall();
+              }}
             />
             {tier !== 'free' && (
               <MenuItem
                 icon={<Shield size={16} color="#64748b" />}
                 label={t('profile:menu.cancelSubscription')}
                 value={t('profile:menu.cancelSubscriptionValue')}
-                onPress={() => showAlert({
-                  title: t('profile:menu.cancelSubscription'),
-                  message: t('profile:alert.cancelSubInfo'),
-                  type: 'info',
-                })}
+                onPress={() =>
+                  showAlert({
+                    title: t('profile:menu.cancelSubscription'),
+                    message: t('profile:alert.cancelSubInfo'),
+                    type: 'info',
+                  })
+                }
               />
             )}
           </View>
@@ -316,7 +368,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
               value={t(`profile:language.${i18n.language}`)}
               onPress={() => {
                 const langs = ['ko', 'en', 'ja'] as const;
-                const currentIdx = langs.indexOf(i18n.language as typeof langs[number]);
+                const currentIdx = langs.indexOf(i18n.language as (typeof langs)[number]);
                 const nextLang = langs[(currentIdx + 1) % langs.length];
                 i18n.changeLanguage(nextLang);
               }}
@@ -349,16 +401,10 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
       <EditNameModal
         visible={showEditName}
         currentName={displayName}
-        onSave={name => updateProfile({ display_name: name }).then(() => { })}
+        onSave={(name) => updateProfile({ display_name: name }).then(() => {})}
         onClose={() => setShowEditName(false)}
       />
-      {legalType && (
-        <LegalModal
-          visible
-          type={legalType}
-          onClose={() => setLegalType(null)}
-        />
-      )}
+      {legalType && <LegalModal visible type={legalType} onClose={() => setLegalType(null)} />}
     </SafeAreaView>
   );
 }
@@ -379,9 +425,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
   },
   closeBtn: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#e2e8f0',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   scroll: { paddingHorizontal: 16, paddingBottom: 48, paddingTop: 4 },
@@ -409,26 +458,37 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   profileInitialBadge: {
-    width: 52, height: 52, borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     backgroundColor: '#eef2ff',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     flexShrink: 0,
   },
   profileInitialText: {
-    fontSize: 22, fontWeight: '800', color: '#6366f1',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#6366f1',
   },
   profileAvatar: {
-    width: 52, height: 52, borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
   },
   profileTextBlock: { flex: 1, gap: 4 },
   profileName: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
   profileEmail: { fontSize: 12, color: '#94a3b8', marginBottom: 6 },
 
   planBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   planBadgeText: { fontSize: 12, fontWeight: '700' },
   planUpgradeText: { fontSize: 11, fontWeight: '600', opacity: 0.8 },
@@ -437,9 +497,13 @@ const styles = StyleSheet.create({
   // 섹션
   section: { marginBottom: 20 },
   sectionTitle: {
-    fontSize: 11, fontWeight: '700', color: '#94a3b8',
-    textTransform: 'uppercase', letterSpacing: 1,
-    marginBottom: 8, marginLeft: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   sectionCard: {
     backgroundColor: '#ffffff',
@@ -454,7 +518,9 @@ const styles = StyleSheet.create({
 
   // Gen 잔액
   genRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
   },
   genLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
@@ -463,8 +529,10 @@ const styles = StyleSheet.create({
   genRight: { alignItems: 'flex-end', gap: 8 },
   genBalance: { fontSize: 26, fontWeight: '800', color: '#6366f1' },
   genChargeBtn: {
-    backgroundColor: '#6366f1', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 6,
+    backgroundColor: '#6366f1',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   genChargeBtnText: { fontSize: 12, fontWeight: '700', color: '#ffffff' },
 
@@ -479,9 +547,12 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   menuIconWrap: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: '#f8fafc',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   menuLabel: { flex: 1, fontSize: 14, color: '#1e293b', fontWeight: '500' },
   menuValue: { fontSize: 12, color: '#94a3b8', maxWidth: 130 },
@@ -490,31 +561,48 @@ const styles = StyleSheet.create({
 
   // 공통 모달
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', padding: 24,
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
   modalCard: {
-    width: '100%', backgroundColor: '#ffffff',
-    borderRadius: 20, padding: 24,
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
   },
   modalTitle: { fontSize: 17, fontWeight: 'bold', color: '#1e293b', marginBottom: 16 },
   modalFieldLabel: { fontSize: 12, fontWeight: '700', color: '#64748b', marginBottom: 6 },
   modalInput: {
-    backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
-    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: '#1e293b', marginBottom: 4,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#1e293b',
+    marginBottom: 4,
   },
   modalHint: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginBottom: 16 },
   errorText: { fontSize: 11, color: '#ef4444', marginBottom: 8 },
   modalBtnRow: { flexDirection: 'row', gap: 10 },
   modalCancelBtn: {
-    flex: 1, paddingVertical: 13, borderRadius: 12,
-    backgroundColor: '#f1f5f9', alignItems: 'center',
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
   },
   modalCancelText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
   modalSaveBtn: {
-    flex: 1, paddingVertical: 13, borderRadius: 12,
-    backgroundColor: '#6366f1', alignItems: 'center',
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: '#6366f1',
+    alignItems: 'center',
   },
   modalSaveText: { fontSize: 14, fontWeight: 'bold', color: '#ffffff' },
 });

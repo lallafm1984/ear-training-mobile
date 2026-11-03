@@ -4,12 +4,22 @@
 
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Dimensions,
-  FlatList, Animated,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  FlatList,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Music, Headphones, Target, BarChart3, ChevronRight,
+  Music,
+  Headphones,
+  Target,
+  BarChart3,
+  ChevronRight,
+  type LucideProps,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -27,7 +37,7 @@ const ONBOARDING_KEY = '@melodygen_onboarding_done';
 
 interface SlideData {
   id: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<LucideProps>;
   color: string;
   bgColor: string;
   title: string;
@@ -81,7 +91,9 @@ export default function OnboardingScreen() {
     if (currentIndex < SLIDES.length - 1) {
       try {
         flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-      } catch { /* layout not ready */ }
+      } catch {
+        /* layout not ready */
+      }
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -125,16 +137,15 @@ export default function OnboardingScreen() {
         ref={flatListRef}
         data={SLIDES}
         renderItem={renderSlide}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={32}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false },
-        )}
-        onMomentumScrollEnd={e => {
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: false,
+        })}
+        onMomentumScrollEnd={(e) => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
           setCurrentIndex(idx);
         }}
