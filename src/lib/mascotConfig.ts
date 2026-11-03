@@ -3,11 +3,12 @@
 // ─────────────────────────────────────────────────────────────
 
 // EXP 시스템:
-// 일일 목표 카테고리 완료 = 5 EXP, 5개 전부 완료 = +5 EXP 보너스 (최대 30)
-// 100 EXP = 1 레벨 업, 최대 레벨 100 (총 9,900 EXP)
+// 일일 목표 카테고리 완료 = 5 EXP, 7개 전부 완료 = +5 EXP 보너스 (하루 최대 40)
+// 귀 열기 레슨 10 EXP (코스 완주 +30). 100 EXP = 1 레벨 업, 최대 레벨 60
 
 const EXP_PER_LEVEL = 100;
 const MAX_LEVEL = 60;
+export const MAX_MASCOT_LEVEL = MAX_LEVEL;
 
 /** 10단계 스테이지 이름 */
 export const STAGE_NAMES: string[] = [
@@ -23,7 +24,15 @@ export const STAGE_NAMES: string[] = [
   '전설',
 ];
 
-/** 총 EXP로 현재 레벨 계산 (1-100) */
+/** 한 스테이지(티어)에 속한 레벨 수 */
+export const LEVELS_PER_STAGE = 6;
+
+/** 레벨 → 스테이지 인덱스 (0-9). 레벨 1-6 → 0, 7-12 → 1, …, 55-60 → 9 */
+export function getMascotStageIndex(level: number): number {
+  return Math.max(0, Math.min(STAGE_NAMES.length - 1, Math.floor((level - 1) / LEVELS_PER_STAGE)));
+}
+
+/** 총 EXP로 현재 레벨 계산 (1-60) */
 export function getLevel(totalExp: number): number {
   if (totalExp < 0) return 1;
   const level = Math.floor(totalExp / EXP_PER_LEVEL) + 1;

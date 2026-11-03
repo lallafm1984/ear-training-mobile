@@ -15,7 +15,11 @@
     "title": "マスコットギャラリー",
     "currentLevel": "現在 Lv.{{level}}",
     "locked": "ロック中",
-    "unlockAt": "Lv.{{level}}で解放"
+    "unlockAt": "Lv.{{level}}で解放",
+    "open": "コレクションを見る",
+    "unlocked": "解放 {{count}}/{{total}}",
+    "current": "現在",
+    "desc": "毎日の目標と耳ひらきレッスンでEXPを集めると、マスコットが育ちます。"
   },
   "exp": {
     "format": "{{current}} / {{needed}} EXP"

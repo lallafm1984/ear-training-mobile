@@ -23,6 +23,7 @@ import {
   LogIn,
   Ear,
   Gauge,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -46,11 +47,19 @@ import MascotCharacter from '../components/MascotCharacter';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
+const GOAL_CATEGORIES: ContentCategory[] = [
+  'melody',
+  'barMelody',
+  'rhythm',
+  'interval',
+  'chord',
+  'progression',
+  'key',
+];
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 export default function HomeScreen() {
-  const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest']);
+  const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest', 'mascot']);
   const navigation = useNavigation<NavProp>();
   const { profile, isGuest, exitGuestMode } = useAuth();
   const { tier } = useSubscription();
@@ -160,8 +169,12 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* 마스코트 인사 */}
-        <View style={styles.mascotCard}>
+        {/* 마스코트 인사 → 탭하면 갤러리 */}
+        <TouchableOpacity
+          style={styles.mascotCard}
+          onPress={() => navigation.navigate('MascotGallery')}
+          activeOpacity={0.85}
+        >
           <MascotCharacter size={80} level={mascotLevel} happy={dailyDone} />
           <View style={styles.mascotTextArea}>
             <Text style={styles.mascotTitle}>
@@ -172,8 +185,14 @@ export default function HomeScreen() {
                 ? t('home:greeting.allDoneDesc')
                 : t('home:greeting.goalProgress', { done: todayGoalDone, total: DAILY_GOAL_COUNT })}
             </Text>
+            <View style={styles.mascotLinkRow}>
+              <Text style={styles.mascotLink}>
+                Lv.{mascotLevel} · {t('mascot:gallery.open')}
+              </Text>
+              <ChevronRight size={14} color={COLORS.primary500} />
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* 게스트 안내 */}
         {isGuest && (
@@ -390,6 +409,8 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     fontWeight: '500',
   },
+  mascotLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  mascotLink: { fontSize: 11, color: COLORS.primary500, fontWeight: '800' },
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',

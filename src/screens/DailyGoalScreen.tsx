@@ -20,12 +20,21 @@ import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import { useReminderSettings } from '../hooks/useReminderSettings';
 import { REMINDER_NUDGE_DISMISSED_KEY } from '../lib/reminder';
 import MascotCharacter from '../components/MascotCharacter';
+import { getMascotStageIndex } from '../lib/mascotConfig';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
+const GOAL_CATEGORIES: ContentCategory[] = [
+  'melody',
+  'barMelody',
+  'rhythm',
+  'interval',
+  'chord',
+  'progression',
+  'key',
+];
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 interface GoalItem {
@@ -33,7 +42,7 @@ interface GoalItem {
   completed: boolean;
 }
 
-/** 연속 목표 달성일 계산 (5개 카테고리 모두 연습한 날) */
+/** 연속 목표 달성일 계산 (목표 카테고리를 모두 연습한 날) */
 function computeGoalStreak(records: { practicedAt: string; contentType: string }[]): number {
   const byDate: Record<string, Set<string>> = {};
   records.forEach((r) => {
@@ -152,7 +161,7 @@ export default function DailyGoalScreen() {
     return cats;
   }, [records]);
 
-  // 일일 목표 목록 생성 (고정 5개 카테고리)
+  // 일일 목표 목록 생성 (고정 7개 카테고리)
   const goals: GoalItem[] = useMemo(() => {
     return GOAL_CATEGORIES.map((cat) => ({
       category: cat,
@@ -167,7 +176,7 @@ export default function DailyGoalScreen() {
   // 연속 달성일
   const goalStreak = useMemo(() => computeGoalStreak(records), [records]);
 
-  // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (최대 30)
+  // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (하루 최대 40)
   // rewardedCount를 AsyncStorage에 저장하여 화면 재진입 시 중복 지급 방지
   useEffect(() => {
     if (!EXP_REWARD_KEY) return;
@@ -213,14 +222,19 @@ export default function DailyGoalScreen() {
       >
         {/* 상단 진행 카드 */}
         <View style={[styles.progressCard, allDone && styles.progressCardDone]}>
-          <View style={styles.mascotRow}>
+          <TouchableOpacity
+            style={styles.mascotRow}
+            onPress={() => navigation.navigate('MascotGallery')}
+            activeOpacity={0.8}
+          >
             <MascotCharacter size={64} level={level} happy={allDone} />
             <View style={styles.mascotInfo}>
               <Text style={[styles.progressTitle, allDone && { color: '#065f46' }]}>
                 {allDone ? t('practice:dailyGoal.complete') : t('practice:dailyGoal.keepGoing')}
               </Text>
               <Text style={styles.levelText}>
-                Lv.{level} {t('mascot:stage.' + Math.min(9, Math.floor((level - 1) / 10)))}
+                Lv.{level} {t('mascot:stage.' + getMascotStageIndex(level))} ·{' '}
+                <Text style={styles.galleryLink}>{t('mascot:gallery.open')}</Text>
               </Text>
               <View style={styles.expBarBg}>
                 <View style={[styles.expBarFill, { width: `${progress.progress * 100}%` }]} />
@@ -229,7 +243,7 @@ export default function DailyGoalScreen() {
                 {t('mascot:exp.format', { current: progress.current, needed: progress.needed })}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <Text style={styles.progressCount}>
             {t('practice:dailyGoal.progress', { done: completedCount, total: DAILY_GOAL_COUNT })}
@@ -391,6 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  galleryLink: { color: COLORS.primary500, fontWeight: '800' },
   levelText: {
     fontSize: 12,
     fontWeight: '700',

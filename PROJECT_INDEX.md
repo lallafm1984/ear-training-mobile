@@ -83,6 +83,7 @@ scripts/
 | ExamResult       | `screens/ExamResultScreen.tsx`       | MockExam → 결과                                                                        |
 | Stats            | `screens/StatsScreen.tsx`            | Home → 통계                                                                            |
 | DailyGoal        | `screens/DailyGoalScreen.tsx`        | Home → 일일 목표                                                                       |
+| MascotGallery    | `screens/MascotGalleryScreen.tsx`    | Home 마스코트 카드 / DailyGoal 마스코트 행 → 60레벨 컬렉션 (해금·잠금·현재 표시)       |
 | BeginnerCourse   | `screens/BeginnerCourseScreen.tsx`   | Home → "처음이라면: 귀 열기 코스" 카드 (7일 레슨 목록·진행률)                          |
 | BeginnerLesson   | `screens/BeginnerLessonScreen.tsx`   | BeginnerCourse → Day 카드 (듣기 포인트 → 미니 문제 → 결과·EXP)                         |
 | LevelTest        | `screens/LevelTestScreen.tsx`        | Home → "3분 레벨 테스트" 카드 (계단식 12문항 → 영역별 시작 난이도 추천)                |
@@ -163,7 +164,7 @@ scripts/
 | `wrongNoteReviewStore.ts`   | WrongNotesScreen(복습 시작) → ChoicePracticeScreen(review 파라미터)                                                                                                                               |
 | `shareCard.ts`              | ShareCardModal, ShareResultCard (공유 카드 데이터·텍스트 문구)                                                                                                                                    |
 | `computeStats.ts`           | StatsScreen                                                                                                                                                                                       |
-| `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen                                                                                                                                                              |
+| `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen(스테이지 인덱스)                                                                                                                                             |
 | `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)                                                                                                                                           |
 | `promotionConfig.ts`        | SubscriptionContext (서버 시간 프로모션 권한 판정)                                                                                                                                                |
 | `appControl.ts`             | AppControlGate (최신 빌드 강제/공지 RPC 검증 및 로컬 노출 상태)                                                                                                                                   |
@@ -208,10 +209,9 @@ scripts/
 
 ### ⚠️ 도달 불가 화면 (Unreachable — MainStack 등록 O, navigate 호출 X)
 
-| 화면              | 파일                               | 설명                                                                                                      |
-| ----------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **ScoreEditor**   | `screens/ScoreEditor/` (13개 모듈) | MainStack에 등록되어 있으나 `navigate('ScoreEditor')` 호출하는 화면 없음. 악보 에디터 + AI 생성 기능 포함 |
-| **MascotGallery** | `screens/MascotGalleryScreen.tsx`  | MainStack에 등록되어 있으나 `navigate('MascotGallery')` 호출하는 화면 없음                                |
+| 화면            | 파일                               | 설명                                                                                                      |
+| --------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **ScoreEditor** | `screens/ScoreEditor/` (13개 모듈) | MainStack에 등록되어 있으나 `navigate('ScoreEditor')` 호출하는 화면 없음. 악보 에디터 + AI 생성 기능 포함 |
 
 **ScoreEditor 관련 모듈** (ScoreEditor만 사용하는 모듈):
 
@@ -262,7 +262,7 @@ Login → Onboarding → Home
 
 [도달 불가]
   ├── ScoreEditor (등록만 됨, 진입 경로 없음)
-  └── MascotGallery (등록만 됨, 진입 경로 없음)
+  └── MascotGallery (Home·DailyGoal 마스코트 탭)
 ```
 
 ---
@@ -361,19 +361,20 @@ Login → Onboarding → Home
 
 ## 기능별 파일 매핑
 
-| 기능                                                | 파일                                                                                                                                                                                                                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 선율/2성부 받아쓰기 문제 생성·진입·생성 예약 취소   | `src/screens/NotationPracticeScreen.tsx`                                                                                                                                                                                                                                          |
-| 새 문제의 첫 음·마디·성부 조건으로 답안 초기화      | `src/hooks/useNoteInput.ts`                                                                                                                                                                                                                                                       |
-| 기보형 문제의 클라이언트 동적 생성                  | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
-| 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증       | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
-| 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태  | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
-| 3분 레벨 테스트 진행·결과·추천 난이도 연동          | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |
-| 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드 | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
-| 오답노트 저장·복습 모드·약점 집중 연습              | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
-| 결과 공유 카드 (이미지/텍스트)                      | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
-| 음계·선법 듣기 (객관식 4단계)                       | `src/lib/scaleQuestions.ts`, `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale)                                                                                                                         |
-| 리듬 탭 (탭 타이밍 채점 4단계)                      | `src/lib/rhythmTap.ts`, `src/screens/RhythmTapScreen.tsx`, `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기)                            |
+| 기능                                                               | 파일                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 선율/2성부 받아쓰기 문제 생성·진입·생성 예약 취소                  | `src/screens/NotationPracticeScreen.tsx`                                                                                                                                                                                                                                          |
+| 새 문제의 첫 음·마디·성부 조건으로 답안 초기화                     | `src/hooks/useNoteInput.ts`                                                                                                                                                                                                                                                       |
+| 기보형 문제의 클라이언트 동적 생성                                 | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
+| 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
+| 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
+| 3분 레벨 테스트 진행·결과·추천 난이도 연동                         | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |
+| 마스코트 갤러리 진입·잠금 표시, 일일 목표 7종(마디·화성 진행 포함) | `src/screens/MascotGalleryScreen.tsx`, `src/screens/HomeScreen.tsx`(GOAL_CATEGORIES·마스코트 카드), `src/screens/DailyGoalScreen.tsx`, `src/lib/mascotConfig.ts`(getMascotStageIndex)                                                                                             |
+| 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드                | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
+| 오답노트 저장·복습 모드·약점 집중 연습                             | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
+| 결과 공유 카드 (이미지/텍스트)                                     | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
+| 음계·선법 듣기 (객관식 4단계)                                      | `src/lib/scaleQuestions.ts`, `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale)                                                                                                                         |
+| 리듬 탭 (탭 타이밍 채점 4단계)                                     | `src/lib/rhythmTap.ts`, `src/screens/RhythmTapScreen.tsx`, `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기)                            |
 
 ---
 
