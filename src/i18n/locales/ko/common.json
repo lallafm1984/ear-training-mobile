@@ -47,5 +47,6 @@
     "storeOpenError": "Google Play를 열지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
     "announcementOpenError": "연결된 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요."
   },
-  "version": "MelodyGen v1.0.0"
+  "version": "MelodyGen v1.0.0",
+  "versionFormat": "MelodyGen v{{version}} (빌드 {{build}})"
 }

@@ -32,6 +32,7 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import * as Application from 'expo-application';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
 import LegalModal from '../components/LegalModal';
@@ -591,7 +592,12 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
           </View>
         )}
 
-        <Text style={styles.versionText}>{t('common:version')}</Text>
+        <Text style={styles.versionText}>
+          {t('common:versionFormat', {
+            version: Application.nativeApplicationVersion ?? '2.0.0',
+            build: Application.nativeBuildVersion ?? '-',
+          })}
+        </Text>
       </ScrollView>
 
       {/* 서브 모달들 */}

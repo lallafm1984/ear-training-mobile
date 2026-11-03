@@ -55,6 +55,10 @@ docs/
 ├── NOTATION_SCREEN_FIX_20260831.md            # 선율/2성부 회귀 원인·실기기 검증·62 (1.1.3) AAB
 ├── BEGINNER_EAR_OPENING_COURSE_DESIGN.md      # 귀 열기 7일 코스 설계안 (2026-11-03 구현)
 └── PROFILES_RLS_20261103.md                   # profiles RLS 활성화 마이그레이션 적용·검증 절차
+store/
+└── android/
+    ├── listing.md                             # Play 스토어 등록 문구 (2.0 ko/en/ja, 릴리스 노트, 앱 액세스 정보)
+    └── RELEASE_GUIDE.md                       # Play Console 릴리스 절차 가이드
 scripts/
 ├── androidLocalBuildEnv.mjs            # 로컬 Android 빌드 환경 변수/경로 유틸
 ├── checkMacAndroidBuildEnv.mjs         # Mac Android 빌드 필수 도구 점검
@@ -391,3 +395,7 @@ Login → Onboarding → Home
 | `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md` | 초급자용 “귀 열기 코스” 설계안 (2026-11-03 BeginnerCourse/BeginnerLesson으로 구현) |
 | `docs/PROFILES_RLS_20261103.md`              | profiles RLS 활성화·tier 보호 트리거 마이그레이션의 배경·적용·검증 절차            |
 | `AD_COPY.md`                                 | 페이지별 광고 문구 모음 (13개 활성 화면)                                           |
+| `store/android/listing.md`                   | Play 스토어 등록 문구 2.0 (ko/en/ja 짧은/전체 설명, 릴리스 노트, 앱 액세스 정보)   |
+| `store/android/RELEASE_GUIDE.md`             | Play Console 릴리스 절차 가이드                                                    |
+| `README.md`                                  | 프로젝트 개요·스택·콘텐츠 10종·스크립트·데이터 원칙·빌드 문서 안내                 |
+| `TODOS.md`                                   | 남은 일 목록 (2.0 이후 남은 항목 포함)                                             |
