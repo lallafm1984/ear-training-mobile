@@ -44,5 +44,12 @@
     "ko": "한국어",
     "en": "English",
     "ja": "日本語"
+  },
+  "guest": {
+    "title": "ゲスト",
+    "subtitle": "ログインすると、練習記録と実力プロフィールがアカウントに安全に保存されます。",
+    "loginButton": "Googleでログイン",
+    "loginMenu": "ログイン",
+    "loginMenuValue": "記録の保存・サブスク"
   }
 }

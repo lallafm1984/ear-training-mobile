@@ -11,8 +11,9 @@ import GoogleLogo from '../components/GoogleLogo';
 
 export default function LoginScreen() {
   const { t } = useTranslation(['auth', 'common']);
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, continueAsGuest } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [startingGuest, setStartingGuest] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [legalType, setLegalType] = useState<LegalType | null>(null);
@@ -24,6 +25,13 @@ export default function LoginScreen() {
     setLoading(true);
     await signInWithGoogle();
     setLoading(false);
+  };
+
+  const handleGuest = async () => {
+    if (!allAgreed || startingGuest) return;
+    setStartingGuest(true);
+    await continueAsGuest();
+    setStartingGuest(false);
   };
 
   const toggleAll = () => {
@@ -101,7 +109,23 @@ export default function LoginScreen() {
           <Text style={styles.googleBtnText}>{t('auth:login.googleButton')}</Text>
         </TouchableOpacity>
 
-        {!allAgreed && <Text style={styles.agreeHint}>{t('auth:login.agreeHint')}</Text>}
+        {/* 로그인 없이 시작 */}
+        <TouchableOpacity
+          style={[styles.guestBtn, (!allAgreed || startingGuest) && { opacity: 0.4 }]}
+          onPress={handleGuest}
+          disabled={!allAgreed || startingGuest}
+          activeOpacity={0.7}
+        >
+          {startingGuest ? (
+            <ActivityIndicator color="#6366f1" size="small" />
+          ) : (
+            <Text style={styles.guestBtnText}>{t('auth:login.guestButton')}</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.agreeHint}>
+          {allAgreed ? t('auth:login.guestHint') : t('auth:login.agreeHint')}
+        </Text>
       </View>
 
       {/* 약관 모달 */}
@@ -200,8 +224,21 @@ const styles = StyleSheet.create({
   agreeHint: {
     fontSize: 12,
     color: '#94a3b8',
-    marginTop: 10,
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 18,
   },
+
+  guestBtn: {
+    marginTop: 12,
+    height: 48,
+    width: '100%',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+  },
+  guestBtnText: { fontSize: 15, fontWeight: '700', color: '#4f46e5' },
 
   googleBtn: {
     flexDirection: 'row',

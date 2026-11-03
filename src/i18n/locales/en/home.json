@@ -37,5 +37,10 @@
     "progress": "{{done}}/{{total}}",
     "complete": "Complete!",
     "goToGoal": "View Goals"
+  },
+  "guestBanner": {
+    "title": "Practicing as a guest",
+    "desc": "Your history is saved only on this device. Sign in to keep it in your account.",
+    "button": "Sign in"
   }
 }

@@ -3,8 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLevel, getExpForNextLevel, getMascotParams } from '../lib/mascotConfig';
 import { useAuth } from '../context';
 import { toLocalDateKey } from '../lib/localDate';
-
-const BASE_KEY = '@melodygen_mascot_exp';
+import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 
 interface StoredData {
   totalExp: number;
@@ -12,18 +11,15 @@ interface StoredData {
 }
 
 export function useMascotExp() {
-  const { user } = useAuth();
-  const storageKey = user ? `${BASE_KEY}_${user.id}` : null;
+  const { storageUserId } = useAuth();
+  const storageKey = localDataKey(LOCAL_DATA_BASE_KEYS.mascotExp, storageUserId);
 
   const [totalExp, setTotalExp] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   // AsyncStorage에서 로드
   useEffect(() => {
-    if (!storageKey) {
-      setLoaded(true);
-      return;
-    }
+    setLoaded(false);
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(storageKey);
@@ -46,7 +42,6 @@ export function useMascotExp() {
   // 항상 저장소의 현재 값을 읽어 더한다. (로드 전 호출 시 기존 EXP를 덮어쓰던 문제 수정)
   const addExp = useCallback(
     async (amount: number) => {
-      if (!storageKey) return;
       try {
         const raw = await AsyncStorage.getItem(storageKey);
         const stored: StoredData | null = raw ? JSON.parse(raw) : null;
@@ -59,7 +54,7 @@ export function useMascotExp() {
         await AsyncStorage.setItem(storageKey, JSON.stringify(data));
       } catch {
         // 저장 실패 시 화면 값만 반영
-        setTotalExp(prev => prev + amount);
+        setTotalExp((prev) => prev + amount);
       }
     },
     [storageKey],

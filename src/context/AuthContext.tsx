@@ -17,6 +17,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
 import { logoutRevenueCat } from '../lib/revenueCat';
 import { logger } from '../lib/logger';
+import {
+  GUEST_MODE_FLAG_KEY,
+  GUEST_STORAGE_ID,
+  allLocalDataKeys,
+  hasGuestData,
+  migrateGuestDataToAccount,
+} from '../lib/localProfileStorage';
 import { useAlert } from './AlertContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -36,6 +43,17 @@ export interface AuthContextValue {
   loading: boolean;
   /** 프로필 갱신 중 */
   profileLoading: boolean;
+  /** 로그인 없이 게스트로 사용 중 */
+  isGuest: boolean;
+  /**
+   * 로컬 학습 데이터(연습 기록·실력 프로필·EXP 등)의 소유자 ID.
+   * 로그인 상태면 user.id, 게스트면 GUEST_STORAGE_ID. 항상 값이 있다.
+   */
+  storageUserId: string;
+  /** 로그인 없이 시작 */
+  continueAsGuest: () => Promise<void>;
+  /** 게스트 모드를 끝내고 로그인 화면으로 돌아간다. 로컬 데이터는 보존된다. */
+  exitGuestMode: () => Promise<void>;
 
   /** 이메일+비밀번호 로그인 */
   signIn: (email: string, password: string) => Promise<AuthError | null>;
@@ -68,6 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  // 게스트 플래그: 앱 재시작 후에도 로그인 화면을 건너뛰기 위해 저장한다.
+  const [guestMode, setGuestMode] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(true);
+  // 게스트 데이터 이관이 끝날 때까지는 계정 키로 전환하지 않는다.
+  const [migratingUserId, setMigratingUserId] = useState<string | null>(null);
 
   // ── 프로필 로드 (없으면 자동 생성) ──────────────────────
   const loadProfile = useCallback(async (uid: string) => {
@@ -139,6 +162,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [showGoogleSignInError],
   );
 
+  // ── 게스트 데이터 → 계정 이관 ───────────────────────────
+  // 로그인 직후 한 번 실행한다. 이관 중에는 storageUserId를 게스트로 유지해
+  // 훅들이 반쯤 합쳐진 데이터를 읽지 않게 한다. 이 함수는 setUser와 같은
+  // 핸들러 안에서 동기적으로 호출되므로 migratingUserId가 user와 함께 반영된다.
+  // 프로필 로딩 화면이 끝나기 전에 로컬 검사가 끝나므로 화면 깜빡임은 없다.
+  const migrateGuestData = useCallback(async (uid: string) => {
+    setMigratingUserId(uid);
+    try {
+      if (!(await hasGuestData(AsyncStorage))) return;
+      const result = await migrateGuestDataToAccount(AsyncStorage, uid);
+      if (result.migrated) {
+        logger.debug(
+          `[AuthContext] 게스트 데이터 이관 완료: 연습 ${result.practiceRecords}건, 시험 ${result.examSessions}건`,
+        );
+      }
+    } catch (error) {
+      logger.warn('[AuthContext] 게스트 데이터 이관 실패:', String(error));
+    } finally {
+      await AsyncStorage.removeItem(GUEST_MODE_FLAG_KEY).catch(() => {});
+      setGuestMode(false);
+      setMigratingUserId(null);
+    }
+  }, []);
+
   // ── 세션 초기화 + OAuth 딥링크 + onAuthStateChange 리스너 ─
   useEffect(() => {
     let mounted = true;
@@ -151,6 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // TOKEN_REFRESHED는 프로필 데이터 변경 없음 → 재로드 불필요 (profileLoading 플래시 방지)
         if (event !== 'TOKEN_REFRESHED') {
           loadProfile(s.user.id);
+        }
+        if (event === 'SIGNED_IN') {
+          // 게스트로 쓰다가 로그인한 경우를 포함해, 훅이 계정 키로 넘어가기 전에 이관을 건다.
+          void migrateGuestData(s.user.id);
         }
       } else {
         setProfile(null);
@@ -173,20 +224,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         setSession(s);
         setUser(s?.user ?? null);
-        if (s?.user) loadProfile(s.user.id);
+        if (s?.user) {
+          loadProfile(s.user.id);
+          // 이전 실행에서 이관이 끝나기 전에 앱이 종료된 경우를 회수한다.
+          void migrateGuestData(s.user.id);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
+    const initializeGuestMode = async () => {
+      try {
+        const flag = await AsyncStorage.getItem(GUEST_MODE_FLAG_KEY);
+        if (mounted) setGuestMode(flag === 'true');
+      } catch {
+        // 플래그를 못 읽으면 로그인 화면으로 간다.
+      } finally {
+        if (mounted) setGuestLoading(false);
+      }
+    };
+
     void initializeSession();
+    void initializeGuestMode();
 
     return () => {
       mounted = false;
       linkingListener.remove();
       listener.subscription.unsubscribe();
     };
-  }, [loadProfile, oauthCallbackProcessor]);
+  }, [loadProfile, oauthCallbackProcessor, migrateGuestData]);
+
+  // ── 게스트 모드 ──────────────────────────────────────────
+  const continueAsGuest = useCallback(async () => {
+    await AsyncStorage.setItem(GUEST_MODE_FLAG_KEY, 'true').catch(() => {});
+    setGuestMode(true);
+  }, []);
+
+  const exitGuestMode = useCallback(async () => {
+    await AsyncStorage.removeItem(GUEST_MODE_FLAG_KEY).catch(() => {});
+    setGuestMode(false);
+  }, []);
 
   // ── 로그인 ───────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string) => {
@@ -266,15 +344,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (delError) return delError.message;
 
-    // 로컬 데이터 정리
+    // 로컬 데이터 정리 (학습 데이터 키는 사용자 ID 접미사가 붙는다)
     await AsyncStorage.multiRemove([
-      '@melodygen_recent_activity',
-      '@melodygen_skill_profile',
-      '@melodygen_last_practice_date',
+      ...allLocalDataKeys(user.id),
       '@melodygen_onboarding_done',
-      '@melodygen_mascot_exp',
-      '@melodygen_daily_exp_rewarded',
-      '@melodygen_exam_sessions',
     ]).catch(() => {});
 
     // auth.users 삭제 (security definer DB Function)
@@ -289,12 +362,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, [user]);
 
+  const isGuest = !session && guestMode;
+  const storageUserId = user && migratingUserId !== user.id ? user.id : GUEST_STORAGE_ID;
+
   const value: AuthContextValue = {
     session,
     user,
     profile,
-    loading,
+    loading: loading || guestLoading,
     profileLoading,
+    isGuest,
+    storageUserId,
+    continueAsGuest,
+    exitGuestMode,
     signIn,
     signUp,
     signOut,

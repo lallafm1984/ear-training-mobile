@@ -13,7 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { UserCircle, Flame, Target, Crown, BarChart3, Trophy } from 'lucide-react-native';
+import { UserCircle, Flame, Target, Crown, BarChart3, Trophy, LogIn } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +39,7 @@ const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 export default function HomeScreen() {
   const { t } = useTranslation(['home', 'common']);
   const navigation = useNavigation<NavProp>();
-  const { profile } = useAuth();
+  const { profile, isGuest, exitGuestMode } = useAuth();
   const { tier } = useSubscription();
   const { profile: _skillProfile } = useSkillProfile();
   const { stats, loaded, reload } = usePracticeHistory();
@@ -151,6 +151,24 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* 게스트 안내 */}
+        {isGuest && (
+          <TouchableOpacity
+            style={styles.guestBanner}
+            onPress={() => void exitGuestMode()}
+            activeOpacity={0.8}
+          >
+            <View style={styles.guestBannerIcon}>
+              <LogIn size={16} color={COLORS.primary500} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.guestBannerTitle}>{t('home:guestBanner.title')}</Text>
+              <Text style={styles.guestBannerDesc}>{t('home:guestBanner.desc')}</Text>
+            </View>
+            <Text style={styles.guestBannerBtn}>{t('home:guestBanner.button')}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>
@@ -298,6 +316,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6366f1',
     fontWeight: '500',
+  },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  guestBannerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate800,
+  },
+  guestBannerDesc: {
+    fontSize: 11,
+    color: COLORS.slate500,
+    marginTop: 2,
+  },
+  guestBannerBtn: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.primary500,
   },
   actionRow: {
     flexDirection: 'row',

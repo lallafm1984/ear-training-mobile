@@ -16,6 +16,7 @@ import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useMascotExp } from '../hooks/useMascotExp';
 import { useAuth } from '../context';
+import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import MascotCharacter from '../components/MascotCharacter';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -62,11 +63,11 @@ export default function DailyGoalScreen() {
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation(['practice', 'content', 'mascot', 'common']);
   const { records, reload } = usePracticeHistory();
-  const { user } = useAuth();
+  const { storageUserId } = useAuth();
   const { level, progress, addExp } = useMascotExp();
   const [rewardedCount, setRewardedCount] = useState<number | null>(null);
 
-  const EXP_REWARD_KEY = user ? `@melodygen_daily_exp_rewarded_${user.id}` : null;
+  const EXP_REWARD_KEY = localDataKey(LOCAL_DATA_BASE_KEYS.dailyExpRewarded, storageUserId);
 
   // 오늘 이미 보상한 목표 수 로드
   useEffect(() => {

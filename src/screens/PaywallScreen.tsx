@@ -110,7 +110,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const { t } = useTranslation(['subscription', 'content', 'common']);
   const { tier: currentTier, loading, refreshSubscription } = useSubscription();
   const { showAlert } = useAlert();
-  const { user } = useAuth();
+  const { user, isGuest, exitGuestMode } = useAuth();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -127,7 +127,30 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       .finally(() => setLoadingPackages(false));
   }, []);
 
+  // 게스트는 결제·복원 전에 로그인해야 한다. 구독은 계정에 연결되기 때문이다.
+  const requireLogin = () => {
+    showAlert({
+      title: t('subscription:paywall.loginRequiredTitle'),
+      message: t('subscription:paywall.loginRequiredMessage'),
+      type: 'info',
+      buttons: [
+        { text: t('common:button.cancel'), style: 'cancel' },
+        {
+          text: t('subscription:paywall.loginButton'),
+          onPress: () => {
+            onClose();
+            void exitGuestMode();
+          },
+        },
+      ],
+    });
+  };
+
   const handleSubscribe = async () => {
+    if (isGuest) {
+      requireLogin();
+      return;
+    }
     if (currentTier === 'pro') {
       showAlert({
         title: t('subscription:paywall.alreadyProTitle'),
@@ -239,6 +262,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   };
 
   const handleRestore = async () => {
+    if (isGuest) {
+      requireLogin();
+      return;
+    }
     setRestoring(true);
     try {
       const customerInfo = await restorePurchases();

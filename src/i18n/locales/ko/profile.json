@@ -44,5 +44,12 @@
     "ko": "한국어",
     "en": "English",
     "ja": "日本語"
+  },
+  "guest": {
+    "title": "게스트",
+    "subtitle": "로그인하면 연습 기록과 실력 프로필이 계정에 안전하게 보관됩니다.",
+    "loginButton": "Google로 로그인",
+    "loginMenu": "로그인",
+    "loginMenuValue": "기록 보관 · 구독"
   }
 }

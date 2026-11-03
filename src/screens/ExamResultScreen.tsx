@@ -14,6 +14,7 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { useAuth } from '../context';
+import { LOCAL_DATA_BASE_KEYS, MAX_EXAM_SESSIONS, localDataKey } from '../lib/localProfileStorage';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -25,7 +26,7 @@ export default function ExamResultScreen() {
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation(['exam', 'content', 'common']);
   const route = useRoute<RouteProp>();
-  const { user } = useAuth();
+  const { storageUserId } = useAuth();
   const savedRef = useRef(false);
   const {
     presetId,
@@ -42,7 +43,7 @@ export default function ExamResultScreen() {
 
   // AsyncStorage에 시험 결과 저장 (1회)
   useEffect(() => {
-    if (!user || savedRef.current) return;
+    if (savedRef.current) return;
     savedRef.current = true;
 
     const record = {
@@ -57,13 +58,22 @@ export default function ExamResultScreen() {
       completed_at: new Date().toISOString(),
     };
 
-    const examKey = `@melodygen_exam_sessions_${user.id}`;
+    const examKey = localDataKey(LOCAL_DATA_BASE_KEYS.examSessions, storageUserId);
     AsyncStorage.getItem(examKey).then((raw) => {
       const existing = raw ? JSON.parse(raw) : [];
-      const updated = [record, ...existing].slice(0, 50);
+      const updated = [record, ...existing].slice(0, MAX_EXAM_SESSIONS);
       AsyncStorage.setItem(examKey, JSON.stringify(updated));
     });
-  }, [categoryScores, elapsedSeconds, maxScore, presetId, title, totalQuestions, totalScore, user]);
+  }, [
+    categoryScores,
+    elapsedSeconds,
+    maxScore,
+    presetId,
+    title,
+    totalQuestions,
+    totalScore,
+    storageUserId,
+  ]);
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 

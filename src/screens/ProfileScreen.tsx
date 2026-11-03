@@ -18,6 +18,7 @@ import {
   User,
   Mail,
   Crown,
+  LogIn,
   LogOut,
   Trash2,
   ChevronRight,
@@ -110,8 +111,17 @@ function EditNameModal({
 // ─────────────────────────────────────────────────────────────
 
 export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenProps) {
-  const { t, i18n } = useTranslation(['profile', 'common', 'subscription']);
-  const { user, profile, signOut, updateProfile, deleteAccount, profileLoading } = useAuth();
+  const { t, i18n } = useTranslation(['profile', 'common', 'subscription', 'home']);
+  const {
+    user,
+    profile,
+    signOut,
+    updateProfile,
+    deleteAccount,
+    profileLoading,
+    isGuest,
+    exitGuestMode,
+  } = useAuth();
   const { tier, subscriptionState, isExpired } = useSubscription();
 
   const { showAlert } = useAlert();
@@ -121,8 +131,16 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
   const [legalType, setLegalType] = useState<LegalType | null>(null);
 
   const tierColor = PLAN_COLOR[tier];
-  const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? '사용자';
+  const displayName = isGuest
+    ? t('profile:guest.title')
+    : (profile?.display_name ?? user?.email?.split('@')[0] ?? t('home:greeting.defaultUser'));
   const email = user?.email ?? '';
+
+  // 게스트 → 로그인 화면으로. 로컬 기록은 보존되고 로그인 시 계정으로 이관된다.
+  const handleGoToLogin = () => {
+    onClose();
+    void exitGuestMode();
+  };
 
   // ── 구독 만료일 포맷 ──────────────────────────────────────
   const expiresLabel = (() => {
@@ -268,7 +286,21 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
               </View>
               <View style={styles.profileTextBlock}>
                 <Text style={styles.profileName}>{displayName}</Text>
-                <Text style={styles.profileEmail}>{email}</Text>
+                {isGuest ? (
+                  <Text style={styles.profileGuestSub}>{t('profile:guest.subtitle')}</Text>
+                ) : (
+                  <Text style={styles.profileEmail}>{email}</Text>
+                )}
+                {isGuest && (
+                  <TouchableOpacity
+                    style={styles.guestLoginBtn}
+                    onPress={handleGoToLogin}
+                    activeOpacity={0.8}
+                  >
+                    <LogIn size={14} color="#ffffff" />
+                    <Text style={styles.guestLoginBtnText}>{t('profile:guest.loginButton')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[
                     styles.planBadge,
@@ -327,17 +359,28 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('profile:section.account')}</Text>
           <View style={styles.sectionCard}>
-            <MenuItem
-              icon={<User size={16} color="#64748b" />}
-              label={t('profile:menu.nickname')}
-              value={displayName}
-              onPress={() => setShowEditName(true)}
-            />
-            <MenuItem
-              icon={<Mail size={16} color="#64748b" />}
-              label={t('profile:menu.email')}
-              value={email}
-            />
+            {isGuest ? (
+              <MenuItem
+                icon={<LogIn size={16} color="#6366f1" />}
+                label={t('profile:guest.loginMenu')}
+                value={t('profile:guest.loginMenuValue')}
+                onPress={handleGoToLogin}
+              />
+            ) : (
+              <>
+                <MenuItem
+                  icon={<User size={16} color="#64748b" />}
+                  label={t('profile:menu.nickname')}
+                  value={displayName}
+                  onPress={() => setShowEditName(true)}
+                />
+                <MenuItem
+                  icon={<Mail size={16} color="#64748b" />}
+                  label={t('profile:menu.email')}
+                  value={email}
+                />
+              </>
+            )}
           </View>
         </View>
 
@@ -376,23 +419,25 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile:section.other')}</Text>
-          <View style={styles.sectionCard}>
-            <MenuItem
-              icon={<LogOut size={16} color="#64748b" />}
-              label={signingOut ? t('profile:menu.signingOut') : t('profile:menu.signOut')}
-              onPress={handleSignOut}
-              disabled={signingOut}
-            />
-            <MenuItem
-              icon={<Trash2 size={16} color="#ef4444" />}
-              label={t('profile:menu.deleteAccount')}
-              onPress={handleDeleteAccount}
-              danger
-            />
+        {!isGuest && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('profile:section.other')}</Text>
+            <View style={styles.sectionCard}>
+              <MenuItem
+                icon={<LogOut size={16} color="#64748b" />}
+                label={signingOut ? t('profile:menu.signingOut') : t('profile:menu.signOut')}
+                onPress={handleSignOut}
+                disabled={signingOut}
+              />
+              <MenuItem
+                icon={<Trash2 size={16} color="#ef4444" />}
+                label={t('profile:menu.deleteAccount')}
+                onPress={handleDeleteAccount}
+                danger
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         <Text style={styles.versionText}>{t('common:version')}</Text>
       </ScrollView>
@@ -479,6 +524,25 @@ const styles = StyleSheet.create({
   profileTextBlock: { flex: 1, gap: 4 },
   profileName: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
   profileEmail: { fontSize: 12, color: '#94a3b8', marginBottom: 6 },
+  profileGuestSub: {
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 18,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  guestLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  guestLoginBtnText: { fontSize: 13, fontWeight: '700', color: '#ffffff' },
 
   planBadge: {
     flexDirection: 'row',

@@ -8,25 +8,21 @@ import { DEFAULT_SKILL_PROFILE } from '../lib/trackConfig';
 import type { UserSkillProfile } from '../lib/trackConfig';
 import type { TrackType } from '../theme';
 import { useAuth } from '../context';
+import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 
-const BASE_KEY = '@melodygen_skill_profile';
-const BASE_LAST_DATE_KEY = '@melodygen_last_practice_date';
 const MS_PER_DAY = 86_400_000;
 
 export function useSkillProfile() {
-  const { user } = useAuth();
-  const storageKey = user ? `${BASE_KEY}_${user.id}` : null;
-  const lastDateKey = user ? `${BASE_LAST_DATE_KEY}_${user.id}` : null;
+  const { storageUserId } = useAuth();
+  const storageKey = localDataKey(LOCAL_DATA_BASE_KEYS.skillProfile, storageUserId);
+  const lastDateKey = localDataKey(LOCAL_DATA_BASE_KEYS.lastPracticeDate, storageUserId);
 
   const [profile, setProfile] = useState<UserSkillProfile>(DEFAULT_SKILL_PROFILE);
   const [loaded, setLoaded] = useState(false);
 
   // ── 로컬 로드 ──
   useEffect(() => {
-    if (!storageKey) {
-      setLoaded(true);
-      return;
-    }
+    setLoaded(false);
     AsyncStorage.getItem(storageKey).then((raw) => {
       if (raw) {
         try {
@@ -44,7 +40,6 @@ export function useSkillProfile() {
   // ── 저장 헬퍼 ──
   const persist = useCallback(
     async (updated: UserSkillProfile) => {
-      if (!storageKey) return;
       setProfile(updated);
       await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
     },
@@ -92,7 +87,6 @@ export function useSkillProfile() {
 
   // ── 스트릭 업데이트 ──
   const updateStreak = useCallback(async () => {
-    if (!lastDateKey) return;
     const today = new Date().toDateString();
     const lastDate = await AsyncStorage.getItem(lastDateKey);
 

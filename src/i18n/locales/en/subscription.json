@@ -59,7 +59,10 @@
     "restoreErrorTitle": "Restore Error",
     "restoreErrorMessage": "An error occurred while restoring your subscription. Please try again.",
     "restoreError": "Restore Error",
-    "restoreErrorMsg": "An error occurred while restoring your subscription. Please try again."
+    "restoreErrorMsg": "An error occurred while restoring your subscription. Please try again.",
+    "loginRequiredTitle": "Sign-in required",
+    "loginRequiredMessage": "Pro subscriptions and restores are linked to a signed-in account.\nYour practice history so far will move with you when you sign in.",
+    "loginButton": "Go to sign in"
   },
   "upgrade": {
     "tierBadge": "Pro and above",

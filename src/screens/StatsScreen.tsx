@@ -28,6 +28,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context';
+import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import PracticeCalendar from '../components/PracticeCalendar';
@@ -47,7 +48,7 @@ interface ExamRecord {
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation(['stats', 'practice', 'common']);
-  const { user } = useAuth();
+  const { storageUserId } = useAuth();
   const { records, stats, loaded, reload } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
 
@@ -65,11 +66,7 @@ export default function StatsScreen() {
   useEffect(() => {
     setExamLoading(true);
     setExamError(false);
-    const examKey = user ? `@melodygen_exam_sessions_${user.id}` : null;
-    if (!examKey) {
-      setExamLoading(false);
-      return;
-    }
+    const examKey = localDataKey(LOCAL_DATA_BASE_KEYS.examSessions, storageUserId);
     AsyncStorage.getItem(examKey)
       .then((raw) => {
         if (raw) {
@@ -85,7 +82,7 @@ export default function StatsScreen() {
         setExamError(true);
         setExamLoading(false);
       });
-  }, [user]);
+  }, [storageUserId]);
 
   // 월별 필터된 시험 기록
   const filteredExams = useMemo(() => {
@@ -151,7 +148,6 @@ export default function StatsScreen() {
 
   // ── DEV 전용: 테스트 데이터 주입 ──
   const seedTestData = async () => {
-    if (!user) return;
     const categories = [
       'melody',
       'barMelody',
@@ -180,7 +176,7 @@ export default function StatsScreen() {
       practicedAt: new Date(now - Math.random() * 60 * 86400_000).toISOString(),
     }));
     await AsyncStorage.setItem(
-      `@melodygen_recent_activity_${user.id}`,
+      localDataKey(LOCAL_DATA_BASE_KEYS.recentActivity, storageUserId),
       JSON.stringify(practiceRecords),
     );
 
@@ -192,17 +188,22 @@ export default function StatsScreen() {
       max_score: 100,
       completed_at: new Date(now - Math.random() * 60 * 86400_000).toISOString(),
     }));
-    await AsyncStorage.setItem(`@melodygen_exam_sessions_${user.id}`, JSON.stringify(examRecords));
+    await AsyncStorage.setItem(
+      localDataKey(LOCAL_DATA_BASE_KEYS.examSessions, storageUserId),
+      JSON.stringify(examRecords),
+    );
 
     // 스킬 프로필 — 연속 학습일 주입
-    const skillRaw = await AsyncStorage.getItem(`@melodygen_skill_profile_${user.id}`);
+    const skillRaw = await AsyncStorage.getItem(
+      localDataKey(LOCAL_DATA_BASE_KEYS.skillProfile, storageUserId),
+    );
     const skillProfile = skillRaw ? JSON.parse(skillRaw) : {};
     await AsyncStorage.setItem(
-      `@melodygen_skill_profile_${user.id}`,
+      localDataKey(LOCAL_DATA_BASE_KEYS.skillProfile, storageUserId),
       JSON.stringify({ ...skillProfile, streakDays: 14 }),
     );
     await AsyncStorage.setItem(
-      `@melodygen_last_practice_date_${user.id}`,
+      localDataKey(LOCAL_DATA_BASE_KEYS.lastPracticeDate, storageUserId),
       new Date().toDateString(),
     );
 

@@ -60,7 +60,7 @@ scripts/
 
 | 화면             | 파일                                 | 진입 경로                 |
 | ---------------- | ------------------------------------ | ------------------------- |
-| Login            | `screens/LoginScreen.tsx`            | App.tsx — 미로그인 시     |
+| Login            | `screens/LoginScreen.tsx`            | App.tsx — 미로그인·게스트 아님 시. "로그인 없이 시작"으로 게스트 모드 진입 |
 | Onboarding       | `screens/OnboardingScreen.tsx`       | 최초 실행 시              |
 | Home             | `screens/HomeScreen.tsx`             | 로그인 후 메인            |
 | CategoryPractice | `screens/CategoryPracticeScreen.tsx` | Home → 카테고리 선택      |
@@ -146,6 +146,7 @@ scripts/
 | `supabase.ts`               | AuthContext, useSkillProfile                                         |
 | `sessionContentLog.ts`      | SessionContentLogContext, 세션 컨텐츠 로그 테이블 insert 매핑 테스트 |
 | `localDate.ts`              | useMascotExp (기기 시간대 기준 YYYY-MM-DD 날짜 키)                   |
+| `localProfileStorage.ts`    | AuthContext, usePracticeHistory, useSkillProfile, useMascotExp, DailyGoal, ExamResult, Stats (로컬 학습 데이터 키·게스트→계정 이관) |
 
 ---
 
@@ -305,13 +306,14 @@ Login → Onboarding → Home
 | `i18nLanguage.test.ts`       | 기기 지역 감지/지원 언어 정규화                             |
 | `sessionContentLog.test.ts`  | 세션 컨텐츠 실행 카운트 요약/DB insert 매핑                 |
 | `localDate.test.ts`          | 로컬 날짜 키 (UTC 날짜 밀림 방지)                           |
+| `localProfileStorage.test.ts`| 게스트 데이터 병합 규칙과 계정 이관                         |
 | `oauthCallback.test.ts`      | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리 |
 | `promotionConfig.test.ts`    | 서버 시간 RPC 판정 및 fail-closed 동작                      |
 | `appControl.test.ts`         | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키            |
 | `secureStoreAdapter.test.ts` | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리    |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (271개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (282개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
