@@ -6,7 +6,7 @@
 
 ```
 src/
-├── components/          # 재사용 가능 UI 컴포넌트 (21개, 미사용 2개)
+├── components/          # 재사용 가능 UI 컴포넌트 (23개, 미사용 2개)
 ├── context/             # React Context 프로바이더 (4개)
 ├── hooks/               # 커스텀 React 훅 (9개)
 ├── lib/                 # 비즈니스 로직 모듈
@@ -19,6 +19,7 @@ src/
 │   ├── examNotationStore.ts      # 모의시험↔기보연습 데이터 전달
 │   ├── wrongNotes.ts             # 오답노트 저장 모델·병합·복습 문항 변환·약점 TOP 집계 (로컬 전용)
 │   ├── wrongNoteReviewStore.ts   # 오답노트 → 객관식 복습 모드 문항 전달
+│   ├── shareCard.ts              # 결과 공유 카드 데이터 모델·텍스트 공유 문구·파일명 (순수 함수)
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   ├── oauthCallback.ts          # OAuth 딥링크 query/hash 파싱 + Supabase 세션 생성
 │   ├── promotionConfig.ts        # 서버 시간 기반 Pro 캠페인 RPC/공지 키
@@ -31,13 +32,13 @@ src/
 ├── i18n/                # 국제화 (i18next)
 │   ├── index.ts         # i18n 초기화 + 언어 감지
 │   ├── language.ts      # 지원 언어 정규화 + 기기 지역 매칭
-│   └── locales/         # 번역 파일 (ko/en/ja × 15 네임스페이스)
+│   └── locales/         # 번역 파일 (ko/en/ja × 16 네임스페이스)
 ├── navigation/          # 네비게이션 설정
 ├── screens/             # 화면 컴포넌트 (18개 + ScoreEditor 서브모듈)
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (24개)
+└── __tests__/           # Jest 테스트 (25개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -89,29 +90,31 @@ scripts/
 
 #### 컴포넌트 (Components)
 
-| 컴포넌트                | 사용처                                                                                               |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `AbcjsRenderer`         | ChoicePractice, MockExam, NotationPractice, ScoreEditor, WrongNotes(듣기), BeginnerLesson, LevelTest |
-| `abcjsSource.ts`        | abcjsWebViewHtml 내부                                                                                |
-| `abcjsWebViewHtml.ts`   | AbcjsRenderer 내부                                                                                   |
-| `AppAlert`              | AlertContext                                                                                         |
-| `AppControlGate`        | App.tsx (로그인 전 강제 업데이트 및 전역 공지)                                                       |
-| `BeginnerLessonIcon`    | BeginnerCourseScreen, BeginnerLessonScreen                                                           |
-| `BottomSheet`           | ScoreEditor (PlaybackSheet, SavedScoresSheet, SettingsSheet)                                         |
-| `CategoryCard`          | HomeScreen                                                                                           |
-| `DailyScoreChart`       | StatsScreen                                                                                          |
-| `DurationToolbar`       | NotationPracticeScreen                                                                               |
-| `ErrorBoundary`         | App.tsx                                                                                              |
-| `GoogleLogo`            | LoginScreen                                                                                          |
-| `GradingResult`         | NotationPracticeScreen                                                                               |
-| `LegalModal`            | LoginScreen, ProfileScreen                                                                           |
-| `MascotCharacter`       | HomeScreen, DailyGoalScreen, MascotGalleryScreen                                                     |
-| `PianoKeyboard`         | NotationPracticeScreen                                                                               |
-| `PracticeCalendar`      | StatsScreen                                                                                          |
-| `PracticeSettingsSheet` | CategoryPracticeScreen                                                                               |
-| `RecentActivityList`    | HomeScreen                                                                                           |
-| `SplashScreen`          | MainStack (초기 로딩)                                                                                |
-| `UpgradeModal`          | ScoreEditor                                                                                          |
+| 컴포넌트                | 사용처                                                                                                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AbcjsRenderer`         | ChoicePractice, MockExam, NotationPractice, ScoreEditor, WrongNotes(듣기), BeginnerLesson, LevelTest                                                 |
+| `abcjsSource.ts`        | abcjsWebViewHtml 내부                                                                                                                                |
+| `abcjsWebViewHtml.ts`   | AbcjsRenderer 내부                                                                                                                                   |
+| `AppAlert`              | AlertContext                                                                                                                                         |
+| `AppControlGate`        | App.tsx (로그인 전 강제 업데이트 및 전역 공지)                                                                                                       |
+| `BeginnerLessonIcon`    | BeginnerCourseScreen, BeginnerLessonScreen                                                                                                           |
+| `BottomSheet`           | ScoreEditor (PlaybackSheet, SavedScoresSheet, SettingsSheet)                                                                                         |
+| `CategoryCard`          | HomeScreen                                                                                                                                           |
+| `DailyScoreChart`       | StatsScreen                                                                                                                                          |
+| `DurationToolbar`       | NotationPracticeScreen                                                                                                                               |
+| `ErrorBoundary`         | App.tsx                                                                                                                                              |
+| `GoogleLogo`            | LoginScreen                                                                                                                                          |
+| `GradingResult`         | NotationPracticeScreen                                                                                                                               |
+| `LegalModal`            | LoginScreen, ProfileScreen                                                                                                                           |
+| `MascotCharacter`       | HomeScreen, DailyGoalScreen, MascotGalleryScreen, BeginnerLessonScreen, LevelTestScreen, ShareResultCard                                             |
+| `PianoKeyboard`         | NotationPracticeScreen                                                                                                                               |
+| `PracticeCalendar`      | StatsScreen                                                                                                                                          |
+| `PracticeSettingsSheet` | CategoryPracticeScreen                                                                                                                               |
+| `RecentActivityList`    | HomeScreen                                                                                                                                           |
+| `ShareCardModal`        | ExamResult, ChoicePractice(결과), LevelTest(결과), Stats(헤더), BeginnerLesson(코스 완주) — 카드 미리보기·이미지(view-shot+expo-sharing)/텍스트 공유 |
+| `ShareResultCard`       | ShareCardModal 내부 (캡처 대상 카드 뷰, MascotCharacter 포함)                                                                                        |
+| `SplashScreen`          | MainStack (초기 로딩)                                                                                                                                |
+| `UpgradeModal`          | ScoreEditor                                                                                                                                          |
 
 #### 커스텀 훅
 
@@ -153,6 +156,7 @@ scripts/
 | `examNotationStore.ts`      | MockExam, NotationPractice                                                                                                                                                                        |
 | `wrongNotes.ts`             | useWrongNotes, WrongNotesScreen, ChoicePractice(복습 모드), localProfileStorage(병합)                                                                                                             |
 | `wrongNoteReviewStore.ts`   | WrongNotesScreen(복습 시작) → ChoicePracticeScreen(review 파라미터)                                                                                                                               |
+| `shareCard.ts`              | ShareCardModal, ShareResultCard (공유 카드 데이터·텍스트 문구)                                                                                                                                    |
 | `computeStats.ts`           | StatsScreen                                                                                                                                                                                       |
 | `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen                                                                                                                                                              |
 | `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)                                                                                                                                           |
@@ -339,13 +343,14 @@ Login → Onboarding → Home
 | `levelTest.test.ts`              | 레벨 테스트 계단식 진행, 영역 레벨 추정·추천, 정규화·병합, 문항 생성                                  |
 | `reminder.test.ts`               | 리마인더 설정 정규화·시각 표시, 알림 권한 흐름·매일 예약/취소 호출 검증                               |
 | `wrongNotes.test.ts`             | 오답 누적·해결·삭제·정리, 병합, 복습 문항 변환·선택, 약점 TOP 집계                                    |
+| `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
 | `promotionConfig.test.ts`        | 서버 시간 RPC 판정 및 fail-closed 동작                                                                |
 | `appControl.test.ts`             | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키                                                      |
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (328개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (332개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -359,6 +364,7 @@ Login → Onboarding → Home
 | 3분 레벨 테스트 진행·결과·추천 난이도 연동          | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |
 | 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드 | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
 | 오답노트 저장·복습 모드·약점 집중 연습              | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
+| 결과 공유 카드 (이미지/텍스트)                      | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
 
 ---
 

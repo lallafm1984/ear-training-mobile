@@ -17,6 +17,7 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  Share2,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -30,6 +31,9 @@ import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useSessionContentLog } from '../context';
 import { useWrongNotes } from '../hooks/useWrongNotes';
 import { wrongNoteReviewStore } from '../lib/wrongNoteReviewStore';
+import { useMascotExp } from '../hooks/useMascotExp';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
 import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -49,9 +53,11 @@ export default function ChoicePracticeScreen() {
   const { updateStreak, applyEvaluation } = useSkillProfile();
   const { trackContentRun } = useSessionContentLog();
   const { addWrong, resolve: resolveWrongNote } = useWrongNotes();
+  const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const [sessionWrong, setSessionWrong] = useState(0);
 
-  const { t } = useTranslation(['practice', 'content', 'common', 'wrongNotes']);
+  const { t, i18n } = useTranslation(['practice', 'content', 'common', 'wrongNotes', 'share']);
   const colors = CATEGORY_COLORS[category];
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
@@ -306,16 +312,44 @@ export default function ChoicePracticeScreen() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
-                {t('common:button.goBack')}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.resultRow}>
+              <TouchableOpacity
+                style={[styles.resultBtn, styles.resultHalf, { backgroundColor: COLORS.slate200 }]}
+                onPress={() =>
+                  setShareData({
+                    kind: 'practice',
+                    title: t('share:kind.practice'),
+                    subtitle: `${t('content:category.' + category + '.name')} · ${diffLabel}`,
+                    headline: `${pct}%`,
+                    headlineLabel: t('share:stat.accuracy'),
+                    stats: [
+                      { label: t('share:stat.correct'), value: `${stats.correct}/${stats.total}` },
+                      { label: t('share:stat.questions'), value: `${stats.total}` },
+                    ],
+                    accent: colors.main,
+                    date: new Date().toLocaleDateString(i18n.language),
+                    mascotLevel,
+                    happy: pct >= 60,
+                  })
+                }
+              >
+                <Share2 size={16} color={COLORS.slate700} />
+                <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
+                  {t('share:button')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.resultBtn, styles.resultHalf, { backgroundColor: COLORS.slate200 }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
+                  {t('common:button.goBack')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+        <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
       </SafeAreaView>
     );
   }
@@ -856,4 +890,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
+  resultRow: { flexDirection: 'row', gap: 10 },
+  resultHalf: { flex: 1 },
 });

@@ -25,6 +25,7 @@ import {
   Sparkles,
   RotateCcw,
   Headphones,
+  Share2,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -44,6 +45,8 @@ import {
 import { useBeginnerCourseProgress } from '../hooks/useBeginnerCourseProgress';
 import { useMascotExp } from '../hooks/useMascotExp';
 import BeginnerLessonIcon from '../components/BeginnerLessonIcon';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -63,12 +66,12 @@ interface LessonOutcome {
 }
 
 export default function BeginnerLessonScreen() {
-  const { t } = useTranslation(['beginner', 'content', 'common']);
+  const { t, i18n } = useTranslation(['beginner', 'content', 'common', 'share']);
   const navigation = useNavigation<NavProp>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const lesson = getBeginnerLesson(route.params.lessonId);
-  const { completeLesson } = useBeginnerCourseProgress();
+  const { completeLesson, isComplete: courseComplete } = useBeginnerCourseProgress();
   const { addExp, level: mascotLevel } = useMascotExp();
 
   const [phase, setPhase] = useState<Phase>('intro');
@@ -77,6 +80,7 @@ export default function BeginnerLessonScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [outcome, setOutcome] = useState<LessonOutcome | null>(null);
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
 
   // 오디오: 숨겨진 렌더러 하나로 문제 소리·정답·내 답을 번갈아 재생
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
@@ -285,6 +289,34 @@ export default function BeginnerLessonScreen() {
               {t('beginner:lesson.result.courseBonus', { exp: BEGINNER_COURSE_COMPLETE_EXP })}
             </Text>
           </View>
+        )}
+        {courseComplete && (
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={() =>
+              setShareData({
+                kind: 'course',
+                title: t('share:kind.course'),
+                headline: t('share:course.headline'),
+                headlineLabel: t('share:course.label'),
+                stats: [
+                  {
+                    label: t('share:stat.lessons'),
+                    value: `${BEGINNER_LESSONS.length}/${BEGINNER_LESSONS.length}`,
+                  },
+                  { label: t('share:stat.level'), value: `Lv.${mascotLevel}` },
+                ],
+                accent: lesson.color,
+                date: new Date().toLocaleDateString(i18n.language),
+                mascotLevel,
+                happy: true,
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <Share2 size={16} color={COLORS.primary700} />
+            <Text style={styles.shareBtnText}>{t('share:buttonLong')}</Text>
+          </TouchableOpacity>
         )}
 
         <View style={styles.resultActions}>
@@ -577,6 +609,7 @@ export default function BeginnerLessonScreen() {
           ) : null}
         </View>
       )}
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
     </SafeAreaView>
   );
 }
@@ -753,6 +786,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   rewardText: { fontSize: 14, fontWeight: '800', color: COLORS.amber800 },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary50,
+    borderWidth: 1,
+    borderColor: COLORS.primary200,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 6,
+  },
+  shareBtnText: { fontSize: 14, fontWeight: '800', color: COLORS.primary700 },
   resultActions: { alignSelf: 'stretch', gap: 10, marginTop: 16 },
   secondaryBtn: {
     flexDirection: 'row',

@@ -1,0 +1,48 @@
+{
+  "button": "共有",
+  "buttonLong": "結果を共有",
+  "modal": {
+    "title": "共有カード",
+    "hint": "画像として保存したり、友だちにそのまま送れます。",
+    "image": "画像で共有",
+    "text": "テキストで共有",
+    "dialogTitle": "MelodyGenの結果を共有"
+  },
+  "error": {
+    "title": "共有に失敗しました",
+    "message": "共有カードを作成できませんでした。しばらくしてからもう一度お試しください。"
+  },
+  "card": {
+    "brand": "MelodyGen",
+    "tagline": "聴音トレーニング、毎日5分",
+    "hashtags": "#MelodyGen #聴音練習"
+  },
+  "kind": {
+    "exam": "模擬試験の結果",
+    "practice": "練習の結果",
+    "levelTest": "レベルテストの結果",
+    "stats": "わたしの練習記録",
+    "course": "耳ひらき7日コース完走"
+  },
+  "stat": {
+    "grade": "評価",
+    "questions": "問題数",
+    "accuracy": "正答率",
+    "correct": "正解",
+    "streak": "連続学習",
+    "sessions": "総練習",
+    "weekly": "今週",
+    "level": "現在のレベル",
+    "lessons": "完了レッスン"
+  },
+  "course": {
+    "headline": "7日完走",
+    "label": "耳ひらきコースのすべてのレッスンを終えました"
+  },
+  "stats": {
+    "streakLabel": "連続で練習しています"
+  },
+  "text": {
+    "footer": "MelodyGenで聴音練習中！🎧"
+  }
+}

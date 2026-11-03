@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Share2,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -33,6 +34,9 @@ import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useWrongNotes } from '../hooks/useWrongNotes';
+import { useMascotExp } from '../hooks/useMascotExp';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
 import PracticeCalendar from '../components/PracticeCalendar';
 import DailyScoreChart from '../components/DailyScoreChart';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -49,11 +53,13 @@ interface ExamRecord {
 
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['stats', 'practice', 'common', 'wrongNotes']);
+  const { t, i18n } = useTranslation(['stats', 'practice', 'common', 'wrongNotes', 'share']);
   const { storageUserId } = useAuth();
   const { records, stats, loaded, reload } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
   const { notes: wrongNotes } = useWrongNotes();
+  const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const unresolvedWrong = wrongNotes.filter((n) => !n.resolvedAt).length;
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
@@ -234,6 +240,30 @@ export default function StatsScreen() {
           <ArrowLeft size={24} color={COLORS.primary500} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('stats:title')}</Text>
+        {stats.totalSessions > 0 && (
+          <TouchableOpacity
+            onPress={() =>
+              setShareData({
+                kind: 'stats',
+                title: t('share:kind.stats'),
+                headline: `${skillProfile.streakDays}${t('common:unit.day')}`,
+                headlineLabel: t('share:stats.streakLabel'),
+                stats: [
+                  { label: t('share:stat.sessions'), value: `${stats.totalSessions}` },
+                  { label: t('share:stat.weekly'), value: `${stats.weeklyCount}` },
+                  { label: t('share:stat.level'), value: `Lv.${mascotLevel}` },
+                ],
+                date: new Date().toLocaleDateString(i18n.language),
+                mascotLevel,
+                happy: skillProfile.streakDays > 0,
+              })
+            }
+            style={styles.shareBtn}
+            hitSlop={8}
+          >
+            <Share2 size={20} color={COLORS.primary500} />
+          </TouchableOpacity>
+        )}
         {__DEV__ && (
           <TouchableOpacity onPress={seedTestData} style={styles.devBtn}>
             <Text style={styles.devBtnText}>SEED</Text>
@@ -472,6 +502,7 @@ export default function StatsScreen() {
           </>
         )}
       </ScrollView>
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
     </SafeAreaView>
   );
 }
@@ -489,8 +520,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: { padding: 4 },
+  shareBtn: { padding: 4 },
   devBtn: {
-    marginLeft: 'auto',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,

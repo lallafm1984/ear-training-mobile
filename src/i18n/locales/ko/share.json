@@ -1,0 +1,48 @@
+{
+  "button": "공유",
+  "buttonLong": "결과 공유하기",
+  "modal": {
+    "title": "공유 카드",
+    "hint": "이미지로 저장하거나 친구에게 바로 보낼 수 있어요.",
+    "image": "이미지로 공유",
+    "text": "텍스트로 공유",
+    "dialogTitle": "MelodyGen 결과 공유"
+  },
+  "error": {
+    "title": "공유 실패",
+    "message": "공유 카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요."
+  },
+  "card": {
+    "brand": "MelodyGen",
+    "tagline": "청음 훈련, 매일 5분",
+    "hashtags": "#MelodyGen #청음연습"
+  },
+  "kind": {
+    "exam": "모의시험 결과",
+    "practice": "연습 결과",
+    "levelTest": "레벨 테스트 결과",
+    "stats": "내 연습 기록",
+    "course": "귀 열기 7일 코스 완주"
+  },
+  "stat": {
+    "grade": "등급",
+    "questions": "문항",
+    "accuracy": "정답률",
+    "correct": "정답",
+    "streak": "연속 학습",
+    "sessions": "총 연습",
+    "weekly": "이번 주",
+    "level": "현재 레벨",
+    "lessons": "완료 레슨"
+  },
+  "course": {
+    "headline": "7일 완주",
+    "label": "귀 열기 코스의 모든 레슨을 마쳤어요"
+  },
+  "stats": {
+    "streakLabel": "연속으로 연습하고 있어요"
+  },
+  "text": {
+    "footer": "MelodyGen으로 청음 연습 중! 🎧"
+  }
+}

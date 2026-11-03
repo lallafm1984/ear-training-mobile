@@ -2,10 +2,18 @@
 // ExamResultScreen — 모의시험 결과 화면
 // ─────────────────────────────────────────────────────────────
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RotateCcw, Home, Trophy, TrendingUp, BookOpen, ChevronRight } from 'lucide-react-native';
+import {
+  RotateCcw,
+  Home,
+  Trophy,
+  TrendingUp,
+  BookOpen,
+  ChevronRight,
+  Share2,
+} from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -14,6 +22,9 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { useAuth } from '../context';
+import { useMascotExp } from '../hooks/useMascotExp';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
 import { LOCAL_DATA_BASE_KEYS, MAX_EXAM_SESSIONS, localDataKey } from '../lib/localProfileStorage';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -24,9 +35,11 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['exam', 'content', 'common', 'wrongNotes']);
+  const { t, i18n } = useTranslation(['exam', 'content', 'common', 'wrongNotes', 'share']);
   const route = useRoute<RouteProp>();
   const { storageUserId } = useAuth();
+  const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const savedRef = useRef(false);
   const {
     presetId,
@@ -88,6 +101,25 @@ export default function ExamResultScreen() {
   };
 
   const grade = getGrade(percentage);
+
+  const openShare = () => {
+    setShareData({
+      kind: 'exam',
+      title: t('share:kind.exam'),
+      subtitle: title,
+      headline: `${percentage}${t('common:unit.score')}`,
+      headlineLabel: `${t('exam:result.totalScore')} · ${grade.label}`,
+      stats: [
+        { label: t('share:stat.grade'), value: grade.label },
+        { label: t('share:stat.questions'), value: `${totalQuestions}` },
+        { label: t('share:stat.accuracy'), value: `${percentage}%` },
+      ],
+      accent: grade.color,
+      date: new Date().toLocaleDateString(i18n.language),
+      mascotLevel,
+      happy: percentage >= 60,
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -204,7 +236,16 @@ export default function ExamResultScreen() {
             <ChevronRight size={16} color={COLORS.primary400} />
           </TouchableOpacity>
         )}
+
+        {/* 결과 공유 */}
+        <TouchableOpacity style={styles.shareBtn} onPress={openShare} activeOpacity={0.8}>
+          <Share2 size={18} color={COLORS.slate600} />
+          <Text style={styles.shareBtnText}>{t('share:buttonLong')}</Text>
+          <ChevronRight size={16} color={COLORS.slate400} />
+        </TouchableOpacity>
       </ScrollView>
+
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
 
       {/* 하단 액션 */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -433,4 +474,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   notesBtnText: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.primary700 },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignSelf: 'stretch',
+  },
+  shareBtnText: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.slate700 },
 });

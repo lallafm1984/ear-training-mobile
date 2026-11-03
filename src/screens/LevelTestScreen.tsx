@@ -25,6 +25,7 @@ import {
   Ear,
   RotateCcw,
   Play,
+  Share2,
 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -35,6 +36,8 @@ import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRend
 import MascotCharacter from '../components/MascotCharacter';
 import { useMascotExp } from '../hooks/useMascotExp';
 import { useLevelTestResult } from '../hooks/useLevelTestResult';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
 import {
   LEVEL_TEST_MINUTES,
   LEVEL_TEST_TOTAL_QUESTIONS,
@@ -64,6 +67,7 @@ export default function LevelTestScreen() {
   const insets = useSafeAreaInsets();
   const { result: savedResult, save } = useLevelTestResult();
   const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [session, setSession] = useState<LevelTestSession>(createLevelTestSession);
@@ -383,6 +387,27 @@ export default function LevelTestScreen() {
             <RotateCcw size={14} color={COLORS.slate600} />
             <Text style={styles.ghostBtnText}>{t('levelTest:result.retry')}</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.ghostBtn}
+            onPress={() =>
+              setShareData({
+                kind: 'levelTest',
+                title: t('share:kind.levelTest'),
+                headline: t(`levelTest:result.overall.${result.overall}`),
+                headlineLabel: t('levelTest:result.score', { correct, total }),
+                stats: result.areas.map((area) => ({
+                  label: t(`content:category.${area.category}.name`),
+                  value: `${area.correct}/${area.total}`,
+                })),
+                date: new Date(result.takenAt).toLocaleDateString(i18n.language),
+                mascotLevel,
+                happy: result.score >= 60,
+              })
+            }
+          >
+            <Share2 size={14} color={COLORS.slate600} />
+            <Text style={styles.ghostBtnText}>{t('share:button')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.navigate('Home')}>
             <Text style={styles.ghostBtnText}>{t('levelTest:result.home')}</Text>
           </TouchableOpacity>
@@ -454,6 +479,7 @@ export default function LevelTestScreen() {
           </TouchableOpacity>
         </View>
       )}
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
     </SafeAreaView>
   );
 }
