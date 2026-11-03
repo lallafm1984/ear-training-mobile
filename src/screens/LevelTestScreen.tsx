@@ -3,15 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Animated,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -32,6 +24,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
+import { useAlert } from '../context';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import MascotCharacter from '../components/MascotCharacter';
 import { useMascotExp } from '../hooks/useMascotExp';
@@ -64,9 +57,10 @@ const ADVANCE_DELAY_MS = 900;
 
 export default function LevelTestScreen() {
   const layout = useResponsiveLayout();
-  const { t, i18n } = useTranslation(['levelTest', 'content', 'beginner', 'common']);
+  const { t, i18n } = useTranslation(['levelTest', 'content', 'beginner', 'share', 'common']);
   const navigation = useNavigation<NavProp>();
   const insets = useSafeAreaInsets();
+  const { showAlert } = useAlert();
   const { result: savedResult, save } = useLevelTestResult();
   const { level: mascotLevel } = useMascotExp();
   const [shareData, setShareData] = useState<ShareCardData | null>(null);
@@ -82,6 +76,8 @@ export default function LevelTestScreen() {
   const [playbackAbc, setPlaybackAbc] = useState(SILENT_ABC);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 그만두기를 확인한 뒤에는 beforeRemove 가드를 건너뛴다 */
+  const leaveConfirmedRef = useRef(false);
 
   const step = currentLevelTestStep(session);
   const answered = selectedId !== null;
@@ -115,7 +111,35 @@ export default function LevelTestScreen() {
     }, []),
   );
 
+  // 문항 진행 중에는 헤더 뒤로가기·안드로이드 뒤로가기·스와이프 모두 확인을 거친다
+  useEffect(() => {
+    if (phase !== 'question') return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (leaveConfirmedRef.current) return;
+      e.preventDefault();
+      showAlert({
+        title: t('levelTest:question.quitTitle'),
+        message: t('levelTest:question.quitMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('levelTest:question.quitCancel'), style: 'cancel' },
+          {
+            text: t('levelTest:question.quitConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              leaveConfirmedRef.current = true;
+              abcjsRef.current?.stopPlay();
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+      });
+    });
+    return unsubscribe;
+  }, [phase, navigation, showAlert, t]);
+
   const startTest = useCallback(() => {
+    leaveConfirmedRef.current = false;
     setResult(null);
     setSession(createLevelTestSession());
     setPhase('question');
@@ -159,23 +183,8 @@ export default function LevelTestScreen() {
     }, ADVANCE_DELAY_MS);
   };
 
-  const handleBack = () => {
-    if (phase === 'question') {
-      Alert.alert(t('levelTest:question.quitTitle'), t('levelTest:question.quitMessage'), [
-        { text: t('levelTest:question.quitCancel'), style: 'cancel' },
-        {
-          text: t('levelTest:question.quitConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            abcjsRef.current?.stopPlay();
-            navigation.goBack();
-          },
-        },
-      ]);
-      return;
-    }
-    navigation.goBack();
-  };
+  // 문항 중이면 beforeRemove 리스너가 확인 알림을 띄운다
+  const handleBack = () => navigation.goBack();
 
   const choiceStyle = (choiceId: string) => {
     if (!answered || !question) return styles.choiceIdle;

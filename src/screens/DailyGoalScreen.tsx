@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { DAILY_GOAL_CATEGORIES, DAILY_GOAL_COUNT, computeGoalStreak } from '../lib/dailyGoal';
 import { useMascotExp } from '../hooks/useMascotExp';
 import { useAuth, useAlert } from '../context';
 import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
@@ -27,47 +28,9 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const GOAL_CATEGORIES: ContentCategory[] = [
-  'melody',
-  'barMelody',
-  'rhythm',
-  'interval',
-  'chord',
-  'progression',
-  'key',
-];
-const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
-
 interface GoalItem {
   category: ContentCategory;
   completed: boolean;
-}
-
-/** 연속 목표 달성일 계산 (목표 카테고리를 모두 연습한 날) */
-function computeGoalStreak(records: { practicedAt: string; contentType: string }[]): number {
-  const byDate: Record<string, Set<string>> = {};
-  records.forEach((r) => {
-    const d = new Date(r.practicedAt).toDateString();
-    if (!byDate[d]) byDate[d] = new Set();
-    byDate[d].add(r.contentType);
-  });
-
-  let streak = 0;
-  const today = new Date();
-
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today.getTime() - i * 86400000).toDateString();
-    const cats = byDate[d];
-    const done = cats ? GOAL_CATEGORIES.every((c) => cats.has(c)) : false;
-    if (done) {
-      streak++;
-    } else {
-      if (i === 0) continue; // 오늘은 아직 진행 중이므로 스킵
-      break;
-    }
-  }
-
-  return streak;
 }
 
 export default function DailyGoalScreen() {
@@ -165,7 +128,7 @@ export default function DailyGoalScreen() {
 
   // 일일 목표 목록 생성 (고정 7개 카테고리)
   const goals: GoalItem[] = useMemo(() => {
-    return GOAL_CATEGORIES.map((cat) => ({
+    return DAILY_GOAL_CATEGORIES.map((cat) => ({
       category: cat,
       completed: todayCategories.has(cat),
     }));
@@ -543,7 +506,6 @@ const styles = StyleSheet.create({
     borderColor: '#c7d2fe',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 16,
   },
   nudgeIcon: {
     width: 36,

@@ -4,7 +4,8 @@
   "filters": {
     "all": "All",
     "unresolved": "Open",
-    "resolved": "Resolved"
+    "resolved": "Resolved",
+    "onlyCategory": "{{name}} only"
   },
   "weakness": {
     "title": "Top 3 weak spots",
@@ -34,6 +35,10 @@
     }
   },
   "clearResolved": "Clear resolved",
+  "clearResolvedConfirm": {
+    "title": "Clear resolved notes?",
+    "message": "{{count}} resolved notes will be removed. This can’t be undone."
+  },
   "review": {
     "title": "Mistake review",
     "progress": "{{current}} / {{total}}"

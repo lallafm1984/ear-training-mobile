@@ -70,18 +70,10 @@
     "dismissButton": "나중에 하기",
     "grandStaffTitle": "큰보표 (Grand Staff)",
     "grandStaffDesc": "피아노 악보를 위한 높은음자리 + 낮은음자리 큰보표는 Pro에서 사용 가능합니다.",
-    "grandStaffBenefits": [
-      "큰보표 악보 생성",
-      "베이스 성부 동시 입력",
-      "고급 편집 기능"
-    ],
+    "grandStaffBenefits": ["큰보표 악보 생성", "베이스 성부 동시 입력", "고급 편집 기능"],
     "examModeTitle": "시험 모드",
     "examModeDesc": "실제 시험과 같은 환경의 마디별 재생 모드는 Pro에서 사용 가능합니다.",
-    "examModeBenefits": [
-      "시험 모드 재생",
-      "구간 대기 시간 설정",
-      "실제 시험 환경 구성"
-    ],
+    "examModeBenefits": ["시험 모드 재생", "구간 대기 시간 설정", "실제 시험 환경 구성"],
     "difficultyTitle": "중급·고급 난이도",
     "difficultyDesc": "초급 이상의 난이도는 Pro에서 사용 가능합니다.",
     "difficultyBenefits": [
@@ -91,18 +83,10 @@
     ],
     "measuresTitle": "8마디 이상 생성",
     "measuresDesc": "4마디 초과 악보 생성은 Pro에서 사용 가능합니다.",
-    "measuresBenefits": [
-      "8·12·16마디 악보 생성",
-      "긴 청음 문제 출제",
-      "다양한 구성 연습"
-    ],
+    "measuresBenefits": ["8·12·16마디 악보 생성", "긴 청음 문제 출제", "다양한 구성 연습"],
     "editNotesTitle": "음표 편집",
     "editNotesDesc": "생성된 악보의 음표 수정은 Pro 플랜에서 사용할 수 있습니다.",
-    "editNotesBenefits": [
-      "음표 음정·길이 수정",
-      "개별 음표 삭제",
-      "세밀한 악보 편집"
-    ],
+    "editNotesBenefits": ["음표 음정·길이 수정", "개별 음표 삭제", "세밀한 악보 편집"],
     "downloadAudioTitle": "음원 다운로드",
     "downloadAudioDesc": "청음 음원(MP3) 다운로드는 Pro 플랜 전용 기능입니다.",
     "downloadAudioBenefits": [

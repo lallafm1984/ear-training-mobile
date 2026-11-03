@@ -1,4 +1,11 @@
-import { CONTENT_MAX_WIDTH, MODAL_MAX_WIDTH, getLayoutInfo, modalCardWidth } from '../lib/layout';
+import {
+  CONTENT_MAX_WIDTH,
+  MODAL_MAX_WIDTH,
+  NARROW_MAX_WIDTH,
+  SHEET_MAX_WIDTH,
+  getLayoutInfo,
+  modalCardWidth,
+} from '../lib/layout';
 
 describe('getLayoutInfo', () => {
   it('폰 크기에서는 태블릿이 아니고 콘텐츠 스타일이 비어 있다', () => {
@@ -6,6 +13,8 @@ describe('getLayoutInfo', () => {
     expect(info.isTablet).toBe(false);
     expect(info.contentMaxWidth).toBeUndefined();
     expect(info.contentStyle).toEqual({});
+    expect(info.narrowStyle).toEqual({});
+    expect(info.sheetStyle).toEqual({});
     expect(info.gridColumns).toBe(3);
   });
 
@@ -18,6 +27,18 @@ describe('getLayoutInfo', () => {
       maxWidth: CONTENT_MAX_WIDTH,
       alignSelf: 'center',
     });
+    expect(portrait.narrowStyle).toEqual({
+      width: '100%',
+      maxWidth: NARROW_MAX_WIDTH,
+      alignSelf: 'center',
+    });
+    expect(portrait.sheetStyle).toEqual({
+      width: '100%',
+      maxWidth: SHEET_MAX_WIDTH,
+      alignSelf: 'center',
+    });
+    expect(NARROW_MAX_WIDTH).toBeLessThan(SHEET_MAX_WIDTH);
+    expect(SHEET_MAX_WIDTH).toBeLessThan(CONTENT_MAX_WIDTH);
     const landscape = getLayoutInfo(1280, 800);
     expect(landscape.isTablet).toBe(true);
     expect(landscape.isLandscape).toBe(true);

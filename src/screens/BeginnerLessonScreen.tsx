@@ -3,15 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Animated,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -32,6 +24,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme/colors';
+import { useAlert } from '../context';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import MascotCharacter from '../components/MascotCharacter';
 import {
@@ -72,6 +65,7 @@ export default function BeginnerLessonScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
+  const { showAlert } = useAlert();
   const lesson = getBeginnerLesson(route.params.lessonId);
   const { completeLesson, isComplete: courseComplete } = useBeginnerCourseProgress();
   const { addExp, level: mascotLevel } = useMascotExp();
@@ -91,6 +85,8 @@ export default function BeginnerLessonScreen() {
   const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
   const pendingPlayRef = useRef(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  /** 그만두기를 확인한 뒤에는 beforeRemove 가드를 건너뛴다 */
+  const leaveConfirmedRef = useRef(false);
 
   const question = questions[index];
   const answered = selectedId !== null;
@@ -98,6 +94,7 @@ export default function BeginnerLessonScreen() {
 
   const startLesson = useCallback(() => {
     if (!lesson) return;
+    leaveConfirmedRef.current = false;
     const qs = generateBeginnerLessonQuestions(lesson.questionKinds, lesson.questionCount);
     setQuestions(qs);
     setIndex(0);
@@ -130,6 +127,33 @@ export default function BeginnerLessonScreen() {
       return () => abcjsRef.current?.stopPlay();
     }, []),
   );
+
+  // 문제 진행 중에는 헤더 뒤로가기·안드로이드 뒤로가기·스와이프 모두 확인을 거친다
+  useEffect(() => {
+    if (phase !== 'question') return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (leaveConfirmedRef.current) return;
+      e.preventDefault();
+      showAlert({
+        title: t('beginner:lesson.quitTitle'),
+        message: t('beginner:lesson.quitMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('beginner:lesson.quitCancel'), style: 'cancel' },
+          {
+            text: t('beginner:lesson.quitConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              leaveConfirmedRef.current = true;
+              abcjsRef.current?.stopPlay();
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+      });
+    });
+    return unsubscribe;
+  }, [phase, navigation, showAlert, t]);
 
   const playAbc = useCallback(
     (abc: string) => {
@@ -207,23 +231,8 @@ export default function BeginnerLessonScreen() {
     setIndex((i) => i + 1);
   };
 
-  const handleBack = () => {
-    if (phase === 'question') {
-      Alert.alert(t('beginner:lesson.quitTitle'), t('beginner:lesson.quitMessage'), [
-        { text: t('beginner:lesson.quitCancel'), style: 'cancel' },
-        {
-          text: t('beginner:lesson.quitConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            abcjsRef.current?.stopPlay();
-            navigation.goBack();
-          },
-        },
-      ]);
-      return;
-    }
-    navigation.goBack();
-  };
+  // 문제 중이면 beforeRemove 리스너가 확인 알림을 띄운다
+  const handleBack = () => navigation.goBack();
 
   const nextLesson = useMemo(() => {
     if (!lesson) return undefined;

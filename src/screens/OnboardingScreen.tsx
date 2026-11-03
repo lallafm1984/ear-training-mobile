@@ -27,6 +27,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme/colors';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -79,6 +80,7 @@ const SLIDES: SlideData[] = [
 
 export default function OnboardingScreen() {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['auth', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
@@ -116,8 +118,10 @@ export default function OnboardingScreen() {
         <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
           <IconComp size={48} color={item.color} />
         </View>
-        <Text style={styles.slideTitle}>{t(item.title)}</Text>
-        <Text style={styles.slideDesc}>{t(item.description)}</Text>
+        <View style={[styles.slideText, layout.narrowStyle]}>
+          <Text style={styles.slideTitle}>{t(item.title)}</Text>
+          <Text style={styles.slideDesc}>{t(item.description)}</Text>
+        </View>
       </View>
     );
   };
@@ -186,7 +190,13 @@ export default function OnboardingScreen() {
       </View>
 
       {/* 하단 버튼 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.narrowStyle,
+          { paddingBottom: Math.max(insets.bottom, 24) },
+        ]}
+      >
         {isLast ? (
           <TouchableOpacity
             style={[styles.startBtn, { backgroundColor: COLORS.primary500 }]}
@@ -250,6 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
+  slideText: { alignItems: 'center', gap: 20 },
   slideTitle: {
     fontSize: 24,
     fontWeight: '900',

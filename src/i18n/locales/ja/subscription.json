@@ -70,18 +70,10 @@
     "dismissButton": "後で",
     "grandStaffTitle": "大譜表（Grand Staff）",
     "grandStaffDesc": "ピアノ楽譜のための高音部譜表＋低音部譜表の大譜表はProでご利用いただけます。",
-    "grandStaffBenefits": [
-      "大譜表の楽譜生成",
-      "バス声部の同時入力",
-      "高度な編集機能"
-    ],
+    "grandStaffBenefits": ["大譜表の楽譜生成", "バス声部の同時入力", "高度な編集機能"],
     "examModeTitle": "試験モード",
     "examModeDesc": "実際の試験と同じ環境の小節ごとの再生モードはProでご利用いただけます。",
-    "examModeBenefits": [
-      "試験モード再生",
-      "区間待機時間の設定",
-      "実際の試験環境の構成"
-    ],
+    "examModeBenefits": ["試験モード再生", "区間待機時間の設定", "実際の試験環境の構成"],
     "difficultyTitle": "中級・上級難易度",
     "difficultyDesc": "初級以上の難易度はProでご利用いただけます。",
     "difficultyBenefits": [
@@ -91,18 +83,10 @@
     ],
     "measuresTitle": "8小節以上の生成",
     "measuresDesc": "4小節を超える楽譜の生成はProでご利用いただけます。",
-    "measuresBenefits": [
-      "8・12・16小節の楽譜生成",
-      "長い聴音問題の出題",
-      "多様な構成の練習"
-    ],
+    "measuresBenefits": ["8・12・16小節の楽譜生成", "長い聴音問題の出題", "多様な構成の練習"],
     "editNotesTitle": "音符の編集",
     "editNotesDesc": "生成された楽譜の音符修正はProプランでご利用いただけます。",
-    "editNotesBenefits": [
-      "音符の音程・長さの修正",
-      "個別音符の削除",
-      "細かい楽譜編集"
-    ],
+    "editNotesBenefits": ["音符の音程・長さの修正", "個別音符の削除", "細かい楽譜編集"],
     "downloadAudioTitle": "音源ダウンロード",
     "downloadAudioDesc": "聴音音源（MP3）のダウンロードはProプラン専用機能です。",
     "downloadAudioBenefits": [

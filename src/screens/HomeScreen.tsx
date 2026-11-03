@@ -31,7 +31,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../context';
 import { useSubscription } from '../context';
-import { useSkillProfile } from '../hooks';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useMascotExp } from '../hooks/useMascotExp';
 import { useBeginnerCourseProgress } from '../hooks/useBeginnerCourseProgress';
@@ -39,6 +38,7 @@ import { BEGINNER_LESSONS, getBeginnerLesson } from '../lib/beginnerCourse';
 import { useLevelTestResult } from '../hooks/useLevelTestResult';
 import { COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
+import { DAILY_GOAL_COUNT, countGoalsDoneToday } from '../lib/dailyGoal';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 import CategoryCard from '../components/CategoryCard';
@@ -48,25 +48,13 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const GOAL_CATEGORIES: ContentCategory[] = [
-  'melody',
-  'barMelody',
-  'rhythm',
-  'interval',
-  'chord',
-  'progression',
-  'key',
-];
-const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
-
 export default function HomeScreen() {
   const layout = useResponsiveLayout();
   const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest', 'mascot']);
   const navigation = useNavigation<NavProp>();
   const { profile, isGuest, exitGuestMode } = useAuth();
   const { tier } = useSubscription();
-  const { profile: _skillProfile } = useSkillProfile();
-  const { stats, loaded, reload } = usePracticeHistory();
+  const { records, stats, loaded, reload } = usePracticeHistory();
   const { level: mascotLevel } = useMascotExp();
   const {
     progress: courseProgress,
@@ -94,20 +82,8 @@ export default function HomeScreen() {
     navigation.navigate('CategoryPractice', { category });
   };
 
-  // 오늘 연습한 목표 카테고리 수
-  const todayGoalDone = useMemo(() => {
-    const todayStr = new Date().toDateString();
-    const cats = new Set<ContentCategory>();
-    stats.recentRecords.forEach((r) => {
-      if (
-        new Date(r.practicedAt).toDateString() === todayStr &&
-        GOAL_CATEGORIES.includes(r.contentType)
-      ) {
-        cats.add(r.contentType);
-      }
-    });
-    return cats.size;
-  }, [stats.recentRecords]);
+  // 오늘 연습한 목표 카테고리 수 (DailyGoalScreen 과 같은 기준: 전체 기록)
+  const todayGoalDone = useMemo(() => countGoalsDoneToday(records), [records]);
 
   const handleDailyGoal = () => {
     navigation.navigate('DailyGoal');

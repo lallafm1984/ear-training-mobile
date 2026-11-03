@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -16,12 +16,14 @@ import {
   Target,
   Sparkles,
   RotateCcw,
+  X,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
+import { useAlert } from '../context';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { useWrongNotes } from '../hooks/useWrongNotes';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
@@ -48,7 +50,11 @@ export default function WrongNotesScreen() {
   const { t, i18n } = useTranslation(['wrongNotes', 'content', 'common']);
   const navigation = useNavigation<NavProp>();
   const route = useRoute<Route>();
-  const categoryFilter = route.params?.category;
+  const { showAlert } = useAlert();
+  // 연습 결과에서 들어오면 그 카테고리만 먼저 보여 주고, 칩으로 해제할 수 있다
+  const [categoryFilter, setCategoryFilter] = useState<ContentCategory | undefined>(
+    route.params?.category,
+  );
   const { notes, loaded, remove, clearResolved, reload } = useWrongNotes();
   const { records } = usePracticeHistory();
 
@@ -118,17 +124,39 @@ export default function WrongNotesScreen() {
   };
 
   const confirmDelete = (note: WrongNote) => {
-    Alert.alert(t('wrongNotes:item.delete'), note.correctAnswer, [
-      { text: t('common:button.cancel'), style: 'cancel' },
-      {
-        text: t('common:button.delete'),
-        style: 'destructive',
-        onPress: () => {
-          if (playingId === note.id) abcjsRef.current?.stopPlay();
-          void remove(note.id);
+    showAlert({
+      title: t('wrongNotes:item.delete'),
+      message: note.correctAnswer,
+      type: 'warning',
+      buttons: [
+        { text: t('common:button.cancel'), style: 'cancel' },
+        {
+          text: t('common:button.delete'),
+          style: 'destructive',
+          onPress: () => {
+            if (playingId === note.id) abcjsRef.current?.stopPlay();
+            void remove(note.id);
+          },
         },
-      },
-    ]);
+      ],
+    });
+  };
+
+  const confirmClearResolved = () => {
+    const count = notes.filter((n) => !!n.resolvedAt).length;
+    showAlert({
+      title: t('wrongNotes:clearResolvedConfirm.title'),
+      message: t('wrongNotes:clearResolvedConfirm.message', { count }),
+      type: 'warning',
+      buttons: [
+        { text: t('common:button.cancel'), style: 'cancel' },
+        {
+          text: t('wrongNotes:clearResolved'),
+          style: 'destructive',
+          onPress: () => void clearResolved(),
+        },
+      ],
+    });
   };
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString(i18n.language);
@@ -248,8 +276,26 @@ export default function WrongNotesScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          {categoryFilter && (
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                styles.categoryChip,
+                { backgroundColor: CATEGORY_COLORS[categoryFilter].bg },
+              ]}
+              onPress={() => setCategoryFilter(undefined)}
+              hitSlop={4}
+            >
+              <Text style={[styles.filterText, { color: CATEGORY_COLORS[categoryFilter].text }]}>
+                {t('wrongNotes:filters.onlyCategory', {
+                  name: t(`content:category.${categoryFilter}.name`),
+                })}
+              </Text>
+              <X size={12} color={CATEGORY_COLORS[categoryFilter].text} />
+            </TouchableOpacity>
+          )}
           {filter === 'resolved' && visible.length > 0 && (
-            <TouchableOpacity style={styles.clearBtn} onPress={() => void clearResolved()}>
+            <TouchableOpacity style={styles.clearBtn} onPress={confirmClearResolved}>
               <Text style={styles.clearBtnText}>{t('wrongNotes:clearResolved')}</Text>
             </TouchableOpacity>
           )}
@@ -435,6 +481,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate100,
   },
   filterChipActive: { backgroundColor: COLORS.slate800 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   filterText: { fontSize: 12, fontWeight: '700', color: COLORS.slate600 },
   clearBtn: { marginLeft: 'auto', paddingVertical: 6 },
   clearBtnText: { fontSize: 11, fontWeight: '700', color: COLORS.error },

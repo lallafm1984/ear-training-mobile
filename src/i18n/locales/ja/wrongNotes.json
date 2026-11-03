@@ -4,7 +4,8 @@
   "filters": {
     "all": "すべて",
     "unresolved": "未解決",
-    "resolved": "解決済み"
+    "resolved": "解決済み",
+    "onlyCategory": "{{name}}のみ"
   },
   "weakness": {
     "title": "弱点 TOP 3",
@@ -34,6 +35,10 @@
     }
   },
   "clearResolved": "解決済みを消す",
+  "clearResolvedConfirm": {
+    "title": "解決済みの誤答を消しますか？",
+    "message": "解決済み{{count}}件が一覧から消えます。元に戻せません。"
+  },
   "review": {
     "title": "間違い復習",
     "progress": "{{current}} / {{total}}"

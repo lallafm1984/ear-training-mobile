@@ -22,7 +22,8 @@ src/
 │   ├── shareCard.ts              # 결과 공유 카드 데이터 모델·텍스트 공유 문구·파일명 (순수 함수)
 │   ├── scaleQuestions.ts         # 음계·선법 듣기 객관식 문제 생성 (템플릿·근음 철자·유사 보기)
 │   ├── rhythmTap.ts              # 리듬 탭 패턴 생성·예상 타점·탭 타이밍 채점 (순수 함수)
-│   ├── layout.ts                 # 반응형 레이아웃 판정 (태블릿·콘텐츠 최대 폭·모달 폭, 순수 함수)
+│   ├── layout.ts                 # 반응형 레이아웃 판정 (태블릿·콘텐츠/폼/시트 최대 폭·모달 폭, 순수 함수)
+│   ├── dailyGoal.ts              # 일일 목표 7종 판정 (오늘 달성 수·연속 달성일, 순수 함수) — Home·DailyGoal 공통
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   ├── oauthCallback.ts          # OAuth 딥링크 query/hash 파싱 + Supabase 세션 생성
 │   ├── promotionConfig.ts        # 서버 시간 기반 Pro 캠페인 RPC/공지 키
@@ -41,7 +42,7 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (29개)
+└── __tests__/           # Jest 테스트 (30개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -163,7 +164,7 @@ scripts/
 | `questionGenerator.ts`      | ChoicePractice, MockExam                                                                                                                                                                          |
 | `scaleQuestions.ts`         | questionGenerator(scale 분기), ChoicePractice·MockExam을 통해 사용                                                                                                                                |
 | `rhythmTap.ts`              | RhythmTapScreen (패턴 생성·타점·채점)                                                                                                                                                             |
-| `layout.ts`                 | useResponsiveLayout, AppAlert·UpgradeModal(모달 폭 상한), DailyScoreChart(기본 차트 폭)                                                                                                           |
+| `layout.ts`                 | useResponsiveLayout, AppAlert·UpgradeModal(모달 폭 상한), BottomSheet·ShareCardModal(시트 폭 상한), LoginScreen·OnboardingScreen(폼/버튼 열 폭 상한), DailyScoreChart(기본 차트 폭)              |
 | `grading.ts`                | NotationPractice, GradingResult                                                                                                                                                                   |
 | `examPresets.ts`            | MockExamSetup, MockExam                                                                                                                                                                           |
 | `examNotationStore.ts`      | MockExam, NotationPractice                                                                                                                                                                        |
@@ -171,6 +172,7 @@ scripts/
 | `wrongNoteReviewStore.ts`   | WrongNotesScreen(복습 시작) → ChoicePracticeScreen(review 파라미터)                                                                                                                               |
 | `shareCard.ts`              | ShareCardModal, ShareResultCard (공유 카드 데이터·텍스트 문구)                                                                                                                                    |
 | `computeStats.ts`           | StatsScreen                                                                                                                                                                                       |
+| `dailyGoal.ts`              | HomeScreen(마스코트·일일 목표 카드), DailyGoalScreen(목표 목록·연속 달성일) — 전체 기록 기준으로 같은 값                                                                                        |
 | `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen(스테이지 인덱스)                                                                                                                                             |
 | `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)                                                                                                                                           |
 | `promotionConfig.ts`        | SubscriptionContext (서버 시간 프로모션 권한 판정)                                                                                                                                                |
@@ -359,7 +361,8 @@ Login → Onboarding → Home
 | `wrongNotes.test.ts`             | 오답 누적·해결·삭제·정리, 병합, 복습 문항 변환·선택, 약점 TOP 집계                                    |
 | `scaleQuestions.test.ts`         | 음계 템플릿 무결성, 근음별 임시표 철자, 오답 보기 선택, 문제 생성                                     |
 | `rhythmTap.test.ts`              | 타점 계산(쉼표·붙임줄·잇단음표), 허용 오차, 탭 채점, 문제 생성, 점수 변환                             |
-| `layout.test.ts`                 | 태블릿 판정·콘텐츠 정렬 스타일·모달 폭                                                                |
+| `layout.test.ts`                 | 태블릿 판정·콘텐츠/폼/시트 정렬 스타일·모달 폭                                                        |
+| `dailyGoal.test.ts`              | 일일 목표 카테고리, 오늘 달성 수(기록 20개 초과 포함), 연속 달성일(오늘 진행 중·중간 공백·6/7 미달성) |
 | `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
 | `promotionConfig.test.ts`        | 서버 시간 RPC 판정 및 fail-closed 동작                                                                |
@@ -367,7 +370,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (368개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (389개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -379,13 +382,13 @@ Login → Onboarding → Home
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
 | 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
 | 3분 레벨 테스트 진행·결과·추천 난이도 연동                         | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |
-| 마스코트 갤러리 진입·잠금 표시, 일일 목표 7종(마디·화성 진행 포함) | `src/screens/MascotGalleryScreen.tsx`, `src/screens/HomeScreen.tsx`(GOAL_CATEGORIES·마스코트 카드), `src/screens/DailyGoalScreen.tsx`, `src/lib/mascotConfig.ts`(getMascotStageIndex)                                                                                             |
+| 마스코트 갤러리 진입·잠금 표시, 일일 목표 7종(마디·화성 진행 포함) | `src/screens/MascotGalleryScreen.tsx`, `src/lib/dailyGoal.ts`(목표 카테고리·달성 수·연속 달성일), `src/screens/HomeScreen.tsx`(마스코트·일일 목표 카드), `src/screens/DailyGoalScreen.tsx`, `src/lib/mascotConfig.ts`(getMascotStageIndex)                                           |
 | 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드                | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
 | 오답노트 저장·복습 모드·약점 집중 연습                             | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
 | 결과 공유 카드 (이미지/텍스트)                                     | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
 | 음계·선법 듣기 (객관식 4단계)                                      | `src/lib/scaleQuestions.ts`, `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale)                                                                                                                         |
 | 리듬 탭 (탭 타이밍 채점 4단계)                                     | `src/lib/rhythmTap.ts`, `src/screens/RhythmTapScreen.tsx`, `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기)                            |
-| 태블릿 레이아웃 (콘텐츠 가운데 정렬·모달 폭·차트 폭)               | `src/lib/layout.ts`, `src/hooks/useResponsiveLayout.ts`, 각 화면의 `contentContainerStyle`, `src/components/{AppAlert,UpgradeModal,DailyScoreChart}.tsx`, `src/screens/OnboardingScreen.tsx`(useWindowDimensions)                                                                 |
+| 태블릿 레이아웃 (콘텐츠 가운데 정렬·모달/시트/폼 폭·차트 폭)       | `src/lib/layout.ts`, `src/hooks/useResponsiveLayout.ts`, 각 화면의 `contentContainerStyle`, `src/components/{AppAlert,UpgradeModal,BottomSheet,ShareCardModal,DailyScoreChart}.tsx`, `src/screens/{LoginScreen,OnboardingScreen}.tsx`(narrowStyle)                                   |
 
 ---
 

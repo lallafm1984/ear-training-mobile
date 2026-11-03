@@ -4,7 +4,8 @@
   "filters": {
     "all": "전체",
     "unresolved": "미해결",
-    "resolved": "해결됨"
+    "resolved": "해결됨",
+    "onlyCategory": "{{name}}만"
   },
   "weakness": {
     "title": "약점 TOP 3",
@@ -34,6 +35,10 @@
     }
   },
   "clearResolved": "해결된 오답 지우기",
+  "clearResolvedConfirm": {
+    "title": "해결된 오답을 지울까요?",
+    "message": "해결된 오답 {{count}}개가 목록에서 사라져요. 되돌릴 수 없어요."
+  },
   "review": {
     "title": "오답 복습",
     "progress": "{{current}} / {{total}}"

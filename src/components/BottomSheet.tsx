@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 interface BottomSheetProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface BottomSheetProps {
 
 export default function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  const layout = useResponsiveLayout();
   return (
     <Modal
       visible={open}
@@ -30,7 +32,13 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
     >
       <View style={styles.sheetOverlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-        <View style={[styles.sheetContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View
+          style={[
+            styles.sheetContent,
+            layout.sheetStyle,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>

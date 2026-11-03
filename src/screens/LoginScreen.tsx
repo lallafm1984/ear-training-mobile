@@ -6,10 +6,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context';
 import LegalModal from '../components/LegalModal';
 import type { LegalType } from '../components/LegalModal';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 import GoogleLogo from '../components/GoogleLogo';
 
 export default function LoginScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['auth', 'common']);
   const { signInWithGoogle, continueAsGuest } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-      <View style={styles.container}>
+      <View style={[styles.container, layout.narrowStyle]}>
         {/* 로고 */}
         <View style={styles.logoWrap}>
           <View style={styles.logoIcon}>
@@ -216,10 +218,6 @@ const styles = StyleSheet.create({
   agreeText: {
     fontSize: 13,
     color: '#475569',
-  },
-  agreeRequired: {
-    color: '#6366f1',
-    fontWeight: '700',
   },
   agreeHint: {
     fontSize: 12,

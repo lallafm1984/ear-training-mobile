@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import { useAlert } from '../context';
 import { logger } from '../lib/logger';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import {
   SHARE_STORE_URL,
   buildShareText,
@@ -38,6 +39,7 @@ interface Props {
 export default function ShareCardModal({ data, onClose }: Props) {
   const { t } = useTranslation(['share', 'common']);
   const { showAlert } = useAlert();
+  const layout = useResponsiveLayout();
   const cardRef = useRef<View>(null);
   const [busy, setBusy] = useState<'image' | 'text' | null>(null);
 
@@ -109,7 +111,7 @@ export default function ShareCardModal({ data, onClose }: Props) {
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, layout.sheetStyle]}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{t('share:modal.title')}</Text>
