@@ -16,6 +16,7 @@ import {
   Lightbulb,
   Eye,
   EyeOff,
+  BookOpen,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -27,6 +28,8 @@ import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRend
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useSessionContentLog } from '../context';
+import { useWrongNotes } from '../hooks/useWrongNotes';
+import { wrongNoteReviewStore } from '../lib/wrongNoteReviewStore';
 import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
 
@@ -41,19 +44,33 @@ export default function ChoicePracticeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
-  const { category, difficulty } = route.params;
+  const { category, difficulty, review = false } = route.params;
   const { addRecord } = usePracticeHistory();
   const { updateStreak, applyEvaluation } = useSkillProfile();
   const { trackContentRun } = useSessionContentLog();
+  const { addWrong, resolve: resolveWrongNote } = useWrongNotes();
+  const [sessionWrong, setSessionWrong] = useState(0);
 
-  const { t } = useTranslation(['practice', 'content', 'common']);
+  const { t } = useTranslation(['practice', 'content', 'common', 'wrongNotes']);
   const colors = CATEGORY_COLORS[category];
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
   // 문제 상태
-  const [question, setQuestion] = useState<ChoiceQuestion>(() =>
-    generateChoiceQuestion(category, difficulty),
+  // 복습 모드면 오답노트 큐에서, 아니면 새로 생성
+  const nextQuestion = useCallback(
+    () =>
+      (review ? wrongNoteReviewStore.next() : null) ?? generateChoiceQuestion(category, difficulty),
+    [review, category, difficulty],
   );
+  const [question, setQuestion] = useState<ChoiceQuestion>(nextQuestion);
+  const reviewTotal = review ? wrongNoteReviewStore.total() : 0;
+  const reviewDone = review && wrongNoteReviewStore.remaining() === 0;
+
+  useEffect(() => {
+    return () => {
+      if (review) wrongNoteReviewStore.clear();
+    };
+  }, [review]);
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
@@ -154,6 +171,14 @@ export default function ChoicePracticeScreen() {
         total: prev.total + 1,
       }));
 
+      // 오답노트: 틀리면 저장(또는 횟수 증가), 복습에서 맞히면 해결
+      if (isCorrect) {
+        if (review) void resolveWrongNote(question.id);
+      } else {
+        setSessionWrong((n) => n + 1);
+        void addWrong(question, choice, 'practice');
+      }
+
       if (!isCorrect) {
         // 틀렸을 때 흔들기 애니메이션
         Animated.sequence([
@@ -164,7 +189,7 @@ export default function ChoicePracticeScreen() {
         ]).start();
       }
     },
-    [answerState, question.correctAnswer, shakeAnim],
+    [answerState, question, review, addWrong, resolveWrongNote, shakeAnim],
   );
 
   const handleNext = useCallback(() => {
@@ -177,7 +202,7 @@ export default function ChoicePracticeScreen() {
       duration: 150,
       useNativeDriver: true,
     }).start(() => {
-      setQuestion(generateChoiceQuestion(category, difficulty));
+      setQuestion(nextQuestion());
       setAnswerState('waiting');
       setSelectedChoice(null);
       Animated.timing(fadeAnim, {
@@ -186,7 +211,7 @@ export default function ChoicePracticeScreen() {
         useNativeDriver: true,
       }).start();
     });
-  }, [category, difficulty, fadeAnim, stopAudio]);
+  }, [nextQuestion, fadeAnim, stopAudio]);
 
   const handleFinish = useCallback(async () => {
     stopAudio();
@@ -257,6 +282,7 @@ export default function ChoicePracticeScreen() {
               style={[styles.resultBtn, { backgroundColor: colors.main }]}
               onPress={() => {
                 setStats({ correct: 0, total: 0 });
+                setSessionWrong(0);
                 setShowResult(false);
                 setAnswerState('waiting');
                 setSelectedChoice(null);
@@ -267,6 +293,18 @@ export default function ChoicePracticeScreen() {
               <RotateCcw size={18} color="#fff" />
               <Text style={styles.resultBtnText}>{t('practice:choice.retryPractice')}</Text>
             </TouchableOpacity>
+
+            {sessionWrong > 0 && (
+              <TouchableOpacity
+                style={[styles.resultBtn, { backgroundColor: COLORS.primary50 }]}
+                onPress={() => navigation.navigate('WrongNotes', { category })}
+              >
+                <BookOpen size={18} color={COLORS.primary600} />
+                <Text style={[styles.resultBtnText, { color: COLORS.primary600 }]}>
+                  {t('wrongNotes:result.viewNotes', { count: sessionWrong })}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
@@ -292,9 +330,22 @@ export default function ChoicePracticeScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.main }]}>
-            {t('content:category.' + category + '.name')}
+            {review ? t('wrongNotes:review.title') : t('content:category.' + category + '.name')}
           </Text>
-          <Text style={styles.headerDesc}>{diffLabel}</Text>
+          <Text style={styles.headerDesc}>
+            {review
+              ? `${t('content:category.' + category + '.name')} · ${t(
+                  'wrongNotes:review.progress',
+                  {
+                    current: Math.min(
+                      stats.total + (answerState === 'waiting' ? 1 : 0),
+                      reviewTotal,
+                    ),
+                    total: reviewTotal,
+                  },
+                )}`
+              : diffLabel}
+          </Text>
         </View>
         <View style={styles.statsChip}>
           <Text style={styles.statsText}>
@@ -406,6 +457,9 @@ export default function ChoicePracticeScreen() {
               </View>
               <Text style={styles.explainAnswer}>{question.correctAnswer}</Text>
               <Text style={styles.explainText}>{question.explanation}</Text>
+              {answerState === 'wrong' && (
+                <Text style={styles.savedHint}>{t('wrongNotes:choice.saved')}</Text>
+              )}
 
               <View style={styles.compareRow}>
                 <TouchableOpacity
@@ -495,15 +549,17 @@ export default function ChoicePracticeScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {answerState !== 'waiting' ? (
           <View style={styles.bottomActions}>
-            <TouchableOpacity
-              style={[styles.bottomBtn, { backgroundColor: colors.main }]}
-              onPress={handleNext}
-            >
-              <Text style={styles.bottomBtnText}>{t('practice:choice.nextQuestion')}</Text>
-              <ChevronRight size={18} color="#fff" />
-            </TouchableOpacity>
+            {!reviewDone && (
+              <TouchableOpacity
+                style={[styles.bottomBtn, { backgroundColor: colors.main }]}
+                onPress={handleNext}
+              >
+                <Text style={styles.bottomBtnText}>{t('practice:choice.nextQuestion')}</Text>
+                <ChevronRight size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
 
-            {stats.total >= 5 && (
+            {(stats.total >= 5 || review) && (
               <TouchableOpacity
                 style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
                 onPress={handleFinish}
@@ -515,7 +571,7 @@ export default function ChoicePracticeScreen() {
             )}
           </View>
         ) : (
-          stats.total >= 5 && (
+          (stats.total >= 5 || (review && stats.total > 0)) && (
             <TouchableOpacity
               style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={handleFinish}
@@ -608,6 +664,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     opacity: 0,
   },
+  savedHint: { fontSize: 11, color: COLORS.slate400, fontWeight: '600', marginTop: 2 },
   explainCard: {
     marginTop: 16,
     backgroundColor: '#fff',

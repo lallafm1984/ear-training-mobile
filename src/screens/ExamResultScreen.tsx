@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RotateCcw, Home, Trophy, TrendingUp } from 'lucide-react-native';
+import { RotateCcw, Home, Trophy, TrendingUp, BookOpen, ChevronRight } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -24,7 +24,7 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['exam', 'content', 'common']);
+  const { t } = useTranslation(['exam', 'content', 'common', 'wrongNotes']);
   const route = useRoute<RouteProp>();
   const { storageUserId } = useAuth();
   const savedRef = useRef(false);
@@ -36,6 +36,7 @@ export default function ExamResultScreen() {
     categoryScores: categoryScoresStr,
     elapsedSeconds,
     totalQuestions,
+    wrongChoiceCount = 0,
   } = route.params;
 
   const categoryScores: Record<string, { score: number; max: number; count: number }> =
@@ -188,6 +189,20 @@ export default function ExamResultScreen() {
               </Text>
             </View>
           </View>
+        )}
+        {/* 오답노트 진입 */}
+        {wrongChoiceCount > 0 && (
+          <TouchableOpacity
+            style={styles.notesBtn}
+            onPress={() => navigation.navigate('WrongNotes', undefined)}
+            activeOpacity={0.8}
+          >
+            <BookOpen size={18} color={COLORS.primary600} />
+            <Text style={styles.notesBtnText}>
+              {t('wrongNotes:exam.viewNotes', { count: wrongChoiceCount })}
+            </Text>
+            <ChevronRight size={16} color={COLORS.primary400} />
+          </TouchableOpacity>
         )}
       </ScrollView>
 
@@ -405,4 +420,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
+  notesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.primary50,
+    borderWidth: 1,
+    borderColor: COLORS.primary200,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  notesBtnText: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.primary700 },
 });

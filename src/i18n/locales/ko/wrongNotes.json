@@ -1,0 +1,55 @@
+{
+  "title": "오답노트",
+  "unresolvedChip": "미해결 {{count}}",
+  "filters": {
+    "all": "전체",
+    "unresolved": "미해결",
+    "resolved": "해결됨"
+  },
+  "weakness": {
+    "title": "약점 TOP 3",
+    "desc": "최근 30일의 오답과 낮은 자기 평가를 합쳐 골랐어요",
+    "stats": "미해결 {{unresolved}} · 오답 {{wrong}}회 · 어려웠던 연습 {{low}}회",
+    "review": "오답 복습",
+    "practice": "집중 연습",
+    "empty": "아직 약점이 보이지 않아요. 연습이 쌓이면 여기서 알려 드릴게요."
+  },
+  "reviewAll": "미해결 {{count}}개 복습하기",
+  "reviewAllHint": "최근 오답부터 최대 {{max}}개",
+  "empty": {
+    "title": "아직 오답이 없어요",
+    "desc": "객관식 연습이나 모의시험에서 틀린 문제가 여기에 모여요. 소리를 다시 듣고 다시 풀 수 있어요."
+  },
+  "item": {
+    "correct": "정답",
+    "mine": "내 답",
+    "wrongCount": "{{count}}회 틀림",
+    "resolved": "해결",
+    "listen": "듣기",
+    "playing": "재생 중",
+    "delete": "삭제",
+    "source": {
+      "practice": "연습",
+      "exam": "모의시험"
+    }
+  },
+  "clearResolved": "해결된 오답 지우기",
+  "review": {
+    "title": "오답 복습",
+    "progress": "{{current}} / {{total}}"
+  },
+  "choice": {
+    "saved": "오답노트에 저장됐어요. 복습에서 맞히면 해결로 바뀌어요."
+  },
+  "result": {
+    "viewNotes": "오답노트 보기 ({{count}})"
+  },
+  "exam": {
+    "viewNotes": "틀린 {{count}}문제를 오답노트에서 다시 듣기"
+  },
+  "stats": {
+    "card": "오답노트",
+    "cardDesc": "미해결 {{count}}개 · 약점 보기",
+    "cardEmpty": "틀린 문제를 모아 다시 들어요"
+  }
+}

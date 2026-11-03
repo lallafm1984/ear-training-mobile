@@ -20,6 +20,7 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -31,6 +32,7 @@ import { useAuth } from '../context';
 import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
+import { useWrongNotes } from '../hooks/useWrongNotes';
 import PracticeCalendar from '../components/PracticeCalendar';
 import DailyScoreChart from '../components/DailyScoreChart';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -47,10 +49,12 @@ interface ExamRecord {
 
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['stats', 'practice', 'common']);
+  const { t } = useTranslation(['stats', 'practice', 'common', 'wrongNotes']);
   const { storageUserId } = useAuth();
   const { records, stats, loaded, reload } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
+  const { notes: wrongNotes } = useWrongNotes();
+  const unresolvedWrong = wrongNotes.filter((n) => !n.resolvedAt).length;
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
   const [examLoading, setExamLoading] = useState(false);
@@ -281,6 +285,31 @@ export default function StatsScreen() {
             <Text style={styles.summaryLabel}>{t('stats:summary.thisWeek')}</Text>
           </View>
         </View>
+
+        {/* 오답노트 */}
+        <TouchableOpacity
+          style={styles.notesCard}
+          onPress={() => navigation.navigate('WrongNotes', undefined)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.notesIcon}>
+            <BookOpen size={18} color={COLORS.primary600} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.notesTitle}>{t('wrongNotes:stats.card')}</Text>
+            <Text style={styles.notesDesc}>
+              {unresolvedWrong > 0
+                ? t('wrongNotes:stats.cardDesc', { count: unresolvedWrong })
+                : t('wrongNotes:stats.cardEmpty')}
+            </Text>
+          </View>
+          {unresolvedWrong > 0 && (
+            <View style={styles.notesBadge}>
+              <Text style={styles.notesBadgeText}>{unresolvedWrong}</Text>
+            </View>
+          )}
+          <ChevronRight size={18} color={COLORS.slate400} />
+        </TouchableOpacity>
 
         {/* 빈 상태 안내 */}
         {stats.totalSessions === 0 && (
@@ -649,4 +678,35 @@ const styles = StyleSheet.create({
     color: COLORS.slate500,
     fontWeight: '500',
   },
+  // 오답노트 카드
+  notesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+  },
+  notesIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesTitle: { fontSize: 14, fontWeight: '800', color: COLORS.slate800 },
+  notesDesc: { fontSize: 11, color: COLORS.slate500, marginTop: 2 },
+  notesBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });

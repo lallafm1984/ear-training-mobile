@@ -43,7 +43,7 @@ describe('localDataKey', () => {
     expect(localDataKey(LOCAL_DATA_BASE_KEYS.recentActivity, 'u1')).toBe(
       '@melodygen_recent_activity_u1',
     );
-    expect(allLocalDataKeys(GUEST_STORAGE_ID)).toHaveLength(8);
+    expect(allLocalDataKeys(GUEST_STORAGE_ID)).toHaveLength(9);
   });
 });
 

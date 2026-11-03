@@ -23,6 +23,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import BeginnerCourseScreen from '../screens/BeginnerCourseScreen';
 import BeginnerLessonScreen from '../screens/BeginnerLessonScreen';
 import LevelTestScreen from '../screens/LevelTestScreen';
+import WrongNotesScreen from '../screens/WrongNotesScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
@@ -41,7 +42,12 @@ export type MainStackParamList = {
   Onboarding: undefined;
   Home: undefined;
   CategoryPractice: { category: ContentCategory; initialDifficulty?: ContentDifficulty };
-  ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
+  ChoicePractice: {
+    category: ContentCategory;
+    difficulty: ContentDifficulty;
+    /** 오답노트 복습 모드 — 문제는 wrongNoteReviewStore 에서 꺼낸다 */
+    review?: boolean;
+  };
   NotationPractice: {
     category: ContentCategory;
     difficulty: ContentDifficulty;
@@ -66,6 +72,8 @@ export type MainStackParamList = {
     categoryScores: string;
     elapsedSeconds: number;
     totalQuestions: number;
+    /** 객관식 오답 수 (오답노트 진입 버튼용) */
+    wrongChoiceCount?: number;
   };
   Stats: undefined;
   DailyGoal: undefined;
@@ -75,6 +83,7 @@ export type MainStackParamList = {
   BeginnerCourse: undefined;
   BeginnerLesson: { lessonId: string };
   LevelTest: undefined;
+  WrongNotes: { category?: ContentCategory } | undefined;
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -108,6 +117,7 @@ export default function MainStack() {
       <Stack.Screen name="BeginnerCourse" component={BeginnerCourseScreen} />
       <Stack.Screen name="BeginnerLesson" component={BeginnerLessonScreen} />
       <Stack.Screen name="LevelTest" component={LevelTestScreen} />
+      <Stack.Screen name="WrongNotes" component={WrongNotesScreen} />
       <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
         {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>

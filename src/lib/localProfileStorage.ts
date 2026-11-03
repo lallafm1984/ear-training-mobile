@@ -19,6 +19,7 @@ import {
   normalizeLevelTestResult,
   type LevelTestResult,
 } from './levelTest/engine';
+import { mergeWrongNotes, normalizeWrongNotes, type WrongNote } from './wrongNotes';
 
 export const GUEST_STORAGE_ID = 'guest';
 
@@ -34,6 +35,7 @@ export const LOCAL_DATA_BASE_KEYS = {
   examSessions: '@melodygen_exam_sessions',
   beginnerCourse: '@melodygen_beginner_course',
   levelTest: '@melodygen_level_test',
+  wrongNotes: '@melodygen_wrong_notes',
 } as const;
 
 export type LocalDataBaseKey = (typeof LOCAL_DATA_BASE_KEYS)[keyof typeof LOCAL_DATA_BASE_KEYS];
@@ -260,6 +262,17 @@ export async function migrateGuestDataToAccount(
     );
     const merged = mergeLevelTestResults(guestLevel, accountLevel);
     if (merged) await write(LOCAL_DATA_BASE_KEYS.levelTest, merged);
+  }
+
+  // 오답노트: 같은 문제는 횟수를 합친다
+  const guestNotes = normalizeWrongNotes(
+    safeParse<WrongNote[]>(await read(LOCAL_DATA_BASE_KEYS.wrongNotes, GUEST_STORAGE_ID)),
+  );
+  if (guestNotes.length > 0) {
+    const accountNotes = normalizeWrongNotes(
+      safeParse<WrongNote[]>(await read(LOCAL_DATA_BASE_KEYS.wrongNotes, userId)),
+    );
+    await write(LOCAL_DATA_BASE_KEYS.wrongNotes, mergeWrongNotes(guestNotes, accountNotes));
   }
 
   await storage.multiRemove(allLocalDataKeys(GUEST_STORAGE_ID));

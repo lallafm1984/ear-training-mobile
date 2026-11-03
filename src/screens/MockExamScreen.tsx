@@ -19,6 +19,7 @@ import { examNotationStore } from '../lib/examNotationStore';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
+import { useWrongNotes } from '../hooks/useWrongNotes';
 import { useAlert, useSessionContentLog } from '../context';
 import type { ExamQuestion } from '../types/exam';
 import type { PracticeRecord } from '../types/content';
@@ -49,6 +50,7 @@ export default function MockExamScreen() {
   const preset = EXAM_PRESETS.find((p) => p.id === presetId)!;
   const { addBatchRecords } = usePracticeHistory();
   const { updateStreak } = useSkillProfile();
+  const { addWrongBatch } = useWrongNotes();
   const { showAlert } = useAlert();
   const { trackContentRuns } = useSessionContentLog();
 
@@ -208,6 +210,7 @@ export default function MockExamScreen() {
     // 결과 계산 + 문항별 연습 기록 수집
     let totalScore = 0;
     const practiceRecords: PracticeRecord[] = [];
+    const wrongChoices: Array<{ question: ChoiceQuestion; myAnswer: string }> = [];
 
     const categoryScores: Record<string, { score: number; max: number; count: number }> = {};
 
@@ -224,6 +227,9 @@ export default function MockExamScreen() {
       let recordRating: number; // 1-5 (연습 기록용)
       if (isChoiceQuestion(q)) {
         const isCorrect = answers[idx] === q.examQuestion.correctAnswer;
+        if (!isCorrect && q.choiceQuestion) {
+          wrongChoices.push({ question: q.choiceQuestion, myAnswer: answers[idx] ?? '' });
+        }
         score = isCorrect ? catMax : 0;
         recordRating = isCorrect ? 5 : 1;
       } else {
@@ -249,6 +255,7 @@ export default function MockExamScreen() {
 
     // 배치로 한 번에 저장 (AsyncStorage 동시 쓰기 방지)
     await addBatchRecords(practiceRecords);
+    if (wrongChoices.length > 0) await addWrongBatch(wrongChoices, 'exam');
 
     await updateStreak();
 
@@ -260,6 +267,7 @@ export default function MockExamScreen() {
       categoryScores: JSON.stringify(categoryScores),
       elapsedSeconds: 0,
       totalQuestions,
+      wrongChoiceCount: wrongChoices.length,
     });
   }, [
     answers,
@@ -270,6 +278,7 @@ export default function MockExamScreen() {
     navigation,
     stopAudio,
     addBatchRecords,
+    addWrongBatch,
     updateStreak,
     t,
   ]);
