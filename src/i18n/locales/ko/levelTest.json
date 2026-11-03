@@ -1,0 +1,55 @@
+{
+  "home": {
+    "title": "3분 레벨 테스트",
+    "desc": "내 시작 난이도 찾기",
+    "done": "{{overall}} · 다시 측정"
+  },
+  "intro": {
+    "title": "3분 레벨 테스트",
+    "subtitle": "{{count}}문제로 음정·화성·조성·리듬의 시작 난이도를 찾아 드려요.",
+    "minutes": "약 {{minutes}}분",
+    "bullet1": "소리를 듣고 보기를 고르면 돼요.",
+    "bullet2": "맞히면 조금 어려워지고, 틀리면 쉬워져요.",
+    "bullet3": "결과는 이 기기에 저장되고 언제든 다시 할 수 있어요.",
+    "start": "시작하기"
+  },
+  "question": {
+    "progress": "{{current}} / {{total}}",
+    "area": "{{name}} · {{level}}단계",
+    "listen": "소리 듣기",
+    "playing": "재생 중...",
+    "replay": "다시 듣기",
+    "hint": "들은 소리에 맞는 보기를 고르세요",
+    "quitTitle": "테스트를 그만둘까요?",
+    "quitMessage": "지금까지의 답은 저장되지 않아요.",
+    "quitConfirm": "그만두기",
+    "quitCancel": "계속하기"
+  },
+  "result": {
+    "title": "레벨 테스트 결과",
+    "score": "정답 {{correct}} / {{total}}",
+    "overall": {
+      "beginner": "입문",
+      "elementary": "초급",
+      "intermediate": "중급",
+      "advanced": "고급"
+    },
+    "overallDesc": {
+      "beginner": "아직 소리가 낯설어요. 귀 열기 코스로 가장 작은 단위부터 들어 보면 금방 달라져요.",
+      "elementary": "기본 소리는 들려요. 각 영역의 1~2단계에서 정확도를 올려 보세요.",
+      "intermediate": "좋아요! 추천 단계에서 시작하면 실력이 빠르게 늘어요.",
+      "advanced": "훌륭해요! 높은 단계와 모의시험으로 실전 감각을 다듬어 보세요."
+    },
+    "areaTitle": "영역별 시작 추천",
+    "level": "Lv {{level}}",
+    "noLevel": "기초",
+    "start": "{{label}}부터",
+    "practice": "연습",
+    "courseTitle": "귀 열기 7일 코스부터 시작해 보세요",
+    "courseDesc": "하루 5문제로 방향·길이·거리·밝기를 먼저 익히면 음정 듣기가 쉬워져요.",
+    "goCourse": "코스 보기",
+    "retry": "다시 테스트",
+    "home": "홈으로",
+    "takenAt": "{{date}} 측정"
+  }
+}

@@ -22,7 +22,8 @@
     "selectDifficulty": "難易度選択",
     "startPractice": "練習開始",
     "locked": "ロック",
-    "pro": "Pro"
+    "pro": "Pro",
+    "recommended": "おすすめ"
   },
   "choice": {
     "question": "問題 {{current}}/{{total}}",

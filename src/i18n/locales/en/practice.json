@@ -22,7 +22,8 @@
     "selectDifficulty": "Select Difficulty",
     "startPractice": "Start Practice",
     "locked": "Locked",
-    "pro": "Pro"
+    "pro": "Pro",
+    "recommended": "Recommended"
   },
   "choice": {
     "question": "Question {{current}}/{{total}}",

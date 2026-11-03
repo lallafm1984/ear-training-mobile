@@ -2,10 +2,10 @@
 // CategoryPracticeScreen — 카테고리별 난이도 선택 → 연습 진입
 // ─────────────────────────────────────────────────────────────
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Lock, Play, Settings2 } from 'lucide-react-native';
+import { ArrowLeft, Lock, Play, Settings2, Sparkles } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,8 @@ import { isCompoundMeter } from '../lib/scoreUtils/duration';
 import type { ContentDifficulty } from '../types/content';
 import type { MainStackParamList, PracticeSettings } from '../navigation/MainStack';
 import PracticeSettingsSheet from '../components/PracticeSettingsSheet';
+import { useLevelTestResult } from '../hooks/useLevelTestResult';
+import { recommendedDifficultyFor } from '../lib/levelTest';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'CategoryPractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -28,7 +30,7 @@ export default function CategoryPracticeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
-  const { category } = route.params;
+  const { category, initialDifficulty } = route.params;
   const { tier } = useSubscription();
   const { t } = useTranslation(['practice', 'content', 'common', 'editor']);
 
@@ -36,7 +38,32 @@ export default function CategoryPracticeScreen() {
   const colors = CATEGORY_COLORS[category];
   const difficulties = getDifficultyList(category);
 
-  const [selectedDiff, setSelectedDiff] = useState<ContentDifficulty>(difficulties[0]);
+  const [selectedDiff, setSelectedDiff] = useState<ContentDifficulty>(
+    initialDifficulty && difficulties.includes(initialDifficulty)
+      ? initialDifficulty
+      : difficulties[0],
+  );
+
+  // 레벨 테스트 추천 난이도: 배지로 표시하고, 따로 지정된 난이도가 없으면 기본 선택(잠긴 단계는 제외)
+  const { result: levelTest, loaded: levelTestLoaded } = useLevelTestResult();
+  const recommendedDiff = recommendedDifficultyFor(levelTest, category);
+  const appliedRecommendation = useRef(false);
+  useEffect(() => {
+    if (appliedRecommendation.current || !levelTestLoaded || initialDifficulty) return;
+    appliedRecommendation.current = true;
+    if (!recommendedDiff) return;
+    const idx = difficulties.indexOf(recommendedDiff);
+    if (idx < 0) return;
+    if (tier === 'free' && idx >= config.freeMaxLevel) return;
+    setSelectedDiff(recommendedDiff);
+  }, [
+    levelTestLoaded,
+    initialDifficulty,
+    recommendedDiff,
+    difficulties,
+    tier,
+    config.freeMaxLevel,
+  ]);
   const showSettings = category === 'melody' || category === 'twoVoice' || category === 'rhythm';
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [practiceSettings, setPracticeSettings] = useState<PracticeSettings>({
@@ -177,9 +204,31 @@ export default function CategoryPracticeScreen() {
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.diffLabel, active && { color: '#fff' }]} numberOfLines={1}>
-                      {t('content:difficulty.' + category + '.' + diff)}
-                    </Text>
+                    <View style={styles.diffLabelRow}>
+                      <Text
+                        style={[styles.diffLabel, active && { color: '#fff' }]}
+                        numberOfLines={1}
+                      >
+                        {t('content:difficulty.' + category + '.' + diff)}
+                      </Text>
+                      {diff === recommendedDiff && (
+                        <View
+                          style={[
+                            styles.recommendChip,
+                            active
+                              ? { backgroundColor: 'rgba(255,255,255,0.25)' }
+                              : { backgroundColor: colors.bg },
+                          ]}
+                        >
+                          <Sparkles size={10} color={active ? '#fff' : colors.main} />
+                          <Text
+                            style={[styles.recommendText, { color: active ? '#fff' : colors.main }]}
+                          >
+                            {t('practice:category.recommended')}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                     {showSettings &&
                       (practiceSettings.timeSignature !== '4/4' ||
                         practiceSettings.keySignature !== 'C' ||
@@ -360,11 +409,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+  diffLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   diffLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.slate700,
+    flexShrink: 1,
   },
+  recommendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  recommendText: { fontSize: 10, fontWeight: '800' },
   diffSettingsHint: {
     fontSize: 10,
     color: COLORS.slate400,

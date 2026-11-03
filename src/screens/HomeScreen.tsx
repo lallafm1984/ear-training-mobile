@@ -22,7 +22,7 @@ import {
   Trophy,
   LogIn,
   Ear,
-  ChevronRight,
+  Gauge,
 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -35,6 +35,7 @@ import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useMascotExp } from '../hooks/useMascotExp';
 import { useBeginnerCourseProgress } from '../hooks/useBeginnerCourseProgress';
 import { BEGINNER_LESSONS, getBeginnerLesson } from '../lib/beginnerCourse';
+import { useLevelTestResult } from '../hooks/useLevelTestResult';
 import { COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
 import type { ContentCategory } from '../types/content';
@@ -49,7 +50,7 @@ const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'cho
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 export default function HomeScreen() {
-  const { t } = useTranslation(['home', 'common', 'beginner']);
+  const { t } = useTranslation(['home', 'common', 'beginner', 'levelTest']);
   const navigation = useNavigation<NavProp>();
   const { profile, isGuest, exitGuestMode } = useAuth();
   const { tier } = useSubscription();
@@ -63,12 +64,14 @@ export default function HomeScreen() {
     reload: reloadCourse,
   } = useBeginnerCourseProgress();
   const nextLesson = nextLessonId ? getBeginnerLesson(nextLessonId) : undefined;
+  const { result: levelTest, reload: reloadLevelTest } = useLevelTestResult();
 
   useFocusEffect(
     useCallback(() => {
       reload();
       void reloadCourse();
-    }, [reload, reloadCourse]),
+      void reloadLevelTest();
+    }, [reload, reloadCourse, reloadLevelTest]),
   );
 
   const handleCategoryPress = (category: ContentCategory) => {
@@ -190,21 +193,23 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* 귀 열기 코스 진입 */}
-        <TouchableOpacity
-          style={[
-            styles.courseCard,
-            courseComplete && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
-          ]}
-          onPress={() => navigation.navigate('BeginnerCourse')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.courseIcon, courseComplete && { backgroundColor: '#d1fae5' }]}>
-            <Ear size={20} color={courseComplete ? '#047857' : COLORS.primary600} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.courseTitle}>{t('beginner:home.title')}</Text>
-            <Text style={styles.courseDesc}>
+        {/* 시작 도우미: 귀 열기 코스 + 레벨 테스트 */}
+        <View style={styles.starterRow}>
+          <TouchableOpacity
+            style={[
+              styles.starterCard,
+              courseComplete && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+            ]}
+            onPress={() => navigation.navigate('BeginnerCourse')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.starterIcon, courseComplete && { backgroundColor: '#d1fae5' }]}>
+              <Ear size={18} color={courseComplete ? '#047857' : COLORS.primary600} />
+            </View>
+            <Text style={styles.starterTitle} numberOfLines={2}>
+              {t('beginner:home.title')}
+            </Text>
+            <Text style={styles.starterDesc} numberOfLines={2}>
               {courseComplete
                 ? t('beginner:home.done')
                 : nextLesson && courseProgress.completedLessonIds.length > 0
@@ -215,9 +220,28 @@ export default function HomeScreen() {
                     })
                   : t('beginner:home.desc')}
             </Text>
-          </View>
-          <ChevronRight size={18} color={COLORS.slate400} />
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.starterCard, { borderColor: '#fde68a', backgroundColor: '#fffbeb' }]}
+            onPress={() => navigation.navigate('LevelTest')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.starterIcon, { backgroundColor: '#fef3c7' }]}>
+              <Gauge size={18} color={COLORS.amber600} />
+            </View>
+            <Text style={styles.starterTitle} numberOfLines={2}>
+              {t('levelTest:home.title')}
+            </Text>
+            <Text style={styles.starterDesc} numberOfLines={2}>
+              {levelTest
+                ? t('levelTest:home.done', {
+                    overall: t(`levelTest:result.overall.${levelTest.overall}`),
+                  })
+                : t('levelTest:home.desc')}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>
@@ -400,34 +424,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary500,
   },
-  courseCard: {
+  starterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    gap: 10,
+  },
+  starterCard: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
     borderColor: '#c7d2fe',
     borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    padding: 14,
+    gap: 6,
   },
-  courseIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  starterIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: '#eef2ff',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 2,
   },
-  courseTitle: {
-    fontSize: 14,
+  starterTitle: {
+    fontSize: 13,
     fontWeight: '800',
     color: COLORS.slate800,
   },
-  courseDesc: {
+  starterDesc: {
     fontSize: 11,
+    lineHeight: 15,
     color: COLORS.slate500,
-    marginTop: 3,
   },
   actionRow: {
     flexDirection: 'row',

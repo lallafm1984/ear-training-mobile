@@ -14,6 +14,11 @@ import {
   normalizeBeginnerProgress,
   type BeginnerCourseProgress,
 } from './beginnerCourse/progress';
+import {
+  mergeLevelTestResults,
+  normalizeLevelTestResult,
+  type LevelTestResult,
+} from './levelTest/engine';
 
 export const GUEST_STORAGE_ID = 'guest';
 
@@ -28,6 +33,7 @@ export const LOCAL_DATA_BASE_KEYS = {
   dailyExpRewarded: '@melodygen_daily_exp_rewarded',
   examSessions: '@melodygen_exam_sessions',
   beginnerCourse: '@melodygen_beginner_course',
+  levelTest: '@melodygen_level_test',
 } as const;
 
 export type LocalDataBaseKey = (typeof LOCAL_DATA_BASE_KEYS)[keyof typeof LOCAL_DATA_BASE_KEYS];
@@ -242,6 +248,18 @@ export async function migrateGuestDataToAccount(
         accountCourse ? normalizeBeginnerProgress(accountCourse) : null,
       ),
     );
+  }
+
+  // 레벨 테스트 결과: 더 최근 것을 남긴다
+  const guestLevel = normalizeLevelTestResult(
+    safeParse<LevelTestResult>(await read(LOCAL_DATA_BASE_KEYS.levelTest, GUEST_STORAGE_ID)),
+  );
+  if (guestLevel) {
+    const accountLevel = normalizeLevelTestResult(
+      safeParse<LevelTestResult>(await read(LOCAL_DATA_BASE_KEYS.levelTest, userId)),
+    );
+    const merged = mergeLevelTestResults(guestLevel, accountLevel);
+    if (merged) await write(LOCAL_DATA_BASE_KEYS.levelTest, merged);
   }
 
   await storage.multiRemove(allLocalDataKeys(GUEST_STORAGE_ID));

@@ -22,6 +22,7 @@ import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BeginnerCourseScreen from '../screens/BeginnerCourseScreen';
 import BeginnerLessonScreen from '../screens/BeginnerLessonScreen';
+import LevelTestScreen from '../screens/LevelTestScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
@@ -39,7 +40,7 @@ export interface PracticeSettings {
 export type MainStackParamList = {
   Onboarding: undefined;
   Home: undefined;
-  CategoryPractice: { category: ContentCategory };
+  CategoryPractice: { category: ContentCategory; initialDifficulty?: ContentDifficulty };
   ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
   NotationPractice: {
     category: ContentCategory;
@@ -73,6 +74,7 @@ export type MainStackParamList = {
   Profile: undefined;
   BeginnerCourse: undefined;
   BeginnerLesson: { lessonId: string };
+  LevelTest: undefined;
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -105,6 +107,7 @@ export default function MainStack() {
       <Stack.Screen name="MascotGallery" component={MascotGalleryScreen} />
       <Stack.Screen name="BeginnerCourse" component={BeginnerCourseScreen} />
       <Stack.Screen name="BeginnerLesson" component={BeginnerLessonScreen} />
+      <Stack.Screen name="LevelTest" component={LevelTestScreen} />
       <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
         {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>
