@@ -16,6 +16,7 @@ import {
   makeRest,
   noteNumToNote,
   scaleNoteToNn,
+  PITCH_ORDER,
 } from '../scoreUtils';
 import type { BassLevel } from '../twoVoice';
 import type { Difficulty, BassDifficulty } from './types';
@@ -435,10 +436,18 @@ export function cleanupBrokenAccidentals(
         break;
       }
     }
+    // 다음 피치음 MIDI (반음계 경과/보조음 판정용)
+    let nextMidiForEntry = -1;
+    for (let j = i + 1; j < notes.length; j++) {
+      if (notes[j].pitch !== 'rest') {
+        nextMidiForEntry = noteToMidiWithKey(notes[j], keySignature);
+        break;
+      }
+    }
     if (prevMidi > 0) {
       const entryDist = Math.abs(curMidi - prevMidi);
-      // 단2도(1반음) 진입: 불협화 충돌
-      if (entryDist === 1) {
+      // 단2도(1반음) 진입: 다음 음으로 2반음 이내 해결하는 반음계 경과/보조음만 허용
+      if (entryDist === 1 && !(nextMidiForEntry > 0 && Math.abs(curMidi - nextMidiForEntry) <= 2)) {
         notes[i] = { ...n, accidental: '' as Accidental };
         continue;
       }
@@ -614,9 +623,9 @@ export function fixConsecutiveRepeats(
         const dn = noteNumToNote(dnNn, scale, baseOctave);
         const upMidi = noteToMidiWithKey(makeNote(up.pitch, up.octave, n.duration), keySignature);
         const dnMidi = noteToMidiWithKey(makeNote(dn.pitch, dn.octave, n.duration), keySignature);
-        // 이전 음과 다른 방향 우선
+        // 이전 음과 다른 방향 우선 (위로는 A5=81 상한)
         const target =
-          upMidi !== baseMidi && up.octave <= 5
+          upMidi !== baseMidi && up.octave <= 5 && upMidi <= 81
             ? up
             : dnMidi !== baseMidi && dn.octave >= 2
               ? dn
@@ -696,6 +705,66 @@ export function fixMinorCrossRelation(
 // ────────────────────────────────────────────────────────────────
 // ★ 종지 쉼표 — 마지막 마디 하드코딩
 // ────────────────────────────────────────────────────────────────
+/** 트레블 종지 으뜸음 허용 MIDI 범위 (G3~A5, 2성부는 베이스 최고음+12 이상) */
+const CADENCE_TREBLE_MIN_MIDI = 55;
+const CADENCE_TREBLE_MAX_MIDI = 81;
+const CADENCE_BASS_MIN_MIDI = 40;
+const CADENCE_BASS_MAX_MIDI = 55;
+
+/**
+ * 종지 으뜸음의 옥타브 선택: 직전 실음(prevMidi)에 가장 가까운 옥타브를 고른다.
+ * 청음 시험 종지는 접근음(2음/이끔음)에서 순차로 으뜸음에 도달하므로
+ * 고정 옥타브를 쓰면 7도·8도 이상 도약이 생긴다(QA에서 전 레벨 발견).
+ * prevMidi가 없으면 baseOctave를 쓴다(범위 보정만 적용).
+ */
+export function pickCadenceTonicOctave(
+  pitch: PitchName,
+  baseOctave: number,
+  keySignature: string,
+  prevMidi: number | undefined,
+  minMidi: number,
+  maxMidi: number,
+): number {
+  const midiOf = (oct: number) => noteToMidiWithKey(makeNote(pitch, oct, '4'), keySignature);
+  const candidates: number[] = [];
+  for (let oct = baseOctave - 2; oct <= baseOctave + 2; oct++) {
+    const m = midiOf(oct);
+    if (m >= minMidi && m <= maxMidi) candidates.push(oct);
+  }
+  if (candidates.length === 0) {
+    // 범위 내 후보가 없으면 범위에 가장 가까운 옥타브
+    let best = baseOctave;
+    let bestDist = Infinity;
+    for (let oct = baseOctave - 2; oct <= baseOctave + 2; oct++) {
+      const m = midiOf(oct);
+      const d = m < minMidi ? minMidi - m : m > maxMidi ? m - maxMidi : 0;
+      if (d < bestDist) {
+        bestDist = d;
+        best = oct;
+      }
+    }
+    return best;
+  }
+  if (prevMidi === undefined || prevMidi < 0) {
+    // 직전 음 정보 없음: baseOctave 우선, 아니면 가장 가까운 후보
+    if (candidates.includes(baseOctave)) return baseOctave;
+    return candidates.reduce((a, b) =>
+      Math.abs(b - baseOctave) < Math.abs(a - baseOctave) ? b : a,
+    );
+  }
+  let best = candidates[0];
+  let bestDist = Math.abs(midiOf(best) - prevMidi);
+  for (const oct of candidates.slice(1)) {
+    const d = Math.abs(midiOf(oct) - prevMidi);
+    // 동률이면 낮은 옥타브(하행 종지) 선호
+    if (d < bestDist) {
+      best = oct;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
 export function generateCadenceMeasure(
   scale: PitchName[],
   trebleBase: number,
@@ -703,10 +772,30 @@ export function generateCadenceMeasure(
   sixteenthsPerBar: number,
   useGrandStaff: boolean,
   keySignature: string,
+  /** 종지 직전 트레블 실음 MIDI (옥타브 선택용) */
+  prevTrebleMidi?: number,
+  /** 종지 직전 베이스 실음 MIDI (옥타브 선택용, 2성부) */
+  prevBassMidi?: number,
 ): { treble: ScoreNote[]; bass: ScoreNote[] } {
   const tonicPitch = scale[0];
   const bassDeg = noteNumToNote(0, scale, bassBase);
   let bassOctave = Math.max(2, Math.min(3, bassDeg.octave));
+  if (useGrandStaff) {
+    bassOctave = Math.max(
+      2,
+      Math.min(
+        3,
+        pickCadenceTonicOctave(
+          bassDeg.pitch,
+          bassOctave,
+          keySignature,
+          prevBassMidi,
+          CADENCE_BASS_MIN_MIDI,
+          CADENCE_BASS_MAX_MIDI,
+        ),
+      ),
+    );
+  }
 
   const canUsePatternB =
     sixteenthsPerBar >= 16 && !!SIXTEENTHS_TO_DUR[12] && !!SIXTEENTHS_TO_DUR[4];
@@ -735,17 +824,17 @@ export function generateCadenceMeasure(
 
   const noteDur = SIXTEENTHS_TO_DUR[noteSixteenths] || '2';
 
-  // 2성부: 트레블 옥타브를 베이스 실효 최고음+12반음 이상으로 보정
-  // 종지마디 베이스뿐 아니라 본체 베이스 최고음(MIDI 55)도 고려
-  let trebleOctave = trebleBase;
-  if (useGrandStaff) {
-    const bassMaxMidi = 55; // BASS_RANGE high (모든 레벨 공통)
-    let trebleMidi = noteToMidiWithKey(makeNote(tonicPitch, trebleOctave, noteDur), keySignature);
-    while (trebleMidi - bassMaxMidi < 12 && trebleOctave < 6) {
-      trebleOctave++;
-      trebleMidi = noteToMidiWithKey(makeNote(tonicPitch, trebleOctave, noteDur), keySignature);
-    }
-  }
+  // 트레블 으뜸음 옥타브: 직전 실음에 가장 가까운 옥타브 (순차 종지)
+  // 2성부: 본체 베이스 최고음(MIDI 55)+12반음 이상 유지
+  const trebleMinMidi = useGrandStaff ? CADENCE_BASS_MAX_MIDI + 12 : CADENCE_TREBLE_MIN_MIDI;
+  const trebleOctave = pickCadenceTonicOctave(
+    tonicPitch,
+    trebleBase,
+    keySignature,
+    prevTrebleMidi,
+    trebleMinMidi,
+    CADENCE_TREBLE_MAX_MIDI,
+  );
   const trebleMelody = makeNote(tonicPitch, trebleOctave, noteDur);
   let bassMelody = makeNote(bassDeg.pitch, bassOctave, noteDur);
   while (
@@ -809,39 +898,69 @@ export function forceGrandStaffFinalTonic(
   keySignature?: string,
 ): void {
   const tTonic = noteNumToNote(0, scale, trebleBase);
-  let trebleOctave = tTonic.octave;
+  const ks = keySignature ?? '';
 
-  // 2성부: 베이스 실효 최고음(MIDI 55) + 12반음 이상 보장
-  if (keySignature && bass.length > 0) {
-    const bassMaxMidi = 55; // BASS_RANGE high
-    let trebleMidi = noteToMidiWithKey(makeNote(tTonic.pitch, trebleOctave, '4'), keySignature);
-    while (trebleMidi - bassMaxMidi < 12 && trebleOctave < 6) {
-      trebleOctave++;
-      trebleMidi = noteToMidiWithKey(makeNote(tTonic.pitch, trebleOctave, '4'), keySignature);
-    }
-  }
+  // 마지막 실음과 그 직전 실음 인덱스
+  const lastPitched = (arr: ScoreNote[]): number => {
+    for (let i = arr.length - 1; i >= 0; i--) if (arr[i].pitch !== 'rest') return i;
+    return -1;
+  };
+  const prevPitchedBefore = (arr: ScoreNote[], idx: number): number => {
+    for (let i = idx - 1; i >= 0; i--) if (arr[i].pitch !== 'rest') return i;
+    return -1;
+  };
 
-  for (let i = treble.length - 1; i >= 0; i--) {
-    if (treble[i].pitch === 'rest') continue;
-    treble[i] = {
-      ...treble[i],
+  const tIdx = lastPitched(treble);
+  if (tIdx >= 0) {
+    const tPrev = prevPitchedBefore(treble, tIdx);
+    const prevMidi = tPrev >= 0 && ks ? noteToMidiWithKey(treble[tPrev], ks) : undefined;
+    // 2성부: 베이스 실효 최고음(MIDI 55) + 12반음 이상 보장
+    const minMidi = ks && bass.length > 0 ? CADENCE_BASS_MAX_MIDI + 12 : CADENCE_TREBLE_MIN_MIDI;
+    const trebleOctave = ks
+      ? pickCadenceTonicOctave(
+          tTonic.pitch,
+          tTonic.octave,
+          ks,
+          prevMidi,
+          minMidi,
+          CADENCE_TREBLE_MAX_MIDI,
+        )
+      : tTonic.octave;
+    treble[tIdx] = {
+      ...treble[tIdx],
       pitch: tTonic.pitch,
       octave: trebleOctave,
       accidental: '' as Accidental,
     };
-    break;
   }
+
   const bDeg = noteNumToNote(0, scale, bassBase);
-  const bOct = Math.max(2, Math.min(3, bDeg.octave));
-  for (let i = bass.length - 1; i >= 0; i--) {
-    if (bass[i].pitch === 'rest') continue;
-    bass[i] = {
-      ...bass[i],
+  const bIdx = lastPitched(bass);
+  if (bIdx >= 0) {
+    const bPrev = prevPitchedBefore(bass, bIdx);
+    const prevMidi = bPrev >= 0 && ks ? noteToMidiWithKey(bass[bPrev], ks) : undefined;
+    const bOct = Math.max(
+      2,
+      Math.min(
+        3,
+        ks
+          ? pickCadenceTonicOctave(
+              bDeg.pitch,
+              Math.max(2, Math.min(3, bDeg.octave)),
+              ks,
+              prevMidi,
+              CADENCE_BASS_MIN_MIDI,
+              CADENCE_BASS_MAX_MIDI,
+            )
+          : bDeg.octave,
+      ),
+    );
+    bass[bIdx] = {
+      ...bass[bIdx],
       pitch: bDeg.pitch,
       octave: bOct,
       accidental: '' as Accidental,
     };
-    break;
   }
 }
 
@@ -856,6 +975,7 @@ export function applyInternalRests(
   sixteenthsPerBar: number,
   useGrandStaff: boolean,
   timeSignature?: string,
+  keySignature?: string,
 ): void {
   const lvl = difficultyLevel(difficulty);
   const params = LEVEL_PARAMS[difficulty];
@@ -990,6 +1110,24 @@ export function applyInternalRests(
   candidates = candidates.filter(
     (p) => p.bar < measures - 1 && !bassRestAt.has(`${p.bar}_${p.offset}`),
   );
+
+  // 쉼표로 바뀐 음의 앞뒤 실음이 삼전음·증2도·7도·9도 이상으로 이어지면 제외
+  // (쉼표를 건너 들리는 도약도 청음에서는 그대로 도약으로 들린다)
+  if (keySignature) {
+    const letterPos = (n: ScoreNote) => PITCH_ORDER.indexOf(n.pitch) + 7 * n.octave;
+    candidates = candidates.filter((p) => {
+      let a = p.noteIdx - 1;
+      while (a >= 0 && treble[a].pitch === 'rest') a--;
+      let b = p.noteIdx + 1;
+      while (b < treble.length && treble[b].pitch === 'rest') b++;
+      if (a < 0 || b >= treble.length) return true;
+      const na = treble[a];
+      const nb = treble[b];
+      const d = Math.abs(noteToMidiWithKey(nb, keySignature) - noteToMidiWithKey(na, keySignature));
+      const letterDist = Math.abs(letterPos(nb) - letterPos(na));
+      return !(d === 6 || d === 10 || d === 11 || d > 12 || (d === 3 && letterDist === 1));
+    });
+  }
 
   if (candidates.length === 0) return;
 

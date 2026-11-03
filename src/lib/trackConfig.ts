@@ -49,7 +49,8 @@ export interface TrackLevelMeta {
 const KEY_POOL_K1 = ['C', 'G', 'F', 'Am', 'Dm', 'Em'];
 const KEY_POOL_K2 = [...KEY_POOL_K1, 'D', 'Bb', 'A', 'Eb', 'Bm', 'Gm', 'Cm'];
 const KEY_POOL_K3 = [...KEY_POOL_K2, 'E', 'Ab', 'B', 'Db', 'F#m', 'C#m', 'Fm', 'Bbm'];
-const KEY_POOL_K4 = [...KEY_POOL_K3, 'F#', 'Gb', 'Cb', 'C#', 'G#m', 'D#m', 'Abm', 'Ebm'];
+// K4: 임시표 6개까지 (C♯·C♭·A♭m 등 7개 조성은 청음 시험 출제 범위를 넘어 제외)
+const KEY_POOL_K4 = [...KEY_POOL_K3, 'F#', 'Gb', 'G#m', 'D#m', 'Ebm'];
 
 export const KEY_POOLS: Record<number, string[]> = {
   1: KEY_POOL_K1,

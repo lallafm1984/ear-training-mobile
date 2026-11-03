@@ -11,7 +11,7 @@ src/
 ├── hooks/               # 커스텀 React 훅 (10개)
 ├── lib/                 # 비즈니스 로직 모듈
 │   ├── scoreUtils/      # 악보 유틸리티 (8개 모듈)
-│   ├── scoreGenerator/  # 악보 생성 엔진 (6개 모듈)
+│   ├── scoreGenerator/  # 악보 생성 엔진 (7개 모듈)
 │   ├── twoVoice/        # 2성부 작곡 모듈 (12개)
 │   ├── beginnerCourse/  # 귀 열기 7일 코스 (커리큘럼·미니 문제 생성·진행 상태, 3개 모듈)
 │   ├── levelTest/       # 3분 레벨 테스트 (영역 정의·계단식 진행·결과·문항 어댑터, 3개 모듈)
@@ -41,7 +41,7 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (28개)
+└── __tests__/           # Jest 테스트 (29개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -299,6 +299,7 @@ Login → Onboarding → Home
 | ------------------- | ------------------------------------------------------------------------------------------ |
 | `types.ts`          | `Difficulty`, `BassDifficulty`, `GeneratorOptions`, `GeneratedScore`, `DURATION_POOL`      |
 | `melodyEngine.ts`   | 멜로디 생성/수정 (40+ 함수: 임시표 정리, 트라이톤 수정, 종지 생성 등)                      |
+| `finalSanity.ts`    | 최종 안전망 `applyFinalSanity` — 금지 도약(쉼표 건너뛰기 포함)·3회 반복·강박 불협화·병행 완전음정·음역을 최소 변경으로 수정, `isBadMelodicStep` |
 | `voiceLeading.ts`   | 성부 진행 분석 (`buildAttackTimeline`, `isConsonantInterval`, `isParallelPerfect`)         |
 | `postProcessing.ts` | 후처리 (`reviewAndFixScore`, 불협화음 해결, 병행 완전음정 수정)                            |
 | `bassEngine.ts`     | 베이스 생성 3전략 (`generateBasicBass`, `generateIndependentBass`, `generateArpeggioBass`) |
@@ -343,6 +344,7 @@ Login → Onboarding → Home
 | `computeStats.test.ts`           | 통계 집계                                                                                             |
 | `skillProfile.test.ts`           | 스킬 레벨 계산                                                                                        |
 | `contentConfig.test.ts`          | 카테고리 설정/난이도 라벨                                                                             |
+| `contentQaRules.test.ts`         | 콘텐츠 QA 규칙 (청음 시험 기준: 선율·2성부 도약/반복/종지, 리듬 받아쓰기, 화성진행·조성·음정 ABC 표기)        |
 | `duration.test.ts`               | 음가 변환/박자 계산                                                                                   |
 | `keySignature.test.ts`           | 조성/음계/임시표                                                                                      |
 | `melodyRhythmLevel.test.ts`      | 레벨별 리듬 파라미터                                                                                  |

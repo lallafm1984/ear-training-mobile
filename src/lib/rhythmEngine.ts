@@ -42,95 +42,151 @@ function makeTriplets(pitch: PitchName = 'B'): ScoreNote[] {
   ];
 }
 
+/** 복합박자(6/8, 9/8, 12/8) 판별 */
+function isCompound(timeSignature: string): boolean {
+  const [topStr, bottomStr] = timeSignature.split('/');
+  const top = parseInt(topStr, 10);
+  const bottom = parseInt(bottomStr, 10);
+  return bottom === 8 && top % 3 === 0 && top >= 6;
+}
+
+/** 박 크기(16분음표 수): 단순박자 = 분모 기준, 복합박자 = 점4분(6) */
+function beatSixteenths(timeSignature: string): number {
+  if (isCompound(timeSignature)) return 6;
+  const [, bottomStr] = timeSignature.split('/');
+  return 16 / (parseInt(bottomStr, 10) || 4);
+}
+
+function rand<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** 레벨·박자별 음가 풀 (16분음표 단위). 복합박자는 점4분(6)을 박으로 쓰는 전용 풀. */
+function durationPoolFor(level: number, compound: boolean): number[] {
+  if (compound) {
+    if (level === 1) return [6, 4, 2]; // 점4분·4분·8분 (8분이 기본 단위)
+    if (level === 2) return [6, 4, 2, 2];
+    if (level === 3) return [6, 4, 2, 2, 3, 1]; // 점8분+16분이 복합박자의 점음표 요소
+    if (level === 4) return [6, 4, 2, 1, 1];
+    if (level === 5) return [6, 4, 2, 2, 3, 1]; // 복합박자에서 셋잇단은 비관용 → 점8분·16분 혼합
+    return [6, 4, 2, 3, 1, 1];
+  }
+  if (level === 1) return [8, 4, 4]; // 2분·4분 (4분 비중 ↑ — 2분음표만 이어지는 마디 완화)
+  if (level === 2) return [8, 4, 4, 2]; // + 8분
+  if (level === 3) return [6, 4, 4, 2]; // + 점4분·당김음
+  if (level === 4) return [4, 4, 2, 1, 1]; // + 16분
+  if (level === 5) return [6, 4, 4, 2]; // + 셋잇단 (변환 시 4분 → 셋잇단 주입)
+  return [6, 4, 4, 2, 1]; // 종합
+}
+
+/** 이 마디가 레벨 고유 요소를 포함하는지 */
+function hasLevelElement(
+  level: number,
+  durList: number[],
+  timeSignature: string,
+  compound: boolean,
+): boolean {
+  if (level === 1) return true;
+  if (level === 2) return durList.includes(2);
+  if (level === 3) {
+    if (compound) return durList.includes(3);
+    return durList.includes(6) || durList.includes(3) || isSyncopated(durList, timeSignature);
+  }
+  if (level === 4) return durList.includes(1);
+  if (level === 5) {
+    if (compound) return durList.includes(3) || durList.includes(1);
+    return durList.includes(4); // 셋잇단 주입 대상
+  }
+  // 종합: 너무 단순한 마디([4,4,4,4] 등) 방지
+  return (
+    durList.includes(1) ||
+    durList.includes(3) ||
+    (!compound && durList.includes(6)) ||
+    isSyncopated(durList, timeSignature)
+  );
+}
+
+interface BarGenOptions {
+  /** 곡 전체에서의 마디 인덱스 (0 = 첫 마디: 첫 박 쉼표 금지) */
+  barIndex: number;
+  /** 이 마디에 박 단위 쉼표(4분/점4분 쉼표)를 넣을지 */
+  wantBeatRest: boolean;
+}
+
 /**
- * Ensures the duration array contains at least one target element, or applies triplet.
- * Returns array of ScoreNotes.
+ * 한 마디 리듬 생성. forceElement면 레벨 고유 요소가 포함될 때까지 재시도.
+ * 쉼표 규칙(청음 시험 기준):
+ *  - 첫 마디 첫 박에는 쉼표를 두지 않는다 (리듬 받아쓰기는 음표로 시작)
+ *  - 쉼표는 4분(복합박자: 점4분·4분)·8분 쉼표만 사용 — 점4분 쉼표(단순박자)·2분 쉼표 금지
+ *  - 연속 쉼표 금지
  */
 function generateRhythmBar(
   level: number,
   timeSignature: string,
   forceElement: boolean,
-  initialWasRest: boolean = false,
-  pitch: PitchName = 'B',
+  initialWasRest: boolean,
+  pitch: PitchName,
+  barOpts: BarGenOptions,
 ): ScoreNote[] {
   const B = getSixteenthsPerBar(timeSignature);
-  let durList: number[];
+  const compound = isCompound(timeSignature);
+  const pool = durationPoolFor(level, compound);
+  const fillOpts =
+    level === 3
+      ? { timeSignature, dottedProb: 0.8, syncopationProb: compound ? 0 : 0.8 }
+      : level === 5
+        ? { timeSignature, dottedProb: 0.5 }
+        : level >= 6
+          ? { timeSignature, dottedProb: 0.5, syncopationProb: compound ? 0 : 0.4 }
+          : { timeSignature };
 
-  while (true) {
-    if (level === 1) {
-      // Level 1: Half, Quarter, Quarter Rest. No whole notes, no syncopation.
-      durList = fillRhythm(B, [8, 4], { timeSignature });
-      break;
-    } else if (level === 2) {
-      // Level 2: 8th note & Rests. Pool [8, 4, 4, 2].
-      durList = fillRhythm(B, [8, 4, 4, 2], { timeSignature });
-      if (!forceElement) break;
-      // We want to force at least one 8th note or rest. We consider 2 as 8th note.
-      if (durList.includes(2)) break;
-    } else if (level === 3) {
-      // Level 3: Dotted notes & Syncopation.
-      durList = fillRhythm(B, [6, 4, 4, 2], {
-        timeSignature,
-        dottedProb: 0.8,
-        syncopationProb: 0.8,
-      });
-      if (!forceElement) break;
-      if (durList.includes(6) || durList.includes(3)) break;
-      if (isSyncopated(durList, timeSignature)) break;
-    } else if (level === 4) {
-      // Level 4: 16th notes.
-      durList = fillRhythm(B, [4, 4, 2, 1, 1], { timeSignature });
-      if (!forceElement) break;
-      if (durList.includes(1)) break;
-    } else if (level === 5) {
-      // Level 5: Triplets. Base pool [6, 4, 4, 2].
-      durList = fillRhythm(B, [6, 4, 4, 2], { timeSignature, dottedProb: 0.5 });
-      // We will inject triplet during ScoreNote conversion. Wait, we must ensure there's a '4' or two '2's to replace.
-      // Easiest is to replace a '4'. So we ensure there is at least one '4'.
-      if (!forceElement) break;
-      if (durList.includes(4)) break;
-    } else if (level >= 6) {
-      // Level 6: Mix of 2~5 (excluding very long notes like 16, 12, potentially 8 unless syncopated).
-      // Pool [6, 4, 4, 2, 1].
-      durList = fillRhythm(B, [6, 4, 4, 2, 1], {
-        timeSignature,
-        dottedProb: 0.5,
-        syncopationProb: 0.4,
-      });
-      if (!forceElement) break;
-      // Force mix: just ensure not too simple. E.g. don't allow just [4, 4, 4, 4].
-      if (durList.includes(1) || durList.includes(6) || isSyncopated(durList, timeSignature)) break;
+  let durList: number[] = fillRhythm(B, pool, fillOpts);
+  if (forceElement) {
+    for (let retry = 0; retry < 40; retry++) {
+      if (hasLevelElement(level, durList, timeSignature, compound)) break;
+      durList = fillRhythm(B, pool, fillOpts);
     }
   }
 
   // Convert to ScoreNote[]
   const notes: ScoreNote[] = [];
   const allowRestsL2Plus = level >= 2;
-  // Decide if we should inject triplet for Level 5 or Level 6 Mix
+  // 셋잇단 주입: 단순박자 L5(강제 마디) / L6+(40%)만 — 복합박자 제외
   let hasInjectedTriplet = false;
-  const shouldInjectTriplet = (level === 5 && forceElement) || (level >= 6 && Math.random() < 0.4);
+  const shouldInjectTriplet =
+    !compound && ((level === 5 && forceElement) || (level >= 6 && Math.random() < 0.4));
+  const tripletTargetIdx = shouldInjectTriplet ? durList.indexOf(4) : -1;
 
-  // 박 크기 계산 (쉼표가 박 경계를 넘지 않도록 제한하기 위함)
-  const [, bottomStr] = timeSignature.split('/');
-  const beatSize = 16 / (parseInt(bottomStr, 10) || 4);
+  const beatSize = beatSixteenths(timeSignature);
 
-  // 정박 위치에 있는 4분음표 인덱스 중 하나를 강제 4분 쉼표로 지정
-  {
+  // 박 단위 쉼표 위치 결정 (wantBeatRest일 때 1개)
+  let forcedRestIdx = -1;
+  if (barOpts.wantBeatRest) {
     let tempPos = 0;
-    const eligible: number[] = [];
+    const eligible: { i: number; pos: number }[] = [];
     for (let i = 0; i < durList.length; i++) {
-      if (durList[i] === 4 && tempPos % beatSize === 0) eligible.push(i);
-      tempPos += durList[i];
+      const d = durList[i];
+      const onBeat = tempPos % beatSize === 0;
+      // 후보: 박머리의 4분(단순) / 점4분·4분(복합), 복합박자 8분 위치의 4분, 어디든 8분
+      const ok = (d === 4 && (onBeat || compound)) || (compound && d === 6 && onBeat) || d === 2;
+      const firstDownbeat = barOpts.barIndex === 0 && tempPos === 0;
+      if (ok && !firstDownbeat && i !== tripletTargetIdx) eligible.push({ i, pos: tempPos });
+      tempPos += d;
     }
-    // 트리플렛 주입 대상(첫 번째 dur=4)은 제외
-    const tripletTargetIdx = shouldInjectTriplet ? durList.indexOf(4) : -1;
-    const filtered = eligible.filter((i) => i !== tripletTargetIdx);
-    if (filtered.length > 0) {
-      const forcedIdx = filtered[Math.floor(Math.random() * filtered.length)];
-      durList = durList.slice(); // 원본 보호
-      // 마커로 음수 사용: -4 = 강제 4분 쉼표
-      (durList as number[])[forcedIdx] = -4;
+    let candidates = eligible;
+    // 마디 첫 박 쉼표는 드물게(30%)만 허용
+    if (candidates.some((e) => e.pos !== 0) && Math.random() >= 0.3) {
+      candidates = candidates.filter((e) => e.pos !== 0);
     }
+    // 4분(이상) 쉼표 우선(70%), 나머지는 8분 쉼표
+    const beatPool = candidates.filter((e) => durList[e.i] >= 4);
+    const pick =
+      beatPool.length > 0 && Math.random() < 0.7
+        ? rand(beatPool)
+        : candidates.length > 0
+          ? rand(candidates)
+          : undefined;
+    if (pick) forcedRestIdx = pick.i;
   }
 
   let wasRest = initialWasRest;
@@ -139,12 +195,12 @@ function generateRhythmBar(
   for (let i = 0; i < durList.length; i++) {
     const dur = durList[i];
 
-    // 강제 4분 쉼표 (직전이 쉼표면 음표로 대체하여 연속 쉼표 방지)
-    if (dur === -4) {
-      const forceAsRest = !wasRest;
-      notes.push(makeRhythmNote(4, forceAsRest, pitch));
-      wasRest = forceAsRest;
-      pos += 4;
+    // 박 단위 쉼표 (직전이 쉼표면 음표로 대체하여 연속 쉼표 방지)
+    if (i === forcedRestIdx) {
+      const asRest = !wasRest;
+      notes.push(makeRhythmNote(dur, asRest, pitch));
+      wasRest = asRest;
+      pos += dur;
       continue;
     }
 
@@ -157,13 +213,15 @@ function generateRhythmBar(
     }
 
     // 쉼표가 박 경계를 넘으면 ABC 변환 시 분할되어 연속 쉼표가 됨 → 허용 안 함
-    const posInBeat = pos % beatSize;
-    const fitsInBeat = posInBeat === 0 || dur <= beatSize - posInBeat;
+    const simpleBeat = 16 / (parseInt(timeSignature.split('/')[1], 10) || 4);
+    const posInBeat = pos % simpleBeat;
+    const fitsInBeat = posInBeat === 0 || dur <= simpleBeat - posInBeat;
+    const firstDownbeat = barOpts.barIndex === 0 && pos === 0;
 
-    // Introduce rests (8분 쉼표만 확률적으로 추가)
+    // 8분 쉼표 확률 삽입 (L2+, 첫 마디 첫 박 제외)
     let isRest = false;
-    if (!wasRest && fitsInBeat && allowRestsL2Plus && dur === 2) {
-      if (Math.random() < 0.15) {
+    if (!wasRest && fitsInBeat && allowRestsL2Plus && dur === 2 && !firstDownbeat) {
+      if (Math.random() < 0.12) {
         isRest = true;
       }
     }
@@ -181,8 +239,7 @@ function generateRhythmBar(
  * e.g., a note starts on off-beat and extends across a beat boundary.
  */
 function isSyncopated(durations: number[], timeSignature: string): boolean {
-  const [, bottomStr] = timeSignature.split('/');
-  const beatSize = 16 / (parseInt(bottomStr, 10) || 4);
+  const beatSize = beatSixteenths(timeSignature);
   let pos = 0;
   for (const d of durations) {
     const noteEnd = pos + d;
@@ -216,53 +273,38 @@ function noteToSixteenths(note: ScoreNote): number {
 }
 
 /**
- * 후처리: 각 마디에 쉼표가 없으면 정박 위치의 4분음표 하나를 4분 쉼표로 교체.
- * 앞뒤 쉼표가 없는 위치만 후보로 삼아 연속 쉼표를 방지한다.
+ * 후처리: 곡 전체에 쉼표가 하나도 없으면 음표 하나를 쉼표로 교체.
+ * 후보는 박머리의 4분음표(복합박자는 점4분 포함) 또는 8분음표. 첫 음표·셋잇단·앞뒤 쉼표 인접은 제외.
+ * (예전에는 "마디마다 쉼표"를 강제해 점4분·2분까지 쉼표로 바꿨다 → 점4분 쉼표·과다 쉼표 문제)
  */
-function ensureRestPerMeasure(notes: ScoreNote[], timeSignature: string): ScoreNote[] {
-  const B = getSixteenthsPerBar(timeSignature);
-  const [, bottomStr] = timeSignature.split('/');
-  const beatSize = 16 / (parseInt(bottomStr, 10) || 4);
-
+function ensureMinRests(notes: ScoreNote[], timeSignature: string): ScoreNote[] {
+  if (notes.some((n) => n.pitch === 'rest')) return notes;
   const result = notes.slice();
+  const B = getSixteenthsPerBar(timeSignature);
+  const compound = isCompound(timeSignature);
+  const beatSize = beatSixteenths(timeSignature);
 
-  // 마디별 인덱스 범위 수집
-  const measures: Array<{ start: number; end: number }> = [];
-  let measureStart = 0;
-  let posInMeasure = 0;
-  for (let i = 0; i < result.length; i++) {
-    posInMeasure += noteToSixteenths(result[i]);
-    if (posInMeasure >= B) {
-      measures.push({ start: measureStart, end: i + 1 });
-      measureStart = i + 1;
-      posInMeasure = 0;
-    }
+  let pos = 0;
+  const candidates: number[] = [];
+  for (let j = 0; j < result.length; j++) {
+    const n = result[j];
+    const d = noteToSixteenths(n);
+    const localPos = pos % B;
+    const onBeat = localPos % beatSize === 0;
+    const ok =
+      j > 0 &&
+      n.pitch !== 'rest' &&
+      n.tuplet == null &&
+      n.tupletNoteDur == null &&
+      (d === 2 || (d === 4 && (onBeat || compound)) || (compound && d === 6 && onBeat));
+    if (ok) candidates.push(j);
+    pos += d;
   }
-  if (measureStart < result.length) {
-    measures.push({ start: measureStart, end: result.length });
-  }
 
-  for (const { start, end } of measures) {
-    const hasRest = result.slice(start, end).some((n) => n.pitch === 'rest');
-    if (hasRest) continue;
-
-    // 후보: 정박 위치의 4분음표 중 앞뒤 음표가 쉼표가 아닌 것
-    let localPos = 0;
-    const candidates: number[] = [];
-    for (let j = start; j < end; j++) {
-      const n = result[j];
-      if (n.pitch !== 'rest' && n.tuplet == null && localPos % beatSize === 0) {
-        const prevIsRest = j > 0 && result[j - 1].pitch === 'rest';
-        const nextIsRest = j < result.length - 1 && result[j + 1].pitch === 'rest';
-        if (!prevIsRest && !nextIsRest) candidates.push(j);
-      }
-      localPos += noteToSixteenths(n);
-    }
-
-    if (candidates.length > 0) {
-      const targetIdx = candidates[Math.floor(Math.random() * candidates.length)];
-      result[targetIdx] = { ...result[targetIdx], pitch: 'rest' };
-    }
+  if (candidates.length > 0) {
+    const beatCands = candidates.filter((j) => noteToSixteenths(result[j]) >= 4);
+    const targetIdx = beatCands.length > 0 ? rand(beatCands) : rand(candidates);
+    result[targetIdx] = { ...result[targetIdx], pitch: 'rest' };
   }
 
   return result;
@@ -284,16 +326,26 @@ export function generateRhythmDictation(
     enforcedIndices.add(Math.floor(Math.random() * measures));
   }
 
+  // 쉼표 마디: 전체의 약 절반(최소 1마디). 예전처럼 마디마다 쉼표를 강제하지 않는다.
+  const restBarCount = Math.max(1, Math.round(measures * 0.5));
+  const restBars = new Set<number>();
+  while (restBars.size < restBarCount) {
+    restBars.add(Math.floor(Math.random() * measures));
+  }
+
   const result: ScoreNote[] = [];
   let prevIsRest = false;
   for (let i = 0; i < measures; i++) {
     const forceElement = enforcedIndices.has(i);
-    const barNotes = generateRhythmBar(level, timeSignature, forceElement, prevIsRest, pitch);
+    const barNotes = generateRhythmBar(level, timeSignature, forceElement, prevIsRest, pitch, {
+      barIndex: i,
+      wantBeatRest: restBars.has(i),
+    });
     if (barNotes.length > 0) {
       prevIsRest = barNotes[barNotes.length - 1].pitch === 'rest';
     }
     result.push(...barNotes);
   }
 
-  return ensureRestPerMeasure(result, timeSignature);
+  return ensureMinRests(result, timeSignature);
 }

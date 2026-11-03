@@ -211,9 +211,11 @@ function failsHardConstraint(
   if (prevMidi !== null && prevMidi > 0) {
     if (Math.abs(altMidi - prevMidi) === 6) return true;
   }
-  // RULE_H6: 이전 음과 단2도(1반음) 진입 금지 — 불협화 충돌
-  if (prevMidi !== null && prevMidi > 0) {
-    if (Math.abs(altMidi - prevMidi) === 1) return true;
+  // RULE_H6: 이전 음과 단2도(1반음) 진입은 반음계 경과/보조음(다음 음으로 2반음 이내 해결)일 때만 허용
+  // (도→도#→레, 미→레#→미 같은 반음계 진행은 청음 시험 임시표의 가장 흔한 형태)
+  if (prevMidi !== null && prevMidi > 0 && Math.abs(altMidi - prevMidi) === 1) {
+    const resolvesByStep = nextMidi !== null && nextMidi > 0 && Math.abs(altMidi - nextMidi) <= 2;
+    if (!resolvesByStep) return true;
   }
   // RULE_H7: 이전 음과 큰 도약(>7반음) 진입 금지
   if (prevMidi !== null && prevMidi > 0) {
@@ -321,9 +323,9 @@ function classifyCandidates(
     for (const m of mixDefs) {
       if (altPC !== m.pc) continue;
       if (nextMidi === null || nextMidi <= 0) continue;
-      // 해결: 하행 1~3반음
+      // 해결: 하행 반음·온음 (3도 도약 해결은 시험 선율에서 쓰이지 않음)
       const diff = altM - nextMidi;
-      if (diff >= 1 && diff <= 3) {
+      if (diff >= 1 && diff <= 2) {
         out.push({
           type: 'MODAL_MIX',
           accidental: acc,
@@ -822,14 +824,19 @@ export function ensureMinAccidentalBars(
       if (!isValidAlteration(n.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
       const altMidi = getAlteredMidi(n.pitch, n.octave, acc);
       // cleanup-safe 조건: 삽입 후 cleanup에서 제거되지 않을 것
-      let safe = true;
-      if (prevMidi > 0) {
+      // + 해결 조건: #은 반음·온음 상행, b은 반음·온음 하행으로 다음 음에 해결해야 한다
+      //   (시→솔#→시 같은 3도 도약 해결은 시험 선율에서 쓰이지 않음)
+      let safe = nextMidi > 0;
+      if (safe && prevMidi > 0) {
+        // 강제 삽입은 순차(반음·온음) 진입만 — 반음계 경과/보조음 형태로 한정
         const ed = Math.abs(altMidi - prevMidi);
-        if (ed === 1 || ed === 6 || ed > 7) safe = false;
+        if (ed > 2) safe = false;
+        if (ed === 1 && Math.abs(altMidi - nextMidi) > 2) safe = false;
       }
-      if (safe && nextMidi > 0) {
-        const xd = Math.abs(altMidi - nextMidi);
-        if (xd > 3 || xd === 6) safe = false;
+      if (safe) {
+        const step = nextMidi - altMidi;
+        if (acc === '#' && !(step === 1 || step === 2)) safe = false;
+        if (acc === 'b' && !(step === -1 || step === -2)) safe = false;
       }
       if (!safe) continue;
       notes[i] = { ...notes[i], accidental: acc };

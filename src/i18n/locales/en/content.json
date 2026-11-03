@@ -77,8 +77,8 @@
     },
     "chord": {
       "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
-      "chord_3": "Level 2 · + Maj7·Min7 chords",
-      "chord_4": "Level 3 · + Dim7 chord"
+      "chord_3": "Level 2 · + Maj7·Min7·Dom7 chords",
+      "chord_4": "Level 3 · + Dim7·Half-dim7 chords"
     },
     "progression": {
       "progression_1": "Level 1 · Basic progressions",
@@ -147,7 +147,9 @@
     "dim": "Diminished Triad",
     "maj7": "Major 7th (M7)",
     "min7": "Minor 7th (m7)",
+    "dom7": "Dominant 7th (Dom7)",
     "dim7": "Diminished 7th (dim7)",
+    "halfdim7": "Half-diminished 7th (m7♭5)",
     "maj_inv1": "Major 1st Inversion",
     "min_inv1": "Minor 1st Inversion"
   },
@@ -238,7 +240,9 @@
       "dim": "A diminished triad stacks two minor 3rds, so the 5th is lowered. Narrow and unstable.",
       "maj7": "A major 7th chord adds a major 7th to a major triad. A soft, dreamy four-note chord.",
       "min7": "A minor 7th chord adds a minor 7th to a minor triad. Dark but warm.",
+      "dom7": "A dominant 7th chord adds a minor 7th to a major triad. Its tension pulls toward the tonic chord.",
       "dim7": "A diminished 7th chord stacks three minor 3rds. All four notes are equally spaced, so it sounds very unstable.",
+      "halfdim7": "A half-diminished 7th adds a minor 7th to a diminished triad. A little softer than a dim7, and common in jazz.",
       "maj_inv1": "A major triad in first inversion has the 3rd on the bottom: a minor 3rd below and a perfect 4th above.",
       "min_inv1": "A minor triad in first inversion has the 3rd on the bottom: a major 3rd below and a perfect 4th above."
     },

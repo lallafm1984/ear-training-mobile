@@ -224,17 +224,36 @@ function fixL1CadenceLeap(notes: BassNote[], ctx: BassGenContext): void {
   }
   tonicCandidates.sort((a, b) => Math.abs(a) - Math.abs(b));
 
-  for (const t of tonicCandidates) {
-    for (let s = 1; s <= MAX_BASS_SCALE_STEP; s++) {
-      for (const sg of [-1, 1] as const) {
-        const newPen = t - sg * s;
-        if (Math.abs(t - newPen) > MAX_BASS_SCALE_STEP) continue;
-        if (!isInRange(newPen, 1, ctx)) continue;
-        if (pi > 0 && getScaleInterval(prevBeforePen, newPen) > MAX_BASS_SCALE_STEP) continue;
-        notes[pi].noteNum = newPen;
-        notes[li].noteNum = t;
-        return;
-      }
+  // 종지 직전 근음 우선순위 (으뜸음 기준 오프셋):
+  //   -3 = 아래 딸림음(V→I 4도 상행, 청음 시험의 표준 종지)
+  //   +3 = 위 버금딸림음(IV→I 변격 종지)
+  //   +1/-1/-2/+2 = ii·vii·vi·iii (최후 수단 — 멜로디 접근음과 병행 8도가 생기기 쉬움)
+  const PEN_OFFSETS = [-3, 3, 1, -1, -2, 2];
+
+  // 이미 종지 조건을 만족하면(V/IV → I, 도약 ≤ 4도) 유지
+  {
+    const pen = notes[pi].noteNum;
+    const last = notes[li].noteNum;
+    const lastIsTonic = ((last % 7) + 7) % 7 === 0;
+    const off = pen - last;
+    if (
+      lastIsTonic &&
+      (off === -3 || off === 3) &&
+      isInRange(pen, 1, ctx) &&
+      isInRange(last, 1, ctx)
+    ) {
+      return;
+    }
+  }
+
+  for (const off of PEN_OFFSETS) {
+    for (const t of tonicCandidates) {
+      const newPen = t + off;
+      if (!isInRange(newPen, 1, ctx)) continue;
+      if (pi > 0 && getScaleInterval(prevBeforePen, newPen) > MAX_BASS_SCALE_STEP) continue;
+      notes[pi].noteNum = newPen;
+      notes[li].noteNum = t;
+      return;
     }
   }
 }
@@ -252,7 +271,7 @@ function enforceBassL1PrimaryRootShare(
 
   const adjustable: number[] = [];
   for (let m = 0; m < measures; m++) {
-    if (m === 0 || m === measures - 1) continue;
+    if (m === 0 || m === measures - 1 || m === measures - 2) continue;
     if (mode === 'harmonic_minor' && m === measures - 2) continue;
     if (!isPrimaryBassRootDegree(notes[m].noteNum)) adjustable.push(m);
   }

@@ -198,6 +198,26 @@ function buildWrongIntervals(correct: number, pool: number[]): number[] {
   return wrongs.slice(0, 3);
 }
 
+/** ABC 음 표기 분해: 임시표 / 음이름 / 옥타브 기호 */
+function abcNoteParts(n: string): { acc: string; letter: string; oct: string } {
+  const m = /^([\^_=]*)([A-Ga-g])([,']*)$/.exec(n);
+  if (!m) return { acc: '', letter: n, oct: '' };
+  return { acc: m[1], letter: m[2], oct: m[3] };
+}
+
+/**
+ * 같은 마디 안에서 abcjs는 임시표를 같은 음이름·옥타브의 뒤 음에 이월한다.
+ * 예) `^D z D z` 는 D♯–D♯(동음)으로 연주됨. 두 번째 음이 임시표 없는 같은 음이면 제자리표(=)를 명시한다.
+ */
+function withExplicitNatural(first: string, second: string): string {
+  const a = abcNoteParts(first);
+  const b = abcNoteParts(second);
+  if (a.letter === b.letter && a.oct === b.oct && a.acc !== '' && b.acc === '') {
+    return '=' + second;
+  }
+  return second;
+}
+
 /** 두 음 ABC. 보기 비교용으로 다른 음정을 같은 근음에서 연주할 때 표 범위를 넘으면 근음을 내린다. */
 function intervalToAbc(rootIdx: number, interval: number, direction: IntervalDirection): string {
   const maxRoot = ABC_NOTE_TABLE.length - 1 - interval;
@@ -205,7 +225,7 @@ function intervalToAbc(rootIdx: number, interval: number, direction: IntervalDir
   const rootNote = ABC_NOTE_TABLE[safeRoot];
   const topNote = ABC_NOTE_TABLE[safeRoot + interval];
   const [first, second] = direction === 'ascending' ? [rootNote, topNote] : [topNote, rootNote];
-  return `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${second} z |]`;
+  return `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${withExplicitNatural(first, second)} z |]`;
 }
 
 function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestion {
@@ -271,7 +291,9 @@ const CHORD_TEMPLATES: Record<string, ChordTemplate> = {
   dim: { name: '감3화음 (dim)', intervals: [0, 3, 6] },
   maj7: { name: '장7화음 (M7)', intervals: [0, 4, 7, 11] },
   min7: { name: '단7화음 (m7)', intervals: [0, 3, 7, 10] },
+  dom7: { name: '속7화음 (Dom7)', intervals: [0, 4, 7, 10] },
   dim7: { name: '감7화음 (dim7)', intervals: [0, 3, 6, 9] },
+  halfdim7: { name: '반감7화음 (m7♭5)', intervals: [0, 3, 6, 10] },
   maj_inv1: { name: '장3화음 제1전위', intervals: [0, 3, 8] },
   min_inv1: { name: '단3화음 제1전위', intervals: [0, 4, 9] },
 };
@@ -281,10 +303,12 @@ const SIMILAR_CHORDS: Record<string, string[]> = {
   major: ['minor', 'aug'],
   minor: ['major', 'dim'],
   aug: ['major', 'maj7'],
-  dim: ['minor', 'dim7'],
-  maj7: ['min7', 'aug'],
-  min7: ['maj7', 'dim7'],
-  dim7: ['dim', 'min7'],
+  dim: ['minor', 'halfdim7'],
+  maj7: ['dom7', 'min7'],
+  min7: ['dom7', 'halfdim7'],
+  dom7: ['maj7', 'min7'],
+  dim7: ['halfdim7', 'dim'],
+  halfdim7: ['min7', 'dim7'],
   maj_inv1: ['min_inv1', 'major'],
   min_inv1: ['maj_inv1', 'minor'],
 };
@@ -292,8 +316,8 @@ const SIMILAR_CHORDS: Record<string, string[]> = {
 /** 누적 풀 */
 const CHORD_POOLS: Record<ChordDifficulty, string[]> = {
   chord_2: ['major', 'minor', 'aug', 'dim'],
-  chord_3: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7'],
-  chord_4: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dim7'],
+  chord_3: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dom7'],
+  chord_4: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dom7', 'dim7', 'halfdim7'],
 };
 
 /** 제시 방식 */
@@ -546,7 +570,7 @@ const KEY_TEMPLATES: Record<string, KeyTemplate> = {
     abcKey: 'Db',
     scaleNotes: '_D, _E, F, _G, | _A, _B, C _D |]',
   },
-  Bb_minor: { name: 'B♭단조 (B♭ minor)', abcKey: 'Bbm', scaleNotes: '_B, C _D _E | F _G A _B |]' },
+  Bb_minor: { name: 'B♭단조 (B♭ minor)', abcKey: 'Bbm', scaleNotes: '_B, C _D _E | F _G =A _B |]' },
   Gb_major: {
     name: 'G♭장조 (G♭ Major)',
     abcKey: 'Gb',
@@ -555,7 +579,7 @@ const KEY_TEMPLATES: Record<string, KeyTemplate> = {
   Eb_minor: {
     name: 'E♭단조 (E♭ minor)',
     abcKey: 'Ebm',
-    scaleNotes: '_E, F, _G, _A, | _B, _C D _E |]',
+    scaleNotes: '_E, F, _G, _A, | _B, _C =D _E |]',
   },
 };
 
@@ -682,9 +706,13 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
 
   const pattern = KEY_MELODY_PATTERNS[patternIdx];
   // 같은 멜로디 패턴을 다른 조성으로 연주한 소리 (비교 청취용)
+  // 청음 시험처럼 기준음 A(라, 440Hz)를 먼저 들려준 뒤 멜로디를 재생한다.
+  // A♭이 조표에 있는 조에서는 제자리표(=)로 A 자연음을 명시한다.
   const keyToAbc = (id: string) => {
     const k = KEY_TEMPLATES[id];
-    return `X:1\nM:4/4\nL:1/4\nK:${k.abcKey}\n${pattern(parseScale(k.scaleNotes))}`;
+    // 조표에서 A가 변화되는 조(B♭단조·B장조·G♯단조 등)는 기준음을 반드시 A♮로 표기
+    const refA = keySignatureAlterations(k.abcKey).A !== 0 ? '=A' : 'A';
+    return `X:1\nM:4/4\nL:1/4\nK:${k.abcKey}\n"^A"${refA}2 z2 | ${pattern(parseScale(k.scaleNotes))}`;
   };
 
   const abc = keyToAbc(keyId);
@@ -983,7 +1011,117 @@ const MINOR_ROMAN_INTERVALS: Record<string, number[]> = {
   VI: [8, 12, 15],
 };
 
-const ABC_PITCH_CLASS_NAMES = ['C', '^C', 'D', '^D', 'E', 'F', '^F', 'G', '^G', 'A', '^A', 'B'];
+const LETTER_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
+const FLAT_ORDER = ['B', 'E', 'A', 'D', 'G', 'C', 'F'];
+const ROMAN_DEGREE: Record<string, number> = {
+  I: 0,
+  i: 0,
+  ii: 1,
+  II: 1,
+  iii: 2,
+  III: 2,
+  IV: 3,
+  iv: 3,
+  V: 4,
+  v: 4,
+  vi: 5,
+  VI: 5,
+  vii: 6,
+  VII: 6,
+};
+
+/**
+ * ABC 조표(K: 값, 예 'Bb' · 'G#m') → 음이름별 조표 변화량(-1 ♭ / 0 / +1 ♯).
+ * 임시표 표기 여부를 조표 기준으로 판단할 때 사용한다.
+ */
+export function keySignatureAlterations(abcKey: string): Record<string, number> {
+  const out: Record<string, number> = { C: 0, D: 0, E: 0, F: 0, G: 0, A: 0, B: 0 };
+  const m = abcKey.match(/^([A-G])([#b]?)(m?)$/);
+  if (!m) return out;
+  const [, letter, acc, minor] = m;
+  let pc = LETTER_PC[letter] + (acc === '#' ? 1 : acc === 'b' ? -1 : 0);
+  if (minor) pc += 3; // 나란한조(장조) 기준으로 조표 개수 계산
+  pc = ((pc % 12) + 12) % 12;
+  const sharpsByPc: Record<number, number> = { 0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 1: 7 };
+  const flatsByPc: Record<number, number> = { 5: -1, 10: -2, 3: -3, 8: -4, 1: -5, 6: -6, 11: -7 };
+  const count =
+    acc === 'b' ? (flatsByPc[pc] ?? sharpsByPc[pc] ?? 0) : (sharpsByPc[pc] ?? flatsByPc[pc] ?? 0);
+  for (let i = 0; i < count; i++) out[SHARP_ORDER[i]] = 1;
+  for (let i = 0; i < -count; i++) out[FLAT_ORDER[i]] = -1;
+  return out;
+}
+
+/**
+ * MIDI + 음이름(letter)으로 ABC 음표를 만든다. 조표와 "마디 안 임시표 상태"를 보고
+ * 필요한 경우에만 ♯/♭/♮를 붙인다 (ABC/abcjs는 같은 마디·같은 옥타브의 임시표가 뒤 음에 전달된다).
+ * 예전처럼 항상 ♯로 적으면 B♭장조의 E♭이 D♯로 보이고, 같은 마디의 뒤 D가 D♯로 울리는 문제가 있었다.
+ */
+function spellAbcNote(
+  midi: number,
+  letter: string,
+  keyAlt: Record<string, number>,
+  barState: Map<string, number>,
+): string {
+  const natural = LETTER_PC[letter];
+  let alt = (((midi - natural) % 12) + 12) % 12;
+  if (alt > 6) alt -= 12;
+  const naturalMidi = midi - alt;
+  const octave = Math.floor(naturalMidi / 12) - 1;
+  const stateKey = `${letter}${octave}`;
+  const current = barState.get(stateKey) ?? keyAlt[letter] ?? 0;
+  let acc = '';
+  if (alt !== current) {
+    acc = alt === 0 ? '=' : alt > 0 ? '^'.repeat(alt) : '_'.repeat(-alt);
+    barState.set(stateKey, alt);
+  }
+  const body =
+    octave <= 4
+      ? `${letter}${','.repeat(4 - octave)}`
+      : `${letter.toLowerCase()}${"'".repeat(octave - 5)}`;
+  return acc + body;
+}
+
+function romanToChordAbc(
+  roman: string,
+  template: ProgressionTemplate,
+  key: ProgressionKey,
+  keyAlt: Record<string, number>,
+  barState: Map<string, number>,
+): string {
+  const intervals =
+    template.mode === 'minor' ? MINOR_ROMAN_INTERVALS[roman] : MAJOR_ROMAN_INTERVALS[roman];
+  const safeIntervals = intervals ?? MAJOR_ROMAN_INTERVALS.I;
+  const degree = ROMAN_DEGREE[roman] ?? 0;
+  const tonicLetterIdx = LETTER_NAMES.indexOf(key.abcKey[0]);
+  // 3도 쌓기: 근음 음이름에서 2글자씩 건너뛴 음이름으로 표기 (조표에 맞는 올바른 철자)
+  const notes = safeIntervals.map((interval, k) => {
+    const letter = LETTER_NAMES[(tonicLetterIdx + degree + 2 * k) % 7];
+    return spellAbcNote(key.tonicMidi + interval, letter, keyAlt, barState);
+  });
+  return `[${notes.join('')}]`;
+}
+
+function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey): string {
+  const keyAlt = keySignatureAlterations(key.abcKey);
+  const romans = template.roman;
+  // 마디 나누기: 2개 → 한 마디, 3개 → 2+1(마지막 온음표), 4개 → 2+2
+  const bars: string[][] = romans.length <= 2 ? [romans] : [romans.slice(0, 2), romans.slice(2)];
+  const rendered = bars.map((bar) => {
+    const barState = new Map<string, number>();
+    return bar.map((roman) => romanToChordAbc(roman, template, key, keyAlt, barState));
+  });
+  let body: string;
+  if (romans.length === 2) {
+    body = `${rendered[0][0]} ${rendered[0][1]} |]`;
+  } else if (romans.length === 3) {
+    body = `${rendered[0][0]} ${rendered[0][1]} | ${rendered[1][0]}2 |]`;
+  } else {
+    body = `${rendered[0][0]} ${rendered[0][1]} | ${rendered[1][0]} ${rendered[1][1]} |]`;
+  }
+  return `X:1\nM:4/4\nL:1/2\nK:${key.abcKey}\n${body}`;
+}
 
 const recentProgressions: string[] = [];
 
@@ -999,49 +1137,6 @@ function pickProgressionTemplate(pool: ProgressionTemplate[]): ProgressionTempla
 function pickProgressionKey(mode: ProgressionMode): ProgressionKey {
   const pool = mode === 'minor' ? MINOR_PROGRESSION_KEYS : MAJOR_PROGRESSION_KEYS;
   return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function midiToAbcPitch(midi: number): string {
-  const pitchClass = ((midi % 12) + 12) % 12;
-  const octave = Math.floor(midi / 12) - 1;
-  const name = ABC_PITCH_CLASS_NAMES[pitchClass];
-  const accidental = name.startsWith('^') ? '^' : '';
-  const letter = accidental ? name.slice(1) : name;
-
-  if (octave <= 3) {
-    return `${name}${','.repeat(4 - octave)}`;
-  }
-  if (octave === 4) {
-    return name;
-  }
-  return `${accidental}${letter.toLowerCase()}${"'".repeat(Math.max(0, octave - 5))}`;
-}
-
-function romanToChordAbc(
-  roman: string,
-  template: ProgressionTemplate,
-  key: ProgressionKey,
-): string {
-  const intervals =
-    template.mode === 'minor' ? MINOR_ROMAN_INTERVALS[roman] : MAJOR_ROMAN_INTERVALS[roman];
-  const safeIntervals = intervals ?? MAJOR_ROMAN_INTERVALS.I;
-  const notes = safeIntervals.map((interval) => midiToAbcPitch(key.tonicMidi + interval));
-  return `[${notes.join('')}]`;
-}
-
-function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey): string {
-  const chords = template.roman.map((roman) => romanToChordAbc(roman, template, key));
-  let body: string;
-
-  if (chords.length === 2) {
-    body = `${chords[0]} ${chords[1]} |]`;
-  } else if (chords.length === 3) {
-    body = `${chords[0]} ${chords[1]} | ${chords[2]}2 |]`;
-  } else {
-    body = `${chords[0]} ${chords[1]} | ${chords[2]} ${chords[3]} |]`;
-  }
-
-  return `X:1\nM:4/4\nL:1/2\nK:${key.abcKey}\n${body}`;
 }
 
 function progressionAnswerLabel(kind: ProgressionKind, answerKey: string): string {

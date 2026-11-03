@@ -24,7 +24,6 @@ import {
   IMPERFECT_CONSONANT_PC,
   MIN_TREBLE_BASS_SEMITONES,
   makeNote,
-  noteNumToNote,
   generateProgression,
   getStrongBeatOffsets,
   noteToMidiWithKey,
@@ -32,10 +31,12 @@ import {
 
 import type { BassLevel, TimeSignature as TVTimeSignature } from '../twoVoice';
 import { applyCounterpointCorrections, generateTwoVoiceStack } from '../twoVoice';
+import { isMelodicallyAcceptable, TREBLE_MAX_MIDI } from '../twoVoice/counterpoint';
 import { ensureMinAccidentalBars } from '../twoVoice/chromaticAccidental';
 
 import type { GeneratorOptions, GeneratedScore } from './types';
 import { difficultyLevel } from './types';
+import { applyFinalSanity } from './finalSanity';
 
 // Import internal helpers from sub-modules
 import {
@@ -89,11 +90,12 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
   // 조표의 wrap 보정을 반영한 트레블 실효 최대 nn 계산
   // 2성부: trebleRangeMin이 높아지므로 rawTrebleMax를 확장하여 충분한 음역 확보
+  // 트레블 최고음은 A5(MIDI 81)까지 — 청음 시험 선율 음역(대략 C4~A5) 기준
   const rawTrebleMax = useGrandStaff ? (lvl <= 2 ? 11 : 14) : lvl <= 2 ? 8 : 12;
   let effectiveTrebleMax = rawTrebleMax;
   while (
     effectiveTrebleMax > 0 &&
-    noteNumToNote(effectiveTrebleMax, scale, TREBLE_BASE).octave > 5
+    nnToMidi(effectiveTrebleMax, scale, TREBLE_BASE, keySignature) > TREBLE_MAX_MIDI
   ) {
     effectiveTrebleMax--;
   }
@@ -156,6 +158,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     }
   }
 
+  // 종지 옥타브 선택용: 직전 실음 MIDI
+  const lastPitchedMidi = (arr: ScoreNote[]): number | undefined => {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i].pitch !== 'rest') return noteToMidiWithKey(arr[i], keySignature);
+    }
+    return undefined;
+  };
   const cadence = generateCadenceMeasure(
     scale,
     TREBLE_BASE,
@@ -163,6 +172,8 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     sixteenthsPerBar,
     useGrandStaff,
     keySignature,
+    lastPitchedMidi(trebleNotes),
+    useGrandStaff ? lastPitchedMidi(bassNotes) : undefined,
   );
   trebleNotes.push(...cadence.treble);
   bassNotes.push(...cadence.bass);
@@ -231,7 +242,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
         let bestPitch: PitchName = tn.pitch;
         let bestOct = tn.octave;
         let bestDist = Infinity;
-        let bestIsImperfect = false;
+        let bestRank = Infinity; // 0: 선율 자연+불완전협화, 1: 선율 자연+완전협화, 2~3: 선율 도약 발생
 
         for (let oct = tn.octave - 1; oct <= tn.octave + 2; oct++) {
           for (const sp of scale) {
@@ -239,6 +250,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
             const cNote = makeNote(sp, oct, tn.duration);
             const cMidi = noteToMidiWithKey(cNote, keySignature);
             if (cMidi - be.midi < MIN_TREBLE_BASS_SEMITONES) continue;
+            if (cMidi > TREBLE_MAX_MIDI) continue;
             const cPc = (((cMidi - be.midi) % 12) + 12) % 12;
             if (DISSONANT_PC.has(cPc)) continue;
 
@@ -259,15 +271,13 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
 
             const dist = Math.abs(cMidi - tMidi);
             const imperfect = IMPERFECT_CONSONANT_PC.has(cPc);
-            if (imperfect && !bestIsImperfect) {
+            const melodic = isMelodicallyAcceptable(trebleNotes, te.idx, cMidi, keySignature);
+            const rank = (melodic ? 0 : 2) + (imperfect ? 0 : 1);
+            if (rank < bestRank || (rank === bestRank && dist < bestDist)) {
               bestPitch = sp;
               bestOct = oct;
               bestDist = dist;
-              bestIsImperfect = true;
-            } else if (imperfect === bestIsImperfect && dist < bestDist) {
-              bestPitch = sp;
-              bestOct = oct;
-              bestDist = dist;
+              bestRank = rank;
             }
           }
         }
@@ -296,6 +306,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     sixteenthsPerBar,
     useGrandStaff,
     timeSignature,
+    keySignature,
   );
 
   // ── 후처리: 박자 경계 분할 (중급 2단계 이상에서만) ──
@@ -364,5 +375,39 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     );
   }
 
+  // ── 최종 안전망: 쉼표·분할·반복음·종지·임시표 처리 뒤에도 남은 금지 도약(쉼표 건너뛰기 포함)·
+  //    3회 반복·강박 불협화·병행 완전음정을 최소 변경으로 수정 ──
+  applyFinalSanity({
+    treble: finalTreble,
+    bass: useGrandStaff ? finalBass : [...internalBassNotes, ...cadence.bass],
+    useGrandStaff,
+    scale,
+    baseOctave: TREBLE_BASE,
+    keySignature,
+    timeSignature,
+    sixteenthsPerBar,
+  });
+
+  // ── 붙임줄 정리: 후처리로 음높이가 바뀌어 다른 음·쉼표로 이어지는 tie 플래그 제거 ──
+  // (ABC 변환은 이런 tie를 무시하므로 데이터와 표기를 일치시킨다)
+  normalizeTies(finalTreble);
+  normalizeTies(finalBass);
+
   return { trebleNotes: finalTreble, bassNotes: finalBass };
+}
+
+/** 같은 음(음이름·옥타브·임시표)으로 이어지지 않는 tie 플래그를 끈다. */
+function normalizeTies(notes: ScoreNote[]): void {
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i];
+    if (!n.tie) continue;
+    const m = notes[i + 1];
+    const ok =
+      !!m &&
+      n.pitch !== 'rest' &&
+      m.pitch === n.pitch &&
+      m.octave === n.octave &&
+      m.accidental === n.accidental;
+    if (!ok) notes[i] = { ...n, tie: false };
+  }
 }
