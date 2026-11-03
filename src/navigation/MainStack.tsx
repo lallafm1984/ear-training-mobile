@@ -20,6 +20,8 @@ import MascotGalleryScreen from '../screens/MascotGalleryScreen';
 import OnboardingScreen, { hasCompletedOnboarding } from '../screens/OnboardingScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import BeginnerCourseScreen from '../screens/BeginnerCourseScreen';
+import BeginnerLessonScreen from '../screens/BeginnerLessonScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
@@ -69,6 +71,8 @@ export type MainStackParamList = {
   MascotGallery: undefined;
   Paywall: undefined;
   Profile: undefined;
+  BeginnerCourse: undefined;
+  BeginnerLesson: { lessonId: string };
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -99,6 +103,8 @@ export default function MainStack() {
       <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen name="DailyGoal" component={DailyGoalScreen} />
       <Stack.Screen name="MascotGallery" component={MascotGalleryScreen} />
+      <Stack.Screen name="BeginnerCourse" component={BeginnerCourseScreen} />
+      <Stack.Screen name="BeginnerLesson" component={BeginnerLessonScreen} />
       <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
         {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>

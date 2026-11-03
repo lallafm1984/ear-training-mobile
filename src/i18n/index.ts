@@ -23,6 +23,7 @@ import koEditor from './locales/ko/editor.json';
 import koContent from './locales/ko/content.json';
 import koMascot from './locales/ko/mascot.json';
 import koLegal from './locales/ko/legal.json';
+import koBeginner from './locales/ko/beginner.json';
 
 // ── en ──
 import enCommon from './locales/en/common.json';
@@ -37,6 +38,7 @@ import enEditor from './locales/en/editor.json';
 import enContent from './locales/en/content.json';
 import enMascot from './locales/en/mascot.json';
 import enLegal from './locales/en/legal.json';
+import enBeginner from './locales/en/beginner.json';
 
 // ── ja ──
 import jaCommon from './locales/ja/common.json';
@@ -51,6 +53,7 @@ import jaEditor from './locales/ja/editor.json';
 import jaContent from './locales/ja/content.json';
 import jaMascot from './locales/ja/mascot.json';
 import jaLegal from './locales/ja/legal.json';
+import jaBeginner from './locales/ja/beginner.json';
 
 const languageDetector = {
   type: 'languageDetector' as const,
@@ -102,6 +105,7 @@ i18n
       'content',
       'mascot',
       'legal',
+      'beginner',
     ],
     defaultNS: 'common',
     resources: {
@@ -118,6 +122,7 @@ i18n
         content: koContent,
         mascot: koMascot,
         legal: koLegal,
+        beginner: koBeginner,
       },
       en: {
         common: enCommon,
@@ -132,6 +137,7 @@ i18n
         content: enContent,
         mascot: enMascot,
         legal: enLegal,
+        beginner: enBeginner,
       },
       ja: {
         common: jaCommon,
@@ -146,6 +152,7 @@ i18n
         content: jaContent,
         mascot: jaMascot,
         legal: jaLegal,
+        beginner: jaBeginner,
       },
     },
     interpolation: {

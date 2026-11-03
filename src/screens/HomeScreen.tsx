@@ -13,7 +13,17 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { UserCircle, Flame, Target, Crown, BarChart3, Trophy, LogIn } from 'lucide-react-native';
+import {
+  UserCircle,
+  Flame,
+  Target,
+  Crown,
+  BarChart3,
+  Trophy,
+  LogIn,
+  Ear,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +33,8 @@ import { useSubscription } from '../context';
 import { useSkillProfile } from '../hooks';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useMascotExp } from '../hooks/useMascotExp';
+import { useBeginnerCourseProgress } from '../hooks/useBeginnerCourseProgress';
+import { BEGINNER_LESSONS, getBeginnerLesson } from '../lib/beginnerCourse';
 import { COLORS } from '../theme/colors';
 import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
 import type { ContentCategory } from '../types/content';
@@ -37,18 +49,26 @@ const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'cho
 const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 export default function HomeScreen() {
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common', 'beginner']);
   const navigation = useNavigation<NavProp>();
   const { profile, isGuest, exitGuestMode } = useAuth();
   const { tier } = useSubscription();
   const { profile: _skillProfile } = useSkillProfile();
   const { stats, loaded, reload } = usePracticeHistory();
   const { level: mascotLevel } = useMascotExp();
+  const {
+    progress: courseProgress,
+    nextLessonId,
+    isComplete: courseComplete,
+    reload: reloadCourse,
+  } = useBeginnerCourseProgress();
+  const nextLesson = nextLessonId ? getBeginnerLesson(nextLessonId) : undefined;
 
   useFocusEffect(
     useCallback(() => {
       reload();
-    }, [reload]),
+      void reloadCourse();
+    }, [reload, reloadCourse]),
   );
 
   const handleCategoryPress = (category: ContentCategory) => {
@@ -169,6 +189,35 @@ export default function HomeScreen() {
             <Text style={styles.guestBannerBtn}>{t('home:guestBanner.button')}</Text>
           </TouchableOpacity>
         )}
+
+        {/* 귀 열기 코스 진입 */}
+        <TouchableOpacity
+          style={[
+            styles.courseCard,
+            courseComplete && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+          ]}
+          onPress={() => navigation.navigate('BeginnerCourse')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.courseIcon, courseComplete && { backgroundColor: '#d1fae5' }]}>
+            <Ear size={20} color={courseComplete ? '#047857' : COLORS.primary600} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.courseTitle}>{t('beginner:home.title')}</Text>
+            <Text style={styles.courseDesc}>
+              {courseComplete
+                ? t('beginner:home.done')
+                : nextLesson && courseProgress.completedLessonIds.length > 0
+                  ? t('beginner:home.inProgress', {
+                      day: nextLesson.day,
+                      done: courseProgress.completedLessonIds.length,
+                      total: BEGINNER_LESSONS.length,
+                    })
+                  : t('beginner:home.desc')}
+            </Text>
+          </View>
+          <ChevronRight size={18} color={COLORS.slate400} />
+        </TouchableOpacity>
 
         {/* 메인 액션 카드 */}
         <View style={styles.actionRow}>
@@ -350,6 +399,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: COLORS.primary500,
+  },
+  courseCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#c7d2fe',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  courseIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  courseTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.slate800,
+  },
+  courseDesc: {
+    fontSize: 11,
+    color: COLORS.slate500,
+    marginTop: 3,
   },
   actionRow: {
     flexDirection: 'row',

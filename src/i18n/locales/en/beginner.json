@@ -1,0 +1,191 @@
+{
+  "course": {
+    "title": "7-Day Ear Opener",
+    "subtitle": "Five questions a day. In a week, sounds start making sense.",
+    "progress": "{{done}}/{{total}} lessons done",
+    "dayLabel": "Day {{day}}",
+    "todayLesson": "Today's lesson",
+    "start": "Start",
+    "review": "Review",
+    "locked": "Finish the previous lesson first",
+    "result": "{{correct}}/{{total}} correct",
+    "exp": "+{{exp}} EXP",
+    "completeTitle": "Course complete!",
+    "completeDesc": "You finished all 7 days. Keep growing in the category practices.",
+    "goCategories": "Go to ear training"
+  },
+  "home": {
+    "title": "New here? Start the Ear Opener",
+    "desc": "Five questions a day, seven days to open your ears",
+    "inProgress": "Day {{day}} in progress · {{done}}/{{total}} done",
+    "done": "Completed · review anytime"
+  },
+  "lesson": {
+    "introTitle": "Today's listening point",
+    "introTip": "Tip",
+    "begin": "Start lesson",
+    "question": "{{current}} / {{total}}",
+    "listen": "Listen",
+    "playing": "Playing...",
+    "replay": "Play again",
+    "chooseHint": "Pick the option that matches what you heard",
+    "correct": "Correct!",
+    "wrong": "Not quite. Here's the answer",
+    "explainTitle": "Why?",
+    "listenCorrect": "Hear the answer",
+    "listenMine": "Hear my pick",
+    "next": "Next",
+    "seeResult": "See result",
+    "quitTitle": "Leave this lesson?",
+    "quitMessage": "Your answers so far won't be saved.",
+    "quitConfirm": "Leave",
+    "quitCancel": "Keep going",
+    "result": {
+      "title": "Day {{day}} complete!",
+      "score": "{{correct}} / {{total}} correct",
+      "perfect": "Perfect! Your ears are responding precisely.",
+      "good": "Nice work! Replay the ones you missed with the explanation in mind.",
+      "keepGoing": "That's okay. One listen a day and it will click soon.",
+      "expEarned": "+{{exp}} EXP earned",
+      "expAlready": "You already earned EXP for this lesson",
+      "courseBonus": "Course completion bonus +{{exp}} EXP",
+      "goPractice": "Keep practicing · {{name}}",
+      "nextDay": "Next lesson",
+      "retry": "Try again",
+      "backToCourse": "Back to course",
+      "nextPreview": "Up next · {{title}}"
+    }
+  },
+  "lessons": {
+    "day1_pitch_direction": {
+      "title": "Up or down",
+      "desc": "Hear two notes, pick the direction",
+      "intro": "A sound goes higher, lower, or stays where it is. Listen to two notes and only notice whether the second one sits above or below the first.",
+      "tip": "Hum the two notes along. The direction becomes much clearer."
+    },
+    "day2_long_short": {
+      "title": "Long and short",
+      "desc": "Feel note length and silence",
+      "intro": "Music also speaks through length. Tell apart a sound that rings on, one that stops short, and a rest where nothing sounds.",
+      "tip": "Tap the table lightly while you listen and you'll feel the lengths in your body."
+    },
+    "day3_leap": {
+      "title": "Near and far",
+      "desc": "Feel the distance between two notes",
+      "intro": "Notice how far apart two notes are. A close neighbor and a leap across town feel different. Once that's familiar we'll name them: thirds and fifths.",
+      "tip": "A perfect fifth is the first two notes of 'Twinkle, Twinkle, Little Star'."
+    },
+    "day4_major_minor": {
+      "title": "Bright and dark",
+      "desc": "Tell major from minor",
+      "intro": "The same tune feels bright and open in major and a little wistful in minor. Focus on the mood the sound gives you.",
+      "tip": "When the third note dips slightly lower, the darker minor feeling appears."
+    },
+    "day5_rhythm_pattern": {
+      "title": "Rhythm cards",
+      "desc": "Match a one-bar rhythm",
+      "intro": "Now listen to a whole bar. Count the beats and match the order of long sounds, short sounds and rests to the card.",
+      "tip": "Count 'one two three four' silently and the rests will show themselves."
+    },
+    "day6_first_melody": {
+      "title": "First melody",
+      "desc": "Short tunes starting on do",
+      "intro": "Hear a short melody that starts on do and pick the solfège. The first note is always do; just follow how far the next notes climb.",
+      "tip": "Get 'do re mi' and 'do mi sol' into your mouth first and comparing gets easy."
+    },
+    "day7_graduation": {
+      "title": "Final review",
+      "desc": "Everything from the six days",
+      "intro": "One question each on direction, length, distance, brightness, rhythm and melody from the past six days. Finish it and you graduate!",
+      "tip": "Mistakes are fine. Use 'Hear the answer' in the explanation to listen once more."
+    }
+  },
+  "prompts": {
+    "pitchDirection": "Listen to two notes and pick where the second one went.",
+    "longShort": "Listen to the length pattern and pick the matching one.",
+    "leapSize": "Are the two notes close together or far apart?",
+    "leapName": "Pick the distance between the two notes.",
+    "majorMinor": "Listen to the short tune. Bright or dark?",
+    "rhythmPattern": "Listen to the one-bar rhythm and pick the matching card.",
+    "firstMelody": "Listen to the tune starting on do and pick the solfège."
+  },
+  "choices": {
+    "direction": {
+      "up": "Up",
+      "down": "Down",
+      "same": "Same"
+    },
+    "longShort": {
+      "long_long": "Long · long",
+      "short_short_long": "Short · short · long",
+      "long_short_short": "Long · short · short",
+      "sound_rest_sound_rest": "Sound · rest · sound · rest",
+      "short_x4": "Short four times"
+    },
+    "leapSize": {
+      "near": "Close",
+      "wide": "Far"
+    },
+    "leapName": {
+      "m3": "Minor 3rd",
+      "M3": "Major 3rd",
+      "P5": "Perfect 5th"
+    },
+    "mode": {
+      "major": "Bright (major)",
+      "minor": "Dark (minor)"
+    },
+    "rhythm": {
+      "q4": "♩ ♩ ♩ ♩",
+      "h_q_q": "𝅗𝅥 ♩ ♩",
+      "q_q_h": "♩ ♩ 𝅗𝅥",
+      "q_ee_q_q": "♩ ♪♪ ♩ ♩",
+      "q_rest_q_q": "♩ 𝄽 ♩ ♩",
+      "q_q_rest_q": "♩ ♩ 𝄽 ♩",
+      "ee_q_h": "♪♪ ♩ 𝅗𝅥",
+      "h_h": "𝅗𝅥 𝅗𝅥"
+    },
+    "melody": {
+      "do_re_mi": "Do re mi",
+      "do_mi_sol": "Do mi sol",
+      "do_re_do": "Do re do",
+      "do_mi_re": "Do mi re",
+      "do_sol_mi": "Do sol mi",
+      "do_fa_sol": "Do fa sol",
+      "do_mi_do": "Do mi do",
+      "do_sol_sol": "Do sol sol",
+      "do_re_mi_fa": "Do re mi fa",
+      "do_mi_sol_mi": "Do mi sol mi",
+      "do_re_mi_re": "Do re mi re"
+    }
+  },
+  "explain": {
+    "direction": {
+      "up": "The second note was higher. When you sing along, a slight tightening in the throat means up.",
+      "down": "The second note was lower. Singing along, the sound settles down toward the chest.",
+      "same": "Both notes had the same pitch. No change means 'same'."
+    },
+    "longShort": {
+      "long_long": "Two long sounds in a row, each ringing for two beats.",
+      "short_short_long": "Two short sounds, then a long one that rings on at the end.",
+      "long_short_short": "A long sound first, followed by two short ones.",
+      "sound_rest_sound_rest": "Sound and rest alternated. The empty spot is the rest.",
+      "short_x4": "Four even short sounds of the same length."
+    },
+    "leapSize": {
+      "near": "The notes were only a couple of steps apart: a close leap that feels connected.",
+      "wide": "The notes were far apart: a wide leap that feels like a jump."
+    },
+    "leapName": {
+      "m3": "A minor third: a small leap with a slightly dark, soft feel.",
+      "M3": "A major third: a bright, open leap and the start of a major chord.",
+      "P5": "A perfect fifth: wide and stable, like the first two notes of 'Twinkle, Twinkle'."
+    },
+    "mode": {
+      "major": "It was major. The raised third note gives the bright, open feeling.",
+      "minor": "It was minor. The third note is a half step lower, which gives the wistful, darker feeling."
+    },
+    "rhythmPattern": "Count 'one two three four' and match the order of long, short and rest to the card.",
+    "firstMelody": "The first note is always do. Follow how many steps each next note climbs and the solfège appears."
+  }
+}

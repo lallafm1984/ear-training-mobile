@@ -9,6 +9,11 @@
 
 import type { PracticeRecord } from '../types/content';
 import type { UserSkillProfile } from './trackConfig';
+import {
+  mergeBeginnerProgress,
+  normalizeBeginnerProgress,
+  type BeginnerCourseProgress,
+} from './beginnerCourse/progress';
 
 export const GUEST_STORAGE_ID = 'guest';
 
@@ -22,6 +27,7 @@ export const LOCAL_DATA_BASE_KEYS = {
   mascotExp: '@melodygen_mascot_exp',
   dailyExpRewarded: '@melodygen_daily_exp_rewarded',
   examSessions: '@melodygen_exam_sessions',
+  beginnerCourse: '@melodygen_beginner_course',
 } as const;
 
 export type LocalDataBaseKey = (typeof LOCAL_DATA_BASE_KEYS)[keyof typeof LOCAL_DATA_BASE_KEYS];
@@ -219,6 +225,23 @@ export async function migrateGuestDataToAccount(
       safeParse<ExamSessionLike[]>(await read(LOCAL_DATA_BASE_KEYS.examSessions, userId)) ?? [];
     await write(LOCAL_DATA_BASE_KEYS.examSessions, mergeExamSessions(guestExams, accountExams));
     result.examSessions = guestExams.length;
+  }
+
+  // 귀 열기 코스 진행
+  const guestCourse = safeParse<BeginnerCourseProgress>(
+    await read(LOCAL_DATA_BASE_KEYS.beginnerCourse, GUEST_STORAGE_ID),
+  );
+  if (guestCourse) {
+    const accountCourse = safeParse<BeginnerCourseProgress>(
+      await read(LOCAL_DATA_BASE_KEYS.beginnerCourse, userId),
+    );
+    await write(
+      LOCAL_DATA_BASE_KEYS.beginnerCourse,
+      mergeBeginnerProgress(
+        normalizeBeginnerProgress(guestCourse),
+        accountCourse ? normalizeBeginnerProgress(accountCourse) : null,
+      ),
+    );
   }
 
   await storage.multiRemove(allLocalDataKeys(GUEST_STORAGE_ID));

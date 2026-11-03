@@ -43,7 +43,7 @@ describe('localDataKey', () => {
     expect(localDataKey(LOCAL_DATA_BASE_KEYS.recentActivity, 'u1')).toBe(
       '@melodygen_recent_activity_u1',
     );
-    expect(allLocalDataKeys(GUEST_STORAGE_ID)).toHaveLength(6);
+    expect(allLocalDataKeys(GUEST_STORAGE_ID)).toHaveLength(7);
   });
 });
 
@@ -123,6 +123,22 @@ describe('migrateGuestDataToAccount', () => {
       '@melodygen_exam_sessions_guest': JSON.stringify([
         { id: 'e1', completed_at: '2026-11-01T00:00:00Z' },
       ]),
+      '@melodygen_beginner_course_guest': JSON.stringify({
+        completedLessonIds: ['day1_pitch_direction'],
+        lessonResults: {
+          day1_pitch_direction: { completedAt: '2026-11-01T00:00:00Z', correct: 4, total: 5 },
+        },
+        rewardedLessonIds: ['day1_pitch_direction'],
+        courseRewarded: false,
+      }),
+      '@melodygen_beginner_course_u1': JSON.stringify({
+        completedLessonIds: ['day2_long_short'],
+        lessonResults: {
+          day2_long_short: { completedAt: '2026-10-01T00:00:00Z', correct: 5, total: 5 },
+        },
+        rewardedLessonIds: ['day2_long_short'],
+        courseRewarded: false,
+      }),
     });
 
     const result = await migrateGuestDataToAccount(storage, 'u1');
@@ -143,6 +159,9 @@ describe('migrateGuestDataToAccount', () => {
       count: 2,
     });
     expect(JSON.parse(storage.data.get('@melodygen_exam_sessions_u1')!)).toHaveLength(1);
+    const course = JSON.parse(storage.data.get('@melodygen_beginner_course_u1')!);
+    expect(course.completedLessonIds.sort()).toEqual(['day1_pitch_direction', 'day2_long_short']);
+    expect(course.rewardedLessonIds).toHaveLength(2);
   });
 
   it('깨진 JSON은 건너뛰고 나머지는 이관한다', async () => {

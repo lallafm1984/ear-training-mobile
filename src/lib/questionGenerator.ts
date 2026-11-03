@@ -665,7 +665,6 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
   recentKeys.push(keyId);
   if (recentKeys.length > 2) recentKeys.shift();
 
-
   // 랜덤 멜로디 패턴 선택 (3연속 동일 패턴 방지)
   const last2Pat = recentPatterns.slice(-2);
   const patBlocked = last2Pat.length === 2 && last2Pat[0] === last2Pat[1] ? last2Pat[0] : null;
