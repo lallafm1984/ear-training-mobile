@@ -28,6 +28,13 @@ export interface ChoiceQuestion {
   abcNotation: string;
   /** 문제 설명 텍스트 */
   prompt: string;
+  /** 정답 해설 (한두 문장, 현재 언어) */
+  explanation: string;
+  /**
+   * 보기별 비교 청취용 ABC. 정답과 같은 근음·조성·배치로 각 보기를 연주한 소리라서
+   * "내가 고른 소리"와 "정답 소리"를 번갈아 들을 수 있다. 키 = 보기 텍스트.
+   */
+  choiceAbc: Record<string, string>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -155,9 +162,9 @@ function pickInterval(pool: number[]): number {
   return picked;
 }
 
-/** 유사 음정 우선 오답 생성 */
-function buildWrongChoices(correct: number, pool: number[]): string[] {
-  const wrongs: string[] = [];
+/** 유사 음정 우선 오답 생성 (반음 수 반환) */
+function buildWrongIntervals(correct: number, pool: number[]): number[] {
+  const wrongs: number[] = [];
   const usedIntervals = new Set<number>([correct]);
 
   // ① 유사 음정 우선 (풀 내외 무관)
@@ -165,14 +172,14 @@ function buildWrongChoices(correct: number, pool: number[]): string[] {
     if (wrongs.length >= 3) break;
     if (usedIntervals.has(sim)) continue;
     usedIntervals.add(sim);
-    wrongs.push(i18n.t('content:interval.' + sim));
+    wrongs.push(sim);
   }
 
   // ② 풀 내 나머지
   for (const i of shuffle(pool.filter((i) => !usedIntervals.has(i)))) {
     if (wrongs.length >= 3) break;
     usedIntervals.add(i);
-    wrongs.push(i18n.t('content:interval.' + i));
+    wrongs.push(i);
   }
 
   // ③ 전체에서 보충
@@ -182,11 +189,21 @@ function buildWrongChoices(correct: number, pool: number[]): string[] {
       .filter((i) => !usedIntervals.has(i));
     for (const i of shuffle(remaining)) {
       if (wrongs.length >= 3) break;
-      wrongs.push(i18n.t('content:interval.' + i));
+      wrongs.push(i);
     }
   }
 
   return wrongs.slice(0, 3);
+}
+
+/** 두 음 ABC. 보기 비교용으로 다른 음정을 같은 근음에서 연주할 때 표 범위를 넘으면 근음을 내린다. */
+function intervalToAbc(rootIdx: number, interval: number, direction: IntervalDirection): string {
+  const maxRoot = ABC_NOTE_TABLE.length - 1 - interval;
+  const safeRoot = Math.max(0, Math.min(rootIdx, maxRoot));
+  const rootNote = ABC_NOTE_TABLE[safeRoot];
+  const topNote = ABC_NOTE_TABLE[safeRoot + interval];
+  const [first, second] = direction === 'ascending' ? [rootNote, topNote] : [topNote, rootNote];
+  return `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${second} z |]`;
 }
 
 function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestion {
@@ -210,25 +227,28 @@ function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestio
     rootIdx = range.min + Math.floor(Math.random() * Math.max(1, maxRoot - range.min + 1));
   }
 
-  const topIdx = rootIdx + interval;
-  const rootNote = ABC_NOTE_TABLE[rootIdx];
-  const topNote = ABC_NOTE_TABLE[Math.min(topIdx, ABC_NOTE_TABLE.length - 1)];
-
-  // ABC notation: 방향 + 음 사이 쉼표 삽입
-  const [first, second] = direction === 'ascending' ? [rootNote, topNote] : [topNote, rootNote];
-  const abc = `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${second} z |]`;
+  const abc = intervalToAbc(rootIdx, interval, direction);
 
   const correctAnswer = i18n.t('content:interval.' + interval);
-  const wrongs = buildWrongChoices(interval, pool);
+  const wrongIntervals = buildWrongIntervals(interval, pool);
+  const choiceAbc: Record<string, string> = {};
+  for (const n of [interval, ...wrongIntervals]) {
+    choiceAbc[i18n.t('content:interval.' + n)] = intervalToAbc(rootIdx, n, direction);
+  }
 
   return {
     id: generateId(),
     contentType: 'interval',
     difficulty,
     correctAnswer,
-    choices: shuffle([correctAnswer, ...wrongs]),
+    choices: shuffle([
+      correctAnswer,
+      ...wrongIntervals.map((n) => i18n.t('content:interval.' + n)),
+    ]),
     abcNotation: abc,
     prompt: i18n.t('practice:choice.intervalPrompt'),
+    explanation: i18n.t('content:explain.interval.' + interval),
+    choiceAbc,
   };
 }
 
@@ -364,8 +384,8 @@ function chordToAbc(rootIdx: number, intervals: number[], presentation: ChordPre
   return `X:1\nM:4/4\nL:1/4\nK:C\n${ordered.join(' ')} |]`;
 }
 
-/** 유사 화음 우선 오답 생성 */
-function buildChordWrongChoices(correctKey: string, pool: string[]): string[] {
+/** 유사 화음 우선 오답 생성 (화음 키 반환) */
+function buildChordWrongKeys(correctKey: string, pool: string[]): string[] {
   const wrongs: string[] = [];
   const used = new Set<string>([correctKey]);
 
@@ -374,25 +394,38 @@ function buildChordWrongChoices(correctKey: string, pool: string[]): string[] {
     if (wrongs.length >= 3) break;
     if (used.has(sim)) continue;
     used.add(sim);
-    wrongs.push(i18n.t('content:chord.' + sim));
+    wrongs.push(sim);
   }
 
   // ② 풀 내 나머지
   for (const k of shuffle(pool.filter((k) => !used.has(k)))) {
     if (wrongs.length >= 3) break;
     used.add(k);
-    wrongs.push(i18n.t('content:chord.' + k));
+    wrongs.push(k);
   }
 
   // ③ 전체에서 보충
   if (wrongs.length < 3) {
     for (const k of shuffle(Object.keys(CHORD_TEMPLATES).filter((k) => !used.has(k)))) {
       if (wrongs.length >= 3) break;
-      wrongs.push(i18n.t('content:chord.' + k));
+      wrongs.push(k);
     }
   }
 
   return wrongs.slice(0, 3);
+}
+
+/** 같은 근음·배치·제시 방식으로 특정 화음을 연주하는 ABC (비교 청취용) */
+function chordKeyToAbc(
+  chordKey: string,
+  rootIdx: number,
+  voicing: ChordVoicing,
+  presentation: ChordPresentation,
+): string {
+  const base = CHORD_TEMPLATES[chordKey].intervals;
+  const intervals = voicing === 'open' ? openVoicing(base) : base;
+  const maxRoot = CHORD_NOTE_TABLE.length - 1 - Math.max(...intervals);
+  return chordToAbc(Math.max(0, Math.min(rootIdx, maxRoot)), intervals, presentation);
 }
 
 function generateChordQuestion(difficulty: ChordDifficulty): ChoiceQuestion {
@@ -435,16 +468,22 @@ function generateChordQuestion(difficulty: ChordDifficulty): ChoiceQuestion {
 
   const abc = chordToAbc(rootIdx, intervals, presentation);
   const correctAnswer = i18n.t('content:chord.' + chordKey);
-  const wrongs = buildChordWrongChoices(chordKey, pool);
+  const wrongKeys = buildChordWrongKeys(chordKey, pool);
+  const choiceAbc: Record<string, string> = {};
+  for (const k of [chordKey, ...wrongKeys]) {
+    choiceAbc[i18n.t('content:chord.' + k)] = chordKeyToAbc(k, rootIdx, voicing, presentation);
+  }
 
   return {
     id: generateId(),
     contentType: 'chord',
     difficulty,
     correctAnswer,
-    choices: shuffle([correctAnswer, ...wrongs]),
+    choices: shuffle([correctAnswer, ...wrongKeys.map((k) => i18n.t('content:chord.' + k))]),
     abcNotation: abc,
     prompt: i18n.t('practice:choice.chordPrompt'),
+    explanation: i18n.t('content:explain.chord.' + chordKey),
+    choiceAbc,
   };
 }
 
@@ -626,10 +665,8 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
   recentKeys.push(keyId);
   if (recentKeys.length > 2) recentKeys.shift();
 
-  const key = KEY_TEMPLATES[keyId];
 
   // 랜덤 멜로디 패턴 선택 (3연속 동일 패턴 방지)
-  const scale = parseScale(key.scaleNotes);
   const last2Pat = recentPatterns.slice(-2);
   const patBlocked = last2Pat.length === 2 && last2Pat[0] === last2Pat[1] ? last2Pat[0] : null;
   const patPool =
@@ -642,11 +679,24 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
   recentPatterns.push(patternIdx);
   if (recentPatterns.length > 2) recentPatterns.shift();
 
-  const melodyBody = KEY_MELODY_PATTERNS[patternIdx](scale);
+  const pattern = KEY_MELODY_PATTERNS[patternIdx];
+  // 같은 멜로디 패턴을 다른 조성으로 연주한 소리 (비교 청취용)
+  const keyToAbc = (id: string) => {
+    const k = KEY_TEMPLATES[id];
+    return `X:1\nM:4/4\nL:1/4\nK:${k.abcKey}\n${pattern(parseScale(k.scaleNotes))}`;
+  };
 
-  const abc = `X:1\nM:4/4\nL:1/4\nK:${key.abcKey}\n${melodyBody}`;
+  const abc = keyToAbc(keyId);
 
   const correctAnswer = i18n.t('content:key.' + keyId);
+  const relativeKeyId = RELATIVE_KEYS[keyId];
+  const explanation = i18n.t(
+    keyId.endsWith('_major') ? 'content:explain.keyMajor' : 'content:explain.keyMinor',
+    {
+      name: correctAnswer,
+      relative: relativeKeyId ? i18n.t('content:key.' + relativeKeyId) : '',
+    },
+  );
 
   // key_1: 2지선다 (장/단조 판별에 집중)
   if (difficulty === 'key_1') {
@@ -659,34 +709,44 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
       choices: shuffle([correctAnswer, i18n.t('content:key.' + otherKeyId)]),
       abcNotation: abc,
       prompt: i18n.t('practice:choice.keyModePrompt'),
+      explanation,
+      choiceAbc: {
+        [correctAnswer]: abc,
+        [i18n.t('content:key.' + otherKeyId)]: keyToAbc(otherKeyId),
+      },
     };
   }
 
   // key_2/key_3: 나란한조 우선 오답 생성
-  const wrongs: string[] = [];
+  const wrongKeyIds: string[] = [];
   const usedKeys = new Set<string>([keyId]);
 
   // ① 나란한조를 반드시 첫 번째 오답으로
-  const relativeKeyId = RELATIVE_KEYS[keyId];
   if (relativeKeyId && !usedKeys.has(relativeKeyId)) {
     usedKeys.add(relativeKeyId);
-    wrongs.push(i18n.t('content:key.' + relativeKeyId));
+    wrongKeyIds.push(relativeKeyId);
   }
 
   // ② 풀 내 나머지에서 채움
   for (const k of shuffle(pool.filter((k) => !usedKeys.has(k)))) {
-    if (wrongs.length >= 3) break;
+    if (wrongKeyIds.length >= 3) break;
     usedKeys.add(k);
-    wrongs.push(i18n.t('content:key.' + k));
+    wrongKeyIds.push(k);
   }
 
   // ③ 풀 외부에서 보충 (풀이 작을 때)
-  if (wrongs.length < 3) {
+  if (wrongKeyIds.length < 3) {
     const outside = Object.keys(KEY_TEMPLATES).filter((k) => !usedKeys.has(k));
     for (const k of shuffle(outside)) {
-      if (wrongs.length >= 3) break;
-      wrongs.push(i18n.t('content:key.' + k));
+      if (wrongKeyIds.length >= 3) break;
+      wrongKeyIds.push(k);
     }
+  }
+
+  const wrongs = wrongKeyIds.slice(0, 3);
+  const choiceAbc: Record<string, string> = {};
+  for (const k of [keyId, ...wrongs]) {
+    choiceAbc[i18n.t('content:key.' + k)] = keyToAbc(k);
   }
 
   return {
@@ -694,9 +754,11 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
     contentType: 'key',
     difficulty,
     correctAnswer,
-    choices: shuffle([correctAnswer, ...wrongs.slice(0, 3)]),
+    choices: shuffle([correctAnswer, ...wrongs.map((k) => i18n.t('content:key.' + k))]),
     abcNotation: abc,
     prompt: i18n.t('practice:choice.keyPrompt'),
+    explanation,
+    choiceAbc,
   };
 }
 
@@ -996,11 +1058,12 @@ function isCompatibleProgressionChoice(
   return template.kind !== 'progression' || candidate.roman.length === template.roman.length;
 }
 
-function buildProgressionWrongChoices(
+/** 오답 템플릿 생성. 각 오답은 정답과 같은 조성으로 연주할 수 있는 템플릿으로 반환한다. */
+function buildProgressionWrongTemplates(
   template: ProgressionTemplate,
   pool: ProgressionTemplate[],
-): string[] {
-  const wrongs: string[] = [];
+): ProgressionTemplate[] {
+  const wrongs: ProgressionTemplate[] = [];
   const usedAnswerKeys = new Set<string>([template.answerKey]);
   const fallbackPool = template.kind === 'cadence' ? CADENCE_TEMPLATES : PROGRESSION_TEMPLATES;
   const answerUniverse = [...pool, ...fallbackPool];
@@ -1011,15 +1074,12 @@ function buildProgressionWrongChoices(
   for (const similarKey of template.similar) {
     if (wrongs.length >= 3) break;
     if (usedAnswerKeys.has(similarKey)) continue;
-    if (
-      !answerUniverse.some(
-        (candidate) =>
-          candidate.answerKey === similarKey && isCompatibleProgressionChoice(template, candidate),
-      )
-    )
-      continue;
+    const candidate = answerUniverse.find(
+      (c) => c.answerKey === similarKey && isCompatibleProgressionChoice(template, c),
+    );
+    if (!candidate) continue;
     usedAnswerKeys.add(similarKey);
-    wrongs.push(progressionAnswerLabel(template.kind, similarKey));
+    wrongs.push(candidate);
   }
 
   for (const candidate of shuffle(
@@ -1027,7 +1087,7 @@ function buildProgressionWrongChoices(
   )) {
     if (wrongs.length >= 3) break;
     usedAnswerKeys.add(candidate.answerKey);
-    wrongs.push(progressionAnswerLabel(template.kind, candidate.answerKey));
+    wrongs.push(candidate);
   }
 
   for (const candidate of shuffle(
@@ -1039,10 +1099,20 @@ function buildProgressionWrongChoices(
   )) {
     if (wrongs.length >= 3) break;
     usedAnswerKeys.add(candidate.answerKey);
-    wrongs.push(progressionAnswerLabel(template.kind, candidate.answerKey));
+    wrongs.push(candidate);
   }
 
   return wrongs.slice(0, 3);
+}
+
+/** 오답 템플릿을 정답과 같은 조성으로 연주한다. 장/단 모드가 다르면 같은 으뜸음의 해당 모드로 바꾼다. */
+function keyForTemplate(template: ProgressionTemplate, key: ProgressionKey): ProgressionKey {
+  const wantsMinor = template.mode === 'minor';
+  const isMinorKey = key.abcKey.endsWith('m');
+  if (wantsMinor === isMinorKey) return key;
+  return wantsMinor
+    ? { abcKey: `${key.abcKey}m`, tonicMidi: key.tonicMidi }
+    : { abcKey: key.abcKey.slice(0, -1), tonicMidi: key.tonicMidi };
 }
 
 function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQuestion {
@@ -1054,19 +1124,33 @@ function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQ
   const template = pickProgressionTemplate(pool);
   const key = pickProgressionKey(template.mode);
   const correctAnswer = progressionAnswerLabel(template.kind, template.answerKey);
-  const wrongs = buildProgressionWrongChoices(template, pool);
+  const wrongTemplates = buildProgressionWrongTemplates(template, pool);
+  const choiceAbc: Record<string, string> = {};
+  for (const t of [template, ...wrongTemplates]) {
+    choiceAbc[progressionAnswerLabel(t.kind, t.answerKey)] = renderProgressionAbc(
+      t,
+      keyForTemplate(t, key),
+    );
+  }
 
   return {
     id: generateId(),
     contentType: 'progression',
     difficulty,
     correctAnswer,
-    choices: shuffle([correctAnswer, ...wrongs]),
+    choices: shuffle([
+      correctAnswer,
+      ...wrongTemplates.map((t) => progressionAnswerLabel(t.kind, t.answerKey)),
+    ]),
     abcNotation: renderProgressionAbc(template, key),
     prompt:
       template.kind === 'cadence'
         ? i18n.t('practice:choice.cadencePrompt')
         : i18n.t('practice:choice.progressionPrompt'),
+    explanation: i18n.t(
+      `content:explain.${template.kind === 'cadence' ? 'cadence' : 'progression'}.${template.answerKey}`,
+    ),
+    choiceAbc,
   };
 }
 

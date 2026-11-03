@@ -42,7 +42,14 @@
     "progressionPrompt": "聞こえる和声進行を選んでください。",
     "cadencePrompt": "最後のカデンツの種類を選んでください。",
     "keyModePrompt": "メロディーを聴いて長調/短調を答えてください。",
-    "keyPrompt": "メロディーを聴いて調性を答えてください。"
+    "keyPrompt": "メロディーを聴いて調性を答えてください。",
+    "explainTitle": "解説",
+    "listenCorrect": "正解を聴く",
+    "listenMine": "自分の答えを聴く",
+    "showScore": "楽譜を見る",
+    "hideScore": "楽譜を隠す",
+    "scoreCorrect": "正解 · {{choice}}",
+    "scoreMine": "自分の答え · {{choice}}"
   },
   "notation": {
     "listenAndWrite": "聴いて記譜してください",

@@ -42,7 +42,14 @@
     "progressionPrompt": "들리는 화성 진행을 고르세요.",
     "cadencePrompt": "마지막 종지의 종류를 고르세요.",
     "keyModePrompt": "멜로디를 듣고 장조/단조를 맞추세요.",
-    "keyPrompt": "멜로디를 듣고 조성을 맞추세요."
+    "keyPrompt": "멜로디를 듣고 조성을 맞추세요.",
+    "explainTitle": "해설",
+    "listenCorrect": "정답 듣기",
+    "listenMine": "내 답 듣기",
+    "showScore": "악보 보기",
+    "hideScore": "악보 숨기기",
+    "scoreCorrect": "정답 · {{choice}}",
+    "scoreMine": "내 답 · {{choice}}"
   },
   "notation": {
     "listenAndWrite": "듣고 기보하세요",

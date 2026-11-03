@@ -42,7 +42,14 @@
     "progressionPrompt": "Listen and identify the harmonic progression.",
     "cadencePrompt": "Listen and identify the final cadence.",
     "keyModePrompt": "Listen and identify major or minor.",
-    "keyPrompt": "Listen and identify the key."
+    "keyPrompt": "Listen and identify the key.",
+    "explainTitle": "Explanation",
+    "listenCorrect": "Hear the answer",
+    "listenMine": "Hear my choice",
+    "showScore": "Show score",
+    "hideScore": "Hide score",
+    "scoreCorrect": "Answer · {{choice}}",
+    "scoreMine": "My choice · {{choice}}"
   },
   "notation": {
     "listenAndWrite": "Listen and notate",

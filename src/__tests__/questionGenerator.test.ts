@@ -152,3 +152,50 @@ describe('generateChoiceQuestions (배치)', () => {
     expect(questions).toHaveLength(0);
   });
 });
+
+describe('해설과 비교 청취', () => {
+  const cases = [
+    ['interval', 'interval_3'],
+    ['chord', 'chord_4'],
+    ['key', 'key_1'],
+    ['key', 'key_3'],
+    ['progression', 'progression_2'],
+    ['progression', 'progression_4'],
+  ] as const;
+
+  cases.forEach(([category, difficulty]) => {
+    it(`${category}/${difficulty}: 모든 보기에 비교용 ABC와 해설이 있다`, () => {
+      for (let i = 0; i < 10; i++) {
+        const q = generateChoiceQuestion(category, difficulty);
+        expect(q.explanation.length).toBeGreaterThan(10);
+        expect(q.explanation).not.toMatch(/^content:/);
+        for (const choice of q.choices) {
+          expect(q.choiceAbc[choice]).toContain('K:');
+        }
+        expect(q.choiceAbc[q.correctAnswer]).toBe(q.abcNotation);
+      }
+    });
+  });
+
+  it('음정 오답 소리는 정답과 같은 방향으로 연주된다', () => {
+    const q = generateChoiceQuestion('interval', 'interval_1');
+    const notes = (abc: string) =>
+      abc
+        .split('\n')
+        .pop()!
+        .split(' ')
+        .filter((n) => n !== 'z' && n !== '|]');
+    const correctNotes = notes(q.abcNotation);
+    expect(correctNotes).toHaveLength(2);
+    for (const choice of q.choices) {
+      expect(notes(q.choiceAbc[choice])).toHaveLength(2);
+    }
+  });
+
+  it('조성 오답 소리는 같은 멜로디 패턴을 다른 조표로 연주한다', () => {
+    const q = generateChoiceQuestion('key', 'key_2');
+    const keyLine = (abc: string) => abc.split('\n').find((l) => l.startsWith('K:'));
+    const keys = new Set(q.choices.map((c) => keyLine(q.choiceAbc[c])));
+    expect(keys.size).toBe(q.choices.length);
+  });
+});
