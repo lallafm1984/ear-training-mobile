@@ -15,22 +15,22 @@ npm install
 npx tsc --noEmit && npm run lint && npm run format:check && npm test
 ```
 
-기대값: TypeScript 오류 0, ESLint 오류 0, Prettier 통과, Jest **31 스위트 / 460개** 통과.
+기대값: TypeScript 오류 0, ESLint 오류 0, Prettier 통과, Jest **34 스위트 / 476개** 통과.
 
 ## 1. 현재 상태 한눈에
 
 | 항목 | 상태 |
 | --- | --- |
 | 라이브 버전 | 1.1.3 / Android versionCode 62 (소스 = 브랜치 `sync/v58-local-snapshot`, 커밋 3a1a283). 원격 `master`(e5858fe, versionCode 52)는 더 오래된 상태 |
-| 2.0 브랜치 HEAD | `9804319` (`claude/project-thread-6dd7sm`), PR #12 https://github.com/lallafm1984/ear-training-mobile/pull/12 (오픈, 미머지) |
-| 앱 버전 | `app.json` version **2.0.0**, android.versionCode **64** |
-| 출시 후보 AAB | 맥북 `/Users/lim/melodygen-build/ear-training-mobile-2.0/build/melodygen-android-v64.aab` (72.2MB, 파일 SHA-256 `82757928191c21d12bbf48ea14ea48a0595ee0dc2552f7b700233d45e7d54fa7`, 커밋 9a84025 기준). 같은 폴더의 `melodygen-android-v63.aab`(프로모션 제거 전)는 **사용하지 않음** |
+| 2.0 브랜치 HEAD | 추가 QA·UI·콘텐츠 수정 `b638689`·`4059b99`·`0163bcc`, 빌드 `b676f16` (`claude/project-thread-6dd7sm`), PR #12 https://github.com/lallafm1984/ear-training-mobile/pull/12 (오픈, 미머지) |
+| 앱 버전 | `app.json` version **2.0.0**, android.versionCode **67** |
+| 출시 후보 AAB | `build/melodygen-android-v67.aab` (2.0.0/67, 72.2MB, SHA-256 `30c30274e1531cbdd2cfae288a062642ccc79d86add25fe56cb1a47a175b5fda`, 소스 `b676f16`). Mac 원본과 Windows 최종 보관본 경로는 12장. v63~v66은 최신 후보가 아님 |
 | 코드 | ✅ tsc / eslint / prettier 통과 |
-| 테스트 | ✅ Jest 31 스위트 460개. 악보 콘텐츠는 abcjs 실제 렌더로 경고 0 확인(2,440 + 361 + 450 문항) |
-| 빌드 | ✅ v64 AAB 로컬 Gradle 빌드 완료, upload 키 서명 지문 일치, `jarsigner -verify` 통과, 번들에 Supabase 호스트 포함 확인 |
+| 테스트 | ✅ Jest 34 스위트 476개. 이전 abcjs 실제 렌더 기록은 2,440 + 361 + 450 문항. 이번 추가 검증은 12장 |
+| 빌드 | ✅ v67 AAB 로컬 Gradle 빌드·Windows 복사 완료, upload 키 서명 지문 일치, `jarsigner -verify` 통과, 번들에 Supabase 호스트 포함 확인 |
 | 운영 DB | ❌ 마이그레이션 3건 미적용 (6장) |
 | 스토어 | ❌ 문구만 준비(`store/android/listing.md`). AAB 업로드·스크린샷·출시 노트 등록 미진행 |
-| 실기기 | ❌ 2.0 빌드 미검증 (7장 체크리스트) |
+| 실기기 | ⚠️ Galaxy S25에서 리듬 탭 신호·언어 선택/취소/적용/재시작 유지 확인. 알림 권한·OS 예약 확인. 나머지는 7·12장 |
 
 ## 2. 환경 사실 (맥북)
 
@@ -139,14 +139,14 @@ select id, enabled, ends_at from public.app_promotions;                         
 
 ## 7. 남은 일 (우선순위 순)
 
-1. **실기기 검증** (v64 AAB 또는 `--apk --no-bump` APK). 특히:
+1. **실기기 검증 확대** (v67 AAB 또는 `--apk --no-bump` APK). 특히:
    - 리듬 탭 클릭 트랙 동기화(4/4·3/4·6/8), 6/8 강박 점 표시, 허용 오차 체감
    - 공유 카드 캡처·공유 시트(view-shot)
    - 리마인더 알림 권한 요청·예약·수신(앱이 포그라운드일 때는 표시되지 않는 것이 의도된 동작)
    - 화성진행 4성부 재생 음량·속도, 6/8 둘잇단 입력·재생
    - 태블릿 레이아웃(가운데 정렬, 모달 폭), 통계 화면 새 섹션, NEW 배지, 요금제 비교표
    - 게스트 → 로그인 데이터 이관, 1.1.3 설치 위에 덮어 설치 시 기존 기록 유지
-2. **Play Console** 내부 테스트 트랙에 v64 업로드 → 검증 → 프로덕션. 스토어 문구·스크린샷·출시 노트 갱신.
+2. **Play Console** 내부 테스트 트랙에 v67 업로드 → 검증 → 프로덕션. 스토어 문구·스크린샷·출시 노트 갱신.
 3. **운영 DB** 마이그레이션 1·2 적용, 웹훅 확인 후 3 적용 (6장).
 4. **QA 반복 루프 유지**(Lim 상시 지시): 디자인·코드·사용자·콘텐츠 관점으로 점검 → 수정 → 재점검을 반복하고 PR #12 설명의 라운드 표에 커밋을 추가한다.
 5. 결정 대기: `ScoreEditor` 완전 삭제 여부(현재 숨김만). `TODOS.md` 1번(계정 삭제 Edge Function)은 `delete_own_account` RPC(security definer) 도입으로 해소된 것으로 보이나 운영 DB에 함수가 존재하는지 확인해 TODOS를 갱신할 것.
@@ -156,7 +156,7 @@ select id, enabled, ends_at from public.app_promotions;                         
 - 2성부 4단계 병행 1/40 잔존, 화음 객관식은 조표 없이 ♯ 철자(소리는 정확), 부분 연습은 설정을 바꾸지 않으면 항상 C장조·4/4(조성 랜덤은 후속 과제).
 - 화면 전반에 하드코딩 hex 색상이 많다(COLORS 토큰 미사용). 다크모드 제외 결정으로 보류.
 - `expo-notifications`에 `setNotificationHandler`가 없어 포그라운드 알림은 표시되지 않는다(의도된 허용).
-- `contentQaRules.test.ts`의 "bass_4/C 6/8: repeat3"가 한 번 간헐 실패했다가 재실행에서 통과한 적이 있다. 반복되면 생성 시드/규칙을 살필 것.
+- `contentQaRules.test.ts`의 간헐 `repeat3` 실패는 F장조 6/8·bass_4/시드 463으로 재현했다. 반복 구간 마지막 음의 화성 제약 때문에 대체 후보가 없던 경우였고, 앞선 두 반복음도 기존 제약 안에서 검사하도록 `0163bcc`에서 수정했다. 고정 시드 회귀 테스트와 전체 검사가 통과했다. 별도로 알려진 병행 잔존 한계는 이번 점검에서 해소했다고 주장하지 않는다.
 - `npm audit`에서 취약점 다수 보고(의존성 트리, 미조치).
 
 ## 9. 작업 규칙 (Lim 요구사항 요약)
@@ -188,3 +188,46 @@ select id, enabled, ends_at from public.app_promotions;                         
 - `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md` — 귀 열기 코스 설계
 - `store/android/listing.md`, `store/android/RELEASE_GUIDE.md` — 스토어 문구·출시 절차
 - `TODOS.md` — 남은 일 목록(7장과 함께 갱신할 것)
+
+
+## 12. Codex 추가 QA·사용자 피드백 반영 (2026-11-04)
+
+### 코드
+
+| 커밋 | 내용 |
+| --- | --- |
+| `b638689` | 리듬 탭 6/8 클릭 트랙 분모 고정(4) 제거, 탭 전환 시 예약 정답 재생 취소. 계정 삭제 RPC 실패 시 프로필·로컬 데이터·로그인 보존. 온보딩·서비스 소개의 오래된 6개 카테고리 문구 갱신 |
+| `4059b99` | 준비(회색) → 입력(진한 주황색·큰 “지금 탭하세요!”) 전환 강조, 마지막 박 뒤 다음 마디 1 대신 입력 종료 표시. 언어 설정을 3개 라디오 옵션 선택 → 적용 방식으로 변경(취소·뒤로가기 시 현재 언어 유지) |
+| `0163bcc` | 2성부 동일음 3회 반복 간헐 실패의 고정 시드 재현·수정 |
+| `b676f16` | Android versionCode 67 출시 후보 |
+
+- `tsc --noEmit`, ESLint, Prettier 통과. Jest **34 스위트/476개** 통과.
+- `rhythmTapScreen.test.ts`: 4/4·3/4·6/8 클릭 간격·카운트인·취소, 자동 재생 충돌, 마지막 박 이후 숫자 재시작 방지.
+- `languagePickerModal.test.ts`: 현재 선택, 적용 전 보류, 취소·뒤로가기, 오류 재시도, 연속 적용 방지.
+- `authContext.test.ts`: RPC 실패 시 보존, 서버 성공 후 로컬 정리 순서, 게스트 삭제 차단.
+- 수정 전 코드에서 새 회귀 테스트의 실패를 확인했고, 수정 후 통과했다. 콘텐츠 시드 463도 수정 전 실패/수정 후 통과를 확인했다.
+- 실제 WebView 클릭 예약 코드의 4/4(750ms)·3/4(714.286ms)·6/8(326.087ms) 간격 및 강박 주기를 별도 하네스로 검증했다. 음질·청감 검증과 구분한다.
+
+### Android UI 검증 범위
+
+- **Galaxy S25(SM-S931N), 별도 `com.melodygen.app.qa` 패키지:** 준비/입력/종료 화면, 언어 선택만으로는 미변경·취소·적용·앱 재시작 후 언어 유지 확인. 확인 후 언어는 한국어로 복구했다. 화면 캡처는 UI 코드가 동일한 QA v66에서 수집했다.
+- **Android 태블릿 에뮬레이터(1600×2560, density 240):** 준비/입력/종료 화면의 가운데 정렬과 신호 변경, 결과 → 공유 카드 → 이미지 캡처 → Android 공유 시트의 이미지 미리보기 확인. 수신자를 고르거나 전송하지 않았다.
+- **알림:** S25에서 POST_NOTIFICATIONS 권한 granted 및 QA 앱의 20:00 알림이 Android AlarmManager에 예약됨을 확인했다. 실제 알림 수신은 아직 확인하지 않았다.
+- **기존 1.1.3 덮어 설치:** S25의 Play 설치본(versionCode 62)은 Play 서명이고, 로컬 APK는 upload 서명이라 직접 덮어 설치할 수 없다. 원본 앱을 삭제하지 않고 QA 패키지를 따로 설치했다. 실제 업데이트 데이터 보존 검증은 Play 내부 테스트 경로가 필요하다.
+- 6/8 둘잇단 기보, 4성부 청감, 게스트 → 로그인 실제 이관, 테스트 계정 탈퇴는 여전히 별도 실기기 확인이 필요하다.
+
+### 최신 산출물
+
+- 출시용 AAB: Mac `build/melodygen-android-v67.aab` / Windows **`D:\Projects\YulProject_1\ear-training-mobile\build\melodygen-android-v67.aab`**.
+- AAB SHA-256: `30c30274e1531cbdd2cfae288a062642ccc79d86add25fe56cb1a47a175b5fda`. upload 인증서 지문 일치, `jarsigner -verify` 통과, Supabase 호스트 포함 확인.
+- 별도 앱/arm64 QA APK: Mac `build/qa-v67/melodygen-android-v67-qa-arm64.apk` / Windows **`D:\Projects\YulProject_1\ear-training-mobile\build\melodygen-android-v67-qa-arm64.apk`** (51.3MB).
+- QA APK SHA-256: `1fdc288595a3f614d80366a68b07a05b637ce73647dc73d15c694b1adfa9db99`. `apksigner verify`로 upload 인증서를 직접 확인했다. 기존 빌드 스크립트는 APK의 v2/v3 서명을 keytool로 읽지 못해 인증서 경고를 출력하므로 APK는 apksigner 결과로 판정한다.
+- Windows에서 두 파일의 SHA-256이 Mac 원본과 일치함을 확인했다. QA APK는 Play 업로드용이 아니며, OAuth scheme도 `melodygen-qa`로 분리했다.
+- UI 증거: `build/qa-v67/screenshots/`(Git 제외). 서명·환경 변수 등 비밀값은 기록하지 않았다.
+
+### 운영·스토어
+
+- 이번 작업에서 운영 DB는 **조회만** 했다. `profiles` RLS=false/정책 0개/구독 보호 트리거 없음, 종료 프로모션 enabled=true를 확인했다.
+- `delete_own_account()`와 auth.users → profiles `ON DELETE CASCADE`가 운영 DB에 존재한다. 기존 TODOS의 “별도 계정 삭제 Edge Function 필요” 항목은 실제 상태에 맞게 고쳤다.
+- `revenuecat-webhook`은 ACTIVE/version 2지만 RevenueCat 측 연결과 실제 수신 여부는 확인하지 않았다. 6장의 3건 마이그레이션은 여전히 미적용이다.
+- Play 업로드·내부 테스트 배포·프로덕션 출시는 수행하지 않았다. 다음 후보는 v67이며 v64~v66을 대신 사용하지 않는다.

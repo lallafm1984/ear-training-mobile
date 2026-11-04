@@ -18,9 +18,9 @@
 
 ## 2.0 업데이트 이후 남은 일 (2026-11-04)
 
-- [ ] 새 네이티브 모듈(expo-notifications, react-native-view-shot) 포함 개발 빌드·릴리스 빌드 후 실기기 확인: 알림 예약, 공유 카드 캡처, 리듬 탭 클릭 트랙 동기화
+- [ ] 실기기 검증 확대: 알림 실제 수신, 6/8 둘잇단 기보·4성부 청감, 게스트 로그인 이관, Play 업데이트 데이터 보존. S25의 리듬 탭 신호·언어 선택/취소/적용/재시작 유지·알림 권한/예약, 태블릿 에뮬레이터의 공유 카드 캡처·공유 시트는 확인했다(`docs/HANDOFF_2_0_CODEX_20261104.md` 12장).
 - [ ] profiles RLS 마이그레이션 운영 DB 적용 (`docs/PROFILES_RLS_20261103.md`)
 - [ ] 종료 프로모션·공지 비활성화 마이그레이션 운영 DB 적용 (`20261104100000_end_admissions_promotion.sql`)
-- [ ] Play Console 스토어 문구·스크린샷·출시 노트 갱신 (`store/android/listing.md`)
+- [ ] Play Console 내부 테스트 v67 AAB 업로드, 스토어 문구·스크린샷·출시 노트 갱신 (`store/android/listing.md`)
 - [ ] (보류) iOS: Apple 로그인, 마이크 권한 문구 삭제, 계정 삭제 확인
 - [ ] (보류) 연간 요금제·무료 체험, 다크 모드
