@@ -28,7 +28,7 @@ npx tsc --noEmit && npm run lint && npm run format:check && npm test
 | 코드 | ✅ tsc / eslint / prettier 통과 |
 | 테스트 | ✅ Jest 34 스위트 476개. 이전 abcjs 실제 렌더 기록은 2,440 + 361 + 450 문항. 이번 추가 검증은 12장 |
 | 빌드 | ✅ v67 AAB 로컬 Gradle 빌드·Windows 복사 완료, upload 키 서명 지문 일치, `jarsigner -verify` 통과, 번들에 Supabase 호스트 포함 확인 |
-| 운영 DB | ❌ 마이그레이션 3건 미적용 (6장) |
+| 운영 DB | ✅ profiles RLS·종료 프로모션 비활성화 2건 적용·검증. 구독 보호 트리거 1건은 웹훅 연결 확인 전 보류 (`docs/PROFILES_RLS_20261103.md`) |
 | 스토어 | ❌ 문구만 준비(`store/android/listing.md`). AAB 업로드·스크린샷·출시 노트 등록 미진행 |
 | 실기기 | ⚠️ Galaxy S25에서 리듬 탭 신호·언어 선택/취소/적용/재시작 유지 확인. 알림 권한·OS 예약 확인. 나머지는 7·12장 |
 
@@ -117,7 +117,9 @@ npm run android:build:gradle -- --apk --no-bump   # 실기기 설치용 APK, 버
 - Play Console 절차는 `store/android/RELEASE_GUIDE.md`, 등록 문구·출시 노트는 `store/android/listing.md`. 내부 테스트 트랙 → 검증 → 프로덕션 순서. Play App Signing을 쓰므로 로컬 AAB는 upload 키로 서명되고 Google이 재서명한다(`docs/LOCAL_ANDROID_BUILD_MAC.md`).
 - 2.0에는 새 네이티브 모듈(expo-notifications, react-native-view-shot)이 있어 **개발 클라이언트도 새로 빌드**해야 한다(`eas.json` development 프로필 또는 `npx expo run:android`).
 
-## 6. 운영 Supabase에 미적용인 마이그레이션 (3건)
+## 6. 운영 Supabase 마이그레이션 적용 현황
+
+2026-11-04 사용자 승인 후 **1·2번 적용 완료**. 역할별 접근·구독 캐시 갱신은 ROLLBACK 트랜잭션으로 검증했고, 빌드 62·67 × ko/en/ja 앱 제어 응답 해시는 적용 전후 동일하다. 운영 이력은 `20261104073459/enable_profiles_rls`, `20261104073628/end_admissions_promotion`. 아래 3번만 보류이며, 상세 결과는 `docs/PROFILES_RLS_20261103.md`의 운영 적용 결과를 따른다.
 
 운영 프로젝트 ref `xcxlqeaenpsnnxphedci`. 적용은 Supabase 대시보드 SQL Editor에서 파일 내용을 실행하거나, CLI를 쓸 수 있으면 `supabase link` 후 적용한다. 자세한 배경·검증·롤백은 `docs/PROFILES_RLS_20261103.md`.
 
@@ -147,7 +149,7 @@ select id, enabled, ends_at from public.app_promotions;                         
    - 태블릿 레이아웃(가운데 정렬, 모달 폭), 통계 화면 새 섹션, NEW 배지, 요금제 비교표
    - 게스트 → 로그인 데이터 이관, 1.1.3 설치 위에 덮어 설치 시 기존 기록 유지
 2. **Play Console** 내부 테스트 트랙에 v67 업로드 → 검증 → 프로덕션. 스토어 문구·스크린샷·출시 노트 갱신.
-3. **운영 DB** 마이그레이션 1·2 적용, 웹훅 확인 후 3 적용 (6장).
+3. **운영 DB** 1·2는 적용 완료. RevenueCat 웹훅 연결·실제 수신 확인 후 3(구독 보호 트리거)만 검토 (6장).
 4. **QA 반복 루프 유지**(Lim 상시 지시): 디자인·코드·사용자·콘텐츠 관점으로 점검 → 수정 → 재점검을 반복하고 PR #12 설명의 라운드 표에 커밋을 추가한다.
 5. 결정 대기: `ScoreEditor` 완전 삭제 여부(현재 숨김만). `TODOS.md` 1번(계정 삭제 Edge Function)은 `delete_own_account` RPC(security definer) 도입으로 해소된 것으로 보이나 운영 DB에 함수가 존재하는지 확인해 TODOS를 갱신할 것.
 

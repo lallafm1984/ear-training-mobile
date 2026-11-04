@@ -14,13 +14,13 @@
 - **Why:** 구독 컬럼 보호 트리거 적용 후에는 클라이언트의 tier 캐시 갱신이 무시된다. 본인 행 RLS와 구독 컬럼 보호 트리거는 별개다.
 - **Depends on:** 구독 보호 트리거 적용 전 실제 RevenueCat → 웹훅 수신 연결 확인
 - **2026-11-03 현황:** 코드에 `supabase/functions/revenuecat-webhook`과 RLS 마이그레이션 2건(`20261103120000_enable_profiles_rls.sql`, `20261103120100_protect_profiles_subscription_columns.sql`)이 있다. 운영 DB 적용은 아직이며 절차는 `docs/PROFILES_RLS_20261103.md`. Advisor의 `rls_disabled_in_public`(profiles) 경고는 첫 번째 마이그레이션 적용으로 해소된다.
-- **2026-11-04 운영 조회:** `revenuecat-webhook`은 ACTIVE/version 2로 배포되어 있다. RevenueCat 대시보드의 연결·실제 수신은 미확인. `profiles` RLS는 false, 정책 0개, 구독 보호 트리거도 미적용이다. 종료된 `admissions_support_2026`의 `enabled`도 아직 true다(종료 시각은 지남). 이번 점검은 읽기 전용이며 운영 DB 변경은 하지 않았다.
+- **2026-11-04 운영 반영:** `profiles` RLS와 본인 정책 4개 적용, 종료 프로모션·공지 enabled=false 반영을 완료했다. 기존 tier 캐시 쓰기를 포함한 역할별 CRUD를 ROLLBACK 테스트로 검증했고, 빌드 62/67의 ko/en/ja 앱 제어 응답도 동일하다. `revenuecat-webhook`은 ACTIVE/version 2 및 service_role 사용을 확인했다. RevenueCat 대시보드의 연결·실제 수신은 미확인이라 구독 보호 트리거만 보류한다. 상세 이력은 `docs/PROFILES_RLS_20261103.md`.
 
 ## 2.0 업데이트 이후 남은 일 (2026-11-04)
 
 - [ ] 실기기 검증 확대: 알림 실제 수신, 6/8 둘잇단 기보·4성부 청감, 게스트 로그인 이관, Play 업데이트 데이터 보존. S25의 리듬 탭 신호·언어 선택/취소/적용/재시작 유지·알림 권한/예약, 태블릿 에뮬레이터의 공유 카드 캡처·공유 시트는 확인했다(`docs/HANDOFF_2_0_CODEX_20261104.md` 12장).
-- [ ] profiles RLS 마이그레이션 운영 DB 적용 (`docs/PROFILES_RLS_20261103.md`)
-- [ ] 종료 프로모션·공지 비활성화 마이그레이션 운영 DB 적용 (`20261104100000_end_admissions_promotion.sql`)
+- [x] profiles RLS 마이그레이션 운영 DB 적용 (`docs/PROFILES_RLS_20261103.md`, 2026-11-04 역할별 접근 검증 완료)
+- [x] 종료 프로모션·공지 비활성화 마이그레이션 운영 DB 적용 (`20261104100000_end_admissions_promotion.sql`, 구버전 RPC 응답 동일)
 - [ ] Play Console 내부 테스트 v67 AAB 업로드, 스토어 문구·스크린샷·출시 노트 갱신 (`store/android/listing.md`)
 - [ ] (보류) iOS: Apple 로그인, 마이크 권한 문구 삭제, 계정 삭제 확인
 - [ ] (보류) 연간 요금제·무료 체험, 다크 모드
