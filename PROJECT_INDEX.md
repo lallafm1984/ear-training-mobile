@@ -413,6 +413,7 @@ Login → Onboarding → Home
 | `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md` | 초급자용 “귀 열기 코스” 설계안 (2026-11-03 BeginnerCourse/BeginnerLesson으로 구현) |
 | `docs/PROFILES_RLS_20261103.md`              | profiles RLS 활성화·tier 보호 트리거 마이그레이션의 배경·적용·검증 절차            |
 | `docs/CONTENT_SCOPE_2_0.md`                  | 2.0 추가 콘텐츠의 무료/Pro 범위표(NEW 배지·요금제 비교표 근거)와 1.1.x 데이터 보존 점검 |
+| `docs/HANDOFF_2_0_CODEX_20261104.md`         | 2.0 작업 인수인계: 현재 상태·커밋 요약·설계 규약·빌드 절차·미적용 DB 마이그레이션·남은 일 |
 | `AD_COPY.md`                                 | 페이지별 광고 문구 모음 (13개 활성 화면)                                           |
 | `store/android/listing.md`                   | Play 스토어 등록 문구 2.0 (ko/en/ja 짧은/전체 설명, 릴리스 노트, 앱 액세스 정보)   |
 | `store/android/RELEASE_GUIDE.md`             | Play Console 릴리스 절차 가이드                                                    |
