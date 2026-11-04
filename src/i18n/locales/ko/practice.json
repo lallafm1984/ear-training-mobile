@@ -57,7 +57,10 @@
     "showScore": "악보 보기",
     "hideScore": "악보 숨기기",
     "scoreCorrect": "정답 · {{choice}}",
-    "scoreMine": "내 답 · {{choice}}"
+    "scoreMine": "내 답 · {{choice}}",
+    "intervalHarmonicPrompt": "동시에 울리는 두 음을 듣고 음정을 맞추세요.",
+    "intervalCompoundPrompt": "옥타브를 넘는 두 음을 듣고 복합음정을 맞추세요.",
+    "scaleBothPrompt": "상행 뒤 하행까지 듣고 음계 종류를 맞추세요."
   },
   "notation": {
     "listenAndWrite": "듣고 기보하세요",

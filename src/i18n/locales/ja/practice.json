@@ -57,7 +57,10 @@
     "showScore": "楽譜を見る",
     "hideScore": "楽譜を隠す",
     "scoreCorrect": "正解 · {{choice}}",
-    "scoreMine": "自分の答え · {{choice}}"
+    "scoreMine": "自分の答え · {{choice}}",
+    "intervalHarmonicPrompt": "同時に鳴る2つの音を聴いて音程を答えてください。",
+    "intervalCompoundPrompt": "オクターブを超える2つの音を聴いて複合音程を答えてください。",
+    "scaleBothPrompt": "上行と下行を聴いて音階の種類を答えてください。"
   },
   "notation": {
     "listenAndWrite": "聴いて記譜してください",

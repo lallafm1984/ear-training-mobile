@@ -20,7 +20,16 @@ export const RHYTHM_TAP_LEVELS: Record<RhythmTapDifficulty, RhythmTapLevelConfig
   tap_2: { engineLevel: 2, measures: 1, tempo: 84, timeSignature: '4/4' },
   tap_3: { engineLevel: 3, measures: 2, tempo: 84, timeSignature: '4/4' },
   tap_4: { engineLevel: 4, measures: 2, tempo: 88, timeSignature: '4/4' },
+  // 5·6단계: 박자 확장. 3/4는 점음표·당김음 레벨, 6/8은 ♪ 단위 클릭(3개 묶음 강박)으로 카운트한다
+  tap_5: { engineLevel: 3, measures: 2, tempo: 84, timeSignature: '3/4' },
+  tap_6: { engineLevel: 3, measures: 2, tempo: 92, timeSignature: '6/8' },
 };
+
+/** 복합박자(6/8·9/8·12/8)면 ♪ 3개마다 강박 — 탭 화면의 박 점 강조와 클릭 트랙 강박 주기에 쓴다 */
+export function accentEveryFor(timeSignature: string): number {
+  const { top, bottom } = parseTimeSignature(timeSignature);
+  return bottom === 8 && top % 3 === 0 ? 3 : top;
+}
 
 /** 탭 단계에서 미리 들려주는 카운트인 마디 수 */
 export const RHYTHM_TAP_COUNT_IN_BARS = 1;
@@ -120,6 +129,8 @@ export function buildRhythmTapQuestionFromNotes(
 ): RhythmTapQuestion {
   const { top } = parseTimeSignature(config.timeSignature);
   const beatMs = beatMsFor(config.tempo, config.timeSignature);
+  // 허용 오차의 기준 박은 '느껴지는 박' — 복합박자는 ♪ 셋을 묶은 점4분음표
+  const feltBeatMs = beatMs * accentEveryFor(config.timeSignature);
   const { onsetsMs, totalMs } = computeOnsets(notes, config.tempo, config.timeSignature);
   const abc = generateAbc({
     title: '',
@@ -143,7 +154,7 @@ export function buildRhythmTapQuestionFromNotes(
     beatMs,
     onsetsMs,
     totalMs,
-    toleranceMs: toleranceFor(onsetsMs, beatMs),
+    toleranceMs: toleranceFor(onsetsMs, feltBeatMs),
   };
 }
 

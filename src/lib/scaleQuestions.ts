@@ -67,6 +67,33 @@ export const SCALE_POOLS: Record<ScaleDifficulty, ScaleId[]> = {
     'whole_tone',
     'blues',
   ],
+  // 5단계: 상행 뒤 하행까지 듣는다. 가락단음계는 하행에서 자연단음계로 돌아오므로(교재 §9) 하행이 결정적 단서가 된다
+  scale_5: [
+    'major',
+    'natural_minor',
+    'harmonic_minor',
+    'melodic_minor',
+    'dorian',
+    'phrygian',
+    'lydian',
+    'mixolydian',
+  ],
+};
+
+/** 제시 방향: 상행만 / 상행 후 하행 */
+export type ScaleDirection = 'ascending' | 'both';
+
+export const SCALE_DIRECTIONS: Record<ScaleDifficulty, ScaleDirection> = {
+  scale_1: 'ascending',
+  scale_2: 'ascending',
+  scale_3: 'ascending',
+  scale_4: 'ascending',
+  scale_5: 'both',
+};
+
+/** 하행 때 다른 형태로 바뀌는 음계 (가락단음계 → 자연단음계) */
+const DESCENDING_FORM: Partial<Record<ScaleId, ScaleId>> = {
+  melodic_minor: 'natural_minor',
 };
 
 /** 보기 수 (1단계는 장/단 2지선다) */
@@ -75,6 +102,7 @@ export const SCALE_CHOICE_COUNT: Record<ScaleDifficulty, number> = {
   scale_2: 4,
   scale_3: 4,
   scale_4: 4,
+  scale_5: 4,
 };
 
 /** 헷갈리기 쉬운 음계 (오답 보기 우선순위) */
@@ -121,6 +149,7 @@ const ROOT_POOLS: Record<ScaleDifficulty, number[]> = {
   scale_2: [60, 61, 62, 63, 64, 65, 66, 67],
   scale_3: [60, 61, 62, 63, 64, 65, 66, 67],
   scale_4: [60, 61, 62, 63, 64, 65, 66, 67],
+  scale_5: [60, 61, 62, 63, 64, 65, 66, 67],
 };
 
 function accidentalMark(acc: number): string {
@@ -138,20 +167,49 @@ function abcPitchName(letterIdx: number, octave: number): string {
   return name.toLowerCase() + "'".repeat(Math.max(0, octave - 5));
 }
 
+/** 음계 한 음의 (반음 오프셋, 글자 오프셋) 쌍 */
+type ScaleStep = { step: number; letter: number };
+
+function templateSteps(id: ScaleId): ScaleStep[] {
+  const tpl = SCALE_TEMPLATES[id];
+  return tpl.steps.map((step, i) => ({ step, letter: tpl.letters[i] }));
+}
+
 /**
- * 근음 MIDI와 템플릿으로 상행 음계 ABC 본문을 만든다.
+ * 제시 방향에 따른 음 순서.
+ * - ascending: 근음 → 옥타브
+ * - both: 근음 → 옥타브 → (하행형 템플릿으로) 근음. 꼭대기 음은 한 번만 울린다.
+ */
+export function scaleStepSequence(
+  id: ScaleId,
+  direction: ScaleDirection = 'ascending',
+): ScaleStep[] {
+  const up = templateSteps(id);
+  if (direction === 'ascending') return up;
+  const down = templateSteps(DESCENDING_FORM[id] ?? id)
+    .slice(0, -1)
+    .reverse();
+  return [...up, ...down];
+}
+
+/**
+ * 근음 MIDI와 템플릿으로 음계 ABC 본문을 만든다 (기본 상행, direction='both'면 상행 후 하행).
  * 임시표는 같은 글자·옥타브에 대해 상태가 바뀔 때만 명시한다(M:none이라 마디 초기화 없음).
  */
-export function scaleToAbcBody(rootMidi: number, id: ScaleId): string {
+export function scaleToAbcBody(
+  rootMidi: number,
+  id: ScaleId,
+  direction: ScaleDirection = 'ascending',
+): string {
   const root = ROOT_SPELLINGS[rootMidi] ?? ROOT_SPELLINGS[60];
-  const tpl = SCALE_TEMPLATES[id];
+  const seq = scaleStepSequence(id, direction);
   const rootOctave = Math.floor(rootMidi / 12) - 1;
   const accState = new Map<string, number>();
   const tokens: string[] = [];
 
-  tpl.steps.forEach((step, i) => {
+  seq.forEach(({ step, letter }, i) => {
     const midi = rootMidi + step;
-    const absLetter = root.letter + tpl.letters[i];
+    const absLetter = root.letter + letter;
     const letterName = LETTERS[absLetter % 7];
     const octave = rootOctave + Math.floor(absLetter / 7);
     const naturalMidi = (octave + 1) * 12 + NATURAL_SEMITONE[letterName];
@@ -163,15 +221,19 @@ export function scaleToAbcBody(rootMidi: number, id: ScaleId): string {
       mark = accidentalMark(acc);
       accState.set(key, acc);
     }
-    const isLast = i === tpl.steps.length - 1;
+    const isLast = i === seq.length - 1;
     tokens.push(`${mark}${abcPitchName(absLetter, octave)}${isLast ? '2' : ''}`);
   });
 
   return tokens.join(' ');
 }
 
-export function scaleToAbc(rootMidi: number, id: ScaleId): string {
-  return `X:1\nM:none\nL:1/8\nQ:1/4=100\nK:C\n${scaleToAbcBody(rootMidi, id)} |]`;
+export function scaleToAbc(
+  rootMidi: number,
+  id: ScaleId,
+  direction: ScaleDirection = 'ascending',
+): string {
+  return `X:1\nM:none\nL:1/8\nQ:1/4=100\nK:C\n${scaleToAbcBody(rootMidi, id, direction)} |]`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -229,12 +291,23 @@ export function generateScaleQuestion(difficulty: ScaleDifficulty): ChoiceQuesti
   const choiceCount = Math.min(SCALE_CHOICE_COUNT[difficulty], pool.length);
   const wrong = buildScaleWrongChoices(scaleId, pool, choiceCount - 1);
 
+  const direction = SCALE_DIRECTIONS[difficulty];
+
   const label = (id: ScaleId) => i18n.t('content:scale.' + id);
   const choiceIds = shuffle([scaleId, ...wrong]);
   const choiceAbc: Record<string, string> = {};
   choiceIds.forEach((id) => {
-    choiceAbc[label(id)] = scaleToAbc(rootMidi, id);
+    choiceAbc[label(id)] = scaleToAbc(rootMidi, id, direction);
   });
+
+  // 상·하행 단계는 하행에 관한 한 문장을 덧붙인다 (가락단음계는 하행형이 다름)
+  const baseExplanation = i18n.t('content:explain.scale.' + scaleId);
+  const explanation =
+    direction === 'both'
+      ? `${baseExplanation} ${i18n.t(
+          'content:explain.scaleDescending.' + (DESCENDING_FORM[scaleId] ? scaleId : 'default'),
+        )}`
+      : baseExplanation;
 
   return {
     id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -242,9 +315,11 @@ export function generateScaleQuestion(difficulty: ScaleDifficulty): ChoiceQuesti
     difficulty,
     correctAnswer: label(scaleId),
     choices: choiceIds.map(label),
-    abcNotation: scaleToAbc(rootMidi, scaleId),
-    prompt: i18n.t('practice:choice.scalePrompt'),
-    explanation: i18n.t('content:explain.scale.' + scaleId),
+    abcNotation: scaleToAbc(rootMidi, scaleId, direction),
+    prompt: i18n.t(
+      direction === 'both' ? 'practice:choice.scaleBothPrompt' : 'practice:choice.scalePrompt',
+    ),
+    explanation,
     choiceAbc,
   };
 }

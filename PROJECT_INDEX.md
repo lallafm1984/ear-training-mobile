@@ -343,7 +343,7 @@ Login → Onboarding → Home
 | 테스트 파일                      | 대상                                                                                                  |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `grading.test.ts`                | `normalizeNotes`, `gradeNotes`                                                                        |
-| `questionGenerator.test.ts`      | 객관식 문제 생성                                                                                      |
+| `questionGenerator.test.ts`      | 객관식 문제 생성 (음정 5·6단계 화성 음정·복합음정 반음 수 검증 포함)                                   |
 | `progressionVoicing.test.ts`     | 화성진행 4성부 성부 배치 규칙 (병행·교차·음역·이끔음·PAC, 실제 큰보표 ABC 검증)                        |
 | `scoreGenerator.test.ts`         | 악보 생성 엔진                                                                                        |
 | `computeStats.test.ts`           | 통계 집계                                                                                             |
@@ -363,8 +363,8 @@ Login → Onboarding → Home
 | `levelTest.test.ts`              | 레벨 테스트 계단식 진행, 영역 레벨 추정·추천, 정규화·병합, 문항 생성                                  |
 | `reminder.test.ts`               | 리마인더 설정 정규화·시각 표시, 알림 권한 흐름·매일 예약/취소 호출 검증                               |
 | `wrongNotes.test.ts`             | 오답 누적·해결·삭제·정리, 병합, 복습 문항 변환·선택, 약점 TOP 집계                                    |
-| `scaleQuestions.test.ts`         | 음계 템플릿 무결성, 근음별 임시표 철자, 오답 보기 선택, 문제 생성                                     |
-| `rhythmTap.test.ts`              | 타점 계산(쉼표·붙임줄·잇단음표), 허용 오차, 탭 채점, 문제 생성, 점수 변환                             |
+| `scaleQuestions.test.ts`         | 음계 템플릿 무결성, 근음별 임시표 철자, 오답 보기 선택, 문제 생성, 5단계 상행·하행(가락단음계 하행형) |
+| `rhythmTap.test.ts`              | 타점 계산(쉼표·붙임줄·잇단음표), 허용 오차, 탭 채점, 문제 생성, 점수 변환, 3/4·6/8 레벨·강박 주기      |
 | `layout.test.ts`                 | 태블릿 판정·콘텐츠/폼/시트 정렬 스타일·모달 폭                                                        |
 | `dailyGoal.test.ts`              | 일일 목표 카테고리, 오늘 달성 수(기록 20개 초과 포함), 연속 달성일(오늘 진행 중·중간 공백·6/7 미달성) |
 | `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
@@ -374,7 +374,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (430개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (449개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -385,6 +385,7 @@ Login → Onboarding → Home
 | 기보형 문제의 클라이언트 동적 생성                                 | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
 | 복합박자(6/8·9/8) 잇단음표 = 둘잇단(2:3) 생성·입력·표기            | `src/lib/rhythmEngine.ts`(makeDuplets·findTupletTargetIdx), `src/lib/twoVoice/melodyGenerator.ts`(tupletSpan16·generateDupletNotes), `src/hooks/useNoteInput.ts`(makeTupletGroup·tupletCount), `src/components/DurationToolbar.tsx`(tupletCount), `src/screens/NotationPracticeScreen.tsx`('duplet' 입력), `src/components/PracticeSettingsSheet.tsx`(안내 문구) |
 | 화성진행·종지 재생 4성부 성부 배치 (큰보표 V1 S·A / V2 T·B)          | `src/lib/progressionVoicing.ts`, `src/lib/questionGenerator.ts`(renderProgressionAbc·spellChordVoice), `src/__tests__/progressionVoicing.test.ts`, `src/__tests__/contentQaRules.test.ts`(큰보표 파서) |
+| 음정 듣기 5·6단계 — 화성 음정(동시 울림)·복합음정(9~13도)          | `src/lib/questionGenerator.ts`(PRESENTATION_POOLS·COMPOUND_INTERVALS·intervalToAbc harmonic), `src/lib/contentConfig.ts`(INTERVAL_DIFF_LABELS), `src/types/content.ts`(IntervalDifficulty), `src/i18n/locales/*/content.json`(interval 13~21·explain.interval·difficulty.interval), `src/i18n/locales/*/practice.json`(choice.intervalHarmonicPrompt·intervalCompoundPrompt) |
 | 화음 듣기 4단계 — 3화음 전위(제1·제2전위)                          | `src/lib/questionGenerator.ts`(CHORD_TEMPLATES maj_inv2·min_inv2, CHORD_POOLS chord_5), `src/lib/contentConfig.ts`(CHORD_DIFF_LABELS), `src/types/content.ts`(ChordDifficulty), `src/i18n/locales/*/content.json`(chord·explain.chord·difficulty.chord) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
 | 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
@@ -393,8 +394,8 @@ Login → Onboarding → Home
 | 귀 열기 코스 화면·레슨 진행·EXP 보상·Home 진입 카드                | `src/screens/BeginnerCourseScreen.tsx`, `src/screens/BeginnerLessonScreen.tsx`, `src/hooks/useBeginnerCourseProgress.ts`, `src/screens/HomeScreen.tsx`                                                                                                                            |
 | 오답노트 저장·복습 모드·약점 집중 연습                             | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
 | 결과 공유 카드 (이미지/텍스트)                                     | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
-| 음계·선법 듣기 (객관식 4단계)                                      | `src/lib/scaleQuestions.ts`, `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale)                                                                                                                         |
-| 리듬 탭 (탭 타이밍 채점 4단계)                                     | `src/lib/rhythmTap.ts`, `src/screens/RhythmTapScreen.tsx`, `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기)                            |
+| 음계·선법 듣기 (객관식 5단계, 5단계 상행·하행)                     | `src/lib/scaleQuestions.ts`(SCALE_DIRECTIONS·scaleStepSequence·DESCENDING_FORM), `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale·explain.scaleDescending), `src/i18n/locales/*/practice.json`(choice.scaleBothPrompt) |
+| 리듬 탭 (탭 타이밍 채점 6단계, 5 3/4·6 6/8)                        | `src/lib/rhythmTap.ts`(RHYTHM_TAP_LEVELS·accentEveryFor), `src/screens/RhythmTapScreen.tsx`(복합박자 강박 점), `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기) |
 | 태블릿 레이아웃 (콘텐츠 가운데 정렬·모달/시트/폼 폭·차트 폭)       | `src/lib/layout.ts`, `src/hooks/useResponsiveLayout.ts`, 각 화면의 `contentContainerStyle`, `src/components/{AppAlert,UpgradeModal,BottomSheet,ShareCardModal,DailyScoreChart}.tsx`, `src/screens/{LoginScreen,OnboardingScreen}.tsx`(narrowStyle)                                   |
 
 ---

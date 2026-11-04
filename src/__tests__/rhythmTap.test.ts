@@ -1,5 +1,6 @@
 import {
   RHYTHM_TAP_LEVELS,
+  accentEveryFor,
   beatMsFor,
   buildRhythmTapQuestionFromNotes,
   computeOnsets,
@@ -114,14 +115,64 @@ describe('문제 생성', () => {
         expect(q.measures).toBe(cfg.measures);
         expect(q.tempo).toBe(cfg.tempo);
         expect(q.beatMs).toBe(beatMsFor(cfg.tempo, cfg.timeSignature));
-        expect(q.totalMs).toBe(Math.round(q.beatMs * 4 * cfg.measures));
+        const [top, bottom] = cfg.timeSignature.split('/').map(Number);
+        expect(q.beatsPerBar).toBe(top);
+        expect(q.totalMs).toBe(Math.round(q.beatMs * top * cfg.measures));
         expect(q.onsetsMs.length).toBeGreaterThanOrEqual(2);
         expect(q.onsetsMs[0]).toBe(0);
         expect(q.toleranceMs).toBeGreaterThanOrEqual(90);
-        expect(q.abc).toMatch(/M: ?4\/4/);
-        expect(q.abc).toMatch(new RegExp(`Q: ?1/4=${cfg.tempo}`));
+        expect(q.abc).toMatch(new RegExp(`M: ?${top}/${bottom}`));
+        // 복합박자는 ABC 템포를 ♪ 기준(×2)으로 적는다 — 클릭 트랙 ♪ 간격과 같은 속도
+        expect(q.abc).toMatch(
+          bottom === 8
+            ? new RegExp(`Q: ?1/8=${cfg.tempo * 2}`)
+            : new RegExp(`Q: ?1/4=${cfg.tempo}`),
+        );
       }
     });
+  });
+
+  it('5단계는 3/4, 6단계는 6/8 — 새 박자 레벨은 패턴이 마디 길이를 정확히 채운다', () => {
+    expect(RHYTHM_TAP_LEVELS.tap_5.timeSignature).toBe('3/4');
+    expect(RHYTHM_TAP_LEVELS.tap_6.timeSignature).toBe('6/8');
+    for (let i = 0; i < 20; i++) {
+      const q5 = generateRhythmTapQuestion('tap_5');
+      expect(q5.beatsPerBar).toBe(3);
+      expect(q5.totalMs).toBe(Math.round(q5.beatMs * 3 * 2));
+      expect(q5.onsetsMs.every((ms) => ms < q5.totalMs)).toBe(true);
+      const q6 = generateRhythmTapQuestion('tap_6');
+      expect(q6.beatsPerBar).toBe(6);
+      expect(q6.totalMs).toBe(Math.round(q6.beatMs * 6 * 2));
+      expect(q6.onsetsMs.every((ms) => ms < q6.totalMs)).toBe(true);
+      // 6/8은 ♪ 단위로 세므로 박 간격이 4/4의 절반 수준이지만 허용 오차는 느껴지는 박(점4분) 기준으로 90ms 아래로 내려가지 않는다
+      expect(q6.toleranceMs).toBeGreaterThanOrEqual(90);
+    }
+  });
+
+  it('accentEveryFor: 복합박자는 ♪ 3개마다 강박, 단순박자는 마디 첫 박만', () => {
+    expect(accentEveryFor('6/8')).toBe(3);
+    expect(accentEveryFor('9/8')).toBe(3);
+    expect(accentEveryFor('12/8')).toBe(3);
+    expect(accentEveryFor('4/4')).toBe(4);
+    expect(accentEveryFor('3/4')).toBe(3);
+    expect(accentEveryFor('2/4')).toBe(2);
+  });
+
+  it('6/8의 허용 오차는 점4분을 기준 박으로 삼아 같은 ♪ 간격의 4/4 패턴과 같다', () => {
+    const eighths = [note('8'), note('8'), note('8'), note('8'), note('8'), note('8')];
+    const compound = buildRhythmTapQuestionFromNotes('tap_6', eighths, {
+      engineLevel: 1,
+      measures: 1,
+      tempo: 90,
+      timeSignature: '6/8',
+    });
+    const simple = buildRhythmTapQuestionFromNotes(
+      'tap_2',
+      [note('8'), note('8'), note('8'), note('8'), note('8'), note('8'), note('8'), note('8')],
+      { engineLevel: 1, measures: 1, tempo: 90, timeSignature: '4/4' },
+    );
+    expect(compound.beatMs).toBe(simple.beatMs / 2);
+    expect(compound.toleranceMs).toBe(simple.toleranceMs);
   });
 
   it('주어진 음표로 문제를 만들면 타점이 음표 위치와 일치한다', () => {

@@ -73,7 +73,9 @@
       "interval_1": "Level 1 · 3rd·4th·5th·8ve",
       "interval_2": "Level 2 · + 2nd·6th",
       "interval_3": "Level 3 · + Semitone·7th",
-      "interval_4": "Level 4 · All (incl. unison·tritone)"
+      "interval_4": "Level 4 · All (incl. unison·tritone)",
+      "interval_5": "Level 5 · Harmonic intervals (played together)",
+      "interval_6": "Level 6 · Compound intervals (9th–13th)"
     },
     "chord": {
       "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
@@ -102,13 +104,16 @@
       "scale_1": "Level 1 · Major / natural minor",
       "scale_2": "Level 2 · + harmonic & melodic minor",
       "scale_3": "Level 3 · 7 church modes",
-      "scale_4": "Level 4 · + pentatonic, whole tone, blues"
+      "scale_4": "Level 4 · + pentatonic, whole tone, blues",
+      "scale_5": "Level 5 · Ascending & descending (melodic minor descent)"
     },
     "rhythmTap": {
       "tap_1": "Level 1 · Quarter/half notes, 1 bar",
       "tap_2": "Level 2 · Eighth notes + rests",
       "tap_3": "Level 3 · Dotted & syncopated, 2 bars",
-      "tap_4": "Level 4 · Sixteenth notes, 2 bars"
+      "tap_4": "Level 4 · Sixteenth notes, 2 bars",
+      "tap_5": "Level 5 · 3/4 time, dotted & syncopated, 2 bars",
+      "tap_6": "Level 6 · 6/8 time, 2 bars"
     }
   },
   "track": {
@@ -139,7 +144,15 @@
     "9": "Major 6th (M6)",
     "10": "Minor 7th (m7)",
     "11": "Major 7th (M7)",
-    "12": "Perfect Octave (P8)"
+    "12": "Perfect Octave (P8)",
+    "13": "Minor 9th (m9)",
+    "14": "Major 9th (M9)",
+    "15": "Minor 10th (m10)",
+    "16": "Major 10th (M10)",
+    "17": "Perfect 11th (P11)",
+    "19": "Perfect 12th (P12)",
+    "20": "Minor 13th (m13)",
+    "21": "Major 13th (M13)"
   },
   "chord": {
     "major": "Major Triad",
@@ -234,7 +247,15 @@
       "9": "A major 6th is nine semitones apart. Wide open, yet bright.",
       "10": "A minor 7th is ten semitones apart. It almost reaches the octave, leaving a gentle tension.",
       "11": "A major 7th is eleven semitones apart, just under the octave, so it sounds sharp and tense.",
-      "12": "A perfect octave is twelve semitones apart: the same note name at a different height, so the two blend completely."
+      "12": "A perfect octave is twelve semitones apart: the same note name at a different height, so the two blend completely.",
+      "13": "A minor 9th is a minor 2nd plus an octave (13 semitones). Hear a compound interval by subtracting the octave and judging the simple interval: the rough semitone tension still remains.",
+      "14": "A major 9th is a major 2nd plus an octave (14 semitones). It sounds like a wide-open do-re and is the basis of add9 chords.",
+      "15": "A minor 10th is a minor 3rd plus an octave (15 semitones). Wide, yet the dark colour of the 3rd is still clear.",
+      "16": "A major 10th is a major 3rd plus an octave (16 semitones). Wide and bright, common in left-hand piano accompaniment.",
+      "17": "A perfect 11th is a perfect 4th plus an octave (17 semitones). The hollow, stable 4th feeling rings from a distance.",
+      "19": "A perfect 12th is a perfect 5th plus an octave (19 semitones). Solid and open; it is easy to confuse with the octave (12), so compare the one-semitone difference.",
+      "20": "A minor 13th is a minor 6th plus an octave (20 semitones). Wide but soft and wistful like the 6th.",
+      "21": "A major 13th is a major 6th plus an octave (21 semitones). The bright, wide interval you hear in 13th chords."
     },
     "chord": {
       "major": "A major triad stacks a major 3rd and a perfect 5th above the root. Bright and stable.",
@@ -290,6 +311,10 @@
       "minor_pentatonic": "Minor pentatonic is natural minor without the 2nd and 6th. The basic material of rock and blues solos.",
       "whole_tone": "The whole-tone scale moves only in whole steps. With no clear center it sounds dreamy and floating.",
       "blues": "The blues scale adds a diminished 5th (blue note) to minor pentatonic. Listen for the chromatic slide."
+    },
+    "scaleDescending": {
+      "default": "At this level the scale is played up and then back down. The same notes return on the way down.",
+      "melodic_minor": "On the way down the raised 6th and 7th fall back, so the descent equals the natural minor. The ascent and descent sounding different is the clue for melodic minor."
     }
   }
 }

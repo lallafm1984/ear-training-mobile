@@ -67,10 +67,16 @@ export type RhythmDifficulty =
   | 'rhythm_5'
   | 'rhythm_6';
 
-/** 음정 듣기 난이도 (4단계) */
-export type IntervalDifficulty = 'interval_1' | 'interval_2' | 'interval_3' | 'interval_4';
+/** 음정 듣기 난이도 (6단계: 5 화성 음정, 6 복합음정) */
+export type IntervalDifficulty =
+  | 'interval_1'
+  | 'interval_2'
+  | 'interval_3'
+  | 'interval_4'
+  | 'interval_5'
+  | 'interval_6';
 
-/** 화성 듣기 난이도 (3단계) */
+/** 화성 듣기 난이도 (4단계) */
 export type ChordDifficulty = 'chord_2' | 'chord_3' | 'chord_4' | 'chord_5';
 
 /** 화성 진행 난이도 (4단계) */
@@ -86,11 +92,11 @@ export type KeyDifficulty = 'key_1' | 'key_2' | 'key_3';
 /** 2성부 난이도 (기존 bass_1~4) */
 export type TwoVoiceDifficulty = 'bass_1' | 'bass_2' | 'bass_3' | 'bass_4';
 
-/** 음계·선법 듣기 난이도 (4단계) */
-export type ScaleDifficulty = 'scale_1' | 'scale_2' | 'scale_3' | 'scale_4';
+/** 음계·선법 듣기 난이도 (5단계: 5 상행·하행) */
+export type ScaleDifficulty = 'scale_1' | 'scale_2' | 'scale_3' | 'scale_4' | 'scale_5';
 
-/** 리듬 탭 난이도 (4단계) */
-export type RhythmTapDifficulty = 'tap_1' | 'tap_2' | 'tap_3' | 'tap_4';
+/** 리듬 탭 난이도 (6단계: 5 3/4박자, 6 6/8박자) */
+export type RhythmTapDifficulty = 'tap_1' | 'tap_2' | 'tap_3' | 'tap_4' | 'tap_5' | 'tap_6';
 
 /** 통합 난이도 타입 */
 export type ContentDifficulty =

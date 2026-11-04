@@ -14,7 +14,14 @@ import { generateChoiceQuestion, generateChoiceQuestions } from '../lib/question
 
 describe('generateChoiceQuestion', () => {
   describe('interval', () => {
-    const difficulties = ['interval_1', 'interval_2', 'interval_3', 'interval_4'] as const;
+    const difficulties = [
+      'interval_1',
+      'interval_2',
+      'interval_3',
+      'interval_4',
+      'interval_5',
+      'interval_6',
+    ] as const;
 
     difficulties.forEach((diff) => {
       it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {
@@ -249,6 +256,111 @@ describe('chord_5 — 3화음 전위(제1·제2전위)', () => {
       for (let i = 0; i < 30; i++) {
         const q = generateChoiceQuestion('chord', d);
         expect(EXPECTED[q.correctAnswer]).toBeUndefined();
+      }
+    }
+  });
+});
+
+// ── 음정 5·6단계: 화성 음정(동시 울림)·복합음정 ─────────────────────
+describe('음정 5·6단계 — 화성 음정·복합음정', () => {
+  const PITCH: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  /** ABC 음 하나 → MIDI (C4 = 60) */
+  function abcMidi(tok: string): number {
+    const m = /^([\^_=]*)([A-Ga-g])([,']*)$/.exec(tok);
+    if (!m) throw new Error('not a note: ' + tok);
+    const acc = (m[1].match(/\^/g) || []).length - (m[1].match(/_/g) || []).length;
+    const upper = m[2] === m[2].toUpperCase();
+    let octave = upper ? 4 : 5;
+    for (const ch of m[3]) octave += ch === "'" ? 1 : -1;
+    return (octave + 1) * 12 + PITCH[m[2].toUpperCase()] + acc;
+  }
+  /** 본문에서 두 음을 뽑아 반음 거리·제시 방식 반환 */
+  function parseInterval(abc: string): { semitones: number; harmonic: boolean; low: number } {
+    const body = abc.split('\n').pop()!;
+    const chord = /^\[(\S+?)\]\d+ z \|\]$/.exec(body);
+    if (chord) {
+      const toks = chord[1].match(/[\^_=]*[A-Ga-g][,']*/g)!;
+      expect(toks).toHaveLength(2);
+      const [a, b] = toks.map(abcMidi);
+      return { semitones: Math.abs(a - b), harmonic: true, low: Math.min(a, b) };
+    }
+    const toks = body.split(' ').filter((t) => t !== 'z' && t !== '|]');
+    expect(toks).toHaveLength(2);
+    const [a, b] = toks.map(abcMidi);
+    return { semitones: Math.abs(a - b), harmonic: false, low: Math.min(a, b) };
+  }
+  const SEMITONES_BY_LABEL: Record<string, number> = {
+    '완전1도 (P1)': 0,
+    '단2도 (m2)': 1,
+    '장2도 (M2)': 2,
+    '단3도 (m3)': 3,
+    '장3도 (M3)': 4,
+    '완전4도 (P4)': 5,
+    '증4도/감5도 (A4/d5)': 6,
+    '완전5도 (P5)': 7,
+    '단6도 (m6)': 8,
+    '장6도 (M6)': 9,
+    '단7도 (m7)': 10,
+    '장7도 (M7)': 11,
+    '완전8도 (P8)': 12,
+    '단9도 (m9)': 13,
+    '장9도 (M9)': 14,
+    '단10도 (m10)': 15,
+    '장10도 (M10)': 16,
+    '완전11도 (P11)': 17,
+    '완전12도 (P12)': 19,
+    '단13도 (m13)': 20,
+    '장13도 (M13)': 21,
+  };
+
+  it('interval_5: 두 음이 동시에 울리고([..]) 정답·보기 소리의 반음 수가 라벨과 일치한다', () => {
+    for (let i = 0; i < 40; i++) {
+      const q = generateChoiceQuestion('interval', 'interval_5');
+      const correct = parseInterval(q.abcNotation);
+      expect(correct.harmonic).toBe(true);
+      expect(correct.semitones).toBe(SEMITONES_BY_LABEL[q.correctAnswer]);
+      expect(correct.semitones).toBeGreaterThanOrEqual(1); // 동음은 한 음으로 들려 제외
+      expect(correct.semitones).toBeLessThanOrEqual(12);
+      expect(q.prompt).toBe('동시에 울리는 두 음을 듣고 음정을 맞추세요.');
+      for (const c of q.choices) {
+        const p = parseInterval(q.choiceAbc[c]);
+        expect(p.harmonic).toBe(true);
+        expect(p.semitones).toBe(SEMITONES_BY_LABEL[c]);
+      }
+    }
+  });
+
+  it('interval_6: 정답은 9도~13도 복합음정이고 보기에는 옥타브를 뺀 단순음정이 섞여 있다', () => {
+    let simpleDistractor = 0;
+    for (let i = 0; i < 40; i++) {
+      const q = generateChoiceQuestion('interval', 'interval_6');
+      const correct = parseInterval(q.abcNotation);
+      expect([13, 14, 15, 16, 17, 19, 20, 21]).toContain(correct.semitones);
+      expect(correct.semitones).toBe(SEMITONES_BY_LABEL[q.correctAnswer]);
+      expect(q.prompt).toBe('옥타브를 넘는 두 음을 듣고 복합음정을 맞추세요.');
+      expect(q.explanation).toContain('옥타브 위의');
+      for (const c of q.choices) {
+        const p = parseInterval(q.choiceAbc[c]);
+        expect(p.harmonic).toBe(correct.harmonic);
+        expect(p.semitones).toBe(SEMITONES_BY_LABEL[c]);
+        if (p.semitones <= 12) simpleDistractor++;
+      }
+      // 아래 음은 A3~F♯4, 위 음은 E6를 넘지 않는다
+      expect(correct.low).toBeGreaterThanOrEqual(57);
+      expect(correct.low + correct.semitones).toBeLessThanOrEqual(88);
+    }
+    expect(simpleDistractor).toBeGreaterThan(0);
+  });
+
+  it('1~4단계는 기존대로 차례 연주이며 복합음정이 정답·보기에 나오지 않는다', () => {
+    for (const diff of ['interval_1', 'interval_2', 'interval_3', 'interval_4'] as const) {
+      for (let i = 0; i < 15; i++) {
+        const q = generateChoiceQuestion('interval', diff);
+        const p = parseInterval(q.abcNotation);
+        expect(p.harmonic).toBe(false);
+        expect(p.semitones).toBeLessThanOrEqual(12);
+        expect(p.low + p.semitones).toBeLessThanOrEqual(76); // E5
+        for (const c of q.choices) expect(SEMITONES_BY_LABEL[c]).toBeLessThanOrEqual(12);
       }
     }
   });

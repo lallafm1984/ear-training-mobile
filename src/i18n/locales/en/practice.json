@@ -57,7 +57,10 @@
     "showScore": "Show score",
     "hideScore": "Hide score",
     "scoreCorrect": "Answer · {{choice}}",
-    "scoreMine": "My choice · {{choice}}"
+    "scoreMine": "My choice · {{choice}}",
+    "intervalHarmonicPrompt": "Listen to the two notes sounding together and identify the interval.",
+    "intervalCompoundPrompt": "Listen to the two notes more than an octave apart and identify the compound interval.",
+    "scaleBothPrompt": "Listen to the scale ascending and descending, then identify its type."
   },
   "notation": {
     "listenAndWrite": "Listen and notate",

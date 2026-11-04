@@ -40,6 +40,7 @@ import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useMascotExp } from '../hooks/useMascotExp';
 import {
   RHYTHM_TAP_COUNT_IN_BARS,
+  accentEveryFor,
   generateRhythmTapQuestion,
   gradeTaps,
   rhythmTapLevelNumber,
@@ -328,6 +329,8 @@ export default function RhythmTapScreen() {
   // ─── 렌더: 탭 ───
   const renderTap = () => {
     const beatsPerBar = question.beatsPerBar;
+    // 복합박자(6/8)는 ♪ 단위로 세되 3개 묶음의 첫 점을 강박으로 표시한다
+    const accentEvery = accentEveryFor(question.timeSignature);
     const inCountIn = tapClock?.inCountIn ?? true;
     const beat = tapClock?.beat ?? 0;
     const currentBeatInBar = beat % beatsPerBar;
@@ -349,6 +352,7 @@ export default function RhythmTapScreen() {
               key={i}
               style={[
                 styles.beatDot,
+                i % accentEvery === 0 && styles.beatDotAccent,
                 tapClock && i === currentBeatInBar
                   ? {
                       backgroundColor: inCountIn ? COLORS.slate400 : colors.main,
@@ -689,6 +693,7 @@ const styles = StyleSheet.create({
   countNumber: { fontSize: 64, fontWeight: '900', lineHeight: 72 },
   beatDots: { flexDirection: 'row', gap: 12, marginBottom: 4 },
   beatDot: { width: 14, height: 14, borderRadius: 7 },
+  beatDotAccent: { width: 18, height: 18, borderRadius: 9 },
   pad: {
     alignSelf: 'stretch',
     height: 230,

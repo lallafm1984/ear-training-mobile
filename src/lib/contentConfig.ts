@@ -51,7 +51,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     bgColor: '#ecfdf5',
     description: '두 음 사이의 음정 식별',
     answerType: 'choice',
-    maxLevel: 4,
+    maxLevel: 6,
     freeMaxLevel: 2,
   },
   {
@@ -106,7 +106,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     bgColor: '#fdf2f8',
     description: '장·단음계와 교회선법 식별',
     answerType: 'choice',
-    maxLevel: 4,
+    maxLevel: 5,
     freeMaxLevel: 2,
   },
   {
@@ -117,7 +117,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     bgColor: '#fff7ed',
     description: '들은 리듬을 탭으로 따라 치기',
     answerType: 'tap',
-    maxLevel: 4,
+    maxLevel: 6,
     freeMaxLevel: 2,
   },
 ];
@@ -160,6 +160,8 @@ export const INTERVAL_DIFF_LABELS: Record<string, string> = {
   interval_2: '2단계 · + 2도·6도',
   interval_3: '3단계 · + 반음·7도',
   interval_4: '4단계 · 전체 (동음·증4도 포함)',
+  interval_5: '5단계 · 화성 음정 (동시 울림)',
+  interval_6: '6단계 · 복합음정 (9도~13도)',
 };
 
 export const CHORD_DIFF_LABELS: Record<string, string> = {
@@ -194,6 +196,7 @@ export const SCALE_DIFF_LABELS: Record<string, string> = {
   scale_2: '2단계 · + 화성·가락단음계',
   scale_3: '3단계 · 교회선법 7종',
   scale_4: '4단계 · + 펜타토닉·온음·블루스',
+  scale_5: '5단계 · 상행·하행 (가락단음계 하행형)',
 };
 
 export const RHYTHM_TAP_DIFF_LABELS: Record<string, string> = {
@@ -201,6 +204,8 @@ export const RHYTHM_TAP_DIFF_LABELS: Record<string, string> = {
   tap_2: '2단계 · 8분음표 + 쉼표',
   tap_3: '3단계 · 점음표·당김음 2마디',
   tap_4: '4단계 · 16분음표 2마디',
+  tap_5: '5단계 · 3/4박자 점음표·당김음 2마디',
+  tap_6: '6단계 · 6/8박자 2마디',
 };
 
 /** 카테고리별 난이도 라벨 맵 */

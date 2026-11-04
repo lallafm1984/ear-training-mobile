@@ -11,10 +11,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 import {
+  SCALE_DIRECTIONS,
   SCALE_POOLS,
   SCALE_TEMPLATES,
   buildScaleWrongChoices,
   generateScaleQuestion,
+  scaleStepSequence,
   scaleToAbcBody,
 } from '../lib/scaleQuestions';
 import { generateChoiceQuestion } from '../lib/questionGenerator';
@@ -90,7 +92,7 @@ describe('buildScaleWrongChoices', () => {
 });
 
 describe('generateScaleQuestion', () => {
-  (['scale_1', 'scale_2', 'scale_3', 'scale_4'] as const).forEach((diff) => {
+  (['scale_1', 'scale_2', 'scale_3', 'scale_4', 'scale_5'] as const).forEach((diff) => {
     it(`${diff}: 보기·정답·비교 청취 ABC·해설을 갖춘다`, () => {
       for (let i = 0; i < 20; i++) {
         const q = generateScaleQuestion(diff);
@@ -119,6 +121,77 @@ describe('generateScaleQuestion', () => {
       const next = generateScaleQuestion('scale_3').correctAnswer;
       expect(next).not.toBe(prev);
       prev = next;
+    }
+  });
+});
+
+describe('scale_5 — 상행·하행', () => {
+  const noteTokens = (abc: string) => abc.split('\n').pop()!.replace(' |]', '').split(' ');
+
+  it('상행 후 하행: 음 수는 2n-1이고 마지막 음만 길다', () => {
+    const body = scaleToAbcBody(60, 'major', 'both');
+    const toks = body.split(' ');
+    expect(toks).toHaveLength(15);
+    expect(toks[toks.length - 1]).toMatch(/2$/);
+    expect(toks.slice(0, -1).every((t) => !/\d$/.test(t))).toBe(true);
+    expect(toks).toEqual([
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'A',
+      'B',
+      'c',
+      'B',
+      'A',
+      'G',
+      'F',
+      'E',
+      'D',
+      'C2',
+    ]);
+  });
+
+  it('가락단음계는 하행에서 자연단음계로 돌아온다 (제자리표·♭ 명시)', () => {
+    expect(scaleToAbcBody(62, 'melodic_minor', 'both')).toBe('D E F G A B ^c d =c _B A G F E D2');
+    // 화성단음계는 하행도 같은 형태 — M:none(마디 없음)이라 이미 적은 ♭은 다시 적지 않아도 유지된다
+    expect(scaleToAbcBody(60, 'harmonic_minor', 'both')).toBe('C D _E F G _A B c B A G F E D C2');
+  });
+
+  it('scaleStepSequence: 상행만이면 템플릿과 같고, both면 하행형 템플릿을 거꾸로 이어 붙인다', () => {
+    const up = scaleStepSequence('melodic_minor');
+    expect(up.map((s) => s.step)).toEqual([0, 2, 3, 5, 7, 9, 11, 12]);
+    const both = scaleStepSequence('melodic_minor', 'both');
+    expect(both.map((s) => s.step)).toEqual([0, 2, 3, 5, 7, 9, 11, 12, 10, 8, 7, 5, 3, 2, 0]);
+  });
+
+  it('scale_5 문제: 정답·보기 모두 상·하행으로 연주되고 해설에 하행 안내가 붙는다', () => {
+    expect(SCALE_DIRECTIONS.scale_5).toBe('both');
+    let melodicSeen = false;
+    for (let i = 0; i < 30; i++) {
+      const q = generateScaleQuestion('scale_5');
+      expect(q.prompt).toBe('상행 뒤 하행까지 듣고 음계 종류를 맞추세요.');
+      for (const c of q.choices) {
+        const toks = noteTokens(q.choiceAbc[c]);
+        expect(toks.length).toBeGreaterThanOrEqual(15);
+        expect(toks.length % 2).toBe(1);
+      }
+      if (q.correctAnswer.startsWith('가락단음계')) {
+        melodicSeen = true;
+        expect(q.explanation).toContain('자연단음계와 같아져요');
+      } else {
+        expect(q.explanation).toContain('하행');
+      }
+    }
+    expect(melodicSeen).toBe(true);
+  });
+
+  it('1~4단계는 상행만 연주한다', () => {
+    for (const diff of ['scale_1', 'scale_2', 'scale_3', 'scale_4'] as const) {
+      const q = generateScaleQuestion(diff);
+      const toks = noteTokens(q.abcNotation);
+      expect(toks.length).toBeLessThanOrEqual(8);
     }
   });
 });

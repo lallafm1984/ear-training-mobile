@@ -59,7 +59,20 @@ const INTERVAL_NAMES: Record<number, string> = {
   10: '단7도 (m7)',
   11: '장7도 (M7)',
   12: '완전8도 (P8)',
+  // 복합음정 (옥타브 + 단순음정)
+  13: '단9도 (m9)',
+  14: '장9도 (M9)',
+  15: '단10도 (m10)',
+  16: '장10도 (M10)',
+  17: '완전11도 (P11)',
+  19: '완전12도 (P12)',
+  20: '단13도 (m13)',
+  21: '장13도 (M13)',
 };
+
+/** 복합음정 풀 (반음 수) — 교재(Milne 7장) 기준 9도~13도, 증11도·14도는 제외 */
+const COMPOUND_INTERVALS = [13, 14, 15, 16, 17, 19, 20, 21];
+const isCompoundInterval = (semitones: number) => semitones > 12;
 
 /** 유사 음정 맵 — 오답 생성 시 우선 배치 */
 const SIMILAR_INTERVALS: Record<number, number[]> = {
@@ -76,6 +89,15 @@ const SIMILAR_INTERVALS: Record<number, number[]> = {
   10: [11, 9], // m7 ↔ M7, M6
   11: [10, 12], // M7 ↔ m7, P8
   12: [11, 10], // P8 ↔ M7, m7
+  // 복합음정: 이웃 복합음정 + 옥타브를 뺀 단순음정(9도↔2도 혼동)을 함께 제시
+  13: [14, 1, 15], // m9 ↔ M9, m2, m10
+  14: [13, 2, 16], // M9 ↔ m9, M2, M10
+  15: [16, 3, 14], // m10 ↔ M10, m3, M9
+  16: [15, 4, 17], // M10 ↔ m10, M3, P11
+  17: [16, 5, 19], // P11 ↔ M10, P4, P12
+  19: [17, 7, 20], // P12 ↔ P11, P5, m13
+  20: [21, 8, 19], // m13 ↔ M13, m6, P12
+  21: [20, 9, 19], // M13 ↔ m13, M6, P12
 };
 
 /** 난이도별 포함 음정 (반음 수 기준, 누적 풀 — 구별 난이도 순) */
@@ -84,10 +106,15 @@ const INTERVAL_POOLS: Record<IntervalDifficulty, number[]> = {
   interval_2: [2, 3, 4, 5, 7, 8, 9, 12], // + M2·m6·M6
   interval_3: [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12], // + m2·m7·M7
   interval_4: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // + P1·A4 (전체)
+  interval_5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // 화성 음정(동시 울림) — 동음은 한 음으로 들려 제외
+  interval_6: COMPOUND_INTERVALS, // 복합음정 9도~13도
 };
 
 /** 연주 방향 */
 type IntervalDirection = 'ascending' | 'descending';
+
+/** 제시 방식: 가락(차례로) / 화성(동시에) */
+export type IntervalPresentation = 'melodic' | 'harmonic';
 
 /** 난이도별 연주 방향 */
 const DIRECTION_POOLS: Record<IntervalDifficulty, IntervalDirection[]> = {
@@ -95,6 +122,18 @@ const DIRECTION_POOLS: Record<IntervalDifficulty, IntervalDirection[]> = {
   interval_2: ['ascending', 'descending'],
   interval_3: ['ascending', 'descending'],
   interval_4: ['ascending', 'descending'],
+  interval_5: ['ascending'], // 화성 제시라 방향 없음(아래 음→위 음 순으로 표기)
+  interval_6: ['ascending', 'descending'],
+};
+
+/** 난이도별 제시 방식 — 5단계는 동시 울림만, 6단계는 두 방식을 섞는다 */
+const PRESENTATION_POOLS: Record<IntervalDifficulty, IntervalPresentation[]> = {
+  interval_1: ['melodic'],
+  interval_2: ['melodic'],
+  interval_3: ['melodic'],
+  interval_4: ['melodic'],
+  interval_5: ['harmonic'],
+  interval_6: ['melodic', 'harmonic'],
 };
 
 /** 반음계 음 테이블 (A3 ~ E5) */
@@ -119,7 +158,22 @@ const ABC_NOTE_TABLE = [
   'd',
   '^d',
   'e', // C5~E5  (idx 15~19)
+  'f',
+  '^f',
+  'g',
+  '^g',
+  'a',
+  '^a',
+  'b', // F5~B5  (idx 20~26, 복합음정 전용)
+  "c'",
+  "^c'",
+  "d'",
+  "^d'",
+  "e'", // C6~E6  (idx 27~31, 복합음정 전용)
 ];
+
+/** 단순음정 단계가 쓰는 표 상한 (E5) — 기존 1~5단계 음역을 그대로 유지한다 */
+const SIMPLE_TABLE_MAX_IDX = 19;
 
 /** 온음계 근음 인덱스 (C, D, E, F, G, A, B만) */
 const DIATONIC_INDICES = [0, 2, 3, 5, 7, 8, 10, 12, 14];
@@ -127,12 +181,16 @@ const DIATONIC_INDICES = [0, 2, 3, 5, 7, 8, 10, 12, 14];
 interface RootRange {
   min: number;
   max: number;
+  /** 위 음이 넘지 못하는 표 인덱스 상한 */
+  topMax: number;
 }
 const ROOT_RANGES: Record<IntervalDifficulty, RootRange> = {
-  interval_1: { min: 3, max: 10 }, // C4~G4
-  interval_2: { min: 0, max: 12 }, // A3~A4
-  interval_3: { min: 0, max: 14 }, // A3~B4
-  interval_4: { min: 0, max: 14 }, // A3~B4
+  interval_1: { min: 3, max: 10, topMax: SIMPLE_TABLE_MAX_IDX }, // C4~G4
+  interval_2: { min: 0, max: 12, topMax: SIMPLE_TABLE_MAX_IDX }, // A3~A4
+  interval_3: { min: 0, max: 14, topMax: SIMPLE_TABLE_MAX_IDX }, // A3~B4
+  interval_4: { min: 0, max: 14, topMax: SIMPLE_TABLE_MAX_IDX }, // A3~B4
+  interval_5: { min: 0, max: 14, topMax: SIMPLE_TABLE_MAX_IDX }, // A3~B4 (동시 울림)
+  interval_6: { min: 0, max: 10, topMax: ABC_NOTE_TABLE.length - 1 }, // A3~F♯4, 위 음 ≤ E6
 };
 
 /** 쉬운 음정 가중치 (기본 1.0) */
@@ -185,11 +243,13 @@ function buildWrongIntervals(correct: number, pool: number[]): number[] {
     wrongs.push(i);
   }
 
-  // ③ 전체에서 보충
+  // ③ 전체에서 보충 (정답과 같은 부류 — 단순음정끼리, 복합음정끼리)
   if (wrongs.length < 3) {
     const remaining = Object.keys(INTERVAL_NAMES)
       .map(Number)
-      .filter((i) => !usedIntervals.has(i));
+      .filter(
+        (i) => !usedIntervals.has(i) && isCompoundInterval(i) === isCompoundInterval(correct),
+      );
     for (const i of shuffle(remaining)) {
       if (wrongs.length >= 3) break;
       wrongs.push(i);
@@ -219,27 +279,48 @@ function withExplicitNatural(first: string, second: string): string {
   return second;
 }
 
-/** 두 음 ABC. 보기 비교용으로 다른 음정을 같은 근음에서 연주할 때 표 범위를 넘으면 근음을 내린다. */
-function intervalToAbc(rootIdx: number, interval: number, direction: IntervalDirection): string {
+/**
+ * 두 음 ABC. 보기 비교용으로 다른 음정을 같은 근음에서 연주할 때 표 범위를 넘으면 근음을 내린다.
+ * - melodic: 아래→위(상행) 또는 위→아래(하행)로 차례로 연주
+ * - harmonic: 두 음을 동시에 울림 (`[xy]`, 점2분 길이)
+ */
+function intervalToAbc(
+  rootIdx: number,
+  interval: number,
+  direction: IntervalDirection,
+  presentation: IntervalPresentation = 'melodic',
+): string {
   const maxRoot = ABC_NOTE_TABLE.length - 1 - interval;
   const safeRoot = Math.max(0, Math.min(rootIdx, maxRoot));
   const rootNote = ABC_NOTE_TABLE[safeRoot];
   const topNote = ABC_NOTE_TABLE[safeRoot + interval];
+  if (presentation === 'harmonic') {
+    return `X:1\nM:4/4\nL:1/4\nK:C\n[${rootNote}${topNote}]3 z |]`;
+  }
   const [first, second] = direction === 'ascending' ? [rootNote, topNote] : [topNote, rootNote];
   return `X:1\nM:4/4\nL:1/4\nK:C\n${first} z ${withExplicitNatural(first, second)} z |]`;
+}
+
+/** 제시 방식·음정 부류에 맞는 문제 안내문 키 */
+function intervalPromptKey(interval: number, presentation: IntervalPresentation): string {
+  if (isCompoundInterval(interval)) return 'practice:choice.intervalCompoundPrompt';
+  if (presentation === 'harmonic') return 'practice:choice.intervalHarmonicPrompt';
+  return 'practice:choice.intervalPrompt';
 }
 
 function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestion {
   const pool = INTERVAL_POOLS[difficulty];
   const interval = pickInterval(pool);
 
-  // 연주 방향 결정
+  // 연주 방향·제시 방식 결정
   const directions = DIRECTION_POOLS[difficulty];
   const direction = directions[Math.floor(Math.random() * directions.length)];
+  const presentations = PRESENTATION_POOLS[difficulty];
+  const presentation = presentations[Math.floor(Math.random() * presentations.length)];
 
-  // 근음 선택: 1~2단계는 온음계만, 3~4단계는 반음계 포함
+  // 근음 선택: 1~2단계는 온음계만, 3단계 이상은 반음계 포함
   const range = ROOT_RANGES[difficulty];
-  const maxRoot = Math.min(range.max, ABC_NOTE_TABLE.length - 1 - interval);
+  const maxRoot = Math.min(range.max, range.topMax - interval);
   const useDiatonic = difficulty === 'interval_1' || difficulty === 'interval_2';
 
   let rootIdx: number;
@@ -250,13 +331,13 @@ function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestio
     rootIdx = range.min + Math.floor(Math.random() * Math.max(1, maxRoot - range.min + 1));
   }
 
-  const abc = intervalToAbc(rootIdx, interval, direction);
+  const abc = intervalToAbc(rootIdx, interval, direction, presentation);
 
   const correctAnswer = i18n.t('content:interval.' + interval);
   const wrongIntervals = buildWrongIntervals(interval, pool);
   const choiceAbc: Record<string, string> = {};
   for (const n of [interval, ...wrongIntervals]) {
-    choiceAbc[i18n.t('content:interval.' + n)] = intervalToAbc(rootIdx, n, direction);
+    choiceAbc[i18n.t('content:interval.' + n)] = intervalToAbc(rootIdx, n, direction, presentation);
   }
 
   return {
@@ -269,7 +350,7 @@ function generateIntervalQuestion(difficulty: IntervalDifficulty): ChoiceQuestio
       ...wrongIntervals.map((n) => i18n.t('content:interval.' + n)),
     ]),
     abcNotation: abc,
-    prompt: i18n.t('practice:choice.intervalPrompt'),
+    prompt: i18n.t(intervalPromptKey(interval, presentation)),
     explanation: i18n.t('content:explain.interval.' + interval),
     choiceAbc,
   };

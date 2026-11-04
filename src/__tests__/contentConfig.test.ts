@@ -76,8 +76,28 @@ describe('getDifficultyList', () => {
     expect(list[0]).toBe('rhythm_1');
   });
 
-  it('interval 카테고리는 4개 난이도를 가진다', () => {
-    expect(getDifficultyList('interval')).toHaveLength(4);
+  it('interval 카테고리는 6개 난이도를 가진다 (5 화성 음정, 6 복합음정)', () => {
+    const list = getDifficultyList('interval');
+    expect(list).toHaveLength(6);
+    expect(list.slice(4)).toEqual(['interval_5', 'interval_6']);
+  });
+
+  it('scale 카테고리는 5개 난이도를 가진다 (5 상행·하행)', () => {
+    const list = getDifficultyList('scale');
+    expect(list).toHaveLength(5);
+    expect(list[4]).toBe('scale_5');
+  });
+
+  it('rhythmTap 카테고리는 6개 난이도를 가진다 (5 3/4박자, 6 6/8박자)', () => {
+    const list = getDifficultyList('rhythmTap');
+    expect(list).toHaveLength(6);
+    expect(list.slice(4)).toEqual(['tap_5', 'tap_6']);
+  });
+
+  it('maxLevel은 난이도 목록 길이와 같다', () => {
+    for (const cat of CONTENT_CATEGORIES) {
+      expect(cat.maxLevel).toBe(getDifficultyList(cat.id).length);
+    }
   });
 
   it('chord 카테고리는 4개 난이도를 가진다', () => {
