@@ -4,6 +4,7 @@ import { Lock } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import BottomSheet from './BottomSheet';
 import { COLORS } from '../theme/colors';
+import { isCompoundMeter } from '../lib/scoreUtils/duration';
 import type { PracticeSettings } from '../navigation/MainStack';
 import type { PlanTier } from '../types';
 
@@ -194,6 +195,10 @@ export default function PracticeSettingsSheet({
             );
           })}
         </View>
+        {(category === 'melody' || category === 'rhythm') &&
+          isCompoundMeter(settings.timeSignature) && (
+            <Text style={styles.hintText}>{t('editor:settings.compoundTupletHint')}</Text>
+          )}
       </View>
 
       {/* ── 리듬 음이름 (리듬 전용) ── */}
@@ -383,6 +388,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.slate700,
     marginBottom: 6,
+  },
+  hintText: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 16,
+    color: COLORS.slate500,
   },
 
   // 박자 칩

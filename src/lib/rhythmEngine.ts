@@ -42,6 +42,27 @@ function makeTriplets(pitch: PitchName = 'B'): ScoreNote[] {
   ];
 }
 
+/**
+ * 둘잇단음표(duplet): 복합박자(6/8·9/8·12/8)에서 한 박(점4분, 6)을 둘로 나눈다.
+ * 복합박자의 박은 이미 셋(8분×3)으로 나뉘므로, 단순박자의 셋잇단에 대응하는 관용 표기는
+ * "박을 둘로 나누는" 둘잇단이다. tupletNoteDur: [2, 4] — 합계 6(점4분 span), 첫 음 2 = 8분음표 표기.
+ */
+function makeDuplets(pitch: PitchName = 'B'): ScoreNote[] {
+  return [
+    {
+      id: uid(),
+      pitch,
+      octave: 4,
+      accidental: '',
+      duration: '8',
+      tuplet: '2',
+      tupletSpan: '4.',
+      tupletNoteDur: 2,
+    },
+    { id: uid(), pitch, octave: 4, accidental: '', duration: '8', tupletNoteDur: 4 },
+  ];
+}
+
 /** 복합박자(6/8, 9/8, 12/8) 판별 */
 function isCompound(timeSignature: string): boolean {
   const [topStr, bottomStr] = timeSignature.split('/');
@@ -68,7 +89,7 @@ function durationPoolFor(level: number, compound: boolean): number[] {
     if (level === 2) return [6, 4, 2, 2];
     if (level === 3) return [6, 4, 2, 2, 3, 1]; // 점8분+16분이 복합박자의 점음표 요소
     if (level === 4) return [6, 4, 2, 1, 1];
-    if (level === 5) return [6, 4, 2, 2, 3, 1]; // 복합박자에서 셋잇단은 비관용 → 점8분·16분 혼합
+    if (level === 5) return [6, 4, 2, 2]; // 박머리 점4분(6) → 둘잇단 주입 대상 (복합박자의 셋잇단 대응)
     return [6, 4, 2, 3, 1, 1];
   }
   if (level === 1) return [8, 4, 4]; // 2분·4분 (4분 비중 ↑ — 2분음표만 이어지는 마디 완화)
@@ -77,6 +98,20 @@ function durationPoolFor(level: number, compound: boolean): number[] {
   if (level === 4) return [4, 4, 2, 1, 1]; // + 16분
   if (level === 5) return [6, 4, 4, 2]; // + 셋잇단 (변환 시 4분 → 셋잇단 주입)
   return [6, 4, 4, 2, 1]; // 종합
+}
+
+/**
+ * 잇단음표로 바꿀 음표 인덱스. 단순박자: 첫 4분음표(→셋잇단). 복합박자: 박머리의 첫 점4분(→둘잇단).
+ * 없으면 -1.
+ */
+function findTupletTargetIdx(durList: number[], compound: boolean): number {
+  if (!compound) return durList.indexOf(4);
+  let pos = 0;
+  for (let i = 0; i < durList.length; i++) {
+    if (durList[i] === 6 && pos % 6 === 0) return i;
+    pos += durList[i];
+  }
+  return -1;
 }
 
 /** 이 마디가 레벨 고유 요소를 포함하는지 */
@@ -94,8 +129,8 @@ function hasLevelElement(
   }
   if (level === 4) return durList.includes(1);
   if (level === 5) {
-    if (compound) return durList.includes(3) || durList.includes(1);
-    return durList.includes(4); // 셋잇단 주입 대상
+    // 잇단음표 주입 대상: 단순박자 4분(→셋잇단) / 복합박자 박머리 점4분(→둘잇단)
+    return findTupletTargetIdx(durList, compound) >= 0;
   }
   // 종합: 너무 단순한 마디([4,4,4,4] 등) 방지
   return (
@@ -151,11 +186,13 @@ function generateRhythmBar(
   // Convert to ScoreNote[]
   const notes: ScoreNote[] = [];
   const allowRestsL2Plus = level >= 2;
-  // 셋잇단 주입: 단순박자 L5(강제 마디) / L6+(40%)만 — 복합박자 제외
-  let hasInjectedTriplet = false;
-  const shouldInjectTriplet =
-    !compound && ((level === 5 && forceElement) || (level >= 6 && Math.random() < 0.4));
-  const tripletTargetIdx = shouldInjectTriplet ? durList.indexOf(4) : -1;
+  // 잇단음표 주입: L5(강제 마디) / L6+(40%)
+  //  - 단순박자: 4분음표 → 셋잇단(8분×3)
+  //  - 복합박자: 박머리 점4분 → 둘잇단(8분×2). 복합박자의 박은 이미 셋으로 나뉘므로
+  //    셋잇단이 아니라 "박을 둘로 나누는" 둘잇단이 관용 표기다.
+  let hasInjectedTuplet = false;
+  const shouldInjectTuplet = (level === 5 && forceElement) || (level >= 6 && Math.random() < 0.4);
+  const tupletTargetIdx = shouldInjectTuplet ? findTupletTargetIdx(durList, compound) : -1;
 
   const beatSize = beatSixteenths(timeSignature);
 
@@ -170,7 +207,7 @@ function generateRhythmBar(
       // 후보: 박머리의 4분(단순) / 점4분·4분(복합), 복합박자 8분 위치의 4분, 어디든 8분
       const ok = (d === 4 && (onBeat || compound)) || (compound && d === 6 && onBeat) || d === 2;
       const firstDownbeat = barOpts.barIndex === 0 && tempPos === 0;
-      if (ok && !firstDownbeat && i !== tripletTargetIdx) eligible.push({ i, pos: tempPos });
+      if (ok && !firstDownbeat && i !== tupletTargetIdx) eligible.push({ i, pos: tempPos });
       tempPos += d;
     }
     let candidates = eligible;
@@ -204,11 +241,11 @@ function generateRhythmBar(
       continue;
     }
 
-    if (shouldInjectTriplet && !hasInjectedTriplet && dur === 4) {
-      notes.push(...makeTriplets(pitch));
-      hasInjectedTriplet = true;
+    if (i === tupletTargetIdx && !hasInjectedTuplet) {
+      notes.push(...(compound ? makeDuplets(pitch) : makeTriplets(pitch)));
+      hasInjectedTuplet = true;
       wasRest = false;
-      pos += 4;
+      pos += dur;
       continue;
     }
 

@@ -38,11 +38,11 @@ src/
 │   ├── language.ts      # 지원 언어 정규화 + 기기 지역 매칭
 │   └── locales/         # 번역 파일 (ko/en/ja × 17 네임스페이스)
 ├── navigation/          # 네비게이션 설정
-├── screens/             # 화면 컴포넌트 (19개 + ScoreEditor 서브모듈)
-│   └── ScoreEditor/     # 악보 에디터 (13개 모듈)
+├── screens/             # 화면 컴포넌트 (19개 + ScoreEditor 서브모듈·숨김)
+│   └── ScoreEditor/     # 악보 에디터 (13개 모듈, MainStack 미등록 — 2026-11 숨김)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (30개)
+└── __tests__/           # Jest 테스트 (31개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -216,11 +216,11 @@ scripts/
 
 ---
 
-### ⚠️ 도달 불가 화면 (Unreachable — MainStack 등록 O, navigate 호출 X)
+### ⚠️ 숨김 화면 (Hidden — MainStack 미등록, navigate 호출 X)
 
-| 화면            | 파일                               | 설명                                                                                                      |
-| --------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **ScoreEditor** | `screens/ScoreEditor/` (13개 모듈) | MainStack에 등록되어 있으나 `navigate('ScoreEditor')` 호출하는 화면 없음. 악보 에디터 + AI 생성 기능 포함 |
+| 화면            | 파일                               | 설명                                                                                                                                                      |
+| --------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ScoreEditor** | `screens/ScoreEditor/` (13개 모듈) | 2026-11 편집기 숨김: `MainStack.tsx`에서 import·`Stack.Screen` 등록을 제거(파라미터 타입만 유지). 코드는 보존되어 있으며 재노출 시 등록만 복구하면 됨 |
 
 **ScoreEditor 관련 모듈** (ScoreEditor만 사용하는 모듈):
 
@@ -270,8 +270,8 @@ Login → Onboarding → Home
                        ├── Paywall (모달)
                        └── Profile (모달)
 
-[도달 불가]
-  └── ScoreEditor (등록만 됨, 진입 경로 없음)
+[숨김]
+  └── ScoreEditor (MainStack 미등록 — 2026-11 편집기 숨김, 코드만 보존)
 ```
 
 ---
@@ -347,6 +347,7 @@ Login → Onboarding → Home
 | `skillProfile.test.ts`           | 스킬 레벨 계산                                                                                        |
 | `contentConfig.test.ts`          | 카테고리 설정/난이도 라벨                                                                             |
 | `contentQaRules.test.ts`         | 콘텐츠 QA 규칙 (청음 시험 기준: 선율·2성부 도약/반복/종지, 리듬 받아쓰기, 화성진행·조성·음정 ABC 표기)        |
+| `compoundTuplet.test.ts`         | 복합박자(6/8·9/8) 잇단음표 규칙 — 셋잇단 레벨은 둘잇단(2:3)으로 출제, ABC `(2:3:2`·채점 타임라인·마디 길이     |
 | `duration.test.ts`               | 음가 변환/박자 계산                                                                                   |
 | `keySignature.test.ts`           | 조성/음계/임시표                                                                                      |
 | `melodyRhythmLevel.test.ts`      | 레벨별 리듬 파라미터                                                                                  |
@@ -370,7 +371,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (389개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (399개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -379,6 +380,7 @@ Login → Onboarding → Home
 | 선율/2성부 받아쓰기 문제 생성·진입·생성 예약 취소                  | `src/screens/NotationPracticeScreen.tsx`                                                                                                                                                                                                                                          |
 | 새 문제의 첫 음·마디·성부 조건으로 답안 초기화                     | `src/hooks/useNoteInput.ts`                                                                                                                                                                                                                                                       |
 | 기보형 문제의 클라이언트 동적 생성                                 | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
+| 복합박자(6/8·9/8) 잇단음표 = 둘잇단(2:3) 생성·입력·표기            | `src/lib/rhythmEngine.ts`(makeDuplets·findTupletTargetIdx), `src/lib/twoVoice/melodyGenerator.ts`(tupletSpan16·generateDupletNotes), `src/hooks/useNoteInput.ts`(makeTupletGroup·tupletCount), `src/components/DurationToolbar.tsx`(tupletCount), `src/screens/NotationPracticeScreen.tsx`('duplet' 입력), `src/components/PracticeSettingsSheet.tsx`(안내 문구) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
 | 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
 | 3분 레벨 테스트 진행·결과·추천 난이도 연동                         | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |

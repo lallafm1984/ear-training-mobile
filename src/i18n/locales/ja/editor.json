@@ -34,7 +34,8 @@
     "sharps": "基本 / 臨時記号 (#)",
     "sharpsOnly": "臨時記号 (#)",
     "flats": "フラット (♭)",
-    "tempo": "テンポ (BPM)"
+    "tempo": "テンポ (BPM)",
+    "compoundTupletHint": "6/8・9/8では三連符の段階が二連符（1拍を2つに分割）で出題されます"
   },
   "loading": {
     "title": "AIが楽譜を生成中です",

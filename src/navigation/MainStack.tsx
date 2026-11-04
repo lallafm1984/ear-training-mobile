@@ -7,7 +7,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from '../components/SplashScreen';
 
 import HomeScreen from '../screens/HomeScreen';
-import ScoreEditorScreen from '../screens/ScoreEditor';
 import CategoryPracticeScreen from '../screens/CategoryPracticeScreen';
 import ChoicePracticeScreen from '../screens/ChoicePracticeScreen';
 import NotationPracticeScreen from '../screens/NotationPracticeScreen';
@@ -55,6 +54,7 @@ export type MainStackParamList = {
     practiceSettings?: PracticeSettings;
     examMode?: boolean;
   };
+  /** 악보 에디터(레거시). 화면 코드는 유지하되 MainStack에 등록하지 않아 진입 불가(숨김) */
   ScoreEditor:
     | {
         category?: ContentCategory;
@@ -109,7 +109,6 @@ export default function MainStack() {
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
       <Stack.Screen name="ChoicePractice" component={ChoicePracticeScreen} />
       <Stack.Screen name="NotationPractice" component={NotationPracticeScreen} />
-      <Stack.Screen name="ScoreEditor" component={ScoreEditorScreen} />
       <Stack.Screen name="MockExamSetup" component={MockExamSetupScreen} />
       <Stack.Screen name="MockExam" component={MockExamScreen} />
       <Stack.Screen name="ExamResult" component={ExamResultScreen} />

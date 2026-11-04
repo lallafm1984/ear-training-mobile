@@ -34,7 +34,8 @@
     "sharps": "기본 / 올림표 (#)",
     "sharpsOnly": "올림표 (#)",
     "flats": "내림표 (♭)",
-    "tempo": "빠르기 (BPM)"
+    "tempo": "빠르기 (BPM)",
+    "compoundTupletHint": "6/8·9/8에서는 셋잇단음표 단계가 둘잇단음표(한 박을 둘로 나눔)로 출제됩니다"
   },
   "loading": {
     "title": "AI가 악보를 생성 중입니다",

@@ -4,7 +4,7 @@
  * 2026-11 콘텐츠 QA에서 발견·수정한 문제가 재발하지 않도록 생성 결과를 규칙으로 고정한다.
  *  · 선율/2성부: 삼전음·증2도·7도·9도 이상 도약 없음(쉼표 건너뛰기 포함), 같은 음 3회 반복 없음,
  *    첫 음은 으뜸3화음 구성음, 마지막 음은 으뜸음, A5 상한, 붙임줄은 같은 음으로만 이어짐
- *  · 리듬: 첫 박 쉼표 없음, 마디 길이 정확, 쉼표 1개 이상, 6/8에서는 셋잇단 없음, 점쉼표는 복합박자에서만
+ *  · 리듬: 첫 박 쉼표 없음, 마디 길이 정확, 쉼표 1개 이상, 6/8에서는 셋잇단 대신 둘잇단(L5+), 점쉼표는 복합박자에서만
  *  · 저음 L1: 종지 직전 베이스는 으뜸음이 아니고 종지 도약은 완전5도 이하
  *  · 객관식: 화성진행 화음이 조표 기준 철자로 표기되어 임시표 전달로 다른 화음이 되지 않음,
  *    조성 문제 기준음 A♮·이끔음 ♮ 명시, 음정 문제의 같은 음이름 임시표 전달 방지, 속7·반감7 번역 키
@@ -273,7 +273,7 @@ describe('2성부 생성 (저음 L1~L4)', () => {
 
 // ── 리듬 받아쓰기 ────────────────────────────────────────────────
 describe('리듬 받아쓰기 생성', () => {
-  it('첫 박 쉼표 없음·마디 길이 정확·쉼표 1개 이상·6/8 셋잇단 없음·점쉼표는 복합박자만', () => {
+  it('첫 박 쉼표 없음·마디 길이 정확·쉼표 1개 이상·6/8은 둘잇단만(L5+)·점쉼표는 복합박자만', () => {
     const found: string[] = [];
     for (let r = 1; r <= 6; r++) {
       const d = `rhythm_${r}`;
@@ -285,7 +285,15 @@ describe('리듬 받아쓰기 생성', () => {
           if (notes[0].pitch === 'rest') found.push(`${tag}: startsWithRest`);
           for (const is of barIssues(notes, ts)) found.push(`${tag}: ${is}`);
           if (!notes.some((x) => x.pitch === 'rest')) found.push(`${tag}: noRest`);
-          if (ts === '6/8' && notes.some((x) => x.tuplet)) found.push(`${tag}: tripletInCompound`);
+          // 복합박자: 셋잇단 금지(박이 이미 셋으로 나뉨) — 잇단음표 레벨(L5+)은 둘잇단(2:3)으로, L1~L4는 잇단음표 없음
+          if (ts === '6/8' && notes.some((x) => x.tuplet && x.tuplet !== '2')) {
+            found.push(`${tag}: tripletInCompound`);
+          }
+          if (ts === '6/8' && r <= 4 && notes.some((x) => x.tuplet))
+            found.push(`${tag}: tupletBelowL5`);
+          if (ts === '6/8' && r === 5 && !notes.some((x) => x.tuplet === '2')) {
+            found.push(`${tag}: noDupletL5`);
+          }
           if (ts !== '6/8' && notes.some((x) => x.pitch === 'rest' && x.duration.endsWith('.'))) {
             found.push(`${tag}: dottedRestInSimple`);
           }

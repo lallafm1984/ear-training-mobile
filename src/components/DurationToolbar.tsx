@@ -23,6 +23,8 @@ interface DurationToolbarProps {
   accentColor: string;
   tripletMode?: boolean;
   onToggleTriplet?: () => void;
+  /** 잇단음표 종류: 3 = 셋잇단(단순박자, 기본) / 2 = 둘잇단(복합박자 6/8 등) */
+  tupletCount?: 2 | 3;
 }
 
 const DURATION_BUTTONS: {
@@ -64,8 +66,11 @@ export default function DurationToolbar({
   accentColor,
   tripletMode,
   onToggleTriplet,
+  tupletCount = 3,
 }: DurationToolbarProps) {
   const { t } = useTranslation(['editor', 'practice']);
+  const tupletLabel =
+    tupletCount === 2 ? t('practice:notation.duplet') : t('practice:notation.triplet');
   const isSelected = (dur: NoteDuration) => selectedDuration === dur;
 
   const effectiveDurKey = isDotted ? `${selectedDuration}.` : selectedDuration;
@@ -199,15 +204,16 @@ export default function DurationToolbar({
           <Text style={[styles.toolBtnText, tieMode && styles.toolBtnTextActive]}>⌒</Text>
         </TouchableOpacity>
 
-        {/* Triplet */}
+        {/* Tuplet — 셋잇단(단순박자) / 둘잇단(복합박자) */}
         {onToggleTriplet && (
           <TouchableOpacity
             style={[styles.toolBtn, tripletMode && styles.toolBtnActive]}
             onPress={onToggleTriplet}
-            accessibilityLabel={t('practice:notation.triplet')}
+            accessibilityRole="button"
+            accessibilityLabel={tupletLabel}
           >
             <MaterialCommunityIcons
-              name="numeric-3-circle-outline"
+              name={tupletCount === 2 ? 'numeric-2-circle-outline' : 'numeric-3-circle-outline'}
               size={14}
               color={tripletMode ? '#fff' : COLORS.slate600}
             />
@@ -218,7 +224,7 @@ export default function DurationToolbar({
                 { marginLeft: 2 },
               ]}
             >
-              {t('practice:notation.triplet')}
+              {tupletLabel}
             </Text>
           </TouchableOpacity>
         )}

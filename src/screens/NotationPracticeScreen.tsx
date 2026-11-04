@@ -30,6 +30,7 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { generateAbc, ScoreNote, generateAbcScaleNotes, sumScoreNotesSixteenths } from '../lib';
 import type { NoteDuration } from '../lib/scoreUtils';
+import { isCompoundMeter } from '../lib/scoreUtils/duration';
 
 type MaterialCommunityIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 import { generatePracticeScore, type PracticeScore } from '../lib/practiceScoreGenerator';
@@ -77,13 +78,15 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 
 // 특수 입력 식별자
 // 쉼표: 'r_' 접두사 + NoteDuration (예: 'r_4' = 4분쉼표)
-type RhythmInput = NoteDuration | 'triplet' | `r_${NoteDuration}`;
+// 잇단음표: 'triplet' = 셋잇단(단순박자, 4분 span) / 'duplet' = 둘잇단(복합박자 6/8 등, 점4분 span)
+type RhythmInput = NoteDuration | 'triplet' | 'duplet' | `r_${NoteDuration}`;
 
 function isRest(input: RhythmInput): boolean {
   return typeof input === 'string' && input.startsWith('r_');
 }
-// 음표 버튼 (전체 일관, 모든 난이도 동일)
+// 음표 버튼 (전체 일관, 모든 난이도 동일) — 복합박자(6/8·9/8)는 셋잇단 대신 둘잇단 버튼
 const NOTE_BUTTONS: RhythmInput[] = ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'triplet'];
+const NOTE_BUTTONS_COMPOUND: RhythmInput[] = ['1', '2', '2.', '4', '4.', '8', '8.', '16', 'duplet'];
 
 // 쉼표 버튼 (전체 일관)
 const REST_BUTTONS: RhythmInput[] = ['r_1', 'r_2', 'r_4', 'r_8', 'r_16'];
@@ -100,6 +103,7 @@ function getDurationLabels(t: (key: string) => string): Record<string, string> {
     '8.': t('practice:notation.dotEighth'),
     '16': t('editor:duration.sixteenth'),
     triplet: t('practice:notation.triplet'),
+    duplet: t('practice:notation.duplet'),
     r_1: t('practice:notation.restWhole'),
     r_2: t('practice:notation.restHalf'),
     r_4: t('practice:notation.restQuarter'),
@@ -119,6 +123,7 @@ const DURATION_ICON: Record<string, MaterialCommunityIconName> = {
   '8.': 'music-note-eighth-dotted',
   '16': 'music-note-sixteenth',
   triplet: 'numeric-3-circle-outline',
+  duplet: 'numeric-2-circle-outline',
   r_1: 'music-rest-whole',
   r_2: 'music-rest-half',
   r_4: 'music-rest-quarter',
@@ -144,6 +149,7 @@ const SIXTEENTHS_MAP: Record<string, number> = {
   '8.': 3,
   '16': 1,
   triplet: 4,
+  duplet: 6, // 둘잇단 = 점4분 한 박
   r_1: 16,
   r_2: 8,
   'r_2.': 12,
@@ -252,6 +258,7 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string, pitch: stri
     '8.': `${p}3`,
     '16': `${p}1`,
     triplet: `(3:2:3${p}2${p}2${p}2`,
+    duplet: `(2:3:2${p}2${p}2`,
     r_1: 'z16',
     r_2: 'z8',
     'r_2.': 'z12',
@@ -280,15 +287,16 @@ function userInputToAbc(input: RhythmInput[], timeSignature: string, pitch: stri
   return `X:1\nM:${timeSignature}\nL:1/16\nK:C\n${abc}`;
 }
 
-/** 정답 시퀀스 추출 (음표 + 쉼표 포함, 셋잇단 그룹은 'triplet' 1개로 축약) */
+/** 정답 시퀀스 추출 (음표 + 쉼표 포함, 잇단음표 그룹은 'triplet'/'duplet' 1개로 축약) */
 function getAnswerSequence(notes: ScoreNote[]): RhythmInput[] {
   const result: RhythmInput[] = [];
   let i = 0;
   while (i < notes.length) {
     const note = notes[i];
-    if (note.tuplet === '3') {
-      result.push('triplet');
-      i += 3;
+    const tupletCount = note.tuplet ? parseInt(note.tuplet, 10) || 0 : 0;
+    if (tupletCount > 0) {
+      result.push(tupletCount === 2 ? 'duplet' : 'triplet');
+      i += tupletCount;
     } else if (note.pitch === 'rest') {
       result.push(`r_${note.duration}` as RhythmInput);
       i++;
@@ -792,7 +800,7 @@ export default function NotationPracticeScreen() {
 
   const userTotalSixteenths = getTotalSixteenths(userInput);
   const rhythmFilled = userTotalSixteenths >= fullTotalSixteenths && fullTotalSixteenths > 0;
-  const noteButtons = NOTE_BUTTONS;
+  const noteButtons = isCompoundMeter(timeSignature) ? NOTE_BUTTONS_COMPOUND : NOTE_BUTTONS;
   const restButtons = REST_BUTTONS;
 
   // ── 결과 화면 ──
@@ -1482,6 +1490,7 @@ export default function NotationPracticeScreen() {
                     onUndo={noteInput.undo}
                     accentColor={colors.main}
                     tripletMode={noteInput.tripletMode}
+                    tupletCount={noteInput.tupletCount}
                     onToggleTriplet={() => {
                       if (noteInput.selectedNoteIndex !== null) {
                         noteInput.replaceWithTriplet();

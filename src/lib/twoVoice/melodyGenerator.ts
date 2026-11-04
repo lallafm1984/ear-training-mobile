@@ -5,7 +5,7 @@
 // Spec: temp/ear_training_melody_prompt_v4.md — 레벨 1–9, 강박 협화, 화성단조 처리
 // ────────────────────────────────────────────────────────────────
 
-import type { ScoreNote, PitchName, NoteDuration, Accidental } from '../scoreUtils';
+import type { ScoreNote, PitchName, NoteDuration, Accidental, TupletType } from '../scoreUtils';
 import {
   getScaleDegrees,
   getSixteenthsPerBar,
@@ -843,7 +843,7 @@ function fixLargeLeaps(melodyNNs: number[], ctx: MelodyGenContext): void {
 
 interface BarRhythmCell {
   dur16: number;
-  /** 한 리듬 칸: 단일 음 또는 셋잇단 3음 */
+  /** 한 리듬 칸: 단일 음, 셋잇단 3음(단순박자) 또는 둘잇단 2음(복합박자) */
   nns: number[];
 }
 
@@ -877,6 +877,20 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
   let lastTrebleDur: number | undefined;
   const beatSize = trebleBeatSizeSixteenths(timeSig);
   const compoundMeter = /^(6|9|12)\/8$/.test(timeSig);
+  // 잇단음표 span(16분 단위): 단순박자 = 4분(셋잇단 8분×3), 복합박자 = 점4분 한 박(둘잇단 8분×2)
+  // 복합박자의 박은 이미 셋으로 나뉘므로 셋잇단 대신 "박을 둘로 나누는" 둘잇단이 관용 표기
+  const tupletSpan16 = compoundMeter ? 6 : 4;
+  /** 마디 내 16분 오프셋 p에 잇단음표를 둘 수 있는가 — 복합: 박머리 / 단순: 2박 단위, 곡 첫 음 제외 */
+  const tupletSlotAt = (bar: number, p: number) =>
+    !(bar === 0 && p === 0) && (compoundMeter ? p % beatSize === 0 : p % (beatSize * 2) === 0);
+  const hasTupletSlot = (bar: number, r: number[]) => {
+    let p = 0;
+    for (const d of r) {
+      if (d === tupletSpan16 && tupletSlotAt(bar, p)) return true;
+      p += d;
+    }
+    return false;
+  };
   const tieProbEff = rhythmParams.tieProb * (/^[57]\/8$/.test(timeSig) ? 0.5 : 1.0);
   // ── 특성 요소 최소 2마디, 최대 3마디 보장 ──
   const MIN_CHAR_BARS = 2;
@@ -1012,6 +1026,11 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       }
       // syncopation/tie: 후처리에서 mustForce로 보장하므로 fillRhythm 부스트 불필요
     }
+    // 복합박자 둘잇단: 박머리 점4분 셀이 있어야 하므로 풀·점음표 확률 보정
+    if (compoundMeter && charType === 'triplet' && !mustSuppress) {
+      if (!effectivePool.includes(6)) effectivePool = [...effectivePool, 6, 6];
+      effectiveDottedProb = Math.max(effectiveDottedProb, mustForce ? 0.95 : 0.6);
+    }
 
     let rhythm = fillRhythm(sixteenthsPerBar, effectivePool, {
       timeSignature: timeSig,
@@ -1034,6 +1053,21 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
           maxNotes: maxNotesForBar,
         });
         if (rhythm.includes(charDur16)) break;
+      }
+    }
+
+    // 강제 모드에서 잇단음표 자리(박머리의 4분/점4분)가 없으면 재시도
+    if (mustForce && charType === 'triplet' && !hasTupletSlot(bar, rhythm)) {
+      for (let retry = 0; retry < 10; retry++) {
+        rhythm = fillRhythm(sixteenthsPerBar, effectivePool, {
+          timeSignature: timeSig,
+          lastDur: lastTrebleDur,
+          syncopationProb: effectiveSyncProb,
+          dottedProb: compoundMeter ? 1.0 : effectiveDottedProb,
+          allowTies: melodyLevel >= 5,
+          maxNotes: maxNotesForBar,
+        });
+        if (hasTupletSlot(bar, rhythm)) break;
       }
     }
 
@@ -1261,28 +1295,30 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       // 셋잇단 (charType=triplet 시 마디당 1개 제한 → budget 분배)
       const forceTriplet = mustForce && charType === 'triplet' && !barHasChar;
       const suppressTriplet = mustSuppress && charType === 'triplet';
-      const barTripletLimit = charType === 'triplet' && barHasChar; // 이미 이 마디에 셋잇단 있음
+      const barTripletLimit = charType === 'triplet' && barHasChar; // 이미 이 마디에 잇단음표 있음
+      // 단순박자: 4분음표 → 셋잇단 / 복합박자(6/8 등): 박머리 점4분 → 둘잇단
       const useTriplet =
         !suppressTriplet &&
         !barTripletLimit &&
-        !compoundMeter && // 복합박자(6/8 등)에서는 4분음표 셋잇단이 비관용적 → 제외
-        !(bar === 0 && barPos === 0) &&
         tripletBudget > 0 &&
-        dur === 4 &&
+        dur === tupletSpan16 &&
         melodyLevel >= 8 &&
-        barPos % (beatSize * 2) === 0 &&
+        tupletSlotAt(bar, barPos) &&
         (forceTriplet || Math.random() < rhythmParams.tripletProb);
 
       if (useTriplet) {
-        const tripNNs = generateTripletNotes(nn, prevNN, ctx);
-        barCells.push({ dur16: 4, nns: [...tripNNs] });
+        const tupNNs: number[] = compoundMeter
+          ? generateDupletNotes(nn, ctx)
+          : generateTripletNotes(nn, prevNN, ctx);
+        barCells.push({ dur16: tupletSpan16, nns: [...tupNNs] });
         tripletBudget--;
         if (charType === 'triplet') barHasChar = true;
-        prevNN = tripNNs[2];
-        prevFinalNn = tripNNs[2];
-        for (let t = 0; t < 2; t++) {
+        const lastTupNn = tupNNs[tupNNs.length - 1];
+        prevNN = lastTupNn;
+        prevFinalNn = lastTupNn;
+        for (let t = 0; t < tupNNs.length - 1; t++) {
           totalMoves++;
-          if (Math.abs(tripNNs[t + 1] - tripNNs[t]) <= 1) stepwiseCount++;
+          if (Math.abs(tupNNs[t + 1] - tupNNs[t]) <= 1) stepwiseCount++;
         }
       } else {
         barCells.push({ dur16: dur, nns: [nn] });
@@ -1314,24 +1350,28 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
     for (const cell of barCells) {
       const durLabel = SIXTEENTHS_TO_DUR[cell.dur16] || '4';
 
-      if (cell.nns.length === 3) {
-        const spanDur = '4' as NoteDuration;
-        const spanSixteenths = durationToSixteenths(spanDur); // 4
-        const tnd = getTupletNoteDuration('3', spanDur); // 2 (written eighth)
+      if (cell.nns.length > 1) {
+        // 잇단음표 그룹: 셋잇단(4분 span, 8분×3) 또는 둘잇단(점4분 span, 8분×2)
+        const count = cell.nns.length;
+        const tupletType = String(count) as TupletType;
+        const spanDur = (count === 2 ? '4.' : '4') as NoteDuration;
+        const spanSixteenths = durationToSixteenths(spanDur); // 6 또는 4
+        const tnd = getTupletNoteDuration(tupletType, spanDur); // 2 (written eighth)
         const innerDur = sixteenthsToDuration(tnd);
         const first = nnToScoreNote(cell.nns[0], innerDur, ctx);
-        first.tuplet = '3';
+        first.tuplet = tupletType;
         first.tupletSpan = spanDur;
         first.tupletNoteDur = tnd;
-        const rem = spanSixteenths - tnd; // 2
-        const perRem = Math.floor(rem / 2); // 1
-        const second = nnToScoreNote(cell.nns[1], innerDur, ctx);
-        second.tupletNoteDur = perRem;
-        const third = nnToScoreNote(cell.nns[2], innerDur, ctx);
-        third.tupletNoteDur = rem - perRem;
         allNotes.push(first);
-        allNotes.push(second);
-        allNotes.push(third);
+        // 나머지 음의 tupletNoteDur 합 = span − tnd (그룹 합계가 span이 되는 규약: 셋잇단 [2,1,1], 둘잇단 [2,4])
+        let rem = spanSixteenths - tnd;
+        for (let k = 1; k < count; k++) {
+          const share = k === count - 1 ? rem : Math.floor(rem / (count - k));
+          const member = nnToScoreNote(cell.nns[k], innerDur, ctx);
+          member.tupletNoteDur = share;
+          allNotes.push(member);
+          rem -= share;
+        }
       } else {
         const nn = cell.nns[0];
         const { pitch, octave } = noteNumToNote(nn, ctx.scale, ctx.baseOctave);
@@ -1366,7 +1406,7 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       !mustSuppress &&
       (mustForce || Math.random() < SYNC_PROB)
     ) {
-      const barNoteCount = barCells.reduce((s, c) => s + (c.nns.length === 3 ? 3 : 1), 0);
+      const barNoteCount = barCells.reduce((s, c) => s + c.nns.length, 0);
       const barStartIdx = allNotes.length - barNoteCount;
       // 마디 내 음표 위치 매핑
       type NoteWithPos = { idx: number; pos: number; dur16: number };
@@ -1516,7 +1556,7 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       !mustSuppress &&
       (tieAlways || Math.random() < rhythmParams.tieProb)
     ) {
-      const barNoteCount = barCells.reduce((s, c) => s + (c.nns.length === 3 ? 3 : 1), 0);
+      const barNoteCount = barCells.reduce((s, c) => s + c.nns.length, 0);
       const barStartIdx = allNotes.length - barNoteCount;
       const barEndIdx = allNotes.length;
       // 분할 가능한 후보: 4분(dur=4) 이상, 쉼표/셋잇단 제외, 첫 음표 제외
@@ -1633,6 +1673,15 @@ function generateTripletNotes(
     n3 = n1;
   }
   return [n1, n2, n3];
+}
+
+/** 둘잇단(복합박자): 순차진행 2음 — 박머리 음에서 한 음 위/아래로 */
+function generateDupletNotes(startNN: number, ctx: MelodyGenContext): [number, number] {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const n1 = startNN;
+  let n2 = clampNN(n1 + dir, ctx);
+  if (n2 === n1) n2 = clampNN(n1 - dir, ctx);
+  return [n1, n2];
 }
 
 // ────────────────────────────────────────────────────────────────
