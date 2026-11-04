@@ -24,7 +24,7 @@
         "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
-      "versionCode": 64,
+      "versionCode": 67,
       "permissions": ["com.android.vending.BILLING"],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
