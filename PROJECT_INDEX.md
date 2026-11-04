@@ -21,6 +21,7 @@ src/
 │   ├── wrongNoteReviewStore.ts   # 오답노트 → 객관식 복습 모드 문항 전달
 │   ├── shareCard.ts              # 결과 공유 카드 데이터 모델·텍스트 공유 문구·파일명 (순수 함수)
 │   ├── scaleQuestions.ts         # 음계·선법 듣기 객관식 문제 생성 (템플릿·근음 철자·유사 보기)
+│   ├── progressionVoicing.ts     # 화성진행·종지 재생용 4성부(SATB) 성부 배치 엔진 (동적 계획법: 병행 5·8도 금지·이끔음 상행·완전 정격종지)
 │   ├── rhythmTap.ts              # 리듬 탭 패턴 생성·예상 타점·탭 타이밍 채점 (순수 함수)
 │   ├── layout.ts                 # 반응형 레이아웃 판정 (태블릿·콘텐츠/폼/시트 최대 폭·모달 폭, 순수 함수)
 │   ├── dailyGoal.ts              # 일일 목표 7종 판정 (오늘 달성 수·연속 달성일, 순수 함수) — Home·DailyGoal 공통
@@ -163,6 +164,7 @@ scripts/
 | `contentConfig.ts`          | 대부분의 화면 (8곳)                                                                                                                                                                               |
 | `questionGenerator.ts`      | ChoicePractice, MockExam                                                                                                                                                                          |
 | `scaleQuestions.ts`         | questionGenerator(scale 분기), ChoicePractice·MockExam을 통해 사용                                                                                                                                |
+| `progressionVoicing.ts`     | questionGenerator(renderProgressionAbc 성부 배치)                                                                                                                                                 |
 | `rhythmTap.ts`              | RhythmTapScreen (패턴 생성·타점·채점)                                                                                                                                                             |
 | `layout.ts`                 | useResponsiveLayout, AppAlert·UpgradeModal(모달 폭 상한), BottomSheet·ShareCardModal(시트 폭 상한), LoginScreen·OnboardingScreen(폼/버튼 열 폭 상한), DailyScoreChart(기본 차트 폭)              |
 | `grading.ts`                | NotationPractice, GradingResult                                                                                                                                                                   |
@@ -342,6 +344,7 @@ Login → Onboarding → Home
 | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `grading.test.ts`                | `normalizeNotes`, `gradeNotes`                                                                        |
 | `questionGenerator.test.ts`      | 객관식 문제 생성                                                                                      |
+| `progressionVoicing.test.ts`     | 화성진행 4성부 성부 배치 규칙 (병행·교차·음역·이끔음·PAC, 실제 큰보표 ABC 검증)                        |
 | `scoreGenerator.test.ts`         | 악보 생성 엔진                                                                                        |
 | `computeStats.test.ts`           | 통계 집계                                                                                             |
 | `skillProfile.test.ts`           | 스킬 레벨 계산                                                                                        |
@@ -371,7 +374,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (399개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (426개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -381,6 +384,7 @@ Login → Onboarding → Home
 | 새 문제의 첫 음·마디·성부 조건으로 답안 초기화                     | `src/hooks/useNoteInput.ts`                                                                                                                                                                                                                                                       |
 | 기보형 문제의 클라이언트 동적 생성                                 | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
 | 복합박자(6/8·9/8) 잇단음표 = 둘잇단(2:3) 생성·입력·표기            | `src/lib/rhythmEngine.ts`(makeDuplets·findTupletTargetIdx), `src/lib/twoVoice/melodyGenerator.ts`(tupletSpan16·generateDupletNotes), `src/hooks/useNoteInput.ts`(makeTupletGroup·tupletCount), `src/components/DurationToolbar.tsx`(tupletCount), `src/screens/NotationPracticeScreen.tsx`('duplet' 입력), `src/components/PracticeSettingsSheet.tsx`(안내 문구) |
+| 화성진행·종지 재생 4성부 성부 배치 (큰보표 V1 S·A / V2 T·B)          | `src/lib/progressionVoicing.ts`, `src/lib/questionGenerator.ts`(renderProgressionAbc·spellChordVoice), `src/__tests__/progressionVoicing.test.ts`, `src/__tests__/contentQaRules.test.ts`(큰보표 파서) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
 | 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
 | 3분 레벨 테스트 진행·결과·추천 난이도 연동                         | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |

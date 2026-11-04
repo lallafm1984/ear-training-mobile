@@ -315,14 +315,10 @@ describe('리듬 받아쓰기 생성', () => {
 const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 /** abcjs 규칙(같은 마디·같은 옥타브 임시표 전달)으로 ABC 본문의 음을 MIDI pc 목록으로 해석 */
-function abcPitchClasses(abc: string): { chords: number[][]; melody: number[] } {
-  const keyLine = abc.match(/K:(\S+)/);
-  const keyAlt = keySignatureAlterations(keyLine ? keyLine[1] : 'C');
-  const body = abc
-    .split('\n')
-    .filter((l) => !/^[A-Z]:/.test(l))
-    .join(' ')
-    .replace(/"[^"]*"/g, ''); // 주석("^A" 기준음 표시 등) 제거
+function parseAbcBody(
+  body: string,
+  keyAlt: Record<string, number>,
+): { chords: number[][]; melody: number[] } {
   const chords: number[][] = [];
   const melody: number[] = [];
   for (const bar of body.split('|')) {
@@ -356,6 +352,34 @@ function abcPitchClasses(abc: string): { chords: number[][]; melody: number[] } 
     }
   }
   return { chords, melody };
+}
+
+/**
+ * ABC → 화음(피치 클래스 배열)·선율 목록. `V:` 성부가 여럿이면(큰보표 화성진행) 같은 순번의
+ * 화음을 성부끼리 합쳐 하나의 화음으로 본다.
+ */
+function abcPitchClasses(abc: string): { chords: number[][]; melody: number[] } {
+  const keyLine = abc.match(/K:(\S+)/);
+  const keyAlt = keySignatureAlterations(keyLine ? keyLine[1] : 'C');
+  const voices: string[][] = [];
+  const plain: string[] = [];
+  let cur: string[] | null = null;
+  for (const line of abc.split('\n')) {
+    if (/^V:/.test(line)) {
+      cur = [];
+      voices.push(cur);
+      continue;
+    }
+    if (/^[A-Z]:/.test(line)) continue;
+    (cur ?? plain).push(line);
+  }
+  const parsed = (voices.length > 0 ? voices : [plain]).map((ls) =>
+    parseAbcBody(ls.join(' ').replace(/"[^"]*"/g, ''), keyAlt),
+  );
+  const count = Math.max(...parsed.map((p) => p.chords.length));
+  const chords: number[][] = [];
+  for (let i = 0; i < count; i++) chords.push(parsed.flatMap((p) => p.chords[i] ?? []));
+  return { chords, melody: parsed[0].melody };
 }
 
 function isTriad(pcs: number[]): boolean {

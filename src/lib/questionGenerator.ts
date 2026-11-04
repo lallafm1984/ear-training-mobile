@@ -13,6 +13,7 @@ import type {
   ScaleDifficulty,
 } from '../types/content';
 import { generateScaleQuestion } from './scaleQuestions';
+import { realizeProgression } from './progressionVoicing';
 
 // ─────────────────────────────────────────────────────────────
 // 공통 타입
@@ -1083,44 +1084,104 @@ function spellAbcNote(
   return acc + body;
 }
 
-function romanToChordAbc(
-  roman: string,
-  template: ProgressionTemplate,
+function romanIntervals(roman: string, template: ProgressionTemplate): number[] {
+  const intervals =
+    template.mode === 'minor' ? MINOR_ROMAN_INTERVALS[roman] : MAJOR_ROMAN_INTERVALS[roman];
+  return intervals ?? MAJOR_ROMAN_INTERVALS.I;
+}
+
+/**
+ * 성부 하나의 MIDI 음을 화음 구성음(근음·3음·5음)의 올바른 음이름으로 ABC 표기한다.
+ * 3도 쌓기: 근음 음이름에서 2글자씩 건너뛴 음이름 (조표에 맞는 철자)
+ */
+function spellChordVoice(
+  midi: number,
+  intervals: number[],
+  degree: number,
   key: ProgressionKey,
   keyAlt: Record<string, number>,
   barState: Map<string, number>,
 ): string {
-  const intervals =
-    template.mode === 'minor' ? MINOR_ROMAN_INTERVALS[roman] : MAJOR_ROMAN_INTERVALS[roman];
-  const safeIntervals = intervals ?? MAJOR_ROMAN_INTERVALS.I;
-  const degree = ROMAN_DEGREE[roman] ?? 0;
   const tonicLetterIdx = LETTER_NAMES.indexOf(key.abcKey[0]);
-  // 3도 쌓기: 근음 음이름에서 2글자씩 건너뛴 음이름으로 표기 (조표에 맞는 올바른 철자)
-  const notes = safeIntervals.map((interval, k) => {
-    const letter = LETTER_NAMES[(tonicLetterIdx + degree + 2 * k) % 7];
-    return spellAbcNote(key.tonicMidi + interval, letter, keyAlt, barState);
-  });
-  return `[${notes.join('')}]`;
+  const pc = ((midi % 12) + 12) % 12;
+  let member = intervals.findIndex((iv) => (((key.tonicMidi + iv) % 12) + 12) % 12 === pc);
+  if (member < 0) member = 0;
+  const letter = LETTER_NAMES[(tonicLetterIdx + degree + 2 * member) % 7];
+  return spellAbcNote(midi, letter, keyAlt, barState);
 }
 
+/**
+ * 로마숫자 진행 → 4성부 큰보표 ABC (위 보표 S·A, 아래 보표 T·B, 반음표 단위).
+ * 성부 배치는 progressionVoicing(병행 5·8도 금지, 이끔음 상행, 정격종지 소프라노 1̂)이 정한다.
+ * 마디 나누기: 2개 → 한 마디, 3개 → 2+1(마지막 온음표), 4개 → 2+2
+ */
 function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey): string {
   const keyAlt = keySignatureAlterations(key.abcKey);
   const romans = template.roman;
-  // 마디 나누기: 2개 → 한 마디, 3개 → 2+1(마지막 온음표), 4개 → 2+2
-  const bars: string[][] = romans.length <= 2 ? [romans] : [romans.slice(0, 2), romans.slice(2)];
-  const rendered = bars.map((bar) => {
-    const barState = new Map<string, number>();
-    return bar.map((roman) => romanToChordAbc(roman, template, key, keyAlt, barState));
+  const chords = romans.map((roman) => romanIntervals(roman, template));
+  const n = romans.length;
+  const endsOnTonic = n >= 2 && (ROMAN_DEGREE[romans[n - 1]] ?? 0) === 0;
+  const dominantBefore = n >= 2 && (ROMAN_DEGREE[romans[n - 2]] ?? 0) === 4;
+  const voiced = realizeProgression({
+    chords,
+    tonicMidi: key.tonicMidi,
+    minor: template.mode === 'minor',
+    sopranoEndsOnTonic: endsOnTonic && dominantBefore, // 완전 정격종지(PAC)
   });
-  let body: string;
-  if (romans.length === 2) {
-    body = `${rendered[0][0]} ${rendered[0][1]} |]`;
-  } else if (romans.length === 3) {
-    body = `${rendered[0][0]} ${rendered[0][1]} | ${rendered[1][0]}2 |]`;
-  } else {
-    body = `${rendered[0][0]} ${rendered[0][1]} | ${rendered[1][0]} ${rendered[1][1]} |]`;
+
+  const barGroups: number[][] =
+    n <= 2 ? [romans.map((_, i) => i)] : [[0, 1], romans.slice(2).map((_, i) => i + 2)];
+  const upper: string[] = [];
+  const lower: string[] = [];
+  for (const group of barGroups) {
+    const upperState = new Map<string, number>();
+    const lowerState = new Map<string, number>();
+    const dur = group.length === 1 ? '2' : '';
+    upper.push(
+      group
+        .map((i) => {
+          const degree = ROMAN_DEGREE[romans[i]] ?? 0;
+          const alto = spellChordVoice(voiced[i].alto, chords[i], degree, key, keyAlt, upperState);
+          const sop = spellChordVoice(
+            voiced[i].soprano,
+            chords[i],
+            degree,
+            key,
+            keyAlt,
+            upperState,
+          );
+          return `[${alto}${sop}]${dur}`;
+        })
+        .join(' '),
+    );
+    lower.push(
+      group
+        .map((i) => {
+          const degree = ROMAN_DEGREE[romans[i]] ?? 0;
+          const bass = spellChordVoice(voiced[i].bass, chords[i], degree, key, keyAlt, lowerState);
+          const tenor = spellChordVoice(
+            voiced[i].tenor,
+            chords[i],
+            degree,
+            key,
+            keyAlt,
+            lowerState,
+          );
+          return `[${bass}${tenor}]${dur}`;
+        })
+        .join(' '),
+    );
   }
-  return `X:1\nM:4/4\nL:1/2\nK:${key.abcKey}\n${body}`;
+  return [
+    'X:1',
+    'M:4/4',
+    'L:1/2',
+    `K:${key.abcKey}`,
+    'V:V1 clef=treble',
+    `${upper.join(' | ')} |]`,
+    'V:V2 clef=bass',
+    `${lower.join(' | ')} |]`,
+  ].join('\n');
 }
 
 const recentProgressions: string[] = [];
@@ -1221,6 +1282,7 @@ function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQ
   const key = pickProgressionKey(template.mode);
   const correctAnswer = progressionAnswerLabel(template.kind, template.answerKey);
   const wrongTemplates = buildProgressionWrongTemplates(template, pool);
+  // 성부 배치에 무작위성이 있으므로 정답 악보는 한 번만 만들어 재생·비교 모두에 쓴다
   const choiceAbc: Record<string, string> = {};
   for (const t of [template, ...wrongTemplates]) {
     choiceAbc[progressionAnswerLabel(t.kind, t.answerKey)] = renderProgressionAbc(
@@ -1228,6 +1290,7 @@ function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQ
       keyForTemplate(t, key),
     );
   }
+  const abcNotation = choiceAbc[correctAnswer];
 
   return {
     id: generateId(),
@@ -1238,7 +1301,7 @@ function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQ
       correctAnswer,
       ...wrongTemplates.map((t) => progressionAnswerLabel(t.kind, t.answerKey)),
     ]),
-    abcNotation: renderProgressionAbc(template, key),
+    abcNotation,
     prompt:
       template.kind === 'cadence'
         ? i18n.t('practice:choice.cadencePrompt')

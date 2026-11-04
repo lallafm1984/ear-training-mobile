@@ -342,6 +342,34 @@ function ensureMinRests(notes: ScoreNote[], timeSignature: string): ScoreNote[] 
     const beatCands = candidates.filter((j) => noteToSixteenths(result[j]) >= 4);
     const targetIdx = beatCands.length > 0 ? rand(beatCands) : rand(candidates);
     result[targetIdx] = { ...result[targetIdx], pitch: 'rest' };
+    return result;
+  }
+
+  // 후보가 없는 경우(예: 2/4 1단계에서 모든 마디가 2분음표): 첫 음표가 아닌 박머리의 "두 박 길이" 음표를
+  // 한 박 음표 + 한 박 쉼표로 나눠 쉼표를 보장한다 (복합박자는 점4분 + 점4분 쉼표).
+  pos = 0;
+  for (let j = 0; j < result.length; j++) {
+    const n = result[j];
+    const d = noteToSixteenths(n);
+    const onBeat = (pos % B) % beatSize === 0;
+    if (
+      j > 0 &&
+      n.pitch !== 'rest' &&
+      n.tuplet == null &&
+      n.tupletNoteDur == null &&
+      d === beatSize * 2 &&
+      onBeat
+    ) {
+      const pitch = n.pitch as PitchName;
+      result.splice(
+        j,
+        1,
+        makeRhythmNote(beatSize, false, pitch),
+        makeRhythmNote(beatSize, true, pitch),
+      );
+      return result;
+    }
+    pos += d;
   }
 
   return result;
