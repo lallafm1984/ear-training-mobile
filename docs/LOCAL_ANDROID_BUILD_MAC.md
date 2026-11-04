@@ -109,7 +109,7 @@ npm run android:build:local
 
 ## EAS 로그인 없이 빌드 (prebuild + Gradle)
 
-EAS 계정에 로그인할 수 없거나 로그인이 만료됐을 때는 EAS 없이 Expo prebuild와 Gradle로 같은 upload key 서명의 AAB를 만들 수 있습니다. 2026-08 릴리스(1.1.x)와 2026-11-04 2.0.0(versionCode 63) AAB가 이 방식으로 만들어졌습니다. 2.0.0 빌드는 같은 순서를 수동으로 실행했고, 그 절차를 아래 스크립트로 고정했습니다.
+EAS 계정에 로그인할 수 없거나 로그인이 만료됐을 때는 EAS 없이 Expo prebuild와 Gradle로 같은 upload key 서명의 AAB를 만들 수 있습니다. 2026-08 릴리스(1.1.x)와 2026-11-04 2.0.0 AAB가 이 방식으로 만들어졌습니다. versionCode 63은 같은 순서를 수동으로 실행했고, 그 절차를 아래 스크립트로 고정한 뒤 versionCode 64(최종 출시 후보)는 `npm run android:build:gradle -- --clean`으로 만들었습니다(Gradle 2분 29초, 전체 약 2.6분).
 
 2.0.0 빌드 기록: 한글 경로(`~/Desktop/프로젝트/...`)에서는 JS 번들 단계(`createBundleReleaseJsAndAssets`)가 "Unable to resolve module .../index.ts"로 실패해 워크트리를 `/Users/lim/melodygen-build/ear-training-mobile-2.0`으로 옮긴 뒤 성공했습니다(Gradle 4분 42초). 산출물 `build/melodygen-android-v63.aab`(약 72MB)의 서명 인증서 지문은 아래 upload 인증서와 일치했고, `jarsigner -verify`는 "jar verified."였습니다.
 
