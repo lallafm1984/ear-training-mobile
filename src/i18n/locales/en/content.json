@@ -132,7 +132,7 @@
     "3": "Minor 3rd (m3)",
     "4": "Major 3rd (M3)",
     "5": "Perfect 4th (P4)",
-    "6": "Augmented 4th (A4)",
+    "6": "Augmented 4th / Diminished 5th (A4/d5)",
     "7": "Perfect 5th (P5)",
     "8": "Minor 6th (m6)",
     "9": "Major 6th (M6)",
@@ -225,7 +225,7 @@
       "3": "A minor 3rd is three semitones apart. It sounds slightly dark and is the basis of the minor triad.",
       "4": "A major 3rd is four semitones apart. It sounds bright and is the basis of the major triad.",
       "5": "A perfect 4th is five semitones apart. Stable, but slightly hollow.",
-      "6": "A tritone (augmented 4th) is six semitones, exactly half an octave, so it sounds the most unstable.",
+      "6": "A tritone (augmented 4th or diminished 5th) is six semitones, exactly half an octave, so it sounds the most unstable. By ear the two spellings are the same sound, so they share the name tritone.",
       "7": "A perfect 5th is seven semitones apart. Wide, solid and very stable.",
       "8": "A minor 6th is eight semitones apart, the inversion of a major 3rd: wide but soft and wistful.",
       "9": "A major 6th is nine semitones apart. Wide open, yet bright.",
@@ -257,7 +257,7 @@
       "IV-V-I": "Tension grows from IV to V and resolves to I. Notice that the first chord is not I.",
       "I-ii-V": "From I through ii (minor) to V, where it stops. It stays open, like a half cadence.",
       "vi-IV-V": "Starts on vi (minor) and rises through IV to V. A dark start with an open ending.",
-      "I-vi-ii-V": "I-vi-ii-V is a circle progression: the bass moves in 4ths and ii-V prepares the next I.",
+      "I-vi-ii-V": "I-vi-ii-V drops a 3rd from I to vi, then vi-ii-V-I is a circle progression moving up in 4ths (down in 5ths). ii-V prepares the next I.",
       "I-V-vi-IV": "I-V-vi-IV is the most common pop progression. Listen for the deceptive move from V to vi.",
       "I-IV-ii-V": "After I-IV comes ii (minor), then V. IV and ii share notes, so follow the bass.",
       "i-iv-V-i": "The basic minor progression. iv is minor, but V sounds major because of the leading tone.",
@@ -266,7 +266,7 @@
     "cadence": {
       "authentic": "An authentic cadence ends V to I. It gives the strongest sense of 'finished'.",
       "half": "A half cadence stops on V. It feels unfinished, waiting for more.",
-      "plagal": "A plagal cadence ends IV to I, like 'Amen': soft and calm.",
+      "plagal": "A plagal cadence ends IV to I, like 'Amen': soft and calm. It often follows an authentic cadence to extend the ending.",
       "deceptive": "A deceptive cadence goes V to vi instead of I. You expect an ending, and it slips away."
     },
     "scale": {
