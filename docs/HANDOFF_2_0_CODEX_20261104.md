@@ -22,12 +22,12 @@ npx tsc --noEmit && npm run lint && npm run format:check && npm test
 | 항목 | 상태 |
 | --- | --- |
 | 라이브 버전 | 1.1.3 / Android versionCode 62 (소스 = 브랜치 `sync/v58-local-snapshot`, 커밋 3a1a283). 원격 `master`(e5858fe, versionCode 52)는 더 오래된 상태 |
-| 2.0 브랜치 HEAD | 추가 QA·UI·콘텐츠 수정 `b638689`·`4059b99`·`0163bcc`, 빌드 `b676f16` (`claude/project-thread-6dd7sm`), PR #12 https://github.com/lallafm1984/ear-training-mobile/pull/12 (오픈, 미머지) |
-| 앱 버전 | `app.json` version **2.0.0**, android.versionCode **67** |
-| 출시 후보 AAB | `build/melodygen-android-v67.aab` (2.0.0/67, 72.2MB, SHA-256 `30c30274e1531cbdd2cfae288a062642ccc79d86add25fe56cb1a47a175b5fda`, 소스 `b676f16`). Mac 원본과 Windows 최종 보관본 경로는 12장. v63~v66은 최신 후보가 아님 |
+| 2.0 브랜치 HEAD | UI·콘텐츠 수정 이후 운영 DB `02e3936`, R8 `10e3ab6`, 알림 호환·빌드 `ec6bb58` (`claude/project-thread-6dd7sm`), PR #12 https://github.com/lallafm1984/ear-training-mobile/pull/12 (오픈, 미머지) |
+| 앱 버전 | `app.json` version **2.0.0**, android.versionCode **72** |
+| 출시 후보 AAB | `build/melodygen-android-v72.aab` (2.0.0/72, 66.9MiB, SHA-256 `6e2639f1187b7d957c0921130ee416522b20870f8a7775eea32406e77e6e8669`, 소스 `ec6bb58`). Windows 최종 보관본과 해시 일치, 상세는 13장. v71 이하는 최신 후보가 아님 |
 | 코드 | ✅ tsc / eslint / prettier 통과 |
 | 테스트 | ✅ Jest 34 스위트 476개. 이전 abcjs 실제 렌더 기록은 2,440 + 361 + 450 문항. 이번 추가 검증은 12장 |
-| 빌드 | ✅ v67 AAB 로컬 Gradle 빌드·Windows 복사 완료, upload 키 서명 지문 일치, `jarsigner -verify` 통과, 번들에 Supabase 호스트 포함 확인 |
+| 빌드 | ✅ v72 AAB·APK 빌드·Windows 복사, upload 서명 검증, AAB의 `jarsigner`·Supabase 호스트·R8 3개 지표 25% 이상 확인 (13장) |
 | 운영 DB | ✅ profiles RLS·종료 프로모션 비활성화 2건 적용·검증. 구독 보호 트리거 1건은 웹훅 연결 확인 전 보류 (`docs/PROFILES_RLS_20261103.md`) |
 | 스토어 | ❌ 문구만 준비(`store/android/listing.md`). AAB 업로드·스크린샷·출시 노트 등록 미진행 |
 | 실기기 | ⚠️ Galaxy S25에서 리듬 탭 신호·언어 선택/취소/적용/재시작 유지 확인. 알림 권한·OS 예약 확인. 나머지는 7·12장 |
@@ -49,7 +49,7 @@ npx tsc --noEmit && npm run lint && npm run format:check && npm test
 | 1859148 | 게스트 모드 – 로그인 없이 시작, 로컬 데이터를 소유자별 키로 분리, 로그인 시 게스트 데이터 병합 이관 |
 | b08319f | 객관식 정답 해설 + 내 답/정답 비교 듣기 |
 | 1768088 | 귀 열기 7일 코스 (`BeginnerCourse`/`BeginnerLesson`, 설계 `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md`) |
-| 724a945 | profiles RLS 마이그레이션 2건 추가 (운영 적용은 아직, 6장) |
+| 724a945 | profiles RLS·구독 컬럼 보호 마이그레이션 추가 (현재 적용 범위는 6장) |
 | fee985a | 3분 레벨 테스트 → 시작 난이도 추천 |
 | 5ee748d | 매일 연습 리마인더 (expo-notifications 로컬 알림, 알림 아이콘) |
 | fdbafbf | 오답노트·약점 집중 연습 |
@@ -141,14 +141,14 @@ select id, enabled, ends_at from public.app_promotions;                         
 
 ## 7. 남은 일 (우선순위 순)
 
-1. **실기기 검증 확대** (v67 AAB 또는 `--apk --no-bump` APK). 특히:
+1. **실기기 검증 확대** (13장의 최신 AAB 또는 `--apk --no-bump` APK). 특히:
    - 리듬 탭 클릭 트랙 동기화(4/4·3/4·6/8), 6/8 강박 점 표시, 허용 오차 체감
    - 공유 카드 캡처·공유 시트(view-shot)
    - 리마인더 알림 권한 요청·예약·수신(앱이 포그라운드일 때는 표시되지 않는 것이 의도된 동작)
    - 화성진행 4성부 재생 음량·속도, 6/8 둘잇단 입력·재생
    - 태블릿 레이아웃(가운데 정렬, 모달 폭), 통계 화면 새 섹션, NEW 배지, 요금제 비교표
    - 게스트 → 로그인 데이터 이관, 1.1.3 설치 위에 덮어 설치 시 기존 기록 유지
-2. **Play Console** 내부 테스트 트랙에 v67 업로드 → 검증 → 프로덕션. 스토어 문구·스크린샷·출시 노트 갱신.
+2. **Play Console** 내부 테스트 트랙에 13장의 최신 AAB 업로드 → DEX 지표·업데이트 검증 → 프로덕션. 스토어 문구·스크린샷·출시 노트 갱신.
 3. **운영 DB** 1·2는 적용 완료. RevenueCat 웹훅 연결·실제 수신 확인 후 3(구독 보호 트리거)만 검토 (6장).
 4. **QA 반복 루프 유지**(Lim 상시 지시): 디자인·코드·사용자·콘텐츠 관점으로 점검 → 수정 → 재점검을 반복하고 PR #12 설명의 라운드 표에 커밋을 추가한다.
 5. 결정 대기: `ScoreEditor` 완전 삭제 여부(현재 숨김만). `TODOS.md` 1번(계정 삭제 Edge Function)은 `delete_own_account` RPC(security definer) 도입으로 해소된 것으로 보이나 운영 DB에 함수가 존재하는지 확인해 TODOS를 갱신할 것.
@@ -218,7 +218,7 @@ select id, enabled, ends_at from public.app_promotions;                         
 - **기존 1.1.3 덮어 설치:** S25의 Play 설치본(versionCode 62)은 Play 서명이고, 로컬 APK는 upload 서명이라 직접 덮어 설치할 수 없다. 원본 앱을 삭제하지 않고 QA 패키지를 따로 설치했다. 실제 업데이트 데이터 보존 검증은 Play 내부 테스트 경로가 필요하다.
 - 6/8 둘잇단 기보, 4성부 청감, 게스트 → 로그인 실제 이관, 테스트 계정 탈퇴는 여전히 별도 실기기 확인이 필요하다.
 
-### 최신 산출물
+### 당시 산출물 (v67, 최신 후보는 13장)
 
 - 출시용 AAB: Mac `build/melodygen-android-v67.aab` / Windows **`D:\Projects\YulProject_1\ear-training-mobile\build\melodygen-android-v67.aab`**.
 - AAB SHA-256: `30c30274e1531cbdd2cfae288a062642ccc79d86add25fe56cb1a47a175b5fda`. upload 인증서 지문 일치, `jarsigner -verify` 통과, Supabase 호스트 포함 확인.
@@ -227,9 +227,46 @@ select id, enabled, ends_at from public.app_promotions;                         
 - Windows에서 두 파일의 SHA-256이 Mac 원본과 일치함을 확인했다. QA APK는 Play 업로드용이 아니며, OAuth scheme도 `melodygen-qa`로 분리했다.
 - UI 증거: `build/qa-v67/screenshots/`(Git 제외). 서명·환경 변수 등 비밀값은 기록하지 않았다.
 
-### 운영·스토어
+### 당시 운영·스토어 (후속 적용 결과는 6·13장)
 
-- 이번 작업에서 운영 DB는 **조회만** 했다. `profiles` RLS=false/정책 0개/구독 보호 트리거 없음, 종료 프로모션 enabled=true를 확인했다.
+- 이 QA 라운드까지 운영 DB는 **조회만** 했다. `profiles` RLS=false/정책 0개/구독 보호 트리거 없음, 종료 프로모션 enabled=true를 확인했다.
 - `delete_own_account()`와 auth.users → profiles `ON DELETE CASCADE`가 운영 DB에 존재한다. 기존 TODOS의 “별도 계정 삭제 Edge Function 필요” 항목은 실제 상태에 맞게 고쳤다.
-- `revenuecat-webhook`은 ACTIVE/version 2지만 RevenueCat 측 연결과 실제 수신 여부는 확인하지 않았다. 6장의 3건 마이그레이션은 여전히 미적용이다.
-- Play 업로드·내부 테스트 배포·프로덕션 출시는 수행하지 않았다. 다음 후보는 v67이며 v64~v66을 대신 사용하지 않는다.
+- `revenuecat-webhook`은 ACTIVE/version 2지만 RevenueCat 측 연결과 실제 수신 여부는 확인하지 않았다. 이 시점에는 3건 마이그레이션이 미적용이었다. 이후 2건의 적용 결과는 6·13장을 따른다.
+- Play 업로드·내부 테스트 배포·프로덕션 출시는 수행하지 않았다. 당시 후보는 v67이었다. 현재 후보는 13장을 따른다.
+
+
+## 13. 운영 DB 반영·Google Play DEX 최적화 후속 (2026-11-04)
+
+### 운영 DB
+
+- 사용자 요청의 “실서버 영향이 없다면 미리 반영” 조건에 따라 라이브 1.1.3 코드와 운영 권한을 대조한 뒤 2건만 적용했다(`02e3936`). 본인 프로필 CRUD·구독 캐시 갱신은 허용하고, 타인 행·anon 접근은 막는 역할별 테스트를 ROLLBACK으로 검증했다.
+- profiles RLS/정책 4개 및 종료 프로모션·공지 비활성화가 적용됐다. 빌드 62/67 × ko/en/ja 원격 앱 제어 응답이 전후 동일하고 프로모션은 적용 전후 모두 비활성이다. Advisor의 profiles RLS 오류도 해소됐다.
+- RevenueCat 웹훅은 ACTIVE v2/service_role 사용까지 확인했다. 실제 RevenueCat 연결·수신은 미확인이라 기존 tier 폴백 캐시를 막을 수 있는 구독 컬럼 보호 트리거는 보류한다. 상세 이력·검증 범위는 `docs/PROFILES_RLS_20261103.md`.
+
+### DEX 경고 대응
+
+- 릴리스 62의 난독화 2% 경고 대응으로 R8 난독화·코드 최적화·코드 축소·리소스 축소를 prebuild config plugin에 영구 반영했다(`10e3ab6`).
+- `purchases-store-amazon:9.29.0` consumer 규칙의 전역 `-dontoptimize`만 제외하고 Amazon 보호 규칙은 보존했다. 실제 release 실행에서 확인한 Expo Record reflection 보호 규칙도 추가했다.
+- `expo-notifications:0.32.17`의 제공 규칙이 consumer에 연결되지 않아 v71에서 알림 직렬화 실패를 재현했다. upstream과 같은 알림 패키지 보호 규칙을 복원한 빌드가 v72다(`ec6bb58`). v70·v71은 Windows `build/obsolete/`에 분리했으며 출시 후보로 사용하지 않는다.
+- AAB 내 `r8.json` 기준 **난독화 58.47% / 최적화 58.16% / 코드 축소 58.40%**. 모두 활성이고 25% 기준 이상이다. 보고서 누락·비활성·기준 미달이면 빌드 검증이 실패한다.
+- DEX는 v67의 5개/54,268,100바이트에서 v72의 2개/14,480,992바이트로 **73.32% 감소**했다. AAB 전체는 75,677,659 → 70,182,395바이트다.
+
+### 최종 산출물
+
+- Mac AAB: `/Users/lim/melodygen-build/ear-training-mobile-2.0/build/melodygen-android-v72.aab`
+- Windows AAB: **`D:\Projects\YulProject_1\ear-training-mobile\build\melodygen-android-v72.aab`**
+- 버전 **2.0.0 / versionCode 72**, 소스 `ec6bb58`.
+- AAB SHA-256: `6e2639f1187b7d957c0921130ee416522b20870f8a7775eea32406e77e6e8669`. Windows 원본 해시 일치.
+- `jarsigner`·upload 인증서 일치·JS 번들 Supabase 호스트 확인 완료. 같은 버전 APK도 `apksigner verify --print-certs`로 인증서를 확인했다.
+- AAB와 같은 폴더에 `melodygen-android-v72-r8.json`, `melodygen-android-v72-mapping.txt`, `melodygen-android-v72-optimization-verification.json`, `melodygen-android-v72.apk`를 보관했다. 보고서와 mapping은 AAB 내부에도 포함된다.
+- **Play 업로드·배포는 미수행**. 새 AAB 업로드 후 Play Console DEX 재평가를 확인해야 하며 기존 출시 62의 온라인 경고가 이미 사라졌다고 보고하지 않는다.
+
+
+### 최적화 release 실행 검증 범위
+
+- 최종 v72 APK를 Android 폰 에뮬레이터(1080×2400)에 설치해 cold start·SecureStore 초기화·게스트/기존 로컬 연습 기록 유지·통계 화면을 확인했다.
+- 통계 결과 카드 → 이미지 캡처 → Android 공유 시트와 이미지 미리보기를 확인했다. 수신자를 선택하거나 전송하지 않았다. WebView 악보·리듬 연습은 같은 최적화 설정의 v71에서 별도로 실행 확인했다.
+- 알림 권한 granted, 20:00 AlarmManager 예약, 앱 재실행 후 설정 enabled 및 OS 예약 유지를 확인했다. 실제 알림 수신은 미확인이다.
+- 최종 로그에서 SecureStore Record 변환·직렬화·ClassNotFoundException·NoSuchMethodError·FATAL EXCEPTION은 0건이다. 에뮬레이터에는 결제 서비스가 없어 RevenueCat은 BILLING_UNAVAILABLE을 반환한다. 실제 구매·복원 검증으로 간주하지 않는다.
+- 증거는 `build/qa-v72/`(Git 제외), 빌드 비교는 `build/melodygen-android-v72-optimization-verification.json`에 보관했다.
+- 이 실행 검증은 에뮬레이터에서만 했다. Galaxy의 Play 62 설치본과 별도 QA 67은 변경하지 않았다. Play 업데이트 데이터 보존·실계정 이관/탈퇴·구매는 추가 검증이 필요하다.
