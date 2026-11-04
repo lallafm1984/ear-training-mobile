@@ -122,6 +122,36 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
   },
 ];
 
+/**
+ * 2.0 업데이트에서 추가된 난이도. 전부 기존 freeMaxLevel 뒤에 붙어 Pro 전용이며,
+ * 화면에서는 NEW 배지로 표시한다 (오픈 범위 표: docs/CONTENT_SCOPE_2_0.md).
+ */
+export const NEW_CONTENT_DIFFICULTIES: ReadonlySet<string> = new Set<string>([
+  'interval_5',
+  'interval_6',
+  'chord_5',
+  'progression_5',
+  'progression_6',
+  'progression_7',
+  'scale_5',
+  'tap_5',
+  'tap_6',
+]);
+
+export function isNewDifficulty(difficulty: ContentDifficulty): boolean {
+  return NEW_CONTENT_DIFFICULTIES.has(difficulty);
+}
+
+/** 카테고리에 새로 추가된 난이도 수 */
+export function countNewLevels(category: ContentCategory): number {
+  return getDifficultyList(category).filter((d) => NEW_CONTENT_DIFFICULTIES.has(d)).length;
+}
+
+/** 무료 사용자가 열 수 있는 난이도 목록 (freeMaxLevel 개) */
+export function getFreeDifficulties(category: ContentCategory): ContentDifficulty[] {
+  return getDifficultyList(category).slice(0, getContentConfig(category).freeMaxLevel);
+}
+
 /** 카테고리 ID로 설정 조회 */
 export function getContentConfig(id: ContentCategory): ContentTypeConfig {
   return CONTENT_CATEGORIES.find((c) => c.id === id)!;

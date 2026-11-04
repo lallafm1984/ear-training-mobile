@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig, getDifficultyList } from '../lib/contentConfig';
+import { getContentConfig, getDifficultyList, isNewDifficulty } from '../lib/contentConfig';
 import { isNotationCategory } from '../lib/notationPractice';
 import { isCompoundMeter } from '../lib/scoreUtils/duration';
 
@@ -221,6 +221,18 @@ export default function CategoryPracticeScreen() {
                       >
                         {t('content:difficulty.' + category + '.' + diff)}
                       </Text>
+                      {isNewDifficulty(diff) && (
+                        <View
+                          style={[
+                            styles.newChip,
+                            active ? { backgroundColor: 'rgba(255,255,255,0.25)' } : null,
+                          ]}
+                        >
+                          <Text style={[styles.newChipText, active && { color: '#fff' }]}>
+                            {t('common:badge.new')}
+                          </Text>
+                        </View>
+                      )}
                       {diff === recommendedDiff && (
                         <View
                           style={[
@@ -432,6 +444,13 @@ const styles = StyleSheet.create({
     color: COLORS.slate700,
     flexShrink: 1,
   },
+  newChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#fde68a',
+  },
+  newChipText: { fontSize: 9, fontWeight: '800', color: '#92400e', letterSpacing: 0.5 },
   recommendChip: {
     flexDirection: 'row',
     alignItems: 'center',

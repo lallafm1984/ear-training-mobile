@@ -53,5 +53,8 @@
     "retry": "Try again"
   },
   "version": "MelodyGen v1.0.0",
-  "versionFormat": "MelodyGen v{{version}} (build {{build}})"
+  "versionFormat": "MelodyGen v{{version}} (build {{build}})",
+  "badge": {
+    "new": "NEW"
+  }
 }

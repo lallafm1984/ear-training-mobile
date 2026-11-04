@@ -53,5 +53,8 @@
     "retry": "다시 시도"
   },
   "version": "MelodyGen v1.0.0",
-  "versionFormat": "MelodyGen v{{version}} (빌드 {{build}})"
+  "versionFormat": "MelodyGen v{{version}} (빌드 {{build}})",
+  "badge": {
+    "new": "NEW"
+  }
 }

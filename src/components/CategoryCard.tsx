@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+export const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   Music,
   Drum,
   ArrowUpDown,
@@ -40,9 +40,18 @@ interface CategoryCardProps {
   practiceCount?: number;
   /** 카드 폭(dp). 그리드 열 수에 맞춰 부모가 계산해 넘긴다. 없으면 30% */
   width?: number;
+  /** 이번 업데이트에서 추가된 난이도 수 — 0보다 크면 NEW 배지 */
+  newCount?: number;
 }
 
-function CategoryCard({ config, onPress, locked, practiceCount, width }: CategoryCardProps) {
+function CategoryCard({
+  config,
+  onPress,
+  locked,
+  practiceCount,
+  width,
+  newCount,
+}: CategoryCardProps) {
   const { t } = useTranslation(['common', 'content']);
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
@@ -76,6 +85,11 @@ function CategoryCard({ config, onPress, locked, practiceCount, width }: Categor
         <View style={styles.lockBadge}>
           <Lock size={10} color={COLORS.slate600} />
           <Text style={styles.lockText}>Pro</Text>
+        </View>
+      )}
+      {!locked && newCount != null && newCount > 0 && (
+        <View style={[styles.newBadge, { backgroundColor: config.color }]}>
+          <Text style={styles.newText}>{t('common:badge.new')}</Text>
         </View>
       )}
       {!locked && practiceCount != null && practiceCount > 0 && (
@@ -121,6 +135,15 @@ const styles = StyleSheet.create({
     color: COLORS.slate500,
     textAlign: 'center',
   },
+  newBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  newText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',

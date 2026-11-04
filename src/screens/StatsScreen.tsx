@@ -22,16 +22,27 @@ import {
   ChevronRight,
   BookOpen,
   Share2,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  AlertCircle,
+  Star,
+  CalendarCheck,
+  Music,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../theme/colors';
+import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 import { useAuth } from '../context';
 import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { computeInsights } from '../lib/computeStats';
+import { CONTENT_CATEGORIES } from '../lib/contentConfig';
+import type { ContentCategory } from '../types/content';
+import { ICON_MAP } from '../components/CategoryCard';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useWrongNotes } from '../hooks/useWrongNotes';
 import { useMascotExp } from '../hooks/useMascotExp';
@@ -44,6 +55,12 @@ import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
+/** 카테고리 → 아이콘 이름 (CategoryCard 와 같은 ICON_MAP 사용) */
+const CONTENT_ICON = Object.fromEntries(CONTENT_CATEGORIES.map((c) => [c.id, c.icon])) as Record<
+  ContentCategory,
+  string
+>;
+
 interface ExamRecord {
   id: string;
   title: string;
@@ -55,7 +72,14 @@ interface ExamRecord {
 export default function StatsScreen() {
   const navigation = useNavigation<NavProp>();
   const layout = useResponsiveLayout();
-  const { t, i18n } = useTranslation(['stats', 'practice', 'common', 'wrongNotes', 'share']);
+  const { t, i18n } = useTranslation([
+    'stats',
+    'practice',
+    'common',
+    'wrongNotes',
+    'share',
+    'content',
+  ]);
   const { storageUserId } = useAuth();
   const { records, stats, loaded, reload } = usePracticeHistory();
   const { profile: skillProfile } = useSkillProfile();
@@ -63,6 +87,8 @@ export default function StatsScreen() {
   const { level: mascotLevel } = useMascotExp();
   const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const unresolvedWrong = wrongNotes.filter((n) => !n.resolvedAt).length;
+  // 카테고리별 분석·약점/강점·주간 증감·활동일
+  const insights = useMemo(() => computeInsights(records), [records]);
 
   const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
   const [examLoading, setExamLoading] = useState(false);
@@ -321,6 +347,31 @@ export default function StatsScreen() {
               {stats.weeklyCount}
             </Text>
             <Text style={styles.summaryLabel}>{t('stats:summary.thisWeek')}</Text>
+            {stats.totalSessions > 0 && (
+              <View style={styles.summaryDeltaRow}>
+                {insights.weeklyDelta > 0 ? (
+                  <ArrowUp size={10} color={COLORS.success} />
+                ) : insights.weeklyDelta < 0 ? (
+                  <ArrowDown size={10} color={COLORS.error} />
+                ) : (
+                  <Minus size={10} color={COLORS.slate400} />
+                )}
+                <Text
+                  style={[
+                    styles.summaryDelta,
+                    insights.weeklyDelta > 0 && { color: COLORS.success },
+                    insights.weeklyDelta < 0 && { color: COLORS.error },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {insights.weeklyDelta > 0
+                    ? t('stats:summary.deltaUp', { count: insights.weeklyDelta })
+                    : insights.weeklyDelta < 0
+                      ? t('stats:summary.deltaDown', { count: -insights.weeklyDelta })
+                      : t('stats:summary.deltaSame')}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -369,6 +420,91 @@ export default function StatsScreen() {
               <Text style={styles.sectionSubLabel}>{t('stats:section.dailyScoreMax')}</Text>
             </View>
             <DailyScoreChart records={records} />
+          </>
+        )}
+
+        {/* 카테고리별 연습 — 횟수·평균 평가·최다 난이도, 약점/강점 */}
+        {insights.byCategory.length > 0 && (
+          <>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>{t('stats:section.byCategory')}</Text>
+              <View style={styles.activeDaysRow}>
+                <CalendarCheck size={12} color={COLORS.slate500} />
+                <Text style={styles.sectionSubLabel}>
+                  {t('stats:section.activeDays', { count: insights.activeDays30 })}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.catCard}>
+              {insights.byCategory.map((c, i) => {
+                const palette = CATEGORY_COLORS[c.category];
+                const Icon = ICON_MAP[CONTENT_ICON[c.category]] ?? Music;
+                const isWeak = insights.weakest === c.category;
+                const isStrong = insights.strongest === c.category;
+                return (
+                  <TouchableOpacity
+                    key={c.category}
+                    style={[styles.catRow, i > 0 && styles.catRowBorder]}
+                    onPress={() =>
+                      navigation.navigate('CategoryPractice', {
+                        category: c.category,
+                        ...(c.topDifficulty ? { initialDifficulty: c.topDifficulty } : {}),
+                      })
+                    }
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('content:category.' + c.category + '.name')}
+                  >
+                    <View style={[styles.catIcon, { backgroundColor: palette.bg }]}>
+                      <Icon size={18} color={palette.main} />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={styles.catNameRow}>
+                        <Text style={styles.catName} numberOfLines={1}>
+                          {t('content:category.' + c.category + '.name')}
+                        </Text>
+                        {isWeak && (
+                          <View style={[styles.catChip, { backgroundColor: '#fee2e2' }]}>
+                            <AlertCircle size={10} color={COLORS.error} />
+                            <Text style={[styles.catChipText, { color: COLORS.error }]}>
+                              {t('stats:category.weak')}
+                            </Text>
+                          </View>
+                        )}
+                        {isStrong && (
+                          <View style={[styles.catChip, { backgroundColor: '#dcfce7' }]}>
+                            <Star size={10} color={COLORS.success} />
+                            <Text style={[styles.catChipText, { color: COLORS.success }]}>
+                              {t('stats:category.strong')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.catMeta} numberOfLines={1}>
+                        {t('stats:category.summary', { count: c.count, rating: c.avgRating })}
+                        {c.topDifficulty
+                          ? ` · ${t('content:difficulty.' + c.category + '.' + c.topDifficulty, {
+                              defaultValue: c.topDifficulty,
+                            })}`
+                          : ''}
+                      </Text>
+                      <View style={styles.catBarTrack}>
+                        <View
+                          style={[
+                            styles.catBarFill,
+                            {
+                              width: `${Math.round((c.avgRating / 5) * 100)}%`,
+                              backgroundColor: palette.main,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <ChevronRight size={16} color={COLORS.slate300} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </>
         )}
 
@@ -553,6 +689,44 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 20,
   },
+  // 요약 — 주간 증감
+  summaryDeltaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  summaryDelta: { fontSize: 10, fontWeight: '600', color: COLORS.slate400 },
+  // 카테고리별 연습
+  activeDaysRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  catCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  catRowBorder: { borderTopWidth: 1, borderTopColor: COLORS.slate100 },
+  catIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  catName: { fontSize: 14, fontWeight: '700', color: COLORS.slate800, flexShrink: 1 },
+  catMeta: { fontSize: 12, color: COLORS.slate500 },
+  catBarTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.slate100, overflow: 'hidden' },
+  catBarFill: { height: 4, borderRadius: 2 },
+  catChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  catChipText: { fontSize: 10, fontWeight: '700' },
   // 요약
   emptyCard: {
     backgroundColor: '#fff',

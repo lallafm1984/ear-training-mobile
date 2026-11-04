@@ -56,7 +56,8 @@ docs/
 ├── APP_CONTROL_RELEASE_HANDOFF_20260822.md    # 빌드 61·라이브 DB·구버전 경계 인수인계
 ├── NOTATION_SCREEN_FIX_20260831.md            # 선율/2성부 회귀 원인·실기기 검증·62 (1.1.3) AAB
 ├── BEGINNER_EAR_OPENING_COURSE_DESIGN.md      # 귀 열기 7일 코스 설계안 (2026-11-03 구현)
-└── PROFILES_RLS_20261103.md                   # profiles RLS 활성화 마이그레이션 적용·검증 절차
+├── PROFILES_RLS_20261103.md                   # profiles RLS 활성화 마이그레이션 적용·검증 절차
+└── CONTENT_SCOPE_2_0.md                       # 2.0 콘텐츠 무료/Pro 오픈 범위표·기존 사용자 데이터 보존 근거
 store/
 └── android/
     ├── listing.md                             # Play 스토어 등록 문구 (2.0 ko/en/ja, 릴리스 노트, 앱 액세스 정보)
@@ -173,7 +174,7 @@ scripts/
 | `wrongNotes.ts`             | useWrongNotes, WrongNotesScreen, ChoicePractice(복습 모드), localProfileStorage(병합)                                                                                                             |
 | `wrongNoteReviewStore.ts`   | WrongNotesScreen(복습 시작) → ChoicePracticeScreen(review 파라미터)                                                                                                                               |
 | `shareCard.ts`              | ShareCardModal, ShareResultCard (공유 카드 데이터·텍스트 문구)                                                                                                                                    |
-| `computeStats.ts`           | StatsScreen                                                                                                                                                                                       |
+| `computeStats.ts`           | StatsScreen (computeStats 요약 + computeInsights 카테고리별 분석·약점/강점·주간 증감·활동일)                                                                                                        |
 | `dailyGoal.ts`              | HomeScreen(마스코트·일일 목표 카드), DailyGoalScreen(목표 목록·연속 달성일) — 전체 기록 기준으로 같은 값                                                                                        |
 | `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen(스테이지 인덱스)                                                                                                                                             |
 | `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)                                                                                                                                           |
@@ -374,7 +375,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (454개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (463개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -386,6 +387,9 @@ Login → Onboarding → Home
 | 복합박자(6/8·9/8) 잇단음표 = 둘잇단(2:3) 생성·입력·표기            | `src/lib/rhythmEngine.ts`(makeDuplets·findTupletTargetIdx), `src/lib/twoVoice/melodyGenerator.ts`(tupletSpan16·generateDupletNotes), `src/hooks/useNoteInput.ts`(makeTupletGroup·tupletCount), `src/components/DurationToolbar.tsx`(tupletCount), `src/screens/NotationPracticeScreen.tsx`('duplet' 입력), `src/components/PracticeSettingsSheet.tsx`(안내 문구) |
 | 화성진행·종지 재생 4성부 성부 배치 (큰보표 V1 S·A / V2 T·B)          | `src/lib/progressionVoicing.ts`, `src/lib/questionGenerator.ts`(renderProgressionAbc·spellChordVoice), `src/__tests__/progressionVoicing.test.ts`, `src/__tests__/contentQaRules.test.ts`(큰보표 파서) |
 | 음정 듣기 5·6단계 — 화성 음정(동시 울림)·복합음정(9~13도)          | `src/lib/questionGenerator.ts`(PRESENTATION_POOLS·COMPOUND_INTERVALS·intervalToAbc harmonic), `src/lib/contentConfig.ts`(INTERVAL_DIFF_LABELS), `src/types/content.ts`(IntervalDifficulty), `src/i18n/locales/*/content.json`(interval 13~21·explain.interval·difficulty.interval), `src/i18n/locales/*/practice.json`(choice.intervalHarmonicPrompt·intervalCompoundPrompt) |
+| 2.0 추가 콘텐츠 무료/Pro 범위·NEW 배지·요금제 비교표            | `src/lib/contentConfig.ts`(NEW_CONTENT_DIFFICULTIES·isNewDifficulty·countNewLevels·getFreeDifficulties), `src/components/CategoryCard.tsx`(newCount·ICON_MAP export), `src/screens/CategoryPracticeScreen.tsx`(NEW 칩), `src/screens/HomeScreen.tsx`, `src/screens/PaywallScreen.tsx`(CONTENT_CATEGORIES 기반 비교표), `src/i18n/locales/*/common.json`(badge.new), `docs/CONTENT_SCOPE_2_0.md` |
+| 통계 화면 — 카테고리별 연습·약점/강점·주간 증감·활동일              | `src/lib/computeStats.ts`(computeInsights), `src/screens/StatsScreen.tsx`, `src/i18n/locales/*/stats.json`(summary.delta*·section.byCategory·activeDays·category.*), `src/__tests__/computeStats.test.ts` |
+| 기존 사용자 데이터 보존(1.1.x → 2.0 키·형태 호환)                   | `src/lib/localProfileStorage.ts`(localDataKey = `<base>_<userId>`), `src/__tests__/localProfileStorage.test.ts`("기존 사용자 데이터 보존"), `docs/CONTENT_SCOPE_2_0.md` |
 | 화성 진행 5~7단계 — 종지 세분화(PAC/IAC/HC/DC)·기능 진행(ii6·V7·전위)·로마숫자 화음 판별 | `src/lib/questionGenerator.ts`(CADENCE_DETAIL_TEMPLATES·FUNCTIONAL_TEMPLATES·ROMAN_TEMPLATES·parseRomanToken·romanChordSpec), `src/lib/progressionVoicing.ts`(ChordSpec·finalSopranoMembers), `src/lib/contentConfig.ts`(PROGRESSION_DIFF_LABELS), `src/types/content.ts`(ProgressionDifficulty), `src/i18n/locales/*/content.json`(cadence.pac/iac·progression·roman·explain.*·difficulty.progression), `src/i18n/locales/*/practice.json`(choice.cadenceDetailPrompt·progressionFigurePrompt·romanPrompt) |
 | 화음 듣기 4단계 — 3화음 전위(제1·제2전위)                          | `src/lib/questionGenerator.ts`(CHORD_TEMPLATES maj_inv2·min_inv2, CHORD_POOLS chord_5), `src/lib/contentConfig.ts`(CHORD_DIFF_LABELS), `src/types/content.ts`(ChordDifficulty), `src/i18n/locales/*/content.json`(chord·explain.chord·difficulty.chord) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
@@ -408,6 +412,7 @@ Login → Onboarding → Home
 | `docs/NOTATION_SCREEN_FIX_20260831.md`       | 8월 22일 회귀 원인·빌드 58~62 대조·실기기 검증·62 (1.1.3) AAB 및 서명 검증         |
 | `docs/BEGINNER_EAR_OPENING_COURSE_DESIGN.md` | 초급자용 “귀 열기 코스” 설계안 (2026-11-03 BeginnerCourse/BeginnerLesson으로 구현) |
 | `docs/PROFILES_RLS_20261103.md`              | profiles RLS 활성화·tier 보호 트리거 마이그레이션의 배경·적용·검증 절차            |
+| `docs/CONTENT_SCOPE_2_0.md`                  | 2.0 추가 콘텐츠의 무료/Pro 범위표(NEW 배지·요금제 비교표 근거)와 1.1.x 데이터 보존 점검 |
 | `AD_COPY.md`                                 | 페이지별 광고 문구 모음 (13개 활성 화면)                                           |
 | `store/android/listing.md`                   | Play 스토어 등록 문구 2.0 (ko/en/ja 짧은/전체 설명, 릴리스 노트, 앱 액세스 정보)   |
 | `store/android/RELEASE_GUIDE.md`             | Play Console 릴리스 절차 가이드                                                    |

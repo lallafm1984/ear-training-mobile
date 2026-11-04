@@ -37,7 +37,7 @@ import { useBeginnerCourseProgress } from '../hooks/useBeginnerCourseProgress';
 import { BEGINNER_LESSONS, getBeginnerLesson } from '../lib/beginnerCourse';
 import { useLevelTestResult } from '../hooks/useLevelTestResult';
 import { COLORS } from '../theme/colors';
-import { CONTENT_CATEGORIES, getContentConfig } from '../lib/contentConfig';
+import { CONTENT_CATEGORIES, getContentConfig, countNewLevels } from '../lib/contentConfig';
 import { DAILY_GOAL_COUNT, countGoalsDoneToday } from '../lib/dailyGoal';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
@@ -309,6 +309,7 @@ export default function HomeScreen() {
                 locked={config.freeMaxLevel === 0 && tier === 'free'}
                 practiceCount={stats.totalByCategory[config.id] || 0}
                 width={categoryCardWidth}
+                newCount={countNewLevels(config.id)}
               />
             ))}
           </View>

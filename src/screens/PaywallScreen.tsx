@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Crown,
-  X,
-  Sparkles,
-  Music2,
-  FileMusic,
-  Layers,
-  ArrowUpDown,
-  Key,
-  Drum,
-} from 'lucide-react-native';
+import { Crown, X, Sparkles, Music } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlert, useSubscription, useAuth } from '../context';
 import {
@@ -28,6 +18,8 @@ import {
 import type { PurchasesPackage } from 'react-native-purchases';
 import { logger } from '../lib/logger';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { CONTENT_CATEGORIES } from '../lib/contentConfig';
+import { ICON_MAP } from '../components/CategoryCard';
 
 interface PaywallScreenProps {
   onClose: () => void;
@@ -48,56 +40,35 @@ const asPurchaseError = (error: unknown): PurchaseErrorLike =>
     : { message: String(error) };
 
 // ─────────────────────────────────────────────────────────────
-// 청음 훈련 카테고리별 Free/Pro 비교
+// 청음 훈련 카테고리별 Free/Pro 비교 — contentConfig(freeMaxLevel·maxLevel)에서 생성
 // ─────────────────────────────────────────────────────────────
 
-const CATEGORY_COMPARE_KEYS = [
+interface CompareRow {
+  key: string;
+  /** i18n 키 (content:category.<id>.name 또는 subscription 키) */
+  nameKey: string;
+  icon: React.ReactNode;
+  free: string;
+  pro: string;
+}
+
+const levelRange = (max: number) => (max <= 1 ? 'Lv.1' : `Lv.1~${max}`);
+
+const CATEGORY_COMPARE_ROWS: CompareRow[] = [
+  ...CONTENT_CATEGORIES.map((config): CompareRow => {
+    const Icon = ICON_MAP[config.icon] ?? Music;
+    return {
+      key: config.id,
+      nameKey: `content:category.${config.id}.name`,
+      icon: <Icon size={14} color={config.color} />,
+      free: config.freeMaxLevel === 0 ? 'locked' : levelRange(config.freeMaxLevel),
+      pro: levelRange(config.maxLevel),
+    };
+  }),
   {
-    nameKey: 'subscription:paywall.compareMelody',
-    icon: <Music2 size={14} color="#6366f1" />,
-    color: '#6366f1',
-    free: 'Lv.1~3',
-    pro: 'Lv.1~9',
-  },
-  {
-    nameKey: 'subscription:paywall.compareRhythm',
-    icon: <Drum size={14} color="#f59e0b" />,
-    color: '#f59e0b',
-    free: 'Lv.1~2',
-    pro: 'Lv.1~6',
-  },
-  {
-    nameKey: 'subscription:paywall.compareInterval',
-    icon: <ArrowUpDown size={14} color="#10b981" />,
-    color: '#10b981',
-    free: 'Lv.1~2',
-    pro: 'Lv.1~4',
-  },
-  {
-    nameKey: 'subscription:paywall.compareHarmony',
-    icon: <Layers size={14} color="#8b5cf6" />,
-    color: '#8b5cf6',
-    free: 'Lv.1',
-    pro: 'Lv.1~4',
-  },
-  {
-    nameKey: 'subscription:paywall.compareKey',
-    icon: <Key size={14} color="#ef4444" />,
-    color: '#ef4444',
-    free: 'Lv.1',
-    pro: 'Lv.1~3',
-  },
-  {
-    nameKey: 'subscription:paywall.compareTwoPart',
-    icon: <FileMusic size={14} color="#0ea5e9" />,
-    color: '#0ea5e9',
-    free: 'locked',
-    pro: 'Lv.1~4',
-  },
-  {
+    key: 'mockExam',
     nameKey: 'subscription:paywall.compareMockExam',
     icon: <Crown size={14} color="#f59e0b" />,
-    color: '#f59e0b',
     free: 'Lv.1',
     pro: 'all',
   },
@@ -345,9 +316,9 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
               <Text style={[styles.categoryHeaderCell, { color: '#94a3b8' }]}>Free</Text>
               <Text style={[styles.categoryHeaderCell, { color: '#6366f1' }]}>Pro</Text>
             </View>
-            {CATEGORY_COMPARE_KEYS.map((cat, i) => (
+            {CATEGORY_COMPARE_ROWS.map((cat, i) => (
               <View
-                key={i}
+                key={cat.key}
                 style={[styles.categoryRow, i % 2 === 0 && { backgroundColor: '#fafaff' }]}
               >
                 <View style={[styles.categoryNameCell, { flex: 1.5 }]}>

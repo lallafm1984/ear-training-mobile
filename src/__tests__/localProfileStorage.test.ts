@@ -47,6 +47,52 @@ describe('localDataKey', () => {
   });
 });
 
+describe('기존 사용자 데이터 보존 (1.1.x → 2.0)', () => {
+  it('로그인 사용자의 학습 데이터 키는 1.1.x 형식 `<base>_<userId>` 와 동일하다', () => {
+    const uid = 'a1b2c3d4-user';
+    // 1.1.x: `${BASE_KEY}_${user.id}` (usePracticeHistory·useSkillProfile·useMascotExp·ExamResultScreen)
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.recentActivity, uid)).toBe(
+      `@melodygen_recent_activity_${uid}`,
+    );
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.skillProfile, uid)).toBe(
+      `@melodygen_skill_profile_${uid}`,
+    );
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.lastPracticeDate, uid)).toBe(
+      `@melodygen_last_practice_date_${uid}`,
+    );
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.mascotExp, uid)).toBe(`@melodygen_mascot_exp_${uid}`);
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.dailyExpRewarded, uid)).toBe(
+      `@melodygen_daily_exp_rewarded_${uid}`,
+    );
+    expect(localDataKey(LOCAL_DATA_BASE_KEYS.examSessions, uid)).toBe(
+      `@melodygen_exam_sessions_${uid}`,
+    );
+  });
+
+  it('1.1.x 에 없던 키(게스트·오답노트·레벨 테스트·입문 코스)는 추가만 되고 기존 키 이름은 바뀌지 않았다', () => {
+    const legacy = [
+      '@melodygen_recent_activity',
+      '@melodygen_skill_profile',
+      '@melodygen_last_practice_date',
+      '@melodygen_mascot_exp',
+      '@melodygen_daily_exp_rewarded',
+      '@melodygen_exam_sessions',
+    ];
+    const bases = Object.values(LOCAL_DATA_BASE_KEYS) as string[];
+    for (const k of legacy) expect(bases).toContain(k);
+  });
+
+  it('계정에 기록이 있고 게스트 데이터가 없으면 이관이 계정 데이터를 건드리지 않는다', async () => {
+    const uid = 'u1';
+    const accountKey = localDataKey(LOCAL_DATA_BASE_KEYS.recentActivity, uid);
+    const payload = JSON.stringify([rec('old1', '2025-01-01T00:00:00.000Z')]);
+    const storage = memoryStorage({ [accountKey]: payload });
+    const result = await migrateGuestDataToAccount(storage, uid);
+    expect(result.migrated).toBe(false);
+    expect(storage.data.get(accountKey)).toBe(payload);
+  });
+});
+
 describe('merge 규칙', () => {
   it('연습 기록은 id 중복을 제거하고 최신순으로 정렬한다', () => {
     const merged = mergePracticeRecords(
