@@ -23,7 +23,11 @@ import {
   mod12,
   type VoicedChord,
 } from '../lib/progressionVoicing';
-import { generateChoiceQuestion, keySignatureAlterations } from '../lib/questionGenerator';
+import {
+  generateChoiceQuestion,
+  keySignatureAlterations,
+  parseRomanToken,
+} from '../lib/questionGenerator';
 
 const MAJOR: Record<string, number[]> = {
   I: [0, 4, 7],
@@ -249,5 +253,206 @@ describe('questionGenerator 화성진행 ABC — 큰보표 성부 배치', () =>
       }
     }
     expect(seen).toBeGreaterThan(0);
+  });
+});
+
+// ── 5~7단계: 종지 세분화 · 기능 진행(전위·7화음) · 로마숫자 판별 ───────────────
+const MAJOR_FULL: Record<string, number[]> = {
+  I: [0, 4, 7],
+  ii: [2, 5, 9],
+  iii: [4, 7, 11],
+  IV: [5, 9, 12],
+  V: [7, 11, 14],
+  vi: [9, 12, 16],
+  'vii°': [11, 14, 17],
+};
+const MINOR_FULL: Record<string, number[]> = {
+  i: [0, 3, 7],
+  'ii°': [2, 5, 8],
+  iv: [5, 8, 12],
+  V: [7, 11, 14],
+  VI: [8, 12, 15],
+};
+const SEVENTH_OF: Record<string, number> = {
+  I: 11,
+  ii: 10,
+  IV: 11,
+  V: 10,
+  vi: 10,
+  i: 10,
+  iv: 10,
+  'ii°': 10,
+};
+
+/** 로마숫자 토큰 → { pcs(으뜸음 기준 상대), bassRel, seventhRel } */
+function expectedChord(token: string, minor: boolean) {
+  const t = parseRomanToken(token);
+  const triad = (minor ? MINOR_FULL : MAJOR_FULL)[t.base];
+  expect(triad).toBeDefined();
+  const members = t.seventh ? [...triad, triad[0] + SEVENTH_OF[t.base]] : triad;
+  const rel = members.map((m) => mod12(m));
+  return {
+    rel,
+    bassRel: rel[Math.min(t.bassMember, rel.length - 1)],
+    seventhRel: t.seventh ? rel[3] : null,
+  };
+}
+
+function pcsOf(c: VoicedChord): number[] {
+  return [c.bass, c.tenor, c.alto, c.soprano].map(mod12);
+}
+
+/** 큰보표 ABC가 로마숫자 열(토큰)과 일치하는지: 구성음 집합(근음·3음 필수, 7음 필수)·베이스 구성음 */
+function expectChordsMatch(abc: string, romans: string[], minor: boolean) {
+  const { chords, tonicPc } = parseGrandStaff(abc);
+  expect(chords).toHaveLength(romans.length);
+  const seventhPcs: Array<number | null> = [];
+  romans.forEach((token, i) => {
+    const exp = expectedChord(token, minor);
+    const c = chords[i];
+    const rel = new Set(pcsOf(c).map((p) => mod12(p - tonicPc)));
+    for (const p of rel) expect(exp.rel).toContain(p); // 화음 밖 음 없음
+    expect(rel.has(exp.rel[0])).toBe(true); // 근음
+    expect(rel.has(exp.rel[1])).toBe(true); // 3음
+    if (exp.seventhRel !== null) expect(rel.has(exp.seventhRel)).toBe(true); // 7음
+    expect(mod12(c.bass - tonicPc)).toBe(exp.bassRel); // 전위(베이스 구성음)
+    seventhPcs.push(exp.seventhRel === null ? null : mod12(tonicPc + exp.seventhRel));
+  });
+  // 성부 진행 규칙 + 7음 하행 해결
+  expect(voiceLeadingIssues(chords, { seventhPcs })).toEqual([]);
+  return { chords, tonicPc };
+}
+
+describe('realizeProgression — 전위·7화음', () => {
+  it('ChordSpec.bassMember 로 지정한 구성음이 베이스에 오고, 7화음은 7음을 포함한다', () => {
+    const voiced = realizeProgression({
+      chords: [
+        { intervals: [0, 4, 7] },
+        { intervals: [2, 5, 9], bassMember: 1 }, // ii6 → 베이스 F
+        { intervals: [7, 11, 14, 17] }, // V7
+        { intervals: [0, 4, 7] },
+      ],
+      tonicMidi: 60,
+      sopranoEndsOnTonic: true,
+      random: () => 0,
+    });
+    expect(mod12(voiced[1].bass)).toBe(5);
+    expect(pcsOf(voiced[2])).toContain(5); // V7의 7음 F
+    expect(mod12(voiced[3].soprano)).toBe(0);
+    expect(voiceLeadingIssues(voiced, { seventhPcs: [null, null, 5, null] })).toEqual([]);
+  });
+
+  it('finalSopranoMembers [1,2] 이면 마지막 소프라노가 3̂ 또는 5̂ (IAC)', () => {
+    for (let i = 0; i < 10; i++) {
+      const voiced = realizeProgression({
+        chords: [
+          [0, 4, 7],
+          [5, 9, 12],
+          [7, 11, 14],
+          [0, 4, 7],
+        ],
+        tonicMidi: 60,
+        finalSopranoMembers: [1, 2],
+      });
+      expect([4, 7]).toContain(mod12(voiced[3].soprano));
+    }
+  });
+});
+
+describe('questionGenerator 5~7단계', () => {
+  const LABEL_TO_ROMANS: Record<string, { romans: string[]; minor: boolean }> = {};
+  for (const key of [
+    'I-ii6-V7-I',
+    'I-IV-V7-I',
+    'I-ii-V7-I',
+    'I6-IV-V7-I',
+    'I-vi-ii6-V7',
+    'I-IV-ii6-V7',
+    'I-V7-vi-IV',
+  ]) {
+    LABEL_TO_ROMANS[key] = { romans: key.split('-'), minor: false };
+  }
+  for (const key of ['i-iv-V7-i', 'i-ii°6-V7-i', 'i-iv6-V7-i']) {
+    LABEL_TO_ROMANS[key] = { romans: key.split('-'), minor: true };
+  }
+
+  it('progression_6: 정답·보기 악보가 라벨의 로마숫자(전위·7화음)와 일치하고 7음은 2도 하행 해결된다', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const q = generateChoiceQuestion('progression', 'progression_6');
+      seen.add(q.correctAnswer);
+      expect(q.prompt).toContain('7화음');
+      for (const label of q.choices) {
+        const spec = LABEL_TO_ROMANS[label];
+        expect(spec).toBeDefined();
+        expectChordsMatch(q.choiceAbc[label], spec.romans, spec.minor);
+      }
+      expect(q.choiceAbc[q.correctAnswer]).toBe(q.abcNotation);
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(6);
+  });
+
+  it('progression_5: 종지 종류가 마지막 두 화음·소프라노·베이스로 확인된다', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      const q = generateChoiceQuestion('progression', 'progression_5');
+      seen.add(q.correctAnswer);
+      expect(q.choices).toHaveLength(4);
+      expect(new Set(q.choices).size).toBe(4);
+      for (const label of q.choices) {
+        const { chords, tonicPc } = parseGrandStaff(q.choiceAbc[label]);
+        expect(voiceLeadingIssues(chords)).toEqual([]);
+        const last = chords[chords.length - 1];
+        const prev = chords[chords.length - 2];
+        const rootOf = (c: VoicedChord) => {
+          const rel = [...new Set(pcsOf(c).map((p) => mod12(p - tonicPc)))].sort((a, b) => a - b);
+          const hasThird = (r: number) => rel.includes(mod12(r + 3)) || rel.includes(mod12(r + 4));
+          // 장·단3화음 근음 찾기: 3음과 5음이 모두 있는 음을 우선, 5음 생략이면 3음만으로
+          return (
+            rel.find((r) => hasThird(r) && rel.includes(mod12(r + 7))) ??
+            rel.find((r) => hasThird(r))!
+          );
+        };
+        const prevRoot = rootOf(prev);
+        const lastRoot = rootOf(last);
+        const sop = mod12(last.soprano - tonicPc);
+        const bassRel = mod12(last.bass - tonicPc);
+        if (label.startsWith('완전 정격종지')) {
+          expect(prevRoot).toBe(7);
+          expect(lastRoot).toBe(0);
+          expect(bassRel).toBe(0);
+          expect(sop).toBe(0);
+        } else if (label.startsWith('불완전 정격종지')) {
+          expect(prevRoot).toBe(7);
+          expect(lastRoot).toBe(0);
+          expect(sop !== 0 || bassRel !== 0).toBe(true);
+        } else if (label === '반종지') {
+          expect(lastRoot).toBe(7);
+        } else if (label === '기만종지') {
+          expect(prevRoot).toBe(7);
+          expect(lastRoot).toBe(9);
+        } else {
+          throw new Error('unexpected label ' + label);
+        }
+      }
+    }
+    expect(seen.size).toBe(4);
+  });
+
+  it('progression_7: 첫 화음은 으뜸화음, 둘째 화음은 라벨의 로마숫자와 일치하고 보기는 같은 조성 안에서만 나온다', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      const q = generateChoiceQuestion('progression', 'progression_7');
+      seen.add(q.correctAnswer);
+      const minor = /K:[A-G][#b]?m/.test(q.abcNotation);
+      const tonicToken = minor ? 'i' : 'I';
+      for (const label of q.choices) {
+        const token = label.split(' ')[0];
+        // 장조 보기는 장조 로마숫자(I·ii·iii·IV·V·vi·vii°6), 단조 보기는 단조 로마숫자만
+        expect(Object.keys(minor ? MINOR_FULL : MAJOR_FULL)).toContain(parseRomanToken(token).base);
+        expectChordsMatch(q.choiceAbc[label], [tonicToken, token], minor);
+      }
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(7);
   });
 });

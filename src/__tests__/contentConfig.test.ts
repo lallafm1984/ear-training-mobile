@@ -108,9 +108,17 @@ describe('getDifficultyList', () => {
     expect(getDifficultyList('key')).toHaveLength(3);
   });
 
-  it('progression 카테고리는 4개 난이도를 가진다', () => {
+  it('progression 카테고리는 7개 난이도를 가진다 (5 종지 세분화·6 기능 진행·7 로마숫자)', () => {
     const list = getDifficultyList('progression');
-    expect(list).toEqual(['progression_1', 'progression_2', 'progression_3', 'progression_4']);
+    expect(list).toEqual([
+      'progression_1',
+      'progression_2',
+      'progression_3',
+      'progression_4',
+      'progression_5',
+      'progression_6',
+      'progression_7',
+    ]);
   });
 
   it('twoVoice 카테고리는 4개 난이도를 가진다', () => {

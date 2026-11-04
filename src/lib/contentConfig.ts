@@ -73,7 +73,7 @@ export const CONTENT_CATEGORIES: ContentTypeConfig[] = [
     bgColor: '#ecfdf5',
     description: '화음의 흐름과 종지 판별',
     answerType: 'choice',
-    maxLevel: 4,
+    maxLevel: 7,
     freeMaxLevel: 1,
   },
   {
@@ -176,6 +176,9 @@ export const PROGRESSION_DIFF_LABELS: Record<string, string> = {
   progression_2: '2단계 · 종지 판별',
   progression_3: '3단계 · 실전 진행',
   progression_4: '4단계 · 문맥형',
+  progression_5: '5단계 · 종지 세분화 (PAC·IAC·반·기만)',
+  progression_6: '6단계 · 기능 진행 (ii6·V7·전위)',
+  progression_7: '7단계 · 로마숫자 화음 판별',
 };
 
 export const KEY_DIFF_LABELS: Record<string, string> = {

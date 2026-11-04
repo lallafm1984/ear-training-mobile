@@ -60,7 +60,10 @@
     "scoreMine": "自分の答え · {{choice}}",
     "intervalHarmonicPrompt": "同時に鳴る2つの音を聴いて音程を答えてください。",
     "intervalCompoundPrompt": "オクターブを超える2つの音を聴いて複合音程を答えてください。",
-    "scaleBothPrompt": "上行と下行を聴いて音階の種類を答えてください。"
+    "scaleBothPrompt": "上行と下行を聴いて音階の種類を答えてください。",
+    "cadenceDetailPrompt": "最後のカデンツの種類を細かく選んでください。最後のソプラノの音とバスを聴いてみましょう。",
+    "progressionFigurePrompt": "バス(転回形)と七の和音に注意して、聞こえる進行を選んでください。",
+    "romanPrompt": "最初に主和音が鳴ります。続いて鳴る和音のローマ数字を選んでください。"
   },
   "notation": {
     "listenAndWrite": "聴いて記譜してください",

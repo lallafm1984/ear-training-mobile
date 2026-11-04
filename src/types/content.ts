@@ -79,12 +79,15 @@ export type IntervalDifficulty =
 /** 화성 듣기 난이도 (4단계) */
 export type ChordDifficulty = 'chord_2' | 'chord_3' | 'chord_4' | 'chord_5';
 
-/** 화성 진행 난이도 (4단계) */
+/** 화성 진행 난이도 (7단계: 5 종지 세분화, 6 기능 진행(전위·7화음), 7 로마숫자 화음 판별) */
 export type ProgressionDifficulty =
   | 'progression_1'
   | 'progression_2'
   | 'progression_3'
-  | 'progression_4';
+  | 'progression_4'
+  | 'progression_5'
+  | 'progression_6'
+  | 'progression_7';
 
 /** 조성 판별 난이도 (3단계) */
 export type KeyDifficulty = 'key_1' | 'key_2' | 'key_3';

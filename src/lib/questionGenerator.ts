@@ -13,7 +13,7 @@ import type {
   ScaleDifficulty,
 } from '../types/content';
 import { generateScaleQuestion } from './scaleQuestions';
-import { realizeProgression } from './progressionVoicing';
+import { realizeProgression, type ChordSpec } from './progressionVoicing';
 
 // ─────────────────────────────────────────────────────────────
 // 공통 타입
@@ -900,16 +900,23 @@ function generateKeyQuestion(difficulty: KeyDifficulty): ChoiceQuestion {
 // 화성 진행 / 종지 데이터
 // ─────────────────────────────────────────────────────────────
 
-type ProgressionKind = 'progression' | 'cadence';
+/**
+ * progression: 로마숫자 열 판별 · cadence: 종지 4종(2단계·4단계) ·
+ * cadenceDetail: 종지 세분화 PAC/IAC/HC/DC(5단계) · roman: I 다음 화음의 로마숫자 판별(7단계)
+ */
+type ProgressionKind = 'progression' | 'cadence' | 'cadenceDetail' | 'roman';
 type ProgressionMode = 'major' | 'minor';
 
 interface ProgressionTemplate {
   id: string;
   answerKey: string;
   kind: ProgressionKind;
+  /** 로마숫자 토큰. 숫자저음 접미(6·64·7·65·43·42)와 감화음 기호(°)를 붙일 수 있다: 'ii6', 'V7', 'vii°6' */
   roman: string[];
   mode: ProgressionMode;
   similar: string[];
+  /** 마지막 화음 소프라노에 허용할 구성음(0 근음·1 3음·2 5음). 종지 세분화(PAC [0] / IAC [1,2])용 */
+  finalSoprano?: number[];
 }
 
 interface ProgressionKey {
@@ -1081,10 +1088,231 @@ const CADENCE_TEMPLATES: ProgressionTemplate[] = [
   },
 ];
 
+/**
+ * 5단계 — 종지 세분화 (교재 22장): 완전 정격종지(PAC, 소프라노 1̂·기본 위치) / 불완전 정격종지(IAC, 소프라노 3̂·5̂
+ * 또는 전위) / 반종지(HC) / 기만종지(DC). 종지 앞에 T–PD 문맥(I–IV, I–ii6)을 둔다.
+ */
+const CADENCE_DETAIL_TEMPLATES: ProgressionTemplate[] = [
+  {
+    id: 'cd_pac_iv',
+    answerKey: 'pac',
+    kind: 'cadenceDetail',
+    roman: ['I', 'IV', 'V', 'I'],
+    mode: 'major',
+    similar: ['iac', 'half', 'deceptive'],
+    finalSoprano: [0],
+  },
+  {
+    id: 'cd_pac_ii6',
+    answerKey: 'pac',
+    kind: 'cadenceDetail',
+    roman: ['I', 'ii6', 'V', 'I'],
+    mode: 'major',
+    similar: ['iac', 'half', 'deceptive'],
+    finalSoprano: [0],
+  },
+  {
+    id: 'cd_pac_ii_v_i',
+    answerKey: 'pac',
+    kind: 'cadenceDetail',
+    roman: ['ii', 'V', 'I'],
+    mode: 'major',
+    similar: ['iac', 'half', 'deceptive'],
+    finalSoprano: [0],
+  },
+  {
+    id: 'cd_iac_soprano_iv',
+    answerKey: 'iac',
+    kind: 'cadenceDetail',
+    roman: ['I', 'IV', 'V', 'I'],
+    mode: 'major',
+    similar: ['pac', 'half', 'deceptive'],
+    finalSoprano: [1, 2],
+  },
+  {
+    id: 'cd_iac_soprano_ii6',
+    answerKey: 'iac',
+    kind: 'cadenceDetail',
+    roman: ['I', 'ii6', 'V', 'I'],
+    mode: 'major',
+    similar: ['pac', 'half', 'deceptive'],
+    finalSoprano: [1, 2],
+  },
+  {
+    id: 'cd_iac_inverted',
+    answerKey: 'iac',
+    kind: 'cadenceDetail',
+    roman: ['I', 'IV', 'V', 'I6'],
+    mode: 'major',
+    similar: ['pac', 'half', 'deceptive'],
+  },
+  {
+    id: 'cd_half_iv',
+    answerKey: 'half',
+    kind: 'cadenceDetail',
+    roman: ['I', 'IV', 'V'],
+    mode: 'major',
+    similar: ['deceptive', 'iac', 'pac'],
+  },
+  {
+    id: 'cd_half_ii6',
+    answerKey: 'half',
+    kind: 'cadenceDetail',
+    roman: ['I', 'ii6', 'V'],
+    mode: 'major',
+    similar: ['deceptive', 'iac', 'pac'],
+  },
+  {
+    id: 'cd_half_vi',
+    answerKey: 'half',
+    kind: 'cadenceDetail',
+    roman: ['I', 'vi', 'IV', 'V'],
+    mode: 'major',
+    similar: ['deceptive', 'iac', 'pac'],
+  },
+  {
+    id: 'cd_deceptive_iv',
+    answerKey: 'deceptive',
+    kind: 'cadenceDetail',
+    roman: ['I', 'IV', 'V', 'vi'],
+    mode: 'major',
+    similar: ['pac', 'iac', 'half'],
+  },
+  {
+    id: 'cd_deceptive_ii6',
+    answerKey: 'deceptive',
+    kind: 'cadenceDetail',
+    roman: ['I', 'ii6', 'V', 'vi'],
+    mode: 'major',
+    similar: ['pac', 'iac', 'half'],
+  },
+];
+
+/**
+ * 6단계 — 기능 진행 T–PD–D–T (교재 17·23장): 버금딸림 기능의 ii6, 7화음 V7, 전위(I6·iv6·ii°6).
+ * 라벨은 숫자저음을 포함한 로마숫자 열이라 베이스(전위)와 7음을 들어야 구별된다.
+ */
+const FUNCTIONAL_TEMPLATES: ProgressionTemplate[] = [
+  {
+    id: 'fn_i_ii6_v7_i',
+    answerKey: 'I-ii6-V7-I',
+    kind: 'progression',
+    roman: ['I', 'ii6', 'V7', 'I'],
+    mode: 'major',
+    similar: ['I-IV-V7-I', 'I-ii-V7-I', 'I6-IV-V7-I'],
+  },
+  {
+    id: 'fn_i_iv_v7_i',
+    answerKey: 'I-IV-V7-I',
+    kind: 'progression',
+    roman: ['I', 'IV', 'V7', 'I'],
+    mode: 'major',
+    similar: ['I-ii6-V7-I', 'I6-IV-V7-I', 'I-ii-V7-I'],
+  },
+  {
+    id: 'fn_i_ii_v7_i',
+    answerKey: 'I-ii-V7-I',
+    kind: 'progression',
+    roman: ['I', 'ii', 'V7', 'I'],
+    mode: 'major',
+    similar: ['I-ii6-V7-I', 'I-IV-V7-I', 'I-vi-ii6-V7'],
+  },
+  {
+    id: 'fn_i6_iv_v7_i',
+    answerKey: 'I6-IV-V7-I',
+    kind: 'progression',
+    roman: ['I6', 'IV', 'V7', 'I'],
+    mode: 'major',
+    similar: ['I-IV-V7-I', 'I-ii6-V7-I', 'I-IV-ii6-V7'],
+  },
+  {
+    id: 'fn_i_vi_ii6_v7',
+    answerKey: 'I-vi-ii6-V7',
+    kind: 'progression',
+    roman: ['I', 'vi', 'ii6', 'V7'],
+    mode: 'major',
+    similar: ['I-IV-ii6-V7', 'I-ii6-V7-I', 'I-V7-vi-IV'],
+  },
+  {
+    id: 'fn_i_iv_ii6_v7',
+    answerKey: 'I-IV-ii6-V7',
+    kind: 'progression',
+    roman: ['I', 'IV', 'ii6', 'V7'],
+    mode: 'major',
+    similar: ['I-vi-ii6-V7', 'I-IV-V7-I', 'I-ii6-V7-I'],
+  },
+  {
+    id: 'fn_i_v7_vi_iv',
+    answerKey: 'I-V7-vi-IV',
+    kind: 'progression',
+    roman: ['I', 'V7', 'vi', 'IV'],
+    mode: 'major',
+    similar: ['I-vi-ii6-V7', 'I-IV-V7-I', 'I6-IV-V7-I'],
+  },
+  {
+    id: 'fn_minor_i_iv_v7_i',
+    answerKey: 'i-iv-V7-i',
+    kind: 'progression',
+    roman: ['i', 'iv', 'V7', 'i'],
+    mode: 'minor',
+    similar: ['i-ii°6-V7-i', 'i-iv6-V7-i', 'I-IV-V7-I'],
+  },
+  {
+    id: 'fn_minor_i_iio6_v7_i',
+    answerKey: 'i-ii°6-V7-i',
+    kind: 'progression',
+    roman: ['i', 'ii°6', 'V7', 'i'],
+    mode: 'minor',
+    similar: ['i-iv-V7-i', 'i-iv6-V7-i', 'I-ii6-V7-I'],
+  },
+  {
+    id: 'fn_minor_i_iv6_v7_i',
+    answerKey: 'i-iv6-V7-i',
+    kind: 'progression',
+    roman: ['i', 'iv6', 'V7', 'i'],
+    mode: 'minor',
+    similar: ['i-iv-V7-i', 'i-ii°6-V7-i', 'I-IV-V7-I'],
+  },
+];
+
+/**
+ * 7단계 — 로마숫자 화음 판별 (교재 10·16장): 으뜸화음을 먼저 들려준 뒤 이어지는 온음계 화음의 로마숫자를 고른다.
+ * vii°와 ii°(단조)는 관행대로 제1전위로 울린다.
+ */
+function romanTemplate(
+  mode: ProgressionMode,
+  target: string,
+  similar: string[],
+): ProgressionTemplate {
+  return {
+    id: `roman_${mode}_${target}`,
+    answerKey: target,
+    kind: 'roman',
+    roman: [mode === 'major' ? 'I' : 'i', target],
+    mode,
+    similar,
+  };
+}
+const ROMAN_TEMPLATES: ProgressionTemplate[] = [
+  romanTemplate('major', 'ii', ['IV', 'vi', 'V']),
+  romanTemplate('major', 'iii', ['vi', 'V', 'IV']),
+  romanTemplate('major', 'IV', ['ii', 'vi', 'V']),
+  romanTemplate('major', 'V', ['vii°6', 'IV', 'iii']),
+  romanTemplate('major', 'vi', ['IV', 'ii', 'iii']),
+  romanTemplate('major', 'vii°6', ['V', 'iii', 'ii']),
+  romanTemplate('minor', 'iv', ['ii°6', 'VI', 'V']),
+  romanTemplate('minor', 'V', ['VI', 'iv', 'ii°6']),
+  romanTemplate('minor', 'VI', ['iv', 'V', 'ii°6']),
+  romanTemplate('minor', 'ii°6', ['iv', 'V', 'VI']),
+];
+
 const PROGRESSION_POOLS: Record<ProgressionDifficulty, ProgressionTemplate[]> = {
   progression_1: PROGRESSION_TEMPLATES.slice(0, 4),
   progression_2: CADENCE_TEMPLATES,
   progression_3: PROGRESSION_TEMPLATES.slice(4),
+  progression_5: CADENCE_DETAIL_TEMPLATES,
+  progression_6: FUNCTIONAL_TEMPLATES,
+  progression_7: ROMAN_TEMPLATES,
   progression_4: [
     ...PROGRESSION_TEMPLATES.slice(2),
     ...CADENCE_TEMPLATES.map((template) => ({
@@ -1104,17 +1332,72 @@ const PROGRESSION_POOLS: Record<ProgressionDifficulty, ProgressionTemplate[]> = 
 const MAJOR_ROMAN_INTERVALS: Record<string, number[]> = {
   I: [0, 4, 7],
   ii: [2, 5, 9],
+  iii: [4, 7, 11],
   IV: [5, 9, 12],
   V: [7, 11, 14],
   vi: [9, 12, 16],
+  'vii°': [11, 14, 17],
 };
 
+/** 단조(화성단음계 기준: V·vii° 에 올린 이끔음) */
 const MINOR_ROMAN_INTERVALS: Record<string, number[]> = {
   i: [0, 3, 7],
+  'ii°': [2, 5, 8],
+  III: [3, 7, 10],
   iv: [5, 8, 12],
   V: [7, 11, 14],
   VI: [8, 12, 15],
+  VII: [10, 14, 17],
 };
+
+/** 7화음의 7음 간격(근음 기준) — 온음계 7화음 (V7 = 속7, ii7 = 단7, I7·IV7 = 장7, vii°7 = 반감7) */
+const MAJOR_SEVENTH_INTERVALS: Record<string, number> = {
+  I: 11,
+  ii: 10,
+  iii: 10,
+  IV: 11,
+  V: 10,
+  vi: 10,
+  'vii°': 10,
+};
+const MINOR_SEVENTH_INTERVALS: Record<string, number> = {
+  i: 10,
+  'ii°': 10,
+  iv: 10,
+  V: 10,
+  VI: 11,
+};
+
+/** 로마숫자 토큰 분해: 'ii6' → base 'ii', bassMember 1 · 'V7' → seventh · 'vii°6' → base 'vii°' */
+interface RomanToken {
+  /** 간격 표 조회 키 (감화음 기호 포함, 예 'vii°') */
+  base: string;
+  /** 음도 조회 키 (기호 없음, 예 'vii') */
+  plain: string;
+  seventh: boolean;
+  bassMember: number;
+}
+const FIGURE_TO_BASS: Record<string, { bassMember: number; seventh: boolean }> = {
+  '': { bassMember: 0, seventh: false },
+  '6': { bassMember: 1, seventh: false },
+  '64': { bassMember: 2, seventh: false },
+  '7': { bassMember: 0, seventh: true },
+  '65': { bassMember: 1, seventh: true },
+  '43': { bassMember: 2, seventh: true },
+  '42': { bassMember: 3, seventh: true },
+};
+export function parseRomanToken(token: string): RomanToken {
+  const m = /^([ivIV]+)([°ºo]?)(64|65|43|42|6|7)?$/.exec(token);
+  if (!m) return { base: token, plain: token, seventh: false, bassMember: 0 };
+  const dim = m[2] ? '°' : '';
+  const figure = FIGURE_TO_BASS[m[3] ?? ''] ?? FIGURE_TO_BASS[''];
+  return {
+    base: `${m[1]}${dim}`,
+    plain: m[1],
+    seventh: figure.seventh,
+    bassMember: figure.bassMember,
+  };
+}
 
 const LETTER_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -1189,9 +1472,27 @@ function spellAbcNote(
 }
 
 function romanIntervals(roman: string, template: ProgressionTemplate): number[] {
-  const intervals =
-    template.mode === 'minor' ? MINOR_ROMAN_INTERVALS[roman] : MAJOR_ROMAN_INTERVALS[roman];
-  return intervals ?? MAJOR_ROMAN_INTERVALS.I;
+  const token = parseRomanToken(roman);
+  const minor = template.mode === 'minor';
+  const triad =
+    (minor ? MINOR_ROMAN_INTERVALS[token.base] : MAJOR_ROMAN_INTERVALS[token.base]) ??
+    MAJOR_ROMAN_INTERVALS.I;
+  if (!token.seventh) return triad;
+  const seventh =
+    (minor ? MINOR_SEVENTH_INTERVALS[token.base] : MAJOR_SEVENTH_INTERVALS[token.base]) ?? 10;
+  return [...triad, triad[0] + seventh];
+}
+
+/** 로마숫자 토큰 → 성부 배치 엔진 입력(구성음 간격 + 베이스 구성음) */
+function romanChordSpec(roman: string, template: ProgressionTemplate): ChordSpec {
+  const token = parseRomanToken(roman);
+  const intervals = romanIntervals(roman, template);
+  return { intervals, bassMember: Math.min(token.bassMember, intervals.length - 1) };
+}
+
+/** 음도(0~6). 숫자저음·감화음 기호는 무시 */
+function romanDegree(roman: string): number {
+  return ROMAN_DEGREE[parseRomanToken(roman).plain] ?? 0;
 }
 
 /**
@@ -1222,15 +1523,19 @@ function spellChordVoice(
 function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey): string {
   const keyAlt = keySignatureAlterations(key.abcKey);
   const romans = template.roman;
-  const chords = romans.map((roman) => romanIntervals(roman, template));
+  const specs = romans.map((roman) => romanChordSpec(roman, template));
+  const chords = specs.map((spec) => spec.intervals);
   const n = romans.length;
-  const endsOnTonic = n >= 2 && (ROMAN_DEGREE[romans[n - 1]] ?? 0) === 0;
-  const dominantBefore = n >= 2 && (ROMAN_DEGREE[romans[n - 2]] ?? 0) === 4;
+  const lastToken = parseRomanToken(romans[n - 1]);
+  const endsOnRootTonic = n >= 2 && romanDegree(romans[n - 1]) === 0 && lastToken.bassMember === 0;
+  const dominantBefore = n >= 2 && romanDegree(romans[n - 2]) === 4;
   const voiced = realizeProgression({
-    chords,
+    chords: specs,
     tonicMidi: key.tonicMidi,
     minor: template.mode === 'minor',
-    sopranoEndsOnTonic: endsOnTonic && dominantBefore, // 완전 정격종지(PAC)
+    // 템플릿이 지정하지 않으면 V→I(기본 위치)는 완전 정격종지(PAC, 소프라노 1̂)
+    finalSopranoMembers:
+      template.finalSoprano ?? (endsOnRootTonic && dominantBefore ? [0] : undefined),
   });
 
   const barGroups: number[][] =
@@ -1244,7 +1549,7 @@ function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey
     upper.push(
       group
         .map((i) => {
-          const degree = ROMAN_DEGREE[romans[i]] ?? 0;
+          const degree = romanDegree(romans[i]);
           const alto = spellChordVoice(voiced[i].alto, chords[i], degree, key, keyAlt, upperState);
           const sop = spellChordVoice(
             voiced[i].soprano,
@@ -1261,7 +1566,7 @@ function renderProgressionAbc(template: ProgressionTemplate, key: ProgressionKey
     lower.push(
       group
         .map((i) => {
-          const degree = ROMAN_DEGREE[romans[i]] ?? 0;
+          const degree = romanDegree(romans[i]);
           const bass = spellChordVoice(voiced[i].bass, chords[i], degree, key, keyAlt, lowerState);
           const tenor = spellChordVoice(
             voiced[i].tenor,
@@ -1304,9 +1609,28 @@ function pickProgressionKey(mode: ProgressionMode): ProgressionKey {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/** 라벨·해설 번역 네임스페이스 (cadence·cadenceDetail → cadence, roman → roman, 그 외 progression) */
+function progressionNamespace(kind: ProgressionKind): 'cadence' | 'roman' | 'progression' {
+  if (kind === 'cadence' || kind === 'cadenceDetail') return 'cadence';
+  if (kind === 'roman') return 'roman';
+  return 'progression';
+}
+
 function progressionAnswerLabel(kind: ProgressionKind, answerKey: string): string {
-  const namespace = kind === 'cadence' ? 'cadence' : 'progression';
-  return i18n.t(`content:${namespace}.${answerKey}`);
+  return i18n.t(`content:${progressionNamespace(kind)}.${answerKey}`);
+}
+
+function progressionFallbackPool(kind: ProgressionKind): ProgressionTemplate[] {
+  switch (kind) {
+    case 'cadence':
+      return CADENCE_TEMPLATES;
+    case 'cadenceDetail':
+      return CADENCE_DETAIL_TEMPLATES;
+    case 'roman':
+      return ROMAN_TEMPLATES;
+    default:
+      return PROGRESSION_TEMPLATES;
+  }
 }
 
 function isCompatibleProgressionChoice(
@@ -1314,6 +1638,13 @@ function isCompatibleProgressionChoice(
   candidate: ProgressionTemplate,
 ): boolean {
   if (candidate.kind !== template.kind || candidate.answerKey === template.answerKey) {
+    return false;
+  }
+  // 로마숫자 판별·종지 세분화는 같은 조성(장/단) 안에서만 보기를 고른다 (iv 와 IV 가 섞이지 않게)
+  if (
+    (template.kind === 'roman' || template.kind === 'cadenceDetail') &&
+    candidate.mode !== template.mode
+  ) {
     return false;
   }
   return template.kind !== 'progression' || candidate.roman.length === template.roman.length;
@@ -1326,7 +1657,7 @@ function buildProgressionWrongTemplates(
 ): ProgressionTemplate[] {
   const wrongs: ProgressionTemplate[] = [];
   const usedAnswerKeys = new Set<string>([template.answerKey]);
-  const fallbackPool = template.kind === 'cadence' ? CADENCE_TEMPLATES : PROGRESSION_TEMPLATES;
+  const fallbackPool = progressionFallbackPool(template.kind);
   const answerUniverse = [...pool, ...fallbackPool];
   const sameShapePool = pool.filter((candidate) =>
     isCompatibleProgressionChoice(template, candidate),
@@ -1406,15 +1737,20 @@ function generateProgressionQuestion(difficulty: ProgressionDifficulty): ChoiceQ
       ...wrongTemplates.map((t) => progressionAnswerLabel(t.kind, t.answerKey)),
     ]),
     abcNotation,
-    prompt:
-      template.kind === 'cadence'
-        ? i18n.t('practice:choice.cadencePrompt')
-        : i18n.t('practice:choice.progressionPrompt'),
+    prompt: i18n.t(progressionPromptKey(template.kind, difficulty)),
     explanation: i18n.t(
-      `content:explain.${template.kind === 'cadence' ? 'cadence' : 'progression'}.${template.answerKey}`,
+      `content:explain.${progressionNamespace(template.kind)}.${template.answerKey}`,
     ),
     choiceAbc,
   };
+}
+
+function progressionPromptKey(kind: ProgressionKind, difficulty: ProgressionDifficulty): string {
+  if (kind === 'cadence') return 'practice:choice.cadencePrompt';
+  if (kind === 'cadenceDetail') return 'practice:choice.cadenceDetailPrompt';
+  if (kind === 'roman') return 'practice:choice.romanPrompt';
+  if (difficulty === 'progression_6') return 'practice:choice.progressionFigurePrompt';
+  return 'practice:choice.progressionPrompt';
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -87,7 +87,10 @@
       "progression_1": "Level 1 · Basic progressions",
       "progression_2": "Level 2 · Cadence ID",
       "progression_3": "Level 3 · Practical progressions",
-      "progression_4": "Level 4 · Contextual"
+      "progression_4": "Level 4 · Contextual",
+      "progression_5": "Level 5 · Cadence types (PAC·IAC·half·deceptive)",
+      "progression_6": "Level 6 · Functional progressions (ii6·V7·inversions)",
+      "progression_7": "Level 7 · Roman numeral chord ID"
     },
     "key": {
       "key_1": "Level 1 · Relative keys (C/Am)",
@@ -182,13 +185,36 @@
     "I-V-vi-IV": "I-V-vi-IV",
     "I-IV-ii-V": "I-IV-ii-V",
     "i-iv-V-i": "i-iv-V-i",
-    "i-VI-iv-V": "i-VI-iv-V"
+    "i-VI-iv-V": "i-VI-iv-V",
+    "I-ii6-V7-I": "I-ii6-V7-I",
+    "I-IV-V7-I": "I-IV-V7-I",
+    "I-ii-V7-I": "I-ii-V7-I",
+    "I6-IV-V7-I": "I6-IV-V7-I",
+    "I-vi-ii6-V7": "I-vi-ii6-V7",
+    "I-IV-ii6-V7": "I-IV-ii6-V7",
+    "I-V7-vi-IV": "I-V7-vi-IV",
+    "i-iv-V7-i": "i-iv-V7-i",
+    "i-ii°6-V7-i": "i-ii°6-V7-i",
+    "i-iv6-V7-i": "i-iv6-V7-i"
+  },
+  "roman": {
+    "ii": "ii (supertonic)",
+    "iii": "iii (mediant)",
+    "IV": "IV (subdominant)",
+    "V": "V (dominant)",
+    "vi": "vi (submediant)",
+    "vii°6": "vii°6 (leading-tone)",
+    "iv": "iv (subdominant)",
+    "VI": "VI (submediant)",
+    "ii°6": "ii°6 (supertonic)"
   },
   "cadence": {
     "authentic": "Authentic Cadence",
     "half": "Half Cadence",
     "plagal": "Plagal Cadence",
-    "deceptive": "Deceptive Cadence"
+    "deceptive": "Deceptive Cadence",
+    "pac": "Perfect Authentic Cadence (PAC)",
+    "iac": "Imperfect Authentic Cadence (IAC)"
   },
   "key": {
     "C_major": "C Major",
@@ -287,13 +313,36 @@
       "I-V-vi-IV": "I-V-vi-IV is the most common pop progression. Listen for the deceptive move from V to vi.",
       "I-IV-ii-V": "After I-IV comes ii (minor), then V. IV and ii share notes, so follow the bass.",
       "i-iv-V-i": "The basic minor progression. iv is minor, but V sounds major because of the leading tone.",
-      "i-VI-iv-V": "In minor, VI (major) brightens briefly before iv-V raises the tension."
+      "i-VI-iv-V": "In minor, VI (major) brightens briefly before iv-V raises the tension.",
+      "I-ii6-V7-I": "The textbook T–PD–D–T progression. ii6 is the first inversion of ii, so the bass is scale degree 4 (same as the root of IV), and the 7th of V7 (4̂) resolves down to 3̂.",
+      "I-IV-V7-I": "Tension grows from IV (predominant) to V7 (dominant seventh) and resolves to I. V7 has one more note than V, the 7th, so it pulls to I more strongly.",
+      "I-ii-V7-I": "ii is in root position, so the bass is scale degree 2. Same chord as ii6, but the different bass note changes the weight of the sound.",
+      "I6-IV-V7-I": "The first chord is I6 (first inversion), so the bass starts on the 3rd (mi). Listen to the bass moving 3̂–4̂–5̂–1̂.",
+      "I-vi-ii6-V7": "I–vi prolongs the tonic, then ii6–V7 opens like a half cadence. Ending on V7 leaves it waiting for resolution.",
+      "I-IV-ii6-V7": "IV and ii6 are predominant chords sharing the same bass (scale degree 4). They follow each other, then the progression stops on V7.",
+      "I-V7-vi-IV": "A deceptive move: vi comes after V7 instead of I. Hear the 7th of V7 resolve down into the 3rd of vi.",
+      "i-iv-V7-i": "The basic functional progression in minor. iv is a minor chord, while V7 carries the raised leading tone, so it resolves to i as brightly as in major.",
+      "i-ii°6-V7-i": "ii°6 is the first inversion of the diminished triad on scale degree 2 in minor. Its bass is scale degree 4 like iv, but it sounds darker and narrower.",
+      "i-iv6-V7-i": "iv6 is the first inversion of iv, so the bass is scale degree 6. The bass then slips a half step down from 6̂ to 5̂ (the root of V7)."
+    },
+    "roman": {
+      "ii": "ii is the minor triad on scale degree 2, a predominant chord. It shares two notes (4 and 6) with IV, but with the bass on 2 it sounds a little darker and lighter.",
+      "iii": "iii is the minor triad on scale degree 3. It shares two notes with I, slipping into the tonic’s place, and it is rare enough to sound unfamiliar.",
+      "IV": "IV is the major triad on scale degree 4, the subdominant. Going I to IV lifts the bass a 4th and opens up brightly.",
+      "V": "V is the major triad on scale degree 5, the dominant. It contains the leading tone, so it has the strongest pull back to I.",
+      "vi": "vi is the minor triad on scale degree 6. It shares two notes (1 and 3) with I, like a dark shadow of the tonic.",
+      "vii°6": "vii° is the diminished triad on the leading tone. As usual it sounds in first inversion (vii°6) with the bass on 2, and like V it is dominant function wanting to go to I.",
+      "iv": "iv is the minor triad on scale degree 4 in minor, the subdominant. From i to iv the bass rises a 4th while the dark colour continues.",
+      "VI": "VI is the major triad on scale degree 6 in minor. It suddenly sounds bright within the minor key and shares two notes with i.",
+      "ii°6": "ii° is the diminished triad on scale degree 2 in minor. It is normally used in first inversion (ii°6) with the bass on 4: a narrower, tenser predominant than iv."
     },
     "cadence": {
       "authentic": "An authentic cadence ends V to I. It gives the strongest sense of 'finished'.",
       "half": "A half cadence stops on V. It feels unfinished, waiting for more.",
       "plagal": "A plagal cadence ends IV to I, like 'Amen': soft and calm. It often follows an authentic cadence to extend the ending.",
-      "deceptive": "A deceptive cadence goes V to vi instead of I. You expect an ending, and it slips away."
+      "deceptive": "A deceptive cadence goes V to vi instead of I. You expect an ending, and it slips away.",
+      "pac": "A perfect authentic cadence (PAC) has V and I both in root position with the soprano ending on the tonic (1̂). It is the most firmly closed cadence.",
+      "iac": "An imperfect authentic cadence (IAC) is still V to I, but the soprano ends on the 3rd or 5th, or a chord is inverted. It closes, but less firmly. Listen to the last soprano note."
     },
     "scale": {
       "major": "The major scale goes W-W-H-W-W-W-H. The raised 3rd and 7th make it sound bright and settled.",

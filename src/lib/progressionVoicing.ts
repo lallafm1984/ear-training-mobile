@@ -12,7 +12,8 @@
  *    단조 증2도 회피, 내성 이끔음 상행, 완전 화음(5음 생략은 비용)
  *  · 종지 옵션: 정격종지(V→I)는 소프라노가 1̂로 끝난다(완전 정격종지, PAC)
  *
- * 입력은 "으뜸음 MIDI + 각 화음의 반음 간격 [근음, 3음, 5음]"만 받는다. 베이스는 항상 근음(기본 위치)이고,
+ * 입력은 "으뜸음 MIDI + 각 화음의 반음 간격 [근음, 3음, 5음(, 7음)]"을 받는다. 기본은 베이스=근음(기본 위치)이고,
+ * ChordSpec 으로 전위(베이스에 둘 구성음)와 7화음을 지정할 수 있다(교재 18·23장: 7음은 2도 하행 해결).
  * 조표·음이름 철자는 호출 쪽(questionGenerator)에서 처리한다. 순수 함수이며 React Native 의존이 없다.
  */
 
@@ -23,14 +24,27 @@ export interface VoicedChord {
   soprano: number;
 }
 
+/** 화음 하나의 명세: 구성음 간격 + 베이스에 둘 구성음(0 근음·1 3음·2 5음·3 7음) */
+export interface ChordSpec {
+  /** 으뜸음 기준 반음 간격 [근음, 3음, 5음] 또는 [근음, 3음, 5음, 7음] */
+  intervals: number[];
+  /** 전위: 베이스 성부에 둘 구성음 인덱스 (기본 0 = 기본 위치) */
+  bassMember?: number;
+}
+
 export interface RealizeProgressionOptions {
-  /** 각 화음의 반음 간격 [근음, 3음, 5음] — 으뜸음 기준 오프셋 (12 이상 허용, mod 12 로 처리) */
-  chords: number[][];
+  /** 각 화음 — 반음 간격 배열(기본 위치) 또는 ChordSpec(전위·7화음) */
+  chords: Array<number[] | ChordSpec>;
   tonicMidi: number;
   /** 단조이면 6̂–♯7̂ 증2도 진행을 피한다 */
   minor?: boolean;
-  /** 마지막 화음의 소프라노를 으뜸음으로 고정 (완전 정격종지) */
+  /** 마지막 화음의 소프라노를 으뜸음으로 고정 (완전 정격종지) — finalSopranoMembers: [0] 과 같다 */
   sopranoEndsOnTonic?: boolean;
+  /**
+   * 마지막 화음의 소프라노에 허용할 구성음 인덱스. [0] = 1̂(PAC), [1, 2] = 3̂·5̂(불완전 정격종지, IAC).
+   * sopranoEndsOnTonic 보다 우선한다.
+   */
+  finalSopranoMembers?: number[];
   /** 테스트용 난수 소스 (기본 Math.random) */
   random?: () => number;
 }
@@ -50,6 +64,8 @@ const INNER_LEADING_TONE_COST = 25;
 const OVERLAP_COST = 60;
 const HIDDEN_PERFECT_COST = 40;
 const AUG_SECOND_COST = 80;
+const SEVENTH_RESOLUTION_COST = 300;
+const INVERTED_BASS_DOUBLING_COST = 20;
 
 export const mod12 = (n: number): number => ((n % 12) + 12) % 12;
 
@@ -70,23 +86,28 @@ function voicesOf(c: VoicedChord): number[] {
 }
 
 /**
- * 한 화음의 가능한 배치 후보(베이스=근음, 상3성은 화음음)와 정적 비용.
+ * 한 화음의 가능한 배치 후보(베이스=지정 구성음, 상3성은 화음음)와 정적 비용.
  *  · 3음은 반드시 포함, 5음 생략은 비용. 이끔음 중복 금지
+ *  · 7화음: 근음·3음·7음 필수, 5음 생략은 가벼운 비용(관행적 V7 = 근음 중복·5음 생략)
+ *  · 전위: 베이스 음 중복은 비용 (3음 베이스 중복 회피)
  *  · 인접 상성부 간격 ≤ 옥타브, 성부 교차 금지(유니즌은 비용)
  */
 function buildCandidates(
   pcs: number[],
+  bassPc: number,
   leadingTonePc: number,
   preferredSopranoPc: number | null,
   random: () => number,
 ): Candidate[] {
-  const [rootPc, thirdPc, fifthPc] = pcs;
+  const [rootPc, thirdPc, fifthPc, seventhPc] = pcs;
+  const isSeventh = pcs.length >= 4;
+  const inverted = bassPc !== rootPc;
   const tenors = pcs.flatMap((pc) => pitchesInRange(pc, VOICE_RANGES.tenor));
   const altos = pcs.flatMap((pc) => pitchesInRange(pc, VOICE_RANGES.alto));
   const sopranos = pcs.flatMap((pc) => pitchesInRange(pc, VOICE_RANGES.soprano));
   const out: Candidate[] = [];
 
-  for (const bass of pitchesInRange(rootPc, VOICE_RANGES.bass)) {
+  for (const bass of pitchesInRange(bassPc, VOICE_RANGES.bass)) {
     for (const tenor of tenors) {
       if (tenor <= bass || tenor - bass > 24) continue;
       for (const alto of altos) {
@@ -100,13 +121,19 @@ function buildCandidates(
             counts.set(pc, (counts.get(pc) ?? 0) + 1);
           }
           if (!counts.has(thirdPc)) continue; // 3음 생략 금지 (장·단 구분이 사라짐)
+          if (!counts.has(rootPc)) continue; // 근음 생략 금지
           if ((counts.get(leadingTonePc) ?? 0) >= 2) continue; // 이끔음 중복 금지
+          if (isSeventh) {
+            if (!counts.has(seventhPc)) continue; // 7음 생략 금지 (7화음의 정체)
+            if ((counts.get(seventhPc) ?? 0) >= 2) continue; // 7음 중복 금지 (해결 시 병행 8도)
+          }
 
           let cost = 0;
-          if (!counts.has(fifthPc)) cost += 25; // 5음 생략 (허용하되 비용)
+          if (!counts.has(fifthPc)) cost += isSeventh ? 5 : 25; // 5음 생략 (허용하되 비용)
           if ((counts.get(thirdPc) ?? 0) >= 2) cost += 10; // 3음 중복 (기만종지 등에서 허용)
           if ((counts.get(fifthPc) ?? 0) >= 2) cost += 5;
           if ((counts.get(rootPc) ?? 0) >= 3) cost += 15;
+          if (inverted && (counts.get(bassPc) ?? 0) >= 2) cost += INVERTED_BASS_DOUBLING_COST;
           if (tenor === alto || alto === soprano) cost += 15; // 유니즌
           if (soprano < 62 || soprano > 77) cost += 4; // 소프라노 극단 음역
           if (bass < 43) cost += (43 - bass) * 0.5;
@@ -128,6 +155,8 @@ interface TransitionContext {
   resolvesLeadingTone: boolean;
   /** 단조의 6̂ (증2도 검사용). 장조면 null */
   minorSixthPc: number | null;
+  /** 앞 화음이 7화음이면 그 7음 pc — 같은 성부가 2도 아래로 해결해야 한다. 아니면 null */
+  prevSeventhPc: number | null;
 }
 
 /**
@@ -190,6 +219,15 @@ function transitionCost(prev: VoicedChord, cur: VoicedChord, ctx: TransitionCont
     }
   }
 
+  // 7화음의 7음은 2도(반음 1~2개) 하행 해결 — 어느 성부에 있든 적용 (베이스 포함, 4/2 전위)
+  if (ctx.prevSeventhPc !== null) {
+    for (let v = 0; v < 4; v++) {
+      if (mod12(pv[v]) !== ctx.prevSeventhPc) continue;
+      const d = cv[v] - pv[v];
+      if (d !== -1 && d !== -2) cost += SEVENTH_RESOLUTION_COST;
+    }
+  }
+
   // 단조: 6̂ ↔ ♯7̂ 증2도 진행 회피
   if (ctx.minorSixthPc !== null) {
     for (let v = 0; v < 4; v++) {
@@ -210,6 +248,10 @@ function transitionCost(prev: VoicedChord, cur: VoicedChord, ctx: TransitionCont
   return cost;
 }
 
+function toSpec(chord: number[] | ChordSpec): ChordSpec {
+  return Array.isArray(chord) ? { intervals: chord, bassMember: 0 } : chord;
+}
+
 /**
  * 로마숫자 진행을 4성부로 배치한다. 반환 배열은 입력 화음 순서와 같다.
  */
@@ -220,16 +262,31 @@ export function realizeProgression(opts: RealizeProgressionOptions): VoicedChord
   const submediantPc = mod12(opts.tonicMidi + (opts.minor ? 8 : 9));
   const minorSixthPc = opts.minor ? submediantPc : null;
 
-  const pcsList = opts.chords.map((iv) => iv.slice(0, 3).map((i) => mod12(opts.tonicMidi + i)));
+  const specs = opts.chords.map(toSpec);
+  const pcsList = specs.map((spec) =>
+    spec.intervals.slice(0, 4).map((i) => mod12(opts.tonicMidi + i)),
+  );
   if (pcsList.length === 0) return [];
+  const bassPcs = specs.map((spec, i) => {
+    const member = Math.min(spec.bassMember ?? 0, pcsList[i].length - 1);
+    return pcsList[i][member];
+  });
 
   const firstPreferred = pcsList[0][Math.min(2, Math.floor(random() * 3))];
   const last = pcsList.length - 1;
+  const finalMembers = opts.finalSopranoMembers ?? (opts.sopranoEndsOnTonic ? [0] : null);
   const layers = pcsList.map((pcs, idx) => {
-    let cands = buildCandidates(pcs, leadingTonePc, idx === 0 ? firstPreferred : null, random);
-    if (idx === last && opts.sopranoEndsOnTonic) {
-      const onTonic = cands.filter((c) => mod12(c.soprano) === tonicPc);
-      if (onTonic.length > 0) cands = onTonic;
+    let cands = buildCandidates(
+      pcs,
+      bassPcs[idx],
+      leadingTonePc,
+      idx === 0 ? firstPreferred : null,
+      random,
+    );
+    if (idx === last && finalMembers) {
+      const allowed = new Set(finalMembers.map((m) => pcs[Math.min(m, pcs.length - 1)]));
+      const filtered = cands.filter((c) => allowed.has(mod12(c.soprano)));
+      if (filtered.length > 0) cands = filtered;
     }
     return cands;
   });
@@ -246,6 +303,7 @@ export function realizeProgression(opts: RealizeProgressionOptions): VoicedChord
         pcsList[i - 1].includes(leadingTonePc) &&
         (pcsList[i][0] === tonicPc || pcsList[i][0] === submediantPc),
       minorSixthPc,
+      prevSeventhPc: pcsList[i - 1].length >= 4 ? pcsList[i - 1][3] : null,
     };
     const next = new Array<number>(curLayer.length).fill(Infinity);
     const ptr = new Array<number>(curLayer.length).fill(0);
@@ -281,10 +339,16 @@ export function realizeProgression(opts: RealizeProgressionOptions): VoicedChord
  * 배치 결과의 규칙 위반 목록 (테스트·QA용). 비어 있으면 통과.
  *  · parallel: 병행 완전5도·8도·유니즌  · crossing: 성부 교차  · spacing: 상성부 간격 > 옥타브
  *  · range: 음역 밖  · leadingTone: 소프라노 이끔음이 1̂로 상행하지 않음 (resolveIdx 에 지정한 전환만)
+ *  · seventh: 앞 화음의 7음(seventhPcs[i-1])을 가진 성부가 2도 하행하지 않음
  */
 export function voiceLeadingIssues(
   chords: VoicedChord[],
-  opts: { leadingTonePc?: number; resolveIdx?: number[] } = {},
+  opts: {
+    leadingTonePc?: number;
+    resolveIdx?: number[];
+    /** 화음별 7음 pc (7화음이 아니면 null) */
+    seventhPcs?: Array<number | null>;
+  } = {},
 ): string[] {
   const issues: string[] = [];
   const names = ['B', 'T', 'A', 'S'];
@@ -316,6 +380,14 @@ export function voiceLeadingIssues(
       v[3] - pv[3] !== 1
     ) {
       issues.push(`leadingTone:${i}`);
+    }
+    const seventhPc = opts.seventhPcs?.[i - 1];
+    if (seventhPc !== undefined && seventhPc !== null) {
+      for (let k = 0; k < 4; k++) {
+        if (mod12(pv[k]) !== seventhPc) continue;
+        const d = v[k] - pv[k];
+        if (d !== -1 && d !== -2) issues.push(`seventh:${i}:${names[k]}`);
+      }
     }
   });
   return issues;

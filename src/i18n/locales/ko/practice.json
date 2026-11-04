@@ -60,7 +60,10 @@
     "scoreMine": "내 답 · {{choice}}",
     "intervalHarmonicPrompt": "동시에 울리는 두 음을 듣고 음정을 맞추세요.",
     "intervalCompoundPrompt": "옥타브를 넘는 두 음을 듣고 복합음정을 맞추세요.",
-    "scaleBothPrompt": "상행 뒤 하행까지 듣고 음계 종류를 맞추세요."
+    "scaleBothPrompt": "상행 뒤 하행까지 듣고 음계 종류를 맞추세요.",
+    "cadenceDetailPrompt": "마지막 종지를 세분해서 고르세요. 마지막 소프라노 음과 베이스를 들어보세요.",
+    "progressionFigurePrompt": "베이스(전위)와 7화음에 주의해서 들리는 진행을 고르세요.",
+    "romanPrompt": "으뜸화음을 먼저 들려드립니다. 이어서 나오는 화음의 로마숫자를 고르세요."
   },
   "notation": {
     "listenAndWrite": "듣고 기보하세요",

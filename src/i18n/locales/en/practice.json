@@ -60,7 +60,10 @@
     "scoreMine": "My choice · {{choice}}",
     "intervalHarmonicPrompt": "Listen to the two notes sounding together and identify the interval.",
     "intervalCompoundPrompt": "Listen to the two notes more than an octave apart and identify the compound interval.",
-    "scaleBothPrompt": "Listen to the scale ascending and descending, then identify its type."
+    "scaleBothPrompt": "Listen to the scale ascending and descending, then identify its type.",
+    "cadenceDetailPrompt": "Identify the exact cadence type. Listen to the last soprano note and the bass.",
+    "progressionFigurePrompt": "Identify the progression, paying attention to the bass (inversions) and seventh chords.",
+    "romanPrompt": "You will hear the tonic chord first. Identify the Roman numeral of the chord that follows."
   },
   "notation": {
     "listenAndWrite": "Listen and notate",
