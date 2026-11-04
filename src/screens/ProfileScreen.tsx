@@ -36,6 +36,7 @@ import * as Application from 'expo-application';
 import { useAlert, useAuth, useSubscription } from '../context';
 import { PLAN_NAME, PLAN_COLOR } from '../types';
 import LegalModal from '../components/LegalModal';
+import LanguagePickerModal from '../components/LanguagePickerModal';
 import type { LegalType } from '../components/LegalModal';
 import { useReminderSettings, type ReminderUpdateOutcome } from '../hooks/useReminderSettings';
 import {
@@ -277,6 +278,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
   const [showEditName, setShowEditName] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [legalType, setLegalType] = useState<LegalType | null>(null);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   const tierColor = PLAN_COLOR[tier];
   const displayName = isGuest
@@ -568,12 +570,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
               icon={<Globe size={16} color="#64748b" />}
               label={t('profile:language.title')}
               value={t(`profile:language.${i18n.language}`)}
-              onPress={() => {
-                const langs = ['ko', 'en', 'ja'] as const;
-                const currentIdx = langs.indexOf(i18n.language as (typeof langs)[number]);
-                const nextLang = langs[(currentIdx + 1) % langs.length];
-                i18n.changeLanguage(nextLang);
-              }}
+              onPress={() => setShowLanguagePicker(true)}
             />
           </View>
         </View>
@@ -614,6 +611,7 @@ export default function ProfileScreen({ onClose, onGoToPaywall }: ProfileScreenP
         onClose={() => setShowEditName(false)}
       />
       {legalType && <LegalModal visible type={legalType} onClose={() => setLegalType(null)} />}
+      {showLanguagePicker && <LanguagePickerModal onClose={() => setShowLanguagePicker(false)} />}
     </SafeAreaView>
   );
 }

@@ -6,7 +6,7 @@
 
 ```
 src/
-├── components/          # 재사용 가능 UI 컴포넌트 (23개, 미사용 2개)
+├── components/          # 재사용 가능 UI 컴포넌트 (24개, 미사용 2개)
 ├── context/             # React Context 프로바이더 (4개)
 ├── hooks/               # 커스텀 React 훅 (10개)
 ├── lib/                 # 비즈니스 로직 모듈
@@ -42,7 +42,7 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈, MainStack 미등록 — 2026-11 숨김)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (33개)
+└── __tests__/           # Jest 테스트 (34개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -118,6 +118,7 @@ scripts/
 | `GoogleLogo`            | LoginScreen                                                                                                                                          |
 | `GradingResult`         | NotationPracticeScreen                                                                                                                               |
 | `LegalModal`            | LoginScreen, ProfileScreen                                                                                                                           |
+| `LanguagePickerModal`   | ProfileScreen — 언어 선택 후 적용, 취소 시 현재 언어 유지                                                                                            |
 | `MascotCharacter`       | HomeScreen, DailyGoalScreen, MascotGalleryScreen, BeginnerLessonScreen, LevelTestScreen, ShareResultCard                                             |
 | `PianoKeyboard`         | NotationPracticeScreen                                                                                                                               |
 | `PracticeCalendar`      | StatsScreen                                                                                                                                          |
@@ -373,11 +374,12 @@ Login → Onboarding → Home
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
 | `authContext.test.ts`            | 회원 탈퇴 서버 실패 시 프로필·로컬 기록·로그인 보존, 서버 삭제 완료 후 본인 데이터 정리, 게스트 삭제 차단 |
 | `rhythmTapScreen.test.ts`        | 4/4·3/4·6/8 실제 화면의 클릭 트랙 박자·카운트인·취소, 탭 전환 시 예약된 정답 재생 취소                  |
+| `languagePickerModal.test.ts`    | 현재 언어 선택 표시, 적용 전 변경 보류, 취소·뒤로가기, 실패 재시도·연속 적용 방지                       |
 | `appControl.test.ts`             | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키                                                      |
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (467개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (475개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -393,6 +395,7 @@ Login → Onboarding → Home
 | 통계 화면 — 카테고리별 연습·약점/강점·주간 증감·활동일              | `src/lib/computeStats.ts`(computeInsights), `src/screens/StatsScreen.tsx`, `src/i18n/locales/*/stats.json`(summary.delta*·section.byCategory·activeDays·category.*), `src/__tests__/computeStats.test.ts` |
 | 기존 사용자 데이터 보존(1.1.x → 2.0 키·형태 호환)                   | `src/lib/localProfileStorage.ts`(localDataKey = `<base>_<userId>`), `src/__tests__/localProfileStorage.test.ts`("기존 사용자 데이터 보존"), `docs/CONTENT_SCOPE_2_0.md` |
 | 회원 탈퇴 실패 시 데이터 보존·성공 후 로컬 정리 순서                  | `src/context/AuthContext.tsx`(delete_own_account RPC → 본인 로컬 데이터 정리 → 로그아웃), `src/__tests__/authContext.test.ts` |
+| 설정 언어 선택 → 적용·취소                                           | `src/components/LanguagePickerModal.tsx`, `src/screens/ProfileScreen.tsx`, `src/i18n/locales/*/profile.json`(language), `src/__tests__/languagePickerModal.test.ts` |
 | 화성 진행 5~7단계 — 종지 세분화(PAC/IAC/HC/DC)·기능 진행(ii6·V7·전위)·로마숫자 화음 판별 | `src/lib/questionGenerator.ts`(CADENCE_DETAIL_TEMPLATES·FUNCTIONAL_TEMPLATES·ROMAN_TEMPLATES·parseRomanToken·romanChordSpec), `src/lib/progressionVoicing.ts`(ChordSpec·finalSopranoMembers), `src/lib/contentConfig.ts`(PROGRESSION_DIFF_LABELS), `src/types/content.ts`(ProgressionDifficulty), `src/i18n/locales/*/content.json`(cadence.pac/iac·progression·roman·explain.*·difficulty.progression), `src/i18n/locales/*/practice.json`(choice.cadenceDetailPrompt·progressionFigurePrompt·romanPrompt) |
 | 화음 듣기 4단계 — 3화음 전위(제1·제2전위)                          | `src/lib/questionGenerator.ts`(CHORD_TEMPLATES maj_inv2·min_inv2, CHORD_POOLS chord_5), `src/lib/contentConfig.ts`(CHORD_DIFF_LABELS), `src/types/content.ts`(ChordDifficulty), `src/i18n/locales/*/content.json`(chord·explain.chord·difficulty.chord) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
@@ -403,7 +406,7 @@ Login → Onboarding → Home
 | 오답노트 저장·복습 모드·약점 집중 연습                             | `src/lib/wrongNotes.ts`, `src/lib/wrongNoteReviewStore.ts`, `src/hooks/useWrongNotes.ts`, `src/screens/WrongNotesScreen.tsx`, `src/screens/ChoicePracticeScreen.tsx`(review), `src/screens/MockExamScreen.tsx`, `src/screens/ExamResultScreen.tsx`, `src/screens/StatsScreen.tsx` |
 | 결과 공유 카드 (이미지/텍스트)                                     | `src/lib/shareCard.ts`, `src/components/ShareResultCard.tsx`, `src/components/ShareCardModal.tsx`, 진입점: `ExamResultScreen`, `ChoicePracticeScreen`(결과), `LevelTestScreen`(결과), `StatsScreen`(헤더), `BeginnerLessonScreen`(코스 완주)                                      |
 | 음계·선법 듣기 (객관식 5단계, 5단계 상행·하행)                     | `src/lib/scaleQuestions.ts`(SCALE_DIRECTIONS·scaleStepSequence·DESCENDING_FORM), `src/lib/questionGenerator.ts`(dispatch), `src/lib/contentConfig.ts`, `src/i18n/locales/*/content.json`(scale·explain.scale·explain.scaleDescending), `src/i18n/locales/*/practice.json`(choice.scaleBothPrompt) |
-| 리듬 탭 (탭 타이밍 채점 6단계, 5 3/4·6 6/8)                        | `src/lib/rhythmTap.ts`(RHYTHM_TAP_LEVELS·accentEveryFor), `src/screens/RhythmTapScreen.tsx`(복합박자 강박 점), `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기) |
+| 리듬 탭 (탭 타이밍 채점 6단계, 5 3/4·6 6/8)                        | `src/lib/rhythmTap.ts`(RHYTHM_TAP_LEVELS·accentEveryFor), `src/screens/RhythmTapScreen.tsx`(박자 분모 전달·준비/입력 신호 강조·종료 후 카운트 재시작 방지·복합박자 강박 점), `src/components/AbcjsRenderer.tsx`(playClickTrack·onClickTrackState), `src/components/abcjsWebViewHtml.ts`(PLAY_CLICK_TRACK), `src/screens/CategoryPracticeScreen.tsx`(answerType tap 분기), `src/__tests__/rhythmTapScreen.test.ts` |
 | 태블릿 레이아웃 (콘텐츠 가운데 정렬·모달/시트/폼 폭·차트 폭)       | `src/lib/layout.ts`, `src/hooks/useResponsiveLayout.ts`, 각 화면의 `contentContainerStyle`, `src/components/{AppAlert,UpgradeModal,BottomSheet,ShareCardModal,DailyScoreChart}.tsx`, `src/screens/{LoginScreen,OnboardingScreen}.tsx`(narrowStyle)                                   |
 
 ---

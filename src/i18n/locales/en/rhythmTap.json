@@ -11,10 +11,14 @@
   },
   "tap": {
     "countIn": "Ready",
-    "go": "Go!",
+    "go": "Tap now!",
     "pad": "Tap here",
     "hint": "After one bar of clicks, tap the rhythm you heard.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "wait": "Wait for the signal",
+    "activeHint": "Keep tapping the rhythm you heard.",
+    "done": "Finished",
+    "finishing": "Checking your result…"
   },
   "result": {
     "title": "Result",

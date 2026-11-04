@@ -39,6 +39,7 @@ jest.mock('lucide-react-native', () => ({
   ChevronRight: 'ChevronRight',
   Volume2: 'Volume2',
   Share2: 'Share2',
+  Check: 'Check',
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'ko' } }),
@@ -150,3 +151,33 @@ it('듣기 자동 재생 전에 탭을 시작하면 예약된 정답 재생이 �
   expect(mockAudio.togglePlay).not.toHaveBeenCalled();
   expect(mockAudio.playClickTrack).toHaveBeenCalledTimes(1);
 });
+
+it.each(['tap_1', 'tap_5', 'tap_6'] as const)(
+  '%s: 마지막 박 이후에는 다음 마디의 1을 표시하지 않고 입력 종료를 알린다',
+  async (difficulty) => {
+    mockDifficulty = difficulty;
+    await act(async () => {
+      renderer = create(React.createElement(RhythmTapScreen));
+    });
+    await act(async () => button('rhythmTap:listen.start').props.onPress());
+    const options = mockAudio.playClickTrack.mock.calls[0][0];
+    const top = options.top!;
+    const beatMs = beatMsFor(options.tempo, `${top}/${options.btm}`);
+    const totalBeats = top * (1 + options.bars);
+    await act(async () => {
+      clickTrackState({ isPlaying: true, leadMs: 80, beatMs, beatsPerBar: top, countInBars: 1 });
+      jest.advanceTimersByTime(Math.ceil(80 + (totalBeats - 0.5) * beatMs));
+    });
+    expect(renderer.root.findByProps({ testID: 'rhythm-tap-count' }).props.children).toBe(top);
+    await act(async () => jest.advanceTimersByTime(Math.ceil(beatMs / 2) + 80));
+    expect(renderer.root.findAllByProps({ testID: 'rhythm-tap-count' })).toHaveLength(0);
+    expect(
+      renderer.root
+        .findAllByType('Text' as React.ElementType)
+        .some((node) => node.props.children === 'rhythmTap:tap.done'),
+    ).toBe(true);
+    // 채점용 여유 시간에도 종료 신호를 유지한다.
+    await act(async () => jest.advanceTimersByTime(300));
+    expect(renderer.root.findAllByProps({ testID: 'rhythm-tap-count' })).toHaveLength(0);
+  },
+);

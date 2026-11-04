@@ -44,7 +44,10 @@
     "title": "Language",
     "ko": "한국어",
     "en": "English",
-    "ja": "日本語"
+    "ja": "日本語",
+    "choose": "Choose your language, then tap Apply.",
+    "apply": "Apply",
+    "error": "Could not change the language. Please try again."
   },
   "guest": {
     "title": "Guest",

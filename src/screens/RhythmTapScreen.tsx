@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Volume2,
   Share2,
+  Check,
 } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
@@ -91,7 +92,11 @@ export default function RhythmTapScreen() {
   const [shareData, setShareData] = useState<ShareCardData | null>(null);
 
   // 탭 단계 진행 상태 (카운트인 → 패턴)
-  const [tapClock, setTapClock] = useState<{ beat: number; inCountIn: boolean } | null>(null);
+  const [tapClock, setTapClock] = useState<{
+    beat: number;
+    inCountIn: boolean;
+    ended: boolean;
+  } | null>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
 
   const abcjsRef = useRef<AbcjsRendererHandle>(null);
@@ -147,7 +152,7 @@ export default function RhythmTapScreen() {
     gradedRef.current = false;
     clockStartRef.current = null;
     patternStartRef.current = null;
-    setTapClock({ beat: 0, inCountIn: true });
+    setTapClock({ beat: 0, inCountIn: true, ended: false });
     setPhase('tap');
     const [top, btm] = question.timeSignature.split('/').map(Number);
     abcjsRef.current?.playClickTrack({
@@ -203,11 +208,24 @@ export default function RhythmTapScreen() {
         stopClock();
         tickRef.current = setInterval(() => {
           const elapsed = Date.now() - start;
-          const beat = Math.floor(elapsed / beatMs);
-          setTapClock({
-            beat: beat < countInBeats ? beat : beat - countInBeats,
+          const beat = Math.max(0, Math.floor(elapsed / beatMs));
+          const patternBeats = question.measures * beatsPerBar;
+          const ended = beat >= countInBeats + patternBeats;
+          const next = {
+            beat: beat < countInBeats ? beat : Math.min(beat - countInBeats, patternBeats - 1),
             inCountIn: beat < countInBeats,
+            ended,
+          };
+          setTapClock((prev) => {
+            if (
+              prev?.beat === next.beat &&
+              prev.inCountIn === next.inCountIn &&
+              prev.ended === next.ended
+            )
+              return prev;
+            return next;
           });
+          if (ended) stopClock();
         }, 40);
         return;
       }
@@ -331,49 +349,91 @@ export default function RhythmTapScreen() {
     // 복합박자(6/8)는 ♪ 단위로 세되 3개 묶음의 첫 점을 강박으로 표시한다
     const accentEvery = accentEveryFor(question.timeSignature);
     const inCountIn = tapClock?.inCountIn ?? true;
+    const ended = tapClock?.ended ?? false;
+    const active = !inCountIn && !ended;
     const beat = tapClock?.beat ?? 0;
-    const currentBeatInBar = beat % beatsPerBar;
+    const currentBeatInBar = ended ? -1 : beat % beatsPerBar;
+    const signalColor = active ? COLORS.white : COLORS.slate700;
     const flashBg = padFlash.interpolate({
       inputRange: [0, 1],
       outputRange: [colors.bg, colors.main + '66'],
     });
     return (
       <View style={styles.stage}>
-        <Text style={[styles.countLabel, { color: inCountIn ? COLORS.slate500 : colors.text }]}>
-          {inCountIn ? t('rhythmTap:tap.countIn') : t('rhythmTap:tap.go')}
-        </Text>
-        <Text style={[styles.countNumber, { color: inCountIn ? COLORS.slate400 : colors.main }]}>
-          {tapClock ? currentBeatInBar + 1 : '·'}
-        </Text>
-        <View style={styles.beatDots}>
-          {Array.from({ length: beatsPerBar }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.beatDot,
-                i % accentEvery === 0 && styles.beatDotAccent,
-                tapClock && i === currentBeatInBar
-                  ? {
-                      backgroundColor: inCountIn ? COLORS.slate400 : colors.main,
-                      transform: [{ scale: 1.25 }],
-                    }
-                  : { backgroundColor: COLORS.slate200 },
-              ]}
-            />
-          ))}
+        <View
+          style={[styles.signalPanel, { backgroundColor: active ? colors.text : COLORS.slate100 }]}
+        >
+          <Text
+            style={[styles.countLabel, { color: signalColor }]}
+            accessibilityLiveRegion="polite"
+          >
+            {ended
+              ? t('rhythmTap:tap.done')
+              : inCountIn
+                ? t('rhythmTap:tap.countIn')
+                : t('rhythmTap:tap.go')}
+          </Text>
+          {ended ? (
+            <View style={styles.countFinished}>
+              <Check size={56} color={colors.text} />
+            </View>
+          ) : (
+            <Text testID="rhythm-tap-count" style={[styles.countNumber, { color: signalColor }]}>
+              {tapClock ? currentBeatInBar + 1 : '·'}
+            </Text>
+          )}
+          <View style={styles.beatDots}>
+            {Array.from({ length: beatsPerBar }, (_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.beatDot,
+                  i % accentEvery === 0 && styles.beatDotAccent,
+                  tapClock && i === currentBeatInBar
+                    ? {
+                        backgroundColor: active ? COLORS.white : COLORS.slate600,
+                        transform: [{ scale: 1.25 }],
+                      }
+                    : { backgroundColor: active ? colors.main : COLORS.slate300 },
+                ]}
+              />
+            ))}
+          </View>
         </View>
 
         <Animated.View style={{ transform: [{ scale: padScale }], alignSelf: 'stretch' }}>
           <Animated.View
-            style={[styles.pad, { borderColor: colors.main, backgroundColor: flashBg }]}
+            style={[
+              styles.pad,
+              { borderColor: active ? colors.text : COLORS.slate300, backgroundColor: flashBg },
+            ]}
           >
-            <Pressable onPressIn={handleTap} style={styles.padPress}>
-              <Hand size={44} color={colors.main} />
-              <Text style={[styles.padText, { color: colors.text }]}>{t('rhythmTap:tap.pad')}</Text>
+            <Pressable
+              onPressIn={handleTap}
+              style={styles.padPress}
+              accessibilityRole="button"
+              accessibilityLabel={t('rhythmTap:tap.pad')}
+            >
+              <Hand size={44} color={active ? colors.text : COLORS.slate400} />
+              <Text style={[styles.padText, { color: active ? colors.text : COLORS.slate600 }]}>
+                {ended
+                  ? t('rhythmTap:tap.done')
+                  : inCountIn
+                    ? t('rhythmTap:tap.wait')
+                    : t('rhythmTap:tap.pad')}
+              </Text>
             </Pressable>
           </Animated.View>
         </Animated.View>
-        <Text style={styles.stageDesc}>{t('rhythmTap:tap.hint')}</Text>
+        <Text style={styles.stageDesc}>
+          {t(
+            ended
+              ? 'rhythmTap:tap.finishing'
+              : active
+                ? 'rhythmTap:tap.activeHint'
+                : 'rhythmTap:tap.hint',
+          )}
+        </Text>
         <TouchableOpacity style={styles.ghostBtn} onPress={cancelTap}>
           <Text style={styles.ghostBtnText}>{t('rhythmTap:tap.cancel')}</Text>
         </TouchableOpacity>
@@ -688,20 +748,29 @@ const styles = StyleSheet.create({
   },
   ghostBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.slate600 },
   row: { alignSelf: 'stretch', flexDirection: 'row', gap: 10 },
-  countLabel: { fontSize: 14, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
-  countNumber: { fontSize: 64, fontWeight: '900', lineHeight: 72 },
-  beatDots: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  signalPanel: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  countLabel: { fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  countNumber: { fontSize: 76, fontWeight: '900', lineHeight: 88 },
+  countFinished: { height: 88, justifyContent: 'center' },
+  beatDots: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
   beatDot: { width: 14, height: 14, borderRadius: 7 },
   beatDotAccent: { width: 18, height: 18, borderRadius: 9 },
   pad: {
     alignSelf: 'stretch',
-    height: 230,
+    minHeight: 190,
     borderRadius: 28,
     borderWidth: 3,
     overflow: 'hidden',
   },
-  padPress: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  padText: { fontSize: 16, fontWeight: '900' },
+  padPress: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
+  padText: { fontSize: 20, fontWeight: '900', textAlign: 'center' },
   scoreCircle: {
     width: 150,
     height: 150,
