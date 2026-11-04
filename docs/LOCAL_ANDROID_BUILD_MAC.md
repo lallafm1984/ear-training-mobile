@@ -11,6 +11,7 @@
 - 기존 React Native/라이브러리 keep 규칙은 보존한다. 문제를 숨기기 위해 전체 앱의 난독화·축소·최적화를 끄지 않는다.
 - 현재 결제 SDK의 `purchases-store-amazon:9.29.0`이 전역 `-dontoptimize`를 포함한다. AGP의 `optimization.keepRules.ignoreFrom`으로 이 버전의 consumer 파일만 제외하고, 나머지 Amazon 보호 규칙 3개는 `plugins/release-compatibility.pro`에 그대로 보존한다. 결제 코드·의존성을 제거하지 않는다. [라이브러리 이슈](https://github.com/RevenueCat/purchases-android/issues/3496), [AGP 8.11 API](https://developer.android.com/reference/tools/gradle-api/8.11/com/android/build/api/dsl/KeepRules#ignoreFrom(kotlin.Array)).
 - Expo SDK 54의 Kotlin Record 변환기·생성기는 reflection을 사용한다. 실제 최적화 release 실행에서 SecureStore 옵션 변환 오류를 확인해 `expo.modules.kotlin.records.**`·`expo.modules.kotlin.allocators.**`만 보호한다. Expo 전체나 앱 전체 최적화를 끄지 않는다.
+- `expo-notifications:0.32.17`에는 보호 규칙 파일이 있지만 consumer 연결이 빠져 있다. 최적화 빌드에서 알림 저장 시 `NotSerializableException`을 재현해 라이브러리 원래 규칙(`expo.modules.notifications.**`)을 호환 파일에 복원한다. [Expo upstream 수정](https://github.com/expo/expo/pull/45974). SDK 업그레이드 시 라이브러리에 실제 연결됐는지 확인한 뒤 중복 규칙을 정리한다.
 
 Google Play의 DEX 최적화 경고는 Java/Kotlin DEX 지표다. Hermes JavaScript 번들 압축 여부와 구분한다. 최적화 후 **실제 release 빌드**를 실행해 WebView·로컬 저장소·알림·공유·구독 초기화를 점검한다.
 
