@@ -379,7 +379,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (475개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (476개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 

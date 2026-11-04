@@ -441,7 +441,10 @@ export function applyFinalSanity(o: FinalSanityOptions): FinalSanityReport {
       run = ons[k].midi === ons[k - 1].midi ? run + 1 : 1;
       if (run < 3) continue;
       const target = isFinalNote(ons[k].idx) ? ons[k - 1].idx : ons[k].idx;
-      if (tryFix(target)) return 1;
+      // 마지막 반복음은 수직 화성 때문에 대체할 수 없는 경우가 있다.
+      // 같은 세 음의 앞쪽도 검사하되 종지음·성부 진행 제약은 그대로 지킨다.
+      const targets = [...new Set([target, ons[k - 1].idx, ons[k - 2].idx])];
+      if (targets.some((idx) => tryFix(idx))) return 1;
       report.unresolved++;
       run = 1;
     }

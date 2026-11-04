@@ -236,6 +236,26 @@ describe('선율 생성 (파트 연습 L1~L9)', () => {
 });
 
 describe('2성부 생성 (저음 L1~L4)', () => {
+  it('F장조 6/8 저음 L4에서 화성 제약으로 남던 같은 음 3회 반복을 제거한다 (시드 463)', () => {
+    let seed = 463;
+    const random = jest.spyOn(Math, 'random').mockImplementation(() => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    });
+    try {
+      const score = generatePracticeScore('twoVoice', 'bass_4', {
+        keySignature: 'F',
+        timeSignature: '6/8',
+      });
+      expect(
+        melodicIssues(score.trebleNotes, 'F').filter((issue) => !issue.startsWith('firstNot')),
+      ).toEqual([]);
+      expect(barIssues(score.trebleNotes, '6/8')).toEqual([]);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   it('트레블 선율 규칙을 지키고 베이스 L1 종지는 V/IV→I 성격이다', () => {
     const found: string[] = [];
     for (const d of ['bass_1', 'bass_2', 'bass_3', 'bass_4']) {
