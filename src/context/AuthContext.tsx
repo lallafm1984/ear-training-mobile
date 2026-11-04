@@ -339,20 +339,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async () => {
     if (!user) return i18n.t('common:error.loginRequired');
 
-    // profiles 레코드 삭제 (CASCADE로 auth.users도 삭제됨)
-    const { error: delError } = await supabase.from('profiles').delete().eq('id', user.id);
-
-    if (delError) return delError.message;
+    // 인증 계정 삭제에 성공한 뒤에만 로컬 데이터를 지운다.
+    // auth.users → profiles 방향의 ON DELETE CASCADE이므로 프로필도 함께 삭제된다.
+    const { error: authDelError } = await supabase.rpc('delete_own_account');
+    if (authDelError) {
+      logger.warn('auth.users 삭제 실패:', authDelError.message);
+      return authDelError.message;
+    }
 
     // 로컬 데이터 정리 (학습 데이터 키는 사용자 ID 접미사가 붙는다)
     await AsyncStorage.multiRemove([
       ...allLocalDataKeys(user.id),
       '@melodygen_onboarding_done',
     ]).catch(() => {});
-
-    // auth.users 삭제 (security definer DB Function)
-    const { error: authDelError } = await supabase.rpc('delete_own_account');
-    if (authDelError) logger.warn('auth.users 삭제 실패:', authDelError.message);
 
     // RevenueCat 사용자 초기화 — 탈퇴 후 재가입 시 이전 구매 토큰이
     // oldPurchaseToken으로 사용되어 "구독 변경 불가" 오류가 나는 것을 방지

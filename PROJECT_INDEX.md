@@ -1,6 +1,6 @@
 # MelodyGen — 프로젝트 구조 인덱스
 
-> 마지막 업데이트: 2026-11-03
+> 마지막 업데이트: 2026-11-04
 
 ## 디렉토리 구조
 
@@ -42,7 +42,7 @@ src/
 │   └── ScoreEditor/     # 악보 에디터 (13개 모듈, MainStack 미등록 — 2026-11 숨김)
 ├── theme/               # 디자인 토큰 (색상, 테마)
 ├── types/               # TypeScript 타입 정의
-└── __tests__/           # Jest 테스트 (31개)
+└── __tests__/           # Jest 테스트 (33개)
 assets/
 ├── icon-square.png      # Android/iOS 스토어용 정사각형 앱 아이콘 원본
 └── notification-icon.png # Android 알림 작은 아이콘 (96×96 흰색 음표, expo-notifications 플러그인)
@@ -371,11 +371,13 @@ Login → Onboarding → Home
 | `dailyGoal.test.ts`              | 일일 목표 카테고리, 오늘 달성 수(기록 20개 초과 포함), 연속 달성일(오늘 진행 중·중간 공백·6/7 미달성) |
 | `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
+| `authContext.test.ts`            | 회원 탈퇴 서버 실패 시 프로필·로컬 기록·로그인 보존, 서버 삭제 완료 후 본인 데이터 정리, 게스트 삭제 차단 |
+| `rhythmTapScreen.test.ts`        | 4/4·3/4·6/8 실제 화면의 클릭 트랙 박자·카운트인·취소, 탭 전환 시 예약된 정답 재생 취소                  |
 | `appControl.test.ts`             | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키                                                      |
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (460개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (467개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -390,6 +392,7 @@ Login → Onboarding → Home
 | 2.0 추가 콘텐츠 무료/Pro 범위·NEW 배지·요금제 비교표            | `src/lib/contentConfig.ts`(NEW_CONTENT_DIFFICULTIES·isNewDifficulty·countNewLevels·getFreeDifficulties), `src/components/CategoryCard.tsx`(newCount·ICON_MAP export), `src/screens/CategoryPracticeScreen.tsx`(NEW 칩), `src/screens/HomeScreen.tsx`, `src/screens/PaywallScreen.tsx`(CONTENT_CATEGORIES 기반 비교표), `src/i18n/locales/*/common.json`(badge.new), `docs/CONTENT_SCOPE_2_0.md` |
 | 통계 화면 — 카테고리별 연습·약점/강점·주간 증감·활동일              | `src/lib/computeStats.ts`(computeInsights), `src/screens/StatsScreen.tsx`, `src/i18n/locales/*/stats.json`(summary.delta*·section.byCategory·activeDays·category.*), `src/__tests__/computeStats.test.ts` |
 | 기존 사용자 데이터 보존(1.1.x → 2.0 키·형태 호환)                   | `src/lib/localProfileStorage.ts`(localDataKey = `<base>_<userId>`), `src/__tests__/localProfileStorage.test.ts`("기존 사용자 데이터 보존"), `docs/CONTENT_SCOPE_2_0.md` |
+| 회원 탈퇴 실패 시 데이터 보존·성공 후 로컬 정리 순서                  | `src/context/AuthContext.tsx`(delete_own_account RPC → 본인 로컬 데이터 정리 → 로그아웃), `src/__tests__/authContext.test.ts` |
 | 화성 진행 5~7단계 — 종지 세분화(PAC/IAC/HC/DC)·기능 진행(ii6·V7·전위)·로마숫자 화음 판별 | `src/lib/questionGenerator.ts`(CADENCE_DETAIL_TEMPLATES·FUNCTIONAL_TEMPLATES·ROMAN_TEMPLATES·parseRomanToken·romanChordSpec), `src/lib/progressionVoicing.ts`(ChordSpec·finalSopranoMembers), `src/lib/contentConfig.ts`(PROGRESSION_DIFF_LABELS), `src/types/content.ts`(ProgressionDifficulty), `src/i18n/locales/*/content.json`(cadence.pac/iac·progression·roman·explain.*·difficulty.progression), `src/i18n/locales/*/practice.json`(choice.cadenceDetailPrompt·progressionFigurePrompt·romanPrompt) |
 | 화음 듣기 4단계 — 3화음 전위(제1·제2전위)                          | `src/lib/questionGenerator.ts`(CHORD_TEMPLATES maj_inv2·min_inv2, CHORD_POOLS chord_5), `src/lib/contentConfig.ts`(CHORD_DIFF_LABELS), `src/types/content.ts`(ChordDifficulty), `src/i18n/locales/*/content.json`(chord·explain.chord·difficulty.chord) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |

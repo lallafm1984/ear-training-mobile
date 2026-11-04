@@ -133,8 +133,7 @@ export default function RhythmTapScreen() {
     if (phase !== 'listen') return;
     const timer = setTimeout(() => abcjsRef.current?.togglePlay(), 600);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question.id]);
+  }, [question.id, phase]);
 
   const handlePlay = useCallback(() => {
     if (isPlaying) abcjsRef.current?.stopPlay();
@@ -150,10 +149,11 @@ export default function RhythmTapScreen() {
     patternStartRef.current = null;
     setTapClock({ beat: 0, inCountIn: true });
     setPhase('tap');
+    const [top, btm] = question.timeSignature.split('/').map(Number);
     abcjsRef.current?.playClickTrack({
       tempo: question.tempo,
-      top: question.beatsPerBar,
-      btm: 4,
+      top,
+      btm,
       countInBars: RHYTHM_TAP_COUNT_IN_BARS,
       bars: question.measures,
       tailMs: Math.round(question.toleranceMs + 250),
@@ -240,7 +240,6 @@ export default function RhythmTapScreen() {
     stopAllAudio();
     setGrade(null);
     setPhase('listen');
-    setTimeout(() => abcjsRef.current?.togglePlay(), 400);
   }, [stopAllAudio]);
 
   const nextRhythm = useCallback(() => {
