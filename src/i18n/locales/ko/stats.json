@@ -3,12 +3,17 @@
   "summary": {
     "streak": "연속 학습일",
     "totalSessions": "총 연습 횟수",
-    "thisWeek": "이번 주"
+    "thisWeek": "이번 주",
+    "deltaUp": "지난주보다 +{{count}}",
+    "deltaDown": "지난주보다 −{{count}}",
+    "deltaSame": "지난주와 같음"
   },
   "section": {
     "dailyScore": "일별 평균 점수",
     "dailyScoreMax": "만점 5점",
-    "examStats": "모의시험 통계"
+    "examStats": "모의시험 통계",
+    "byCategory": "카테고리별 연습",
+    "activeDays": "최근 30일 중 {{count}}일 연습"
   },
   "exam": {
     "attempts": "응시 횟수",
@@ -43,5 +48,10 @@
     "detailTitle": "{{month}}월 {{day}}일 연습 기록",
     "avgRating": "평균 {{rating}}점",
     "noRecord": "이 날은 연습 기록이 없습니다"
+  },
+  "category": {
+    "summary": "{{count}}회 · 평균 {{rating}}점",
+    "weak": "약점",
+    "strong": "강점"
   }
 }

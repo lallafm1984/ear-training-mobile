@@ -1,0 +1,48 @@
+{
+  "button": "Share",
+  "buttonLong": "Share result",
+  "modal": {
+    "title": "Share card",
+    "hint": "Save it as an image or send it straight to a friend.",
+    "image": "Share as image",
+    "text": "Share as text",
+    "dialogTitle": "Share MelodyGen result"
+  },
+  "error": {
+    "title": "Sharing failed",
+    "message": "Couldn't create the share card. Please try again later."
+  },
+  "card": {
+    "brand": "MelodyGen",
+    "tagline": "Ear training, 5 minutes a day",
+    "hashtags": "#MelodyGen #EarTraining"
+  },
+  "kind": {
+    "exam": "Mock exam result",
+    "practice": "Practice result",
+    "levelTest": "Level test result",
+    "stats": "My practice record",
+    "course": "7-day Ear Opening course complete"
+  },
+  "stat": {
+    "grade": "Grade",
+    "questions": "Questions",
+    "accuracy": "Accuracy",
+    "correct": "Correct",
+    "streak": "Streak",
+    "sessions": "Sessions",
+    "weekly": "This week",
+    "level": "Level",
+    "lessons": "Lessons done"
+  },
+  "course": {
+    "headline": "7 days done",
+    "label": "Every lesson of the Ear Opening course is complete"
+  },
+  "stats": {
+    "streakLabel": "practice streak"
+  },
+  "text": {
+    "footer": "Training my ears with MelodyGen! 🎧"
+  }
+}

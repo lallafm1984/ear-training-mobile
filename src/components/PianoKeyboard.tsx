@@ -23,7 +23,7 @@ const OCTAVES = [3, 4, 5];
 
 function PianoKeyboard({
   onKeyPress,
-  accentColor,
+  accentColor: _accentColor,
   initialOctave = 4,
 }: PianoKeyboardProps) {
   const scrollRef = useRef<ScrollView>(null);
@@ -64,7 +64,7 @@ function PianoKeyboard({
       >
         <View style={styles.keysWrapper}>
           {/* White keys */}
-          {whiteKeys.map((key, index) => (
+          {whiteKeys.map((key) => (
             <TouchableOpacity
               key={`white-${key.pitch}${key.octave}`}
               style={styles.whiteKey}
@@ -72,7 +72,8 @@ function PianoKeyboard({
               onPress={() => onKeyPress(key.pitch, key.octave, '')}
             >
               <Text style={styles.whiteKeyLabel}>
-                {key.pitch}{key.octave}
+                {key.pitch}
+                {key.octave}
               </Text>
             </TouchableOpacity>
           ))}

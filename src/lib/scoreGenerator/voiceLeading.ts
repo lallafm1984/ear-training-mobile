@@ -3,7 +3,7 @@
 // ────────────────────────────────────────────────────────────────
 
 import type { ScoreNote } from '../scoreUtils';
-import { durationToSixteenths, getSixteenthsPerBar, noteToMidiWithKey, getTupletActualSixteenths } from '../scoreUtils';
+import { durationToSixteenths, noteToMidiWithKey, getTupletActualSixteenths } from '../scoreUtils';
 
 // ────────────────────────────────────────────────────────────────
 // ★ 최종 검토: 자동 생성 악보의 화성·성부 진행·마디 정합성 검증 및 보정
@@ -57,17 +57,19 @@ export function isConsonantInterval(semitones: number): boolean {
  * 연속 두 공격점에서 동일 완전음정(0,7)이 같은 방향으로 진행하면 위반.
  */
 export function isParallelPerfect(
-  prevTrebleMidi: number, prevBassMidi: number,
-  currTrebleMidi: number, currBassMidi: number,
+  prevTrebleMidi: number,
+  prevBassMidi: number,
+  currTrebleMidi: number,
+  currBassMidi: number,
 ): boolean {
-  const prevInt = ((prevTrebleMidi - prevBassMidi) % 12 + 12) % 12;
-  const currInt = ((currTrebleMidi - currBassMidi) % 12 + 12) % 12;
+  const prevInt = (((prevTrebleMidi - prevBassMidi) % 12) + 12) % 12;
+  const currInt = (((currTrebleMidi - currBassMidi) % 12) + 12) % 12;
   // 둘 다 완전 유니즌(0) 또는 완전5도(7)
   if (prevInt !== 0 && prevInt !== 7) return false;
   if (currInt !== 0 && currInt !== 7) return false;
   // 같은 방향으로 진행해야 병행
   const trebleDir = Math.sign(currTrebleMidi - prevTrebleMidi);
-  const bassDir   = Math.sign(currBassMidi - prevBassMidi);
+  const bassDir = Math.sign(currBassMidi - prevBassMidi);
   return trebleDir !== 0 && trebleDir === bassDir;
 }
 

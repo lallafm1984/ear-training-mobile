@@ -5,14 +5,31 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
-  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic, Lock,
+  Music,
+  Drum,
+  ArrowUpDown,
+  Layers,
+  GitBranch,
+  Key,
+  FileMusic,
+  AudioLines,
+  Hand,
+  Lock,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../theme/colors';
 import type { ContentTypeConfig } from '../types/content';
 
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  Music, Drum, ArrowUpDown, Layers, GitBranch, Key, FileMusic,
+export const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+  Music,
+  Drum,
+  ArrowUpDown,
+  Layers,
+  GitBranch,
+  Key,
+  FileMusic,
+  AudioLines,
+  Hand,
 };
 
 interface CategoryCardProps {
@@ -21,9 +38,20 @@ interface CategoryCardProps {
   locked?: boolean;
   /** 연습 횟수 (진도 표시용) */
   practiceCount?: number;
+  /** 카드 폭(dp). 그리드 열 수에 맞춰 부모가 계산해 넘긴다. 없으면 30% */
+  width?: number;
+  /** 이번 업데이트에서 추가된 난이도 수 — 0보다 크면 NEW 배지 */
+  newCount?: number;
 }
 
-function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardProps) {
+function CategoryCard({
+  config,
+  onPress,
+  locked,
+  practiceCount,
+  width,
+  newCount,
+}: CategoryCardProps) {
   const { t } = useTranslation(['common', 'content']);
   const IconComponent = ICON_MAP[config.icon] ?? Music;
 
@@ -31,6 +59,7 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
     <TouchableOpacity
       style={[
         styles.card,
+        width != null && { flexBasis: width },
         locked
           ? { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed' }
           : { backgroundColor: config.bgColor, borderColor: config.color + '30' },
@@ -38,10 +67,15 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconWrap, { backgroundColor: locked ? '#b0bccc' : config.color + '18' }]}>
+      <View
+        style={[styles.iconWrap, { backgroundColor: locked ? '#b0bccc' : config.color + '18' }]}
+      >
         <IconComponent size={24} color={locked ? '#6b7a8d' : config.color} />
       </View>
-      <Text style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]} numberOfLines={1}>
+      <Text
+        style={[styles.name, { color: locked ? COLORS.slate400 : config.color }]}
+        numberOfLines={1}
+      >
         {t('content:category.' + config.id + '.name')}
       </Text>
       <Text style={[styles.desc, locked && { color: COLORS.slate400 }]} numberOfLines={1}>
@@ -53,10 +87,16 @@ function CategoryCard({ config, onPress, locked, practiceCount }: CategoryCardPr
           <Text style={styles.lockText}>Pro</Text>
         </View>
       )}
+      {!locked && newCount != null && newCount > 0 && (
+        <View style={[styles.newBadge, { backgroundColor: config.color }]}>
+          <Text style={styles.newText}>{t('common:badge.new')}</Text>
+        </View>
+      )}
       {!locked && practiceCount != null && practiceCount > 0 && (
         <View style={[styles.countBadge, { backgroundColor: config.color + '20' }]}>
           <Text style={[styles.countText, { color: config.color }]}>
-            {practiceCount}{t('common:unit.count')}
+            {practiceCount}
+            {t('common:unit.count')}
           </Text>
         </View>
       )}
@@ -95,6 +135,15 @@ const styles = StyleSheet.create({
     color: COLORS.slate500,
     textAlign: 'center',
   },
+  newBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  newText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',

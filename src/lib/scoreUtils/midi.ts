@@ -7,7 +7,13 @@ import { getKeySigAlteration, KEY_SIG_MAP } from './keySignature';
 
 /** MIDI 음높이 계산용 반음 오프셋 */
 export const PITCH_SEMITONES: Record<string, number> = {
-  C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11,
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
 };
 
 export function pitchToMidi(note: ScoreNote): number {
@@ -22,7 +28,10 @@ const PITCH_ORDER_UTILS: PitchName[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
 /** nn(스케일 디그리 인덱스) → MIDI 번호 변환 (조표 반영) */
 export function nnToMidi(
-  nn: number, scale: PitchName[], baseOctave: number, keySignature: string,
+  nn: number,
+  scale: PitchName[],
+  baseOctave: number,
+  keySignature: string,
 ): number {
   const deg = ((nn % 7) + 7) % 7;
   const octOff = Math.floor(nn / 7);
@@ -42,10 +51,15 @@ export function nnToMidi(
 
 /** 두 nn 사이의 반음(semitone) 거리 (절대값) */
 export function getMidiInterval(
-  nn1: number, nn2: number,
-  scale: PitchName[], baseOctave: number, keySignature: string,
+  nn1: number,
+  nn2: number,
+  scale: PitchName[],
+  baseOctave: number,
+  keySignature: string,
 ): number {
-  return Math.abs(nnToMidi(nn1, scale, baseOctave, keySignature) - nnToMidi(nn2, scale, baseOctave, keySignature));
+  return Math.abs(
+    nnToMidi(nn1, scale, baseOctave, keySignature) - nnToMidi(nn2, scale, baseOctave, keySignature),
+  );
 }
 
 /**
@@ -82,12 +96,42 @@ export function noteToMidiWithKey(note: ScoreNote, keySignature: string): number
 // Enharmonic spelling
 // ────────────────────────────────────────────────────────────────
 
-const SHARP_KEYS = new Set(['G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'D#m', 'A#m']);
-const FLAT_KEYS  = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm', 'Abm']);
+const SHARP_KEYS = new Set([
+  'G',
+  'D',
+  'A',
+  'E',
+  'B',
+  'F#',
+  'C#',
+  'Em',
+  'Bm',
+  'F#m',
+  'C#m',
+  'G#m',
+  'D#m',
+  'A#m',
+]);
+const FLAT_KEYS = new Set([
+  'F',
+  'Bb',
+  'Eb',
+  'Ab',
+  'Db',
+  'Gb',
+  'Cb',
+  'Dm',
+  'Gm',
+  'Cm',
+  'Fm',
+  'Bbm',
+  'Ebm',
+  'Abm',
+]);
 
 function getKeySigType(keySignature: string): 'sharp' | 'flat' | 'none' {
   if (SHARP_KEYS.has(keySignature)) return 'sharp';
-  if (FLAT_KEYS.has(keySignature))  return 'flat';
+  if (FLAT_KEYS.has(keySignature)) return 'flat';
   return 'none';
 }
 
@@ -124,6 +168,11 @@ function normalizeEnharmonic(note: ScoreNote, preferFlat: boolean): ScoreNote {
  */
 export function applyEnharmonicSpelling(notes: ScoreNote[], keySignature: string): ScoreNote[] {
   const keySigType = getKeySigType(keySignature);
+  // 화성단음계 이끔음(올린 7음) 글자 — 조성 음이므로 이명동음 변환 대상에서 제외
+  const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const isMinor = keySignature.endsWith('m');
+  const rootLetterIdx = LETTERS.indexOf(keySignature[0]);
+  const leadingLetter = isMinor && rootLetterIdx >= 0 ? LETTERS[(rootLetterIdx + 6) % 7] : null;
 
   return notes.map((note, i) => {
     if (note.pitch === 'rest') return note;
@@ -131,6 +180,7 @@ export function applyEnharmonicSpelling(notes: ScoreNote[], keySignature: string
 
     const keySigMap = KEY_SIG_MAP[keySignature] || {};
     if (keySigMap[note.pitch] === note.accidental) return note;
+    if (leadingLetter && note.pitch === leadingLetter && note.accidental === '#') return note;
 
     const prevNote = (() => {
       for (let j = i - 1; j >= 0; j--) {
@@ -155,13 +205,20 @@ export function applyEnharmonicSpelling(notes: ScoreNote[], keySignature: string
       direction = currMidi > prevMidi ? 'up' : currMidi < prevMidi ? 'down' : 'none';
     }
 
+    // 반음계 임시표 표기 규칙(청음 시험 관행): 상행 해결 → #(아래 글자 올림), 하행 해결 → b(위 글자 내림).
+    // 예) C장조 G#→A, A♭→G / G장조에서도 A♭→G (조표가 #이어도 하행은 b로 적는다)
+    // 해결 방향을 알 수 없으면 조표 성격을 따르고, 그것도 없으면 원래 표기를 유지한다.
     let preferFlat: boolean;
-    if (keySigType === 'flat') {
+    if (direction === 'down') {
+      preferFlat = true;
+    } else if (direction === 'up') {
+      preferFlat = false;
+    } else if (keySigType === 'flat') {
       preferFlat = true;
     } else if (keySigType === 'sharp') {
       preferFlat = false;
     } else {
-      preferFlat = direction === 'down';
+      preferFlat = note.accidental === 'b';
     }
 
     return normalizeEnharmonic(note, preferFlat);

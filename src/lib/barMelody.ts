@@ -1,6 +1,6 @@
 import type { ContentDifficulty } from '../types/content';
 import type { Accidental, PitchName, ScoreNote } from './scoreUtils';
-import { makeRest, uid } from './scoreUtils';
+import { makeRest, resolveAbcAccidental, uid } from './scoreUtils';
 
 export const BAR_MELODY_SLOT_COUNT = 4;
 
@@ -35,11 +35,14 @@ interface BarMelodyChromaticOption {
   accidental: Accidental;
 }
 
-export const BAR_MELODY_PITCH_OPTIONS: BarMelodyPitchOption[] = Array.from({ length: 8 }, (_, degree) => ({
-  degree,
-  pitch: C_MAJOR_PITCHES[degree % 7],
-  octave: 4 + Math.floor(degree / 7),
-}));
+export const BAR_MELODY_PITCH_OPTIONS: BarMelodyPitchOption[] = Array.from(
+  { length: 8 },
+  (_, degree) => ({
+    degree,
+    pitch: C_MAJOR_PITCHES[degree % 7],
+    octave: 4 + Math.floor(degree / 7),
+  }),
+);
 
 const BAR_MELODY_CHROMATIC_PITCH_OPTIONS: BarMelodyChromaticOption[] = [
   { midi: 60, pitch: 'C', octave: 4, accidental: '' },
@@ -57,8 +60,9 @@ const BAR_MELODY_CHROMATIC_PITCH_OPTIONS: BarMelodyChromaticOption[] = [
   { midi: 72, pitch: 'C', octave: 5, accidental: '' },
 ];
 
-const BAR_MELODY_NATURAL_CHROMATIC_PITCH_OPTIONS = BAR_MELODY_CHROMATIC_PITCH_OPTIONS
-  .filter(option => !option.accidental);
+const BAR_MELODY_NATURAL_CHROMATIC_PITCH_OPTIONS = BAR_MELODY_CHROMATIC_PITCH_OPTIONS.filter(
+  (option) => !option.accidental,
+);
 
 export function buildBarMelodyDisplayNotes(notes: (ScoreNote | null)[]): ScoreNote[] {
   return Array.from({ length: BAR_MELODY_SLOT_COUNT }, (_, index) => {
@@ -68,16 +72,16 @@ export function buildBarMelodyDisplayNotes(notes: (ScoreNote | null)[]): ScoreNo
   });
 }
 
-function barMelodyPitchToAbc(note: ScoreNote): string {
+function barMelodyPitchToAbc(note: ScoreNote, measureAccState: Map<string, string>): string {
   if (note.pitch === 'rest') return 'z';
 
-  const accidentalPrefix = note.accidental === '#'
-    ? '^'
-    : note.accidental === 'b'
-      ? '_'
-      : note.accidental === 'n'
-        ? '='
-        : '';
+  const accidentalPrefix = resolveAbcAccidental(
+    note.pitch,
+    note.octave,
+    note.accidental,
+    'C',
+    measureAccState,
+  );
 
   if (note.octave <= 2) return `${accidentalPrefix}${note.pitch},${','.repeat(3 - note.octave)}`;
   if (note.octave === 3) return `${accidentalPrefix}${note.pitch},`;
@@ -87,19 +91,12 @@ function barMelodyPitchToAbc(note: ScoreNote): string {
 }
 
 export function buildBarMelodyDisplayAbc(notes: (ScoreNote | null)[]): string {
+  const measureAccState = new Map<string, string>();
   const body = buildBarMelodyDisplayNotes(notes)
-    .map(note => `${barMelodyPitchToAbc(note)}4`)
+    .map((note) => `${barMelodyPitchToAbc(note, measureAccState)}4`)
     .join(' ');
 
-  return [
-    'X:1',
-    'T:',
-    'M:4/4',
-    'L:1/16',
-    'Q:1/4=80',
-    'K:C',
-    `${body} |]`,
-  ].join('\n');
+  return ['X:1', 'T:', 'M:4/4', 'L:1/16', 'Q:1/4=80', 'K:C', `${body} |]`].join('\n');
 }
 
 export function getBarMelodyMaxIntervalStep(difficulty: ContentDifficulty): number {
@@ -149,7 +146,7 @@ export function appendBarMelodyInput(
   note: ScoreNote,
 ): (ScoreNote | null)[] {
   const next = Array.from({ length: BAR_MELODY_SLOT_COUNT }, (_, index) => notes[index] ?? null);
-  const emptyIndex = next.findIndex(value => value === null);
+  const emptyIndex = next.findIndex((value) => value === null);
   if (emptyIndex < 0) return next;
   next[emptyIndex] = { ...note, duration: '4', tie: false };
   return next;
@@ -176,11 +173,22 @@ export function getBarMelodyDegree(note: ScoreNote): number | null {
 }
 
 function countChromaticOptions(options: BarMelodyChromaticOption[]): number {
-  return options.filter(option => option.accidental).length;
+  return options.filter((option) => option.accidental).length;
 }
 
 function pickRandomOption<T>(options: T[]): T | undefined {
   return options[Math.floor(Math.random() * options.length)];
+}
+
+function wouldRequireNaturalCancellation(
+  selected: BarMelodyChromaticOption[],
+  option: BarMelodyChromaticOption,
+): boolean {
+  if (option.accidental) return false;
+  return selected.some(
+    (prev) =>
+      prev.pitch === option.pitch && prev.octave === option.octave && prev.accidental !== '',
+  );
 }
 
 function generateChromaticBarMelodyNotes(difficulty: ContentDifficulty): ScoreNote[] {
@@ -200,11 +208,12 @@ function generateChromaticBarMelodyNotes(difficulty: ContentDifficulty): ScoreNo
       const mustPickAccidental = accidentalsNeeded >= slotsRemaining;
       const accidentalLimitReached = accidentalCount >= targetAccidentals;
 
-      const candidates = BAR_MELODY_CHROMATIC_PITCH_OPTIONS.filter(option => {
+      const candidates = BAR_MELODY_CHROMATIC_PITCH_OPTIONS.filter((option) => {
         const semitoneStep = Math.abs(option.midi - current.midi);
         if (semitoneStep < 1 || semitoneStep > 2) return false;
         if (accidentalLimitReached && option.accidental) return false;
         if (mustPickAccidental && !option.accidental) return false;
+        if (wouldRequireNaturalCancellation(selected, option)) return false;
         return true;
       });
 
@@ -214,18 +223,16 @@ function generateChromaticBarMelodyNotes(difficulty: ContentDifficulty): ScoreNo
     }
 
     if (
-      selected.length === BAR_MELODY_SLOT_COUNT
-      && countChromaticOptions(selected) === targetAccidentals
+      selected.length === BAR_MELODY_SLOT_COUNT &&
+      countChromaticOptions(selected) === targetAccidentals
     ) {
       return selected.map(makeBarMelodyChromaticNote);
     }
   }
 
-  const fallback = targetAccidentals === 2
-    ? [60, 61, 62, 63]
-    : [60, 61, 62, 64];
+  const fallback = targetAccidentals === 2 ? [60, 61, 62, 63] : [60, 61, 62, 64];
   return fallback
-    .map(midi => BAR_MELODY_CHROMATIC_PITCH_OPTIONS.find(option => option.midi === midi))
+    .map((midi) => BAR_MELODY_CHROMATIC_PITCH_OPTIONS.find((option) => option.midi === midi))
     .filter((option): option is BarMelodyChromaticOption => Boolean(option))
     .map(makeBarMelodyChromaticNote);
 }
@@ -240,12 +247,10 @@ export function generateBarMelodyNotes(difficulty: ContentDifficulty): ScoreNote
 
   while (degrees.length < BAR_MELODY_SLOT_COUNT) {
     const current = degrees[degrees.length - 1];
-    const candidates = BAR_MELODY_PITCH_OPTIONS
-      .map(option => option.degree)
-      .filter(degree => {
-        const step = Math.abs(degree - current);
-        return step >= 1 && step <= maxStep;
-      });
+    const candidates = BAR_MELODY_PITCH_OPTIONS.map((option) => option.degree).filter((degree) => {
+      const step = Math.abs(degree - current);
+      return step >= 1 && step <= maxStep;
+    });
     const next = candidates[Math.floor(Math.random() * candidates.length)] ?? current;
     degrees.push(next);
   }

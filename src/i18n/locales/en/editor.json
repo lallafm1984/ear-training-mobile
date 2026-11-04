@@ -34,7 +34,8 @@
     "sharps": "Default / Sharps (#)",
     "sharpsOnly": "Sharps (#)",
     "flats": "Flats (♭)",
-    "tempo": "Tempo (BPM)"
+    "tempo": "Tempo (BPM)",
+    "compoundTupletHint": "In 6/8 and 9/8, the triplet level uses duplets (two notes per beat) instead"
   },
   "loading": {
     "title": "AI is generating the score",

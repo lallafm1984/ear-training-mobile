@@ -31,6 +31,14 @@
     "twoVoice": {
       "name": "Two-Part",
       "description": "Melody + bass staff"
+    },
+    "scale": {
+      "name": "Scales & Modes",
+      "description": "Identify major/minor scales and church modes"
+    },
+    "rhythmTap": {
+      "name": "Rhythm Tap",
+      "description": "Tap back the rhythm you hear"
     }
   },
   "difficulty": {
@@ -65,18 +73,24 @@
       "interval_1": "Level 1 · 3rd·4th·5th·8ve",
       "interval_2": "Level 2 · + 2nd·6th",
       "interval_3": "Level 3 · + Semitone·7th",
-      "interval_4": "Level 4 · All (incl. unison·tritone)"
+      "interval_4": "Level 4 · All (incl. unison·tritone)",
+      "interval_5": "Level 5 · Harmonic intervals (played together)",
+      "interval_6": "Level 6 · Compound intervals (9th–13th)"
     },
     "chord": {
       "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
-      "chord_3": "Level 2 · + Maj7·Min7 chords",
-      "chord_4": "Level 3 · + Dim7 chord"
+      "chord_3": "Level 2 · + Maj7·Min7·Dom7 chords",
+      "chord_4": "Level 3 · + Dim7·Half-dim7 chords",
+      "chord_5": "Level 4 · + Triad inversions (1st·2nd)"
     },
     "progression": {
       "progression_1": "Level 1 · Basic progressions",
       "progression_2": "Level 2 · Cadence ID",
       "progression_3": "Level 3 · Practical progressions",
-      "progression_4": "Level 4 · Contextual"
+      "progression_4": "Level 4 · Contextual",
+      "progression_5": "Level 5 · Cadence types (PAC·IAC·half·deceptive)",
+      "progression_6": "Level 6 · Functional progressions (ii6·V7·inversions)",
+      "progression_7": "Level 7 · Roman numeral chord ID"
     },
     "key": {
       "key_1": "Level 1 · Relative keys (C/Am)",
@@ -88,6 +102,21 @@
       "bass_2": "Level 2 · Rhythmic variation",
       "bass_3": "Level 3 · Counterpoint elements",
       "bass_4": "Level 4 · Complex parts"
+    },
+    "scale": {
+      "scale_1": "Level 1 · Major / natural minor",
+      "scale_2": "Level 2 · + harmonic & melodic minor",
+      "scale_3": "Level 3 · 7 church modes",
+      "scale_4": "Level 4 · + pentatonic, whole tone, blues",
+      "scale_5": "Level 5 · Ascending & descending (melodic minor descent)"
+    },
+    "rhythmTap": {
+      "tap_1": "Level 1 · Quarter/half notes, 1 bar",
+      "tap_2": "Level 2 · Eighth notes + rests",
+      "tap_3": "Level 3 · Dotted & syncopated, 2 bars",
+      "tap_4": "Level 4 · Sixteenth notes, 2 bars",
+      "tap_5": "Level 5 · 3/4 time, dotted & syncopated, 2 bars",
+      "tap_6": "Level 6 · 6/8 time, 2 bars"
     }
   },
   "track": {
@@ -112,13 +141,21 @@
     "3": "Minor 3rd (m3)",
     "4": "Major 3rd (M3)",
     "5": "Perfect 4th (P4)",
-    "6": "Augmented 4th (A4)",
+    "6": "Augmented 4th / Diminished 5th (A4/d5)",
     "7": "Perfect 5th (P5)",
     "8": "Minor 6th (m6)",
     "9": "Major 6th (M6)",
     "10": "Minor 7th (m7)",
     "11": "Major 7th (M7)",
-    "12": "Perfect Octave (P8)"
+    "12": "Perfect Octave (P8)",
+    "13": "Minor 9th (m9)",
+    "14": "Major 9th (M9)",
+    "15": "Minor 10th (m10)",
+    "16": "Major 10th (M10)",
+    "17": "Perfect 11th (P11)",
+    "19": "Perfect 12th (P12)",
+    "20": "Minor 13th (m13)",
+    "21": "Major 13th (M13)"
   },
   "chord": {
     "major": "Major Triad",
@@ -127,9 +164,13 @@
     "dim": "Diminished Triad",
     "maj7": "Major 7th (M7)",
     "min7": "Minor 7th (m7)",
+    "dom7": "Dominant 7th (Dom7)",
     "dim7": "Diminished 7th (dim7)",
+    "halfdim7": "Half-diminished 7th (m7♭5)",
     "maj_inv1": "Major 1st Inversion",
-    "min_inv1": "Minor 1st Inversion"
+    "min_inv1": "Minor 1st Inversion",
+    "maj_inv2": "Major 2nd Inversion",
+    "min_inv2": "Minor 2nd Inversion"
   },
   "progression": {
     "I-V-I": "I-V-I",
@@ -144,13 +185,36 @@
     "I-V-vi-IV": "I-V-vi-IV",
     "I-IV-ii-V": "I-IV-ii-V",
     "i-iv-V-i": "i-iv-V-i",
-    "i-VI-iv-V": "i-VI-iv-V"
+    "i-VI-iv-V": "i-VI-iv-V",
+    "I-ii6-V7-I": "I-ii6-V7-I",
+    "I-IV-V7-I": "I-IV-V7-I",
+    "I-ii-V7-I": "I-ii-V7-I",
+    "I6-IV-V7-I": "I6-IV-V7-I",
+    "I-vi-ii6-V7": "I-vi-ii6-V7",
+    "I-IV-ii6-V7": "I-IV-ii6-V7",
+    "I-V7-vi-IV": "I-V7-vi-IV",
+    "i-iv-V7-i": "i-iv-V7-i",
+    "i-ii°6-V7-i": "i-ii°6-V7-i",
+    "i-iv6-V7-i": "i-iv6-V7-i"
+  },
+  "roman": {
+    "ii": "ii (supertonic)",
+    "iii": "iii (mediant)",
+    "IV": "IV (subdominant)",
+    "V": "V (dominant)",
+    "vi": "vi (submediant)",
+    "vii°6": "vii°6 (leading-tone)",
+    "iv": "iv (subdominant)",
+    "VI": "VI (submediant)",
+    "ii°6": "ii°6 (supertonic)"
   },
   "cadence": {
     "authentic": "Authentic Cadence",
     "half": "Half Cadence",
     "plagal": "Plagal Cadence",
-    "deceptive": "Deceptive Cadence"
+    "deceptive": "Deceptive Cadence",
+    "pac": "Perfect Authentic Cadence (PAC)",
+    "iac": "Imperfect Authentic Cadence (IAC)"
   },
   "key": {
     "C_major": "C Major",
@@ -177,5 +241,129 @@
     "Bb_minor": "B♭ minor",
     "Gb_major": "G♭ Major",
     "Eb_minor": "E♭ minor"
+  },
+  "scale": {
+    "major": "Major",
+    "natural_minor": "Natural minor",
+    "harmonic_minor": "Harmonic minor",
+    "melodic_minor": "Melodic minor",
+    "ionian": "Ionian (major)",
+    "dorian": "Dorian",
+    "phrygian": "Phrygian",
+    "lydian": "Lydian",
+    "mixolydian": "Mixolydian",
+    "aeolian": "Aeolian (natural minor)",
+    "locrian": "Locrian",
+    "major_pentatonic": "Major pentatonic",
+    "minor_pentatonic": "Minor pentatonic",
+    "whole_tone": "Whole tone",
+    "blues": "Blues scale"
+  },
+  "explain": {
+    "interval": {
+      "0": "A perfect unison is the same note played twice. If the pitch does not move at all, it is a unison.",
+      "1": "A minor 2nd is one semitone apart, like two neighboring keys. It sounds tense and rough.",
+      "2": "A major 2nd is two semitones apart, like do-re: one step along the scale.",
+      "3": "A minor 3rd is three semitones apart. It sounds slightly dark and is the basis of the minor triad.",
+      "4": "A major 3rd is four semitones apart. It sounds bright and is the basis of the major triad.",
+      "5": "A perfect 4th is five semitones apart. Stable, but slightly hollow.",
+      "6": "A tritone (augmented 4th or diminished 5th) is six semitones, exactly half an octave, so it sounds the most unstable. By ear the two spellings are the same sound, so they share the name tritone.",
+      "7": "A perfect 5th is seven semitones apart. Wide, solid and very stable.",
+      "8": "A minor 6th is eight semitones apart, the inversion of a major 3rd: wide but soft and wistful.",
+      "9": "A major 6th is nine semitones apart. Wide open, yet bright.",
+      "10": "A minor 7th is ten semitones apart. It almost reaches the octave, leaving a gentle tension.",
+      "11": "A major 7th is eleven semitones apart, just under the octave, so it sounds sharp and tense.",
+      "12": "A perfect octave is twelve semitones apart: the same note name at a different height, so the two blend completely.",
+      "13": "A minor 9th is a minor 2nd plus an octave (13 semitones). Hear a compound interval by subtracting the octave and judging the simple interval: the rough semitone tension still remains.",
+      "14": "A major 9th is a major 2nd plus an octave (14 semitones). It sounds like a wide-open do-re and is the basis of add9 chords.",
+      "15": "A minor 10th is a minor 3rd plus an octave (15 semitones). Wide, yet the dark colour of the 3rd is still clear.",
+      "16": "A major 10th is a major 3rd plus an octave (16 semitones). Wide and bright, common in left-hand piano accompaniment.",
+      "17": "A perfect 11th is a perfect 4th plus an octave (17 semitones). The hollow, stable 4th feeling rings from a distance.",
+      "19": "A perfect 12th is a perfect 5th plus an octave (19 semitones). Solid and open; it is easy to confuse with the octave (12), so compare the one-semitone difference.",
+      "20": "A minor 13th is a minor 6th plus an octave (20 semitones). Wide but soft and wistful like the 6th.",
+      "21": "A major 13th is a major 6th plus an octave (21 semitones). The bright, wide interval you hear in 13th chords."
+    },
+    "chord": {
+      "major": "A major triad stacks a major 3rd and a perfect 5th above the root. Bright and stable.",
+      "minor": "A minor triad stacks a minor 3rd and a perfect 5th. The lowered 3rd makes it sound dark.",
+      "aug": "An augmented triad stacks two major 3rds, so the 5th is raised. It leans nowhere, with an eerie tension.",
+      "dim": "A diminished triad stacks two minor 3rds, so the 5th is lowered. Narrow and unstable.",
+      "maj7": "A major 7th chord adds a major 7th to a major triad. A soft, dreamy four-note chord.",
+      "min7": "A minor 7th chord adds a minor 7th to a minor triad. Dark but warm.",
+      "dom7": "A dominant 7th chord adds a minor 7th to a major triad. Its tension pulls toward the tonic chord.",
+      "dim7": "A diminished 7th chord stacks three minor 3rds. All four notes are equally spaced, so it sounds very unstable.",
+      "halfdim7": "A half-diminished 7th adds a minor 7th to a diminished triad. A little softer than a dim7, and common in jazz.",
+      "maj_inv1": "A major triad in first inversion has the 3rd on the bottom: a minor 3rd below and a perfect 4th above.",
+      "min_inv1": "A minor triad in first inversion has the 3rd on the bottom: a major 3rd below and a perfect 4th above.",
+      "maj_inv2": "A major triad in second inversion has the 5th on the bottom: a perfect 4th below and a major 3rd above. Figured bass calls it a 6/4 chord; it sounds unstable and usually moves on.",
+      "min_inv2": "A minor triad in second inversion has the 5th on the bottom: a perfect 4th below and a minor 3rd above. It sounds hollower and less stable than first inversion."
+    },
+    "keyMajor": "{{name}}: a major key with a bright 3rd. It shares its key signature with {{relative}}, so listen for the note the melody rests and ends on (the tonic).",
+    "keyMinor": "{{name}}: a minor key with a dark 3rd. It shares its key signature with {{relative}}, so listen for the final note (the tonic) and the raised leading tone.",
+    "progression": {
+      "I-V-I": "Tonic to dominant and back: the most basic progression. Remember how V resolves into I.",
+      "I-IV-I": "Tonic to subdominant and back. IV is softer and less tense than V.",
+      "I-IV-V-I": "I-IV-V-I builds tension step by step and resolves to I. The most common progression of all.",
+      "I-vi-IV-V": "vi (minor) darkens the mood, then IV-V opens it up. Ending on V, it still feels unfinished.",
+      "ii-V-I": "ii-V-I is the core progression of jazz and pop. The minor ii prepares V, which resolves to I.",
+      "IV-V-I": "Tension grows from IV to V and resolves to I. Notice that the first chord is not I.",
+      "I-ii-V": "From I through ii (minor) to V, where it stops. It stays open, like a half cadence.",
+      "vi-IV-V": "Starts on vi (minor) and rises through IV to V. A dark start with an open ending.",
+      "I-vi-ii-V": "I-vi-ii-V drops a 3rd from I to vi, then vi-ii-V-I is a circle progression moving up in 4ths (down in 5ths). ii-V prepares the next I.",
+      "I-V-vi-IV": "I-V-vi-IV is the most common pop progression. Listen for the deceptive move from V to vi.",
+      "I-IV-ii-V": "After I-IV comes ii (minor), then V. IV and ii share notes, so follow the bass.",
+      "i-iv-V-i": "The basic minor progression. iv is minor, but V sounds major because of the leading tone.",
+      "i-VI-iv-V": "In minor, VI (major) brightens briefly before iv-V raises the tension.",
+      "I-ii6-V7-I": "The textbook T–PD–D–T progression. ii6 is the first inversion of ii, so the bass is scale degree 4 (same as the root of IV), and the 7th of V7 (4̂) resolves down to 3̂.",
+      "I-IV-V7-I": "Tension grows from IV (predominant) to V7 (dominant seventh) and resolves to I. V7 has one more note than V, the 7th, so it pulls to I more strongly.",
+      "I-ii-V7-I": "ii is in root position, so the bass is scale degree 2. Same chord as ii6, but the different bass note changes the weight of the sound.",
+      "I6-IV-V7-I": "The first chord is I6 (first inversion), so the bass starts on the 3rd (mi). Listen to the bass moving 3̂–4̂–5̂–1̂.",
+      "I-vi-ii6-V7": "I–vi prolongs the tonic, then ii6–V7 opens like a half cadence. Ending on V7 leaves it waiting for resolution.",
+      "I-IV-ii6-V7": "IV and ii6 are predominant chords sharing the same bass (scale degree 4). They follow each other, then the progression stops on V7.",
+      "I-V7-vi-IV": "A deceptive move: vi comes after V7 instead of I. Hear the 7th of V7 resolve down into the 3rd of vi.",
+      "i-iv-V7-i": "The basic functional progression in minor. iv is a minor chord, while V7 carries the raised leading tone, so it resolves to i as brightly as in major.",
+      "i-ii°6-V7-i": "ii°6 is the first inversion of the diminished triad on scale degree 2 in minor. Its bass is scale degree 4 like iv, but it sounds darker and narrower.",
+      "i-iv6-V7-i": "iv6 is the first inversion of iv, so the bass is scale degree 6. The bass then slips a half step down from 6̂ to 5̂ (the root of V7)."
+    },
+    "roman": {
+      "ii": "ii is the minor triad on scale degree 2, a predominant chord. It shares two notes (4 and 6) with IV, but with the bass on 2 it sounds a little darker and lighter.",
+      "iii": "iii is the minor triad on scale degree 3. It shares two notes with I, slipping into the tonic’s place, and it is rare enough to sound unfamiliar.",
+      "IV": "IV is the major triad on scale degree 4, the subdominant. Going I to IV lifts the bass a 4th and opens up brightly.",
+      "V": "V is the major triad on scale degree 5, the dominant. It contains the leading tone, so it has the strongest pull back to I.",
+      "vi": "vi is the minor triad on scale degree 6. It shares two notes (1 and 3) with I, like a dark shadow of the tonic.",
+      "vii°6": "vii° is the diminished triad on the leading tone. As usual it sounds in first inversion (vii°6) with the bass on 2, and like V it is dominant function wanting to go to I.",
+      "iv": "iv is the minor triad on scale degree 4 in minor, the subdominant. From i to iv the bass rises a 4th while the dark colour continues.",
+      "VI": "VI is the major triad on scale degree 6 in minor. It suddenly sounds bright within the minor key and shares two notes with i.",
+      "ii°6": "ii° is the diminished triad on scale degree 2 in minor. It is normally used in first inversion (ii°6) with the bass on 4: a narrower, tenser predominant than iv."
+    },
+    "cadence": {
+      "authentic": "An authentic cadence ends V to I. It gives the strongest sense of 'finished'.",
+      "half": "A half cadence stops on V. It feels unfinished, waiting for more.",
+      "plagal": "A plagal cadence ends IV to I, like 'Amen': soft and calm. It often follows an authentic cadence to extend the ending.",
+      "deceptive": "A deceptive cadence goes V to vi instead of I. You expect an ending, and it slips away.",
+      "pac": "A perfect authentic cadence (PAC) has V and I both in root position with the soprano ending on the tonic (1̂). It is the most firmly closed cadence.",
+      "iac": "An imperfect authentic cadence (IAC) is still V to I, but the soprano ends on the 3rd or 5th, or a chord is inverted. It closes, but less firmly. Listen to the last soprano note."
+    },
+    "scale": {
+      "major": "The major scale goes W-W-H-W-W-W-H. The raised 3rd and 7th make it sound bright and settled.",
+      "natural_minor": "The natural minor scale goes W-H-W-W-H-W-W. The lowered 3rd, 6th and 7th make it sound dark.",
+      "harmonic_minor": "Harmonic minor raises only the 7th of natural minor. The augmented 2nd between 6 and 7 gives an exotic tension.",
+      "melodic_minor": "Melodic minor (ascending) raises both the 6th and 7th. It starts minor and ends almost like major.",
+      "ionian": "Ionian is the same as the major scale: half steps between 3-4 and 7-8, bright and stable.",
+      "dorian": "Dorian is natural minor with a raised 6th. A minor mode with a bright 6th, common in jazz and folk.",
+      "phrygian": "Phrygian is natural minor with a lowered 2nd. The half step at the very start gives a dark, Spanish color.",
+      "lydian": "Lydian is major with a raised 4th. Whole steps all the way from 1 to 4 make it feel dreamy and floating.",
+      "mixolydian": "Mixolydian is major with a lowered 7th. Bright, but the ending feels less resolved, like blues and rock.",
+      "aeolian": "Aeolian is the same as natural minor: lowered 3rd, 6th and 7th, dark and calm.",
+      "locrian": "Locrian lowers the 2nd and 5th. With a diminished 5th above the tonic, it is the most unstable mode.",
+      "major_pentatonic": "Major pentatonic is the major scale without the 4th and 7th. No half steps, so it rests easily anywhere.",
+      "minor_pentatonic": "Minor pentatonic is natural minor without the 2nd and 6th. The basic material of rock and blues solos.",
+      "whole_tone": "The whole-tone scale moves only in whole steps. With no clear center it sounds dreamy and floating.",
+      "blues": "The blues scale adds a diminished 5th (blue note) to minor pentatonic. Listen for the chromatic slide."
+    },
+    "scaleDescending": {
+      "default": "At this level the scale is played up and then back down. The same notes return on the way down.",
+      "melodic_minor": "On the way down the raised 6th and 7th fall back, so the descent equals the natural minor. The ascent and descent sounding different is the clue for melodic minor."
+    }
   }
 }

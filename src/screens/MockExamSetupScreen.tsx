@@ -3,13 +3,18 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Play, GraduationCap, BookOpen, Trophy,
-  ArrowUpDown, Layers, Crown, Lock,
+  ArrowLeft,
+  Play,
+  GraduationCap,
+  BookOpen,
+  Trophy,
+  ArrowUpDown,
+  Layers,
+  Lock,
+  type LucideProps,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -18,13 +23,13 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useSubscription } from '../context';
 import { COLORS } from '../theme/colors';
 import { EXAM_PRESETS } from '../lib/examPresets';
-import { getContentConfig } from '../lib/contentConfig';
 import type { ExamPreset } from '../types/exam';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
 
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
+const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
   GraduationCap,
   BookOpen,
   Trophy,
@@ -33,6 +38,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 };
 
 export default function MockExamSetupScreen() {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['exam', 'content', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
@@ -59,7 +65,13 @@ export default function MockExamSetupScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={COLORS.amber700} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -70,14 +82,14 @@ export default function MockExamSetupScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 프리셋 목록 */}
         <Text style={styles.sectionTitle}>{t('exam:setup.examType')}</Text>
 
         <View style={styles.presetList}>
-          {EXAM_PRESETS.map(preset => {
+          {EXAM_PRESETS.map((preset) => {
             const active = selectedPreset?.id === preset.id;
             const IconComp = ICON_MAP[preset.icon] ?? GraduationCap;
             const isLocked = tier === 'free' && preset.id !== 'basic';
@@ -91,22 +103,39 @@ export default function MockExamSetupScreen() {
                   active && !isLocked && styles.presetCardActive,
                   isLocked && styles.presetCardLocked,
                 ]}
-                onPress={() => isLocked ? navigation.navigate('Paywall') : setSelectedPreset(preset)}
+                onPress={() =>
+                  isLocked ? navigation.navigate('Paywall') : setSelectedPreset(preset)
+                }
                 activeOpacity={isLocked ? 1 : 0.7}
               >
                 <View style={styles.presetHeader}>
-                  <View style={[
-                    styles.presetIcon,
-                    isLocked
-                      ? { backgroundColor: '#b0bccc' }
-                      : active ? { backgroundColor: COLORS.amber500 } : { backgroundColor: COLORS.amber50 },
-                  ]}>
-                    <IconComp size={20} color={isLocked ? '#6b7a8d' : active ? '#fff' : COLORS.amber600} />
+                  <View
+                    style={[
+                      styles.presetIcon,
+                      isLocked
+                        ? { backgroundColor: '#b0bccc' }
+                        : active
+                          ? { backgroundColor: COLORS.amber500 }
+                          : { backgroundColor: COLORS.amber50 },
+                    ]}
+                  >
+                    <IconComp
+                      size={20}
+                      color={isLocked ? '#6b7a8d' : active ? '#fff' : COLORS.amber600}
+                    />
                   </View>
                   <View style={styles.presetInfo}>
                     <View style={styles.presetNameRow}>
-                      <Text style={[styles.presetName, isLocked && styles.presetNameLocked, !isLocked && active && { color: COLORS.amber700 }]}>
-                        {t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}
+                      <Text
+                        style={[
+                          styles.presetName,
+                          isLocked && styles.presetNameLocked,
+                          !isLocked && active && { color: COLORS.amber700 },
+                        ]}
+                      >
+                        {t(
+                          `exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`,
+                        )}
                       </Text>
                       {isLocked && (
                         <View style={styles.lockBadge}>
@@ -116,7 +145,9 @@ export default function MockExamSetupScreen() {
                       )}
                     </View>
                     <Text style={[styles.presetDesc, isLocked && { color: COLORS.slate400 }]}>
-                      {t(`exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}Desc`)}
+                      {t(
+                        `exam:preset.${preset.id.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}Desc`,
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -136,23 +167,27 @@ export default function MockExamSetupScreen() {
           <View style={styles.detailCard}>
             <Text style={styles.detailTitle}>{t('exam:setup.examComposition')}</Text>
             {selectedPreset.sections.map((section, idx) => {
-              const catConfig = getContentConfig(section.contentType);
               return (
                 <View key={idx} style={styles.detailRow}>
                   <View style={styles.detailLeft}>
-                    <Text style={styles.detailCat}>{t(`content:category.${section.contentType}.name`)}</Text>
+                    <Text style={styles.detailCat}>
+                      {t(`content:category.${section.contentType}.name`)}
+                    </Text>
                     <Text style={styles.detailDiff}>
                       {t('content:difficulty.' + section.contentType + '.' + section.difficulty)}
                     </Text>
                   </View>
-                  <Text style={styles.detailCount}>{t('exam:setup.questionCount', { count: section.questionCount })}</Text>
+                  <Text style={styles.detailCount}>
+                    {t('exam:setup.questionCount', { count: section.questionCount })}
+                  </Text>
                 </View>
               );
             })}
 
             <View style={styles.detailSummary}>
               <Text style={styles.detailSummaryText}>
-                {t('exam:setup.totalQuestions', { count: totalQuestions })} · {t('exam:setup.totalPoints', { points: 100 })}
+                {t('exam:setup.totalQuestions', { count: totalQuestions })} ·{' '}
+                {t('exam:setup.totalPoints', { points: 100 })}
               </Text>
             </View>
           </View>

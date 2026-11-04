@@ -6,7 +6,13 @@
     "progress": "{{done}} / {{total}} complete",
     "streak": "{{days}}-day streak",
     "sectionTitle": "Goal List",
-    "tip": "Practice each category at least once to complete the goal.\nKeep it up daily to grow your streak!"
+    "tip": "Practice each category at least once to complete the goal.\nKeep it up daily to grow your streak!",
+    "reminderNudge": {
+      "title": "Turn on a reminder so tomorrow isn't missed?",
+      "desc": "One nudge a day at 20:00. You can change the time in your profile.",
+      "enable": "Turn on",
+      "later": "Later"
+    }
   },
   "selfEval": {
     "title": "How was your practice?",
@@ -22,7 +28,8 @@
     "selectDifficulty": "Select Difficulty",
     "startPractice": "Start Practice",
     "locked": "Locked",
-    "pro": "Pro"
+    "pro": "Pro",
+    "recommended": "Recommended"
   },
   "choice": {
     "question": "Question {{current}}/{{total}}",
@@ -41,8 +48,22 @@
     "chordPrompt": "Listen and identify the chord type.",
     "progressionPrompt": "Listen and identify the harmonic progression.",
     "cadencePrompt": "Listen and identify the final cadence.",
-    "keyModePrompt": "Listen and identify major or minor.",
-    "keyPrompt": "Listen and identify the key."
+    "keyModePrompt": "You will hear the reference note A first, then the melody. Identify major or minor.",
+    "keyPrompt": "You will hear the reference note A first, then the melody. Identify the key.",
+    "scalePrompt": "Listen to the scale and identify its type.",
+    "explainTitle": "Explanation",
+    "listenCorrect": "Hear the answer",
+    "listenMine": "Hear my choice",
+    "showScore": "Show score",
+    "hideScore": "Hide score",
+    "scoreCorrect": "Answer · {{choice}}",
+    "scoreMine": "My choice · {{choice}}",
+    "intervalHarmonicPrompt": "Listen to the two notes sounding together and identify the interval.",
+    "intervalCompoundPrompt": "Listen to the two notes more than an octave apart and identify the compound interval.",
+    "scaleBothPrompt": "Listen to the scale ascending and descending, then identify its type.",
+    "cadenceDetailPrompt": "Identify the exact cadence type. Listen to the last soprano note and the bass.",
+    "progressionFigurePrompt": "Identify the progression, paying attention to the bass (inversions) and seventh chords.",
+    "romanPrompt": "You will hear the tonic chord first. Identify the Roman numeral of the chord that follows."
   },
   "notation": {
     "listenAndWrite": "Listen and notate",
@@ -56,6 +77,7 @@
     "dotQuarter": "Dot. qtr",
     "dotEighth": "Dot. 8th",
     "triplet": "Triplet",
+    "duplet": "Duplet",
     "restWhole": "W rest",
     "restHalf": "H rest",
     "restQuarter": "Q rest",

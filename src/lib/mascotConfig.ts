@@ -3,19 +3,36 @@
 // ─────────────────────────────────────────────────────────────
 
 // EXP 시스템:
-// 일일 목표 카테고리 완료 = 5 EXP, 5개 전부 완료 = +5 EXP 보너스 (최대 30)
-// 100 EXP = 1 레벨 업, 최대 레벨 100 (총 9,900 EXP)
+// 일일 목표 카테고리 완료 = 5 EXP, 7개 전부 완료 = +5 EXP 보너스 (하루 최대 40)
+// 귀 열기 레슨 10 EXP (코스 완주 +30). 100 EXP = 1 레벨 업, 최대 레벨 60
 
 const EXP_PER_LEVEL = 100;
 const MAX_LEVEL = 60;
+export const MAX_MASCOT_LEVEL = MAX_LEVEL;
 
 /** 10단계 스테이지 이름 */
 export const STAGE_NAMES: string[] = [
-  '뉴비', '초보', '학생', '연습생', '연주자',
-  '음악가', '전문가', '마스터', '거장', '전설',
+  '뉴비',
+  '초보',
+  '학생',
+  '연습생',
+  '연주자',
+  '음악가',
+  '전문가',
+  '마스터',
+  '거장',
+  '전설',
 ];
 
-/** 총 EXP로 현재 레벨 계산 (1-100) */
+/** 한 스테이지(티어)에 속한 레벨 수 */
+export const LEVELS_PER_STAGE = 6;
+
+/** 레벨 → 스테이지 인덱스 (0-9). 레벨 1-6 → 0, 7-12 → 1, …, 55-60 → 9 */
+export function getMascotStageIndex(level: number): number {
+  return Math.max(0, Math.min(STAGE_NAMES.length - 1, Math.floor((level - 1) / LEVELS_PER_STAGE)));
+}
+
+/** 총 EXP로 현재 레벨 계산 (1-60) */
 export function getLevel(totalExp: number): number {
   if (totalExp < 0) return 1;
   const level = Math.floor(totalExp / EXP_PER_LEVEL) + 1;
@@ -42,9 +59,9 @@ export interface MascotParams {
   blushColor: string;
   headphoneColor: string;
   headphoneInner: string;
-  eyeStyle: number;   // 0-9
+  eyeStyle: number; // 0-9
   mouthStyle: number; // 0-9
-  earType: number;    // 0=none, 1=round, 2=cat, 3=bunny, 4=bear
+  earType: number; // 0=none, 1=round, 2=cat, 3=bunny, 4=bear
   cheekDecor: number; // 0=none, 1=dot, 2=star, 3=heart, 4=sparkle, 5=music
   accessory:
     | 'none'
@@ -75,8 +92,16 @@ export function getMascotParams(level: number): MascotParams {
   const EAR_BY_TIER = [0, 0, 1, 2, 1, 3, 4, 2, 4, 3];
   // 악세서리: 티어별
   const ACC_BY_TIER: MascotParams['accessory'][] = [
-    'none', 'none', 'none', 'scarf', 'none',
-    'crown', 'smallWings', 'bigWings', 'halo', 'fire',
+    'none',
+    'none',
+    'none',
+    'scarf',
+    'none',
+    'crown',
+    'smallWings',
+    'bigWings',
+    'halo',
+    'fire',
   ];
 
   const BODY_COLORS = [

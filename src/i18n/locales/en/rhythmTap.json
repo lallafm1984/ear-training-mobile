@@ -1,0 +1,51 @@
+{
+  "title": "Rhythm Tap",
+  "round": "Rhythm {{n}}",
+  "listen": {
+    "title": "Listen to the rhythm",
+    "desc": "The rhythm starts after one bar of metronome. Listen as many times as you like.",
+    "play": "Listen",
+    "playing": "Playing...",
+    "start": "Tap it back",
+    "bars": "{{count}} bar(s) · ♩= {{tempo}}"
+  },
+  "tap": {
+    "countIn": "Ready",
+    "go": "Tap now!",
+    "pad": "Tap here",
+    "hint": "After one bar of clicks, tap the rhythm you heard.",
+    "cancel": "Cancel",
+    "wait": "Wait for the signal",
+    "activeHint": "Keep tapping the rhythm you heard.",
+    "done": "Finished",
+    "finishing": "Checking your result…"
+  },
+  "result": {
+    "title": "Result",
+    "score": "{{score}} pts",
+    "matched": "{{matched}}/{{expected}} hit",
+    "extra": "{{count}} extra tap(s)",
+    "perfect": "On time",
+    "early": "Early",
+    "late": "Late",
+    "miss": "Missed",
+    "msgGreat": "Nearly perfect!",
+    "msgGood": "Nice, you followed the beat well.",
+    "msgKeep": "Practice waiting through rests and long notes.",
+    "listenAnswer": "Hear the answer",
+    "retry": "Same rhythm again",
+    "next": "Next rhythm",
+    "finish": "Finish",
+    "timeline": "Timing"
+  },
+  "summary": {
+    "title": "Practice complete!",
+    "avg": "Average {{score}} pts",
+    "rounds": "{{count}} rhythm(s)",
+    "retry": "Practice again",
+    "back": "Back"
+  },
+  "error": {
+    "audio": "Couldn't play audio. Please try again."
+  }
+}

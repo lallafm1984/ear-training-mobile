@@ -1,0 +1,60 @@
+{
+  "title": "Mistake notebook",
+  "unresolvedChip": "{{count}} open",
+  "filters": {
+    "all": "All",
+    "unresolved": "Open",
+    "resolved": "Resolved",
+    "onlyCategory": "{{name}} only"
+  },
+  "weakness": {
+    "title": "Top 3 weak spots",
+    "desc": "From the last 30 days of mistakes and low self-ratings",
+    "stats": "{{unresolved}} open · {{wrong}} wrong · {{low}} hard sessions",
+    "review": "Review mistakes",
+    "practice": "Focused practice",
+    "empty": "No weak spots yet. Keep practicing and they will show up here."
+  },
+  "reviewAll": "Review {{count}} open mistakes",
+  "reviewAllHint": "Most recent first, up to {{max}}",
+  "empty": {
+    "title": "No mistakes yet",
+    "desc": "Questions you miss in choice practice or mock exams collect here, so you can listen again and retry them."
+  },
+  "item": {
+    "correct": "Answer",
+    "mine": "My pick",
+    "wrongCount": "Missed {{count}}×",
+    "resolved": "Resolved",
+    "listen": "Listen",
+    "playing": "Playing",
+    "delete": "Delete",
+    "source": {
+      "practice": "Practice",
+      "exam": "Mock exam"
+    }
+  },
+  "clearResolved": "Clear resolved",
+  "clearResolvedConfirm": {
+    "title": "Clear resolved notes?",
+    "message": "{{count}} resolved notes will be removed. This can’t be undone."
+  },
+  "review": {
+    "title": "Mistake review",
+    "progress": "{{current}} / {{total}}"
+  },
+  "choice": {
+    "saved": "Saved to your mistake notebook. Get it right in review to resolve it."
+  },
+  "result": {
+    "viewNotes": "Open mistake notebook ({{count}})"
+  },
+  "exam": {
+    "viewNotes": "Listen again to the {{count}} missed questions"
+  },
+  "stats": {
+    "card": "Mistake notebook",
+    "cardDesc": "{{count}} open · see weak spots",
+    "cardEmpty": "Missed questions, collected to replay"
+  }
+}

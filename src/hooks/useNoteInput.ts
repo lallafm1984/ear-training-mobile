@@ -3,9 +3,19 @@
 // ─────────────────────────────────────────────────────────────
 
 import { useState, useCallback, useRef } from 'react';
-import type { ScoreNote, NoteDuration, PitchName, Accidental } from '../lib/scoreUtils';
-import { uid, durationToSixteenths, getSixteenthsPerBar, getKeySigAlteration } from '../lib/scoreUtils';
+import type { ScoreNote, NoteDuration, PitchName, Accidental, TupletType } from '../lib/scoreUtils';
+import {
+  uid,
+  durationToSixteenths,
+  getSixteenthsPerBar,
+  getKeySigAlteration,
+} from '../lib/scoreUtils';
 import { isCompoundMeter } from '../lib/scoreUtils/duration';
+
+/** 음표의 실제 길이(16분 단위). 잇단음표는 tupletNoteDur(그룹 합 = span) 사용 */
+function noteSixteenths(note: ScoreNote): number {
+  return note.tupletNoteDur ?? durationToSixteenths(note.duration);
+}
 
 // ── Types ──
 
@@ -94,18 +104,24 @@ function userNotesToAbc(
     let barPos = 0;
     let tupletRemaining = 0;
     let currentTupletNoteDur = 0; // 그룹 시작 시 설정, 전체 음표에 동일 적용
+    let currentTupletSpan16 = 0; // 그룹이 실제로 차지하는 길이(셋잇단 4, 둘잇단 6)
 
     for (let i = 0; i < noteArr.length; i++) {
       const note = noteArr[i];
 
-      // 셋잇단음표 시작 마커 (앞에 공백으로 beam 분리)
-      if (note.tuplet === '3' && tupletRemaining === 0) {
+      // 잇단음표 시작 마커 (앞에 공백으로 beam 분리): 셋잇단 (3:2:3 / 둘잇단 (2:3:2
+      const tupletCount = tupletGroupSize(note);
+      if (tupletCount > 0 && tupletRemaining === 0) {
         if (abc.length > 0 && !abc.endsWith(' ') && !abc.endsWith('|')) {
           abc += ' ';
         }
-        abc += '(3:2:3';
-        tupletRemaining = 3;
+        const q = tupletCount === 2 ? 3 : 2;
+        abc += `(${tupletCount}:${q}:${tupletCount}`;
+        tupletRemaining = tupletCount;
         currentTupletNoteDur = note.tupletNoteDur ?? 2; // 첫 음표에서 한번만 설정
+        currentTupletSpan16 = durationToSixteenths(
+          note.tupletSpan ?? (tupletCount === 2 ? '4.' : '4'),
+        );
       }
 
       // 셋잇단음표 내부: 그룹 전체 동일 duration, beam 연결 (공백 없음)
@@ -118,14 +134,15 @@ function userNotesToAbc(
         abc += pitchPart + (noteDur === 1 ? '' : noteDur);
         tupletRemaining--;
         if (tupletRemaining === 0) {
-          // 셋잇단 전체가 tupletSpan 만큼 차지
-          barPos += durationToSixteenths(note.tupletSpan ?? '4');
+          // 잇단음표 그룹 전체가 span 만큼 차지
+          barPos += currentTupletSpan16;
           abc += ' '; // 그룹 끝난 후에만 공백
         }
         // 그룹 내부: 공백 없음 (beam 연결)
       } else {
         // invisible rest 처리: invisibleFromIndex 이상인 rest는 x로 출력
-        const isInvisible = invisibleFromIndex !== undefined && i >= invisibleFromIndex && note.pitch === 'rest';
+        const isInvisible =
+          invisibleFromIndex !== undefined && i >= invisibleFromIndex && note.pitch === 'rest';
         if (isInvisible) {
           const dur = durationToSixteenths(note.duration);
           abc += `x${dur === 1 ? '' : dur} `;
@@ -154,14 +171,17 @@ function userNotesToAbc(
     isCompoundMeter(timeSignature) ? `Q: 1/8=${(tempo ?? 90) * 2}` : `Q: 1/4=${tempo ?? 90}`,
     useGrandStaff ? '%%staves {V1 V2}' : null,
     `K: ${keySignature}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   if (!useGrandStaff || !bassNotes) {
     return header + '\n' + notesBodyAbc(notes, keySignature, trebleInvisibleFrom);
   }
 
   const trebleBody = notesBodyAbc(notes, keySignature, trebleInvisibleFrom);
-  const bassBody = bassNotes.length > 0 ? notesBodyAbc(bassNotes, keySignature, bassInvisibleFrom) : 'z16 |]';
+  const bassBody =
+    bassNotes.length > 0 ? notesBodyAbc(bassNotes, keySignature, bassInvisibleFrom) : 'z16 |]';
   return header + '\nV:V1 clef=treble\n' + trebleBody + '\nV:V2 clef=bass\n' + bassBody;
 }
 
@@ -170,16 +190,21 @@ function userNotesToAbc(
 /** 점음표 적용 — 1., 2., 4., 8. 허용 (16분음표는 점음표 불가) */
 function applyDot(dur: NoteDuration): NoteDuration {
   switch (dur) {
-    case '1': return '1.';
-    case '2': return '2.';
-    case '4': return '4.';
-    case '8': return '8.';
-    default: return dur;
+    case '1':
+      return '1.';
+    case '2':
+      return '2.';
+    case '4':
+      return '4.';
+    case '8':
+      return '8.';
+    default:
+      return dur;
   }
 }
 
 function sumSixteenths(notes: ScoreNote[]): number {
-  return notes.reduce((sum, n) => sum + durationToSixteenths(n.duration), 0);
+  return notes.reduce((sum, n) => sum + noteSixteenths(n), 0);
 }
 
 /** 음표 인덱스가 속한 마디의 시작/끝 인덱스와 마디 내 위치 반환 */
@@ -188,7 +213,7 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
   let measureCum = 0; // 현재 마디 내 누적
 
   for (let i = 0; i < notes.length; i++) {
-    const dur = durationToSixteenths(notes[i].duration);
+    const dur = noteSixteenths(notes[i]);
     if (measureCum + dur > barLen) {
       // 새 마디 시작
       measureStartIdx = i;
@@ -199,7 +224,7 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
       let measureEndIdx = i; // inclusive
       let tempCum = 0;
       for (let j = measureStartIdx; j < notes.length; j++) {
-        const d = durationToSixteenths(notes[j].duration);
+        const d = noteSixteenths(notes[j]);
         if (tempCum + d > barLen) break;
         tempCum += d;
         measureEndIdx = j;
@@ -211,8 +236,8 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
         posInMeasure: measureCum,
         measureTotal,
         isMeasureFull: measureTotal >= barLen,
-        spaceBeforeNote: measureCum,                          // 이 음표 전까지 사용된 공간
-        spaceAfterNote: measureTotal - measureCum - dur,      // 이 음표 뒤 남은 공간
+        spaceBeforeNote: measureCum, // 이 음표 전까지 사용된 공간
+        spaceAfterNote: measureTotal - measureCum - dur, // 이 음표 뒤 남은 공간
       };
     }
     measureCum += dur;
@@ -222,19 +247,37 @@ function getMeasureInfo(notes: ScoreNote[], noteIndex: number, barLen: number) {
     }
   }
   return {
-    measureStartIdx: 0, measureEndIdx: 0, posInMeasure: 0,
-    measureTotal: 0, isMeasureFull: false, spaceBeforeNote: 0, spaceAfterNote: 0,
+    measureStartIdx: 0,
+    measureEndIdx: 0,
+    posInMeasure: 0,
+    measureTotal: 0,
+    isMeasureFull: false,
+    spaceBeforeNote: 0,
+    spaceAfterNote: 0,
   };
 }
 
 /** duration에 해당하는 쉼표 ScoreNote 생성 */
 function makeRestNote(dur: NoteDuration): ScoreNote {
-  return { id: uid(), pitch: 'rest' as PitchName, octave: 0, accidental: '' as Accidental, duration: dur };
+  return {
+    id: uid(),
+    pitch: 'rest' as PitchName,
+    octave: 0,
+    accidental: '' as Accidental,
+    duration: dur,
+  };
 }
 
 /** 16분음표 수를 NoteDuration으로 변환 (가능한 경우) */
 const SIXTEENTHS_TO_NOEDUR: Record<number, NoteDuration> = {
-  16: '1', 12: '2.', 8: '2', 6: '4.', 4: '4', 3: '8.', 2: '8', 1: '16',
+  16: '1',
+  12: '2.',
+  8: '2',
+  6: '4.',
+  4: '4',
+  3: '8.',
+  2: '8',
+  1: '16',
 };
 
 /** 배열 내 연속된 쉼표를 합쳐서 하나의 쉼표로 만듦 (마디 경계 내에서만) */
@@ -244,7 +287,7 @@ function mergeAdjacentRests(notes: ScoreNote[], barLen: number): ScoreNote[] {
 
   for (let i = 0; i < notes.length; i++) {
     const note = notes[i];
-    const dur = durationToSixteenths(note.duration);
+    const dur = noteSixteenths(note);
 
     if (note.pitch === 'rest') {
       // 연속 쉼표 합산 (마디 경계 넘지 않게)
@@ -301,57 +344,58 @@ function makeRestsAscending(sixteenths: number): ScoreNote[] {
   return makeRests(sixteenths).reverse();
 }
 
-/** 특정 마디에 속하는 음표들을 반환 */
-function getNotesForMeasure(notes: ScoreNote[], measureIdx: number, barLen: number): ScoreNote[] {
-  let pos = 0;
-  let currentMeasure = 0;
-  const result: ScoreNote[] = [];
-  for (const note of notes) {
-    if (currentMeasure === measureIdx) result.push(note);
-    pos += durationToSixteenths(note.duration);
-    if (pos >= barLen * (currentMeasure + 1)) {
-      currentMeasure++;
-      if (currentMeasure > measureIdx) break;
-    }
-  }
-  return result;
+/** 잇단음표 그룹 크기 (그룹 첫 음이 아니거나 잇단음표가 아니면 0) */
+function tupletGroupSize(note: ScoreNote | undefined): number {
+  if (!note || !note.tuplet) return 0;
+  return parseInt(note.tuplet, 10) || 0;
 }
 
-/** 특정 마디의 시작 인덱스를 반환 */
-function getMeasureStartIndex(notes: ScoreNote[], measureIdx: number, barLen: number): number {
-  let pos = 0;
-  let currentMeasure = 0;
-  for (let i = 0; i < notes.length; i++) {
-    if (currentMeasure === measureIdx) return i;
-    pos += durationToSixteenths(notes[i].duration);
-    if (pos >= barLen * (currentMeasure + 1)) {
-      currentMeasure++;
-    }
-  }
-  return notes.length;
-}
-
-/** 특정 마디에서 사용된 16분음표 수 */
-function getMeasureUsed(notes: ScoreNote[], measureIdx: number, barLen: number): number {
-  const measureNotes = getNotesForMeasure(notes, measureIdx, barLen);
-  return sumSixteenths(measureNotes);
-}
-
-/** 특정 마디가 완성되었는지 확인 */
-function isMeasureComplete(notes: ScoreNote[], measureIdx: number, barLen: number): boolean {
-  return getMeasureUsed(notes, measureIdx, barLen) >= barLen;
-}
-
-/** 셋잇단음표 그룹의 시작 인덱스를 찾음. 해당 인덱스가 셋잇단이 아니면 -1 */
-function findTripletGroupStart(notes: ScoreNote[], index: number): number {
+/** 잇단음표 그룹의 시작 인덱스를 찾음. 해당 인덱스가 그룹에 속하지 않으면 -1 */
+function findTupletGroupStart(notes: ScoreNote[], index: number): number {
   if (index < 0 || index >= notes.length) return -1;
-  // 현재 음표가 그룹 시작 (tuplet === '3')
-  if (notes[index].tuplet === '3') return index;
-  // 이전 음표가 그룹 시작이고, 현재가 2번째
-  if (index >= 1 && notes[index - 1].tuplet === '3') return index - 1;
-  // 2개 전 음표가 그룹 시작이고, 현재가 3번째
-  if (index >= 2 && notes[index - 2].tuplet === '3') return index - 2;
+  // 최대 3음 그룹(셋잇단): 현재·1개 전·2개 전 음표 중 그룹 시작을 찾고, 현재가 그 그룹 범위 안인지 확인
+  for (let back = 0; back <= 2 && index - back >= 0; back++) {
+    const start = index - back;
+    const size = tupletGroupSize(notes[start]);
+    if (size > 0) return back < size ? start : -1;
+  }
   return -1;
+}
+
+/**
+ * 잇단음표 그룹 생성 — 단순박자: 셋잇단(4분 span, 8분×3), 복합박자(6/8 등): 둘잇단(점4분 span, 8분×2).
+ * 복합박자의 박은 이미 셋으로 나뉘므로 셋잇단 대신 "박을 둘로 나누는" 둘잇단이 관용 표기다.
+ * tupletNoteDur 규약: 첫 음 = 표기 길이(8분=2), 나머지는 합이 span이 되도록 분배 (셋잇단 [2,1,1], 둘잇단 [2,4]).
+ */
+function makeTupletGroup(
+  compound: boolean,
+  pitch: PitchName,
+  octave: number,
+  accidental: Accidental,
+): ScoreNote[] {
+  const count = compound ? 2 : 3;
+  const span: NoteDuration = compound ? '4.' : '4';
+  const written = 2; // 8분음표 표기
+  let rem = durationToSixteenths(span) - written;
+  const group: ScoreNote[] = [];
+  for (let i = 0; i < count; i++) {
+    let share = written;
+    if (i > 0) {
+      share = i === count - 1 ? rem : Math.floor(rem / (count - i));
+      rem -= share;
+    }
+    group.push({
+      id: uid(),
+      pitch,
+      octave,
+      accidental,
+      duration: '8' as NoteDuration,
+      ...(i === 0
+        ? { tuplet: String(count) as TupletType, tupletSpan: span, tupletNoteDur: written }
+        : { tupletNoteDur: share }),
+    });
+  }
+  return group;
 }
 
 /** 첫음을 제외한 나머지를 4분쉼표로 채워 전체 마디를 완성 */
@@ -440,7 +484,7 @@ function replaceNoteAtPosition(
   // 우측에서 소비 가능한 공간 계산
   let available = 0;
   for (let i = targetIdx + 1; i <= measureEndIdx; i++) {
-    available += durationToSixteenths(notes[i].duration);
+    available += noteSixteenths(notes[i]);
   }
 
   if (available < needed) return null; // 공간 부족 → 교체 불가
@@ -453,7 +497,7 @@ function replaceNoteAtPosition(
   const trailingRests: ScoreNote[] = [];
 
   for (let i = targetIdx + 1; i <= measureEndIdx && remaining > 0; i++) {
-    const dur = durationToSixteenths(notes[i].duration);
+    const dur = noteSixteenths(notes[i]);
     removeCount++;
     if (dur <= remaining) {
       // 완전 소비
@@ -491,7 +535,7 @@ function canReplaceAtPosition(
 
   let available = 0;
   for (let i = targetIdx + 1; i <= info.measureEndIdx; i++) {
-    available += durationToSixteenths(notes[i].duration);
+    available += noteSixteenths(notes[i]);
   }
   return available >= needed;
 }
@@ -504,13 +548,17 @@ function makeInitialState(
   barSixteenths?: number,
   useGrandStaff?: boolean,
 ): NoteInputState {
-  const trebleNotes = (totalSixteenths && barSixteenths)
-    ? fillWithQuarterRests(firstNote ?? null, totalSixteenths, barSixteenths)
-    : (firstNote ? [firstNote] : []);
+  const trebleNotes =
+    totalSixteenths && barSixteenths
+      ? fillWithQuarterRests(firstNote ?? null, totalSixteenths, barSixteenths)
+      : firstNote
+        ? [firstNote]
+        : [];
 
-  const bassNotes = (useGrandStaff && totalSixteenths && barSixteenths)
-    ? fillWithQuarterRests(null, totalSixteenths, barSixteenths)
-    : [];
+  const bassNotes =
+    useGrandStaff && totalSixteenths && barSixteenths
+      ? fillWithQuarterRests(null, totalSixteenths, barSixteenths)
+      : [];
 
   return {
     trebleNotes,
@@ -534,7 +582,12 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const { keySignature, timeSignature, measures, useGrandStaff, firstNote, tempo } = options;
 
   const [state, setState] = useState<NoteInputState>(() =>
-    makeInitialState(firstNote, measures * getSixteenthsPerBar(timeSignature), getSixteenthsPerBar(timeSignature), useGrandStaff),
+    makeInitialState(
+      firstNote,
+      measures * getSixteenthsPerBar(timeSignature),
+      getSixteenthsPerBar(timeSignature),
+      useGrandStaff,
+    ),
   );
 
   // ── Undo history stack ──
@@ -542,7 +595,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** setState wrapper that saves undo snapshot before mutation */
   function setStateWithUndo(updater: (prev: NoteInputState) => NoteInputState) {
-    setState(prev => {
+    setState((prev) => {
       const next = updater(prev);
       if (next === prev) return prev; // no change → no undo entry
       undoHistoryRef.current.push({
@@ -556,6 +609,10 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   const barSixteenths = getSixteenthsPerBar(timeSignature);
   const totalSixteenths = measures * barSixteenths;
+  // 잇단음표 종류: 단순박자 = 셋잇단(4분 span 4) / 복합박자(6/8 등) = 둘잇단(점4분 한 박 span 6)
+  const compound = isCompoundMeter(timeSignature);
+  const tupletCount: 2 | 3 = compound ? 2 : 3;
+  const tupletSpan16 = compound ? 6 : 4;
 
   // ── Derived helpers ──
 
@@ -579,9 +636,22 @@ export function useNoteInput(options: UseNoteInputOptions) {
       // 셋잇단음표는 음길이 변경 불가
       if (notes[targetIdx].tuplet === '3') return false;
       const effectiveDur = state.isDotted ? applyDot(dur) : dur;
-      return canReplaceAtPosition(notes, targetIdx, durationToSixteenths(effectiveDur), barSixteenths);
+      return canReplaceAtPosition(
+        notes,
+        targetIdx,
+        durationToSixteenths(effectiveDur),
+        barSixteenths,
+      );
     },
-    [getActiveNotes, state.selectedNoteIndex, state.cursorIndex, state.activeVoice, state.isDotted, firstNote, barSixteenths],
+    [
+      getActiveNotes,
+      state.selectedNoteIndex,
+      state.cursorIndex,
+      state.activeVoice,
+      state.isDotted,
+      firstNote,
+      barSixteenths,
+    ],
   );
 
   // 하위 호환용 alias
@@ -591,30 +661,34 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   const setDuration = useCallback((dur: NoteDuration) => {
     // 16분음표 선택 시 점 모드 해제 (점16분 불가), 나머지는 점 모드 유지
-    setState(prev => ({ ...prev, selectedDuration: dur, isDotted: dur === '16' ? false : prev.isDotted }));
+    setState((prev) => ({
+      ...prev,
+      selectedDuration: dur,
+      isDotted: dur === '16' ? false : prev.isDotted,
+    }));
   }, []);
 
   const toggleDot = useCallback(() => {
-    setState(prev => ({ ...prev, isDotted: !prev.isDotted }));
+    setState((prev) => ({ ...prev, isDotted: !prev.isDotted }));
   }, []);
 
   const setAccidentalMode = useCallback((mode: '#' | 'b' | null) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       accidentalMode: prev.accidentalMode === mode ? null : mode,
     }));
   }, []);
 
   const toggleTie = useCallback(() => {
-    setState(prev => ({ ...prev, tieMode: !prev.tieMode }));
+    setState((prev) => ({ ...prev, tieMode: !prev.tieMode }));
   }, []);
 
   /** 선택된 음표의 붙임줄 토글 (편집 모드 전용) */
   const toggleSelectedTie = useCallback(() => {
-    setStateWithUndo(prev => {
+    setStateWithUndo((prev) => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
+      const notes = [...(prev[key] as ScoreNote[])];
       const idx = prev.selectedNoteIndex;
       if (idx < 0 || idx >= notes.length) return prev;
 
@@ -625,7 +699,12 @@ export function useNoteInput(options: UseNoteInputOptions) {
       } else {
         // 붙임줄 추가: 다음 음표가 같은 음높이일 때만
         const next = notes[idx + 1];
-        if (next && next.pitch === note.pitch && next.octave === note.octave && next.pitch !== 'rest') {
+        if (
+          next &&
+          next.pitch === note.pitch &&
+          next.octave === note.octave &&
+          next.pitch !== 'rest'
+        ) {
           notes[idx] = { ...note, tie: true };
         } else {
           return prev; // 다음 음표가 없거나 다른 음 → 무시
@@ -635,22 +714,27 @@ export function useNoteInput(options: UseNoteInputOptions) {
     });
   }, []);
 
-  const setActiveVoice = useCallback((voice: 'treble' | 'bass') => {
-    if (!useGrandStaff) return;
-    setState(prev => ({ ...prev, activeVoice: voice, selectedNoteIndex: null }));
-  }, [useGrandStaff]);
+  const setActiveVoice = useCallback(
+    (voice: 'treble' | 'bass') => {
+      if (!useGrandStaff) return;
+      setState((prev) => ({ ...prev, activeVoice: voice, selectedNoteIndex: null }));
+    },
+    [useGrandStaff],
+  );
 
   const addNote = useCallback(
     (pitch: PitchName, octave: number, accidental?: Accidental) => {
-      setStateWithUndo(prev => {
+      setStateWithUndo((prev) => {
         const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-        const notes = [...prev[key] as ScoreNote[]];
+        const notes = [...(prev[key] as ScoreNote[])];
 
         // 임시표 결정: accidentalMode 우선, 그 다음 인자
         const resolvedAccidental: Accidental =
-          prev.accidentalMode === '#' ? '#' :
-          prev.accidentalMode === 'b' ? 'b' :
-          accidental ?? '';
+          prev.accidentalMode === '#'
+            ? '#'
+            : prev.accidentalMode === 'b'
+              ? 'b'
+              : (accidental ?? '');
 
         // 입력 위치 결정: 선택된 음표 > 커서 위치
         const targetIdx = prev.selectedNoteIndex ?? prev.cursorIndex;
@@ -663,8 +747,8 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
         // ── 셋잇단음표 그룹 편집 (선택 모드) ──
         if (prev.selectedNoteIndex !== null) {
-          const isTripletGroup = notes[prev.selectedNoteIndex].tuplet === '3';
-          if (isTripletGroup) {
+          const groupSize = tupletGroupSize(notes[prev.selectedNoteIndex]);
+          if (groupSize > 0) {
             const editIdx = prev.selectedNoteIndex + prev.tripletEditStep;
             if (editIdx < notes.length) {
               notes[editIdx] = {
@@ -676,8 +760,8 @@ export function useNoteInput(options: UseNoteInputOptions) {
               };
             }
             const nextStep = prev.tripletEditStep + 1;
-            if (nextStep >= 3) {
-              const nextCursor = findNextRestIndex(notes, prev.selectedNoteIndex + 3);
+            if (nextStep >= groupSize) {
+              const nextCursor = findNextRestIndex(notes, prev.selectedNoteIndex + groupSize);
               return {
                 ...prev,
                 [key]: notes,
@@ -698,35 +782,37 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
         // ── 셋잇단음표 모드 (커서 위치에 삽입) ──
         if (prev.tripletMode) {
-          const spanSixteenths = 4; // 4분음표 공간
-          // 커서 위치의 음표가 4분음표 이상이어야 셋잇단 변환 가능
+          const spanSixteenths = tupletSpan16; // 단순박자 4분(4) / 복합박자 점4분(6)
+          // 커서 위치에 span 만큼의 자리를 만들 수 있어야 잇단음표 변환 가능
           const targetDur16 = durationToSixteenths(notes[targetIdx].duration);
-          if (targetDur16 < spanSixteenths) return prev;
           if (!canReplaceAtPosition(notes, targetIdx, spanSixteenths, barSixteenths)) return prev;
 
-          const tripletNotes: ScoreNote[] = [];
-          for (let i = 0; i < 3; i++) {
-            tripletNotes.push({
-              id: uid(),
-              pitch,
-              octave,
-              accidental: resolvedAccidental,
-              duration: '8' as NoteDuration,
-              ...(i === 0
-                ? { tuplet: '3' as any, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
-                : { tupletNoteDur: 1 }),
-            });
+          const tripletNotes = makeTupletGroup(compound, pitch, octave, resolvedAccidental);
+
+          // 복합박자: 4분쉼표 자리에 점4분 span이 필요하면 우측을 소비해 자리를 넓힌다
+          let working = notes;
+          if (targetDur16 < spanSixteenths) {
+            const placeholder = makeRestNote(SIXTEENTHS_TO_NOEDUR[spanSixteenths] ?? '4');
+            const enlarged = replaceNoteAtPosition(
+              notes,
+              targetIdx,
+              placeholder,
+              spanSixteenths,
+              barSixteenths,
+            );
+            if (!enlarged) return prev;
+            working = enlarged;
           }
 
-          // 원래 음가가 4분보다 길면 나머지를 쉼표로
-          const remainDur = targetDur16 - spanSixteenths;
+          // 원래 음가가 span보다 길면 나머지를 쉼표로
+          const remainDur = Math.max(0, targetDur16 - spanSixteenths);
           const restNotes = remainDur > 0 ? makeRests(remainDur) : [];
-          notes.splice(targetIdx, 1, ...tripletNotes, ...restNotes);
+          working.splice(targetIdx, 1, ...tripletNotes, ...restNotes);
 
-          const nextCursor = findNextRestIndex(notes, targetIdx + 3);
+          const nextCursor = findNextRestIndex(working, targetIdx + tripletNotes.length);
           return {
             ...prev,
-            [key]: notes,
+            [key]: working,
             accidentalMode: null,
             isDotted: false,
             tripletMode: false,
@@ -774,13 +860,13 @@ export function useNoteInput(options: UseNoteInputOptions) {
         };
       });
     },
-    [totalSixteenths, firstNote, barSixteenths, measures],
+    [firstNote, barSixteenths, compound, tupletSpan16],
   );
 
   const addRest = useCallback(() => {
-    setStateWithUndo(prev => {
+    setStateWithUndo((prev) => {
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
+      const notes = [...(prev[key] as ScoreNote[])];
       const targetIdx = prev.selectedNoteIndex ?? prev.cursorIndex;
       if (targetIdx < 0 || targetIdx >= notes.length) return prev;
       // firstNote 보호
@@ -814,7 +900,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
   const undo = useCallback(() => {
     const snapshot = undoHistoryRef.current.pop();
     if (!snapshot) return;
-    setState(prev => {
+    setState((prev) => {
       const notes = prev.activeVoice === 'treble' ? snapshot.trebleNotes : snapshot.bassNotes;
       const newCursor = findNextRestIndex(notes, firstNote ? 1 : 0);
       return {
@@ -836,7 +922,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
       totalSixteenths,
       barSixteenths,
     );
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       trebleNotes: clearedTreble,
       bassNotes: useGrandStaff ? fillWithQuarterRests(null, totalSixteenths, barSixteenths) : [],
@@ -846,14 +932,14 @@ export function useNoteInput(options: UseNoteInputOptions) {
   }, [firstNote, totalSixteenths, barSixteenths, useGrandStaff]);
 
   const selectNote = useCallback((index: number | null) => {
-    setState(prev => {
+    setState((prev) => {
       if (index === null) {
         return { ...prev, selectedNoteIndex: null, editSnapshot: null, tripletEditStep: 0 };
       }
       const notes = prev.activeVoice === 'treble' ? prev.trebleNotes : prev.bassNotes;
 
-      // 셋잇단음표 그룹이면 시작 인덱스로 설정
-      const tripletStart = findTripletGroupStart(notes, index);
+      // 잇단음표 그룹이면 시작 인덱스로 설정
+      const tripletStart = findTupletGroupStart(notes, index);
       const newIndex = tripletStart >= 0 ? tripletStart : index;
 
       // 토글: 같은 음표 다시 선택하면 해제
@@ -872,118 +958,165 @@ export function useNoteInput(options: UseNoteInputOptions) {
         const note = notes[newIndex];
         const durStr = note.duration as string;
         if (durStr.endsWith('.')) {
-          return { ...prev, selectedNoteIndex: newIndex, selectedDuration: durStr.slice(0, -1) as NoteDuration, isDotted: true, editSnapshot: snapshot, tripletEditStep: 0 };
+          return {
+            ...prev,
+            selectedNoteIndex: newIndex,
+            selectedDuration: durStr.slice(0, -1) as NoteDuration,
+            isDotted: true,
+            editSnapshot: snapshot,
+            tripletEditStep: 0,
+          };
         }
-        return { ...prev, selectedNoteIndex: newIndex, selectedDuration: note.duration, isDotted: false, editSnapshot: snapshot, tripletEditStep: 0 };
+        return {
+          ...prev,
+          selectedNoteIndex: newIndex,
+          selectedDuration: note.duration,
+          isDotted: false,
+          editSnapshot: snapshot,
+          tripletEditStep: 0,
+        };
       }
       return { ...prev, selectedNoteIndex: newIndex, editSnapshot: snapshot, tripletEditStep: 0 };
     });
   }, []);
 
   /** 커서를 특정 인덱스로 이동 (음표 클릭 시 사용) */
-  const moveCursor = useCallback((index: number) => {
-    setState(prev => {
-      const notes = prev.activeVoice === 'treble' ? prev.trebleNotes : prev.bassNotes;
-      if (index < 0 || index >= notes.length) return prev;
-      // firstNote 보호: 인덱스 0은 건너뜀
-      const effectiveIndex = (firstNote && prev.activeVoice === 'treble' && index === 0) ? 1 : index;
-      return { ...prev, cursorIndex: effectiveIndex, selectedNoteIndex: null, tripletEditStep: 0 };
-    });
-  }, [firstNote]);
+  const moveCursor = useCallback(
+    (index: number) => {
+      setState((prev) => {
+        const notes = prev.activeVoice === 'treble' ? prev.trebleNotes : prev.bassNotes;
+        if (index < 0 || index >= notes.length) return prev;
+        // firstNote 보호: 인덱스 0은 건너뜀
+        const effectiveIndex =
+          firstNote && prev.activeVoice === 'treble' && index === 0 ? 1 : index;
+        return {
+          ...prev,
+          cursorIndex: effectiveIndex,
+          selectedNoteIndex: null,
+          tripletEditStep: 0,
+        };
+      });
+    },
+    [firstNote],
+  );
 
   /** 선택된 음표 또는 커서 위치의 음길이 변경 (교체 모드)
    *  replaceNoteAtPosition을 활용하여 분할/병합 처리
    */
-  const updateSelectedNoteDuration = useCallback((dur: NoteDuration) => {
-    setStateWithUndo(prev => {
-      const targetIdx = prev.selectedNoteIndex ?? prev.cursorIndex;
-      const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
-      if (targetIdx < 0 || targetIdx >= notes.length) return prev;
+  const updateSelectedNoteDuration = useCallback(
+    (dur: NoteDuration) => {
+      setStateWithUndo((prev) => {
+        const targetIdx = prev.selectedNoteIndex ?? prev.cursorIndex;
+        const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
+        const notes = [...(prev[key] as ScoreNote[])];
+        if (targetIdx < 0 || targetIdx >= notes.length) return prev;
 
-      // firstNote 보호
-      if (prev.activeVoice === 'treble' && firstNote && targetIdx === 0) return prev;
-      // 셋잇단음표 음길이 변경 불가
-      if (notes[targetIdx].tuplet === '3') return prev;
+        // firstNote 보호
+        if (prev.activeVoice === 'treble' && firstNote && targetIdx === 0) return prev;
+        // 잇단음표 음길이 변경 불가
+        if (tupletGroupSize(notes[targetIdx]) > 0) return prev;
 
-      const effectiveDur = prev.isDotted ? applyDot(dur) : dur;
-      const newDur16 = durationToSixteenths(effectiveDur);
-      const oldDur16 = durationToSixteenths(notes[targetIdx].duration);
-      if (oldDur16 === newDur16) return prev;
+        const effectiveDur = prev.isDotted ? applyDot(dur) : dur;
+        const newDur16 = durationToSixteenths(effectiveDur);
+        const oldDur16 = durationToSixteenths(notes[targetIdx].duration);
+        if (oldDur16 === newDur16) return prev;
 
-      const updatedNote = { ...notes[targetIdx], duration: effectiveDur };
-      const replaced = replaceNoteAtPosition(notes, targetIdx, updatedNote, newDur16, barSixteenths);
-      if (!replaced) return prev;
+        const updatedNote = { ...notes[targetIdx], duration: effectiveDur };
+        const replaced = replaceNoteAtPosition(
+          notes,
+          targetIdx,
+          updatedNote,
+          newDur16,
+          barSixteenths,
+        );
+        if (!replaced) return prev;
 
-      const merged = mergeAdjacentRests(replaced, barSixteenths);
-      return { ...prev, [key]: merged };
-    });
-  }, [barSixteenths, firstNote]);
+        const merged = mergeAdjacentRests(replaced, barSixteenths);
+        return { ...prev, [key]: merged };
+      });
+    },
+    [barSixteenths, firstNote],
+  );
 
   /** 특정 음길이로 변경 가능한지 확인 — canReplaceDuration으로 통합 */
   const canEditDuration = canReplaceDuration;
 
-  /** 선택된 음표를 셋잇단음표로 변환 (4분음표 → 8분×3) */
+  /** 선택된 음표를 잇단음표로 변환 — 단순박자: 셋잇단(4분 → 8분×3) / 복합박자: 둘잇단(점4분 → 8분×2) */
   const replaceWithTriplet = useCallback(() => {
-    setStateWithUndo(prev => {
+    setStateWithUndo((prev) => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
+      const notes = [...(prev[key] as ScoreNote[])];
       const idx = prev.selectedNoteIndex;
       if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
       if (idx < 0 || idx >= notes.length) return prev;
 
       const note = notes[idx];
-      // 이미 셋잇단이면 무시
-      if (note.tuplet === '3') return prev;
-      // 4분음표(4 sixteenths) 이상이어야 셋잇단 변환 가능
+      // 이미 잇단음표면 무시
+      if (note.tuplet) return prev;
+      // span(단순 4분 / 복합 점4분) 자리를 만들 수 있어야 변환 가능
       const dur16 = durationToSixteenths(note.duration);
-      if (dur16 < 4) return prev;
+      if (!canReplaceAtPosition(notes, idx, tupletSpan16, barSixteenths)) return prev;
 
-      // 원래 음표를 3개의 셋잇단으로 교체
-      const tripletNotes: ScoreNote[] = [];
-      for (let i = 0; i < 3; i++) {
-        tripletNotes.push({
-          id: uid(),
-          pitch: note.pitch,
-          octave: note.octave,
-          accidental: note.accidental,
-          duration: '8' as NoteDuration,
-          ...(i === 0
-            ? { tuplet: '3' as any, tupletSpan: '4' as NoteDuration, tupletNoteDur: 2 }
-            : { tupletNoteDur: 1 }),
-        });
+      let working = notes;
+      if (dur16 < tupletSpan16) {
+        const placeholder = makeRestNote(SIXTEENTHS_TO_NOEDUR[tupletSpan16] ?? '4');
+        const enlarged = replaceNoteAtPosition(
+          notes,
+          idx,
+          placeholder,
+          tupletSpan16,
+          barSixteenths,
+        );
+        if (!enlarged) return prev;
+        working = enlarged;
       }
 
-      // 원래 음표가 4분음표보다 길면 나머지를 쉼표로 채움
-      const remainDur = dur16 - 4;
+      // 원래 음표를 잇단음표 그룹으로 교체
+      const tripletNotes = makeTupletGroup(compound, note.pitch, note.octave, note.accidental);
+
+      // 원래 음표가 span보다 길면 나머지를 쉼표로 채움
+      const remainDur = Math.max(0, dur16 - tupletSpan16);
       const restNotes = remainDur > 0 ? makeRests(remainDur) : [];
 
-      notes.splice(idx, 1, ...tripletNotes, ...restNotes);
-      const merged = mergeAdjacentRests(notes, barSixteenths);
+      working.splice(idx, 1, ...tripletNotes, ...restNotes);
+      const merged = mergeAdjacentRests(working, barSixteenths);
 
-      return { ...prev, [key]: merged, selectedNoteIndex: null, cursorIndex: findNextRestIndex(merged, idx + 3), tripletEditStep: 0 };
+      return {
+        ...prev,
+        [key]: merged,
+        selectedNoteIndex: null,
+        cursorIndex: findNextRestIndex(merged, idx + tripletNotes.length),
+        tripletEditStep: 0,
+      };
     });
-  }, [firstNote, barSixteenths]);
+  }, [firstNote, barSixteenths, compound, tupletSpan16]);
 
   /** 선택된 음표를 같은 길이의 쉼표로 변환 (편집 모드 전용) */
   const replaceWithRest = useCallback(() => {
-    setStateWithUndo(prev => {
+    setStateWithUndo((prev) => {
       if (prev.selectedNoteIndex === null) return prev;
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
+      const notes = [...(prev[key] as ScoreNote[])];
       const idx = prev.selectedNoteIndex;
       if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
       if (idx < 0 || idx >= notes.length) return prev;
 
-      const isTripletGroup = notes[idx].tuplet === '3';
+      const groupSize = tupletGroupSize(notes[idx]);
 
-      if (isTripletGroup) {
-        // 셋잇단 3개 제거 → 4분쉼표로 대체
-        const removeCount = Math.min(3, notes.length - idx);
-        notes.splice(idx, removeCount, makeRestNote('4'));
+      if (groupSize > 0) {
+        // 잇단음표 그룹 제거 → span 길이(4분/점4분)의 쉼표로 대체
+        const span16 = durationToSixteenths(notes[idx].tupletSpan ?? '4');
+        const removeCount = Math.min(groupSize, notes.length - idx);
+        notes.splice(idx, removeCount, ...makeRests(span16));
         const merged = mergeAdjacentRests(notes, barSixteenths);
-        return { ...prev, [key]: merged, selectedNoteIndex: null, cursorIndex: findNextRestIndex(merged, idx), tripletEditStep: 0 };
+        return {
+          ...prev,
+          [key]: merged,
+          selectedNoteIndex: null,
+          cursorIndex: findNextRestIndex(merged, idx),
+          tripletEditStep: 0,
+        };
       }
 
       // 이미 쉼표면 무시
@@ -991,32 +1124,45 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
       notes[idx] = makeRestNote(notes[idx].duration);
       const merged = mergeAdjacentRests(notes, barSixteenths);
-      return { ...prev, [key]: merged, selectedNoteIndex: null, cursorIndex: findNextRestIndex(merged, idx), tripletEditStep: 0 };
+      return {
+        ...prev,
+        [key]: merged,
+        selectedNoteIndex: null,
+        cursorIndex: findNextRestIndex(merged, idx),
+        tripletEditStep: 0,
+      };
     });
   }, [firstNote, barSixteenths]);
 
   /** 선택된 음표를 같은 길이의 쉼표로 대체 (삭제 = 쉼표 대체, 마디 구조 유지) */
   const deleteSelectedNote = useCallback(() => {
-    setStateWithUndo(prev => {
+    setStateWithUndo((prev) => {
       if (prev.selectedNoteIndex === null) return prev;
 
       const key = prev.activeVoice === 'treble' ? 'trebleNotes' : 'bassNotes';
-      const notes = [...prev[key] as ScoreNote[]];
+      const notes = [...(prev[key] as ScoreNote[])];
       const idx = prev.selectedNoteIndex;
 
       // firstNote 보호
       if (prev.activeVoice === 'treble' && firstNote && idx === 0) return prev;
       if (idx < 0 || idx >= notes.length) return prev;
 
-      const isTripletGroup = notes[idx].tuplet === '3';
+      const groupSize = tupletGroupSize(notes[idx]);
 
-      if (isTripletGroup) {
-        // 셋잇단 3개 제거 → 4분쉼표로 대체
-        const removeCount = Math.min(3, notes.length - idx);
-        notes.splice(idx, removeCount, makeRestNote('4'));
+      if (groupSize > 0) {
+        // 잇단음표 그룹 제거 → span 길이(4분/점4분)의 쉼표로 대체
+        const span16 = durationToSixteenths(notes[idx].tupletSpan ?? '4');
+        const removeCount = Math.min(groupSize, notes.length - idx);
+        notes.splice(idx, removeCount, ...makeRests(span16));
         const merged = mergeAdjacentRests(notes, barSixteenths);
         const newCursor = findNextRestIndex(merged, idx);
-        return { ...prev, [key]: merged, selectedNoteIndex: null, cursorIndex: newCursor, tripletEditStep: 0 };
+        return {
+          ...prev,
+          [key]: merged,
+          selectedNoteIndex: null,
+          cursorIndex: newCursor,
+          tripletEditStep: 0,
+        };
       }
 
       // 일반 음표: 같은 길이 쉼표로 대체
@@ -1038,7 +1184,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 수정 취소: 스냅샷으로 복원 */
   const cancelEdit = useCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       if (!prev.editSnapshot) return { ...prev, selectedNoteIndex: null, tripletEditStep: 0 };
       return {
         ...prev,
@@ -1053,7 +1199,7 @@ export function useNoteInput(options: UseNoteInputOptions) {
 
   /** 셋잇단음표 모드 토글 */
   const toggleTriplet = useCallback(() => {
-    setState(prev => ({ ...prev, tripletMode: !prev.tripletMode }));
+    setState((prev) => ({ ...prev, tripletMode: !prev.tripletMode }));
   }, []);
 
   const getUserAbcString = useCallback((): string => {
@@ -1077,15 +1223,26 @@ export function useNoteInput(options: UseNoteInputOptions) {
     // 커서까지의 16분음표 수 계산
     let posInTotal = 0;
     for (let i = 0; i < Math.min(targetIdx, notes.length); i++) {
-      posInTotal += durationToSixteenths(notes[i].duration);
+      posInTotal += noteSixteenths(notes[i]);
     }
     const [, tsBottom] = timeSignature.split('/').map(Number);
     const beatUnit = 16 / (tsBottom || 4);
     const currentMeasure = Math.floor(posInTotal / barSixteenths);
     const posInMeasure = posInTotal % barSixteenths;
     const currentBeat = Math.floor(posInMeasure / beatUnit) + 1;
-    return { measure: Math.min(currentMeasure + 1, measures), beat: currentBeat, totalMeasures: measures };
-  }, [getActiveNotes, state.selectedNoteIndex, state.cursorIndex, timeSignature, barSixteenths, measures]);
+    return {
+      measure: Math.min(currentMeasure + 1, measures),
+      beat: currentBeat,
+      totalMeasures: measures,
+    };
+  }, [
+    getActiveNotes,
+    state.selectedNoteIndex,
+    state.cursorIndex,
+    timeSignature,
+    barSixteenths,
+    measures,
+  ]);
 
   /** 쉼표가 아닌 음표가 하나라도 입력되었는지 (제출 가능 조건) */
   const isComplete = (() => {
@@ -1093,35 +1250,47 @@ export function useNoteInput(options: UseNoteInputOptions) {
     // 첫음 이후에 쉼표가 아닌 음표가 있으면 제출 가능
     const hasInput = treble.some((n, i) => (!firstNote || i > 0) && n.pitch !== 'rest');
     if (useGrandStaff) {
-      const bassHasInput = state.bassNotes.some(n => n.pitch !== 'rest');
+      const bassHasInput = state.bassNotes.some((n) => n.pitch !== 'rest');
       return hasInput && bassHasInput;
     }
     return hasInput;
   })();
 
-  const reset = useCallback((
-    newFirstNote?: ScoreNote | null,
-    overrideMeasures?: number,
-    overrideBarSixteenths?: number,
-    overrideGrandStaff?: boolean,
-  ) => {
-    undoHistoryRef.current = [];
-    const effectiveBar = overrideBarSixteenths ?? barSixteenths;
-    const effectiveTotal = overrideMeasures ? overrideMeasures * effectiveBar : totalSixteenths;
-    const effectiveGrandStaff = overrideGrandStaff ?? useGrandStaff;
-    setState(makeInitialState(newFirstNote ?? firstNote, effectiveTotal, effectiveBar, effectiveGrandStaff));
-  }, [firstNote, totalSixteenths, barSixteenths, useGrandStaff]);
+  // 새 문제의 조건을 모두 인자로 받아 콜백을 안정적으로 유지한다.
+  // 현재 firstNote에 의존하면 악보 생성 → reset 변경 → 생성 effect 재실행이 반복된다.
+  const reset = useCallback(
+    (
+      newFirstNote: ScoreNote | null,
+      newMeasures: number,
+      newBarSixteenths: number,
+      newGrandStaff: boolean,
+    ) => {
+      undoHistoryRef.current = [];
+      setState(
+        makeInitialState(
+          newFirstNote,
+          newMeasures * newBarSixteenths,
+          newBarSixteenths,
+          newGrandStaff,
+        ),
+      );
+    },
+    [],
+  );
 
-  const isTripletSelected = state.selectedNoteIndex !== null &&
-    getActiveNotes()[state.selectedNoteIndex]?.tuplet === '3';
+  const isTripletSelected =
+    state.selectedNoteIndex !== null &&
+    tupletGroupSize(getActiveNotes()[state.selectedNoteIndex]) > 0;
 
-  const isSelectedNoteTied = state.selectedNoteIndex !== null &&
-    !!getActiveNotes()[state.selectedNoteIndex]?.tie;
+  const isSelectedNoteTied =
+    state.selectedNoteIndex !== null && !!getActiveNotes()[state.selectedNoteIndex]?.tie;
 
   return {
     // State
     ...state,
     // Derived
+    /** 현재 박자의 잇단음표 종류: 3 = 셋잇단(단순박자), 2 = 둘잇단(복합박자) */
+    tupletCount,
     getActiveNotes,
     getRemainingDuration,
     canAddDuration,

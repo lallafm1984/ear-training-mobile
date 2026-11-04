@@ -4,16 +4,26 @@
 
 import type { ScoreNote, PitchName, Accidental, NoteDuration } from '../scoreUtils';
 import {
-  durationToSixteenths, getSixteenthsPerBar, noteToMidiWithKey, getTupletActualSixteenths, SIXTEENTHS_TO_DUR,
-  getKeySigAlteration, nnToMidi, getMidiInterval,
-  PITCH_ORDER, getBassBaseOctave, CHORD_TONES,
-  DISSONANT_PC, IMPERFECT_CONSONANT_PC, MIN_TREBLE_BASS_SEMITONES,
-  makeNote, makeRest, noteNumToNote, scaleNoteToNn,
-  buildTrebleAttackMidiMap, passesBassSpacing,
-  chordToneBnnCandidates, snapToChordTone,
-  getStrongBeatOffsets, getScaleDegrees, generateProgression,
+  durationToSixteenths,
+  getSixteenthsPerBar,
+  noteToMidiWithKey,
+  getTupletActualSixteenths,
+  SIXTEENTHS_TO_DUR,
+  PITCH_ORDER,
+  DISSONANT_PC,
+  IMPERFECT_CONSONANT_PC,
+  MIN_TREBLE_BASS_SEMITONES,
+  makeNote,
+  noteNumToNote,
+  passesBassSpacing,
+  chordToneBnnCandidates,
 } from '../scoreUtils';
-import { buildAttackTimeline, isConsonantInterval, isParallelPerfect, splitNotesIntoMeasures } from './voiceLeading';
+import {
+  buildAttackTimeline,
+  isConsonantInterval,
+  isParallelPerfect,
+  splitNotesIntoMeasures,
+} from './voiceLeading';
 
 export function reviewAndFixScore(
   treble: ScoreNote[],
@@ -25,103 +35,117 @@ export function reviewAndFixScore(
   consonanceRatio: number,
 ): { treble: ScoreNote[]; bass: ScoreNote[] } {
   const sixteenthsPerBar = getSixteenthsPerBar(timeSignature);
-  const BASS_BASE = 3;
-
   // ════════════════════════════════════════════════════════════════
   // Pass 1: 마디 음가 합계 정합성 검증
   // ════════════════════════════════════════════════════════════════
-  const verifyMeasureDurations = (notes: ScoreNote[], label: string): void => {
+  const verifyMeasureDurations = (notes: ScoreNote[], _label: string): void => {
     // 반복: splice 후 인덱스 변동이 있을 수 있으므로 안정될 때까지 재검증
     for (let pass = 0; pass < 3; pass++) {
-    let anyFix = false;
-    const measures = splitNotesIntoMeasures(notes, sixteenthsPerBar);
-    for (let m = 0; m < measures.length; m++) {
-      let total = 0;
-      let ni = 0;
-      while (ni < measures[m].length) {
-        const n = measures[m][ni];
-        if (n.tuplet) {
-          const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
-          total += span;
-          ni += parseInt(n.tuplet, 10);
-        } else {
-          total += durationToSixteenths(n.duration);
-          ni += 1;
+      let anyFix = false;
+      const measures = splitNotesIntoMeasures(notes, sixteenthsPerBar);
+      for (let m = 0; m < measures.length; m++) {
+        let total = 0;
+        let ni = 0;
+        while (ni < measures[m].length) {
+          const n = measures[m][ni];
+          if (n.tuplet) {
+            const span = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+            total += span;
+            ni += parseInt(n.tuplet, 10);
+          } else {
+            total += durationToSixteenths(n.duration);
+            ni += 1;
+          }
         }
-      }
-      // 부족한 경우 쉼표로 채움
-      if (total < sixteenthsPerBar) {
-        const gap = sixteenthsPerBar - total;
-        const fillDur = SIXTEENTHS_TO_DUR[gap];
-        if (fillDur) {
-          let insertIdx = 0;
-          for (let mi = 0; mi < m; mi++) insertIdx += measures[mi].length;
-          insertIdx += measures[m].length;
-          notes.splice(insertIdx, 0, {
-            id: Math.random().toString(36).substr(2, 9),
-            pitch: 'rest', octave: 4, accidental: '', duration: fillDur, tie: false,
-          });
+        // 부족한 경우 쉼표로 채움
+        if (total < sixteenthsPerBar) {
+          const gap = sixteenthsPerBar - total;
+          const fillDur = SIXTEENTHS_TO_DUR[gap];
+          if (fillDur) {
+            let insertIdx = 0;
+            for (let mi = 0; mi < m; mi++) insertIdx += measures[mi].length;
+            insertIdx += measures[m].length;
+            notes.splice(insertIdx, 0, {
+              id: Math.random().toString(36).substr(2, 9),
+              pitch: 'rest',
+              octave: 4,
+              accidental: '',
+              duration: fillDur,
+              tie: false,
+            });
+            anyFix = true;
+            break; // 재분할 필요 → 다음 pass에서 재검증
+          }
+        }
+
+        // 초과한 경우: 마디 끝에서 역순으로 음표를 줄여 맞춤
+        if (total > sixteenthsPerBar) {
+          let excess = total - sixteenthsPerBar;
+          let startIdx = 0;
+          for (let mi = 0; mi < m; mi++) startIdx += measures[mi].length;
+
+          // 마디 내 요소를 "청크" 단위로 분류 (일반 음표 1개 또는 tuplet 그룹)
+          const chunks: { start: number; count: number; dur: number; isTuplet: boolean }[] = [];
+          let ci = 0;
+          while (ci < measures[m].length) {
+            const n = measures[m][ci];
+            if (n.tuplet) {
+              const cnt = parseInt(n.tuplet, 10);
+              const dur = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
+              chunks.push({ start: ci, count: cnt, dur, isTuplet: true });
+              ci += cnt;
+            } else {
+              chunks.push({
+                start: ci,
+                count: 1,
+                dur: durationToSixteenths(n.duration),
+                isTuplet: false,
+              });
+              ci += 1;
+            }
+          }
+
+          // 뒤에서부터 청크 단위로 제거/축소
+          for (let ch = chunks.length - 1; ch >= 0 && excess > 0; ch--) {
+            const chunk = chunks[ch];
+            if (chunk.dur <= excess) {
+              notes.splice(startIdx + chunk.start, chunk.count);
+              excess -= chunk.dur;
+            } else if (!chunk.isTuplet) {
+              const newDur = chunk.dur - excess;
+              const newDurLabel = SIXTEENTHS_TO_DUR[newDur];
+              if (newDurLabel) {
+                notes[startIdx + chunk.start] = {
+                  ...notes[startIdx + chunk.start],
+                  duration: newDurLabel,
+                };
+              }
+              excess = 0;
+            } else {
+              // tuplet 그룹 전체 제거 후, 남는 공간을 쉼표로 채움
+              const gap = chunk.dur - excess;
+              notes.splice(startIdx + chunk.start, chunk.count);
+              excess -= chunk.dur;
+              if (gap > 0) {
+                const fillDur = SIXTEENTHS_TO_DUR[gap];
+                if (fillDur) {
+                  notes.splice(startIdx + chunk.start, 0, {
+                    id: Math.random().toString(36).substr(2, 9),
+                    pitch: 'rest',
+                    octave: 4,
+                    accidental: '',
+                    duration: fillDur,
+                    tie: false,
+                  });
+                }
+              }
+            }
+          }
           anyFix = true;
           break; // 재분할 필요 → 다음 pass에서 재검증
         }
       }
-
-      // 초과한 경우: 마디 끝에서 역순으로 음표를 줄여 맞춤
-      if (total > sixteenthsPerBar) {
-        let excess = total - sixteenthsPerBar;
-        let startIdx = 0;
-        for (let mi = 0; mi < m; mi++) startIdx += measures[mi].length;
-
-        // 마디 내 요소를 "청크" 단위로 분류 (일반 음표 1개 또는 tuplet 그룹)
-        const chunks: { start: number; count: number; dur: number; isTuplet: boolean }[] = [];
-        let ci = 0;
-        while (ci < measures[m].length) {
-          const n = measures[m][ci];
-          if (n.tuplet) {
-            const cnt = parseInt(n.tuplet, 10);
-            const dur = getTupletActualSixteenths(n.tuplet, n.tupletSpan || n.duration);
-            chunks.push({ start: ci, count: cnt, dur, isTuplet: true });
-            ci += cnt;
-          } else {
-            chunks.push({ start: ci, count: 1, dur: durationToSixteenths(n.duration), isTuplet: false });
-            ci += 1;
-          }
-        }
-
-        // 뒤에서부터 청크 단위로 제거/축소
-        for (let ch = chunks.length - 1; ch >= 0 && excess > 0; ch--) {
-          const chunk = chunks[ch];
-          if (chunk.dur <= excess) {
-            notes.splice(startIdx + chunk.start, chunk.count);
-            excess -= chunk.dur;
-          } else if (!chunk.isTuplet) {
-            const newDur = chunk.dur - excess;
-            const newDurLabel = SIXTEENTHS_TO_DUR[newDur];
-            if (newDurLabel) {
-              notes[startIdx + chunk.start] = { ...notes[startIdx + chunk.start], duration: newDurLabel };
-            }
-            excess = 0;
-          } else {
-            // tuplet 그룹 전체 제거 후, 남는 공간을 쉼표로 채움
-            const gap = chunk.dur - excess;
-            notes.splice(startIdx + chunk.start, chunk.count);
-            excess -= chunk.dur;
-            if (gap > 0) {
-              const fillDur = SIXTEENTHS_TO_DUR[gap];
-              if (fillDur) {
-                notes.splice(startIdx + chunk.start, 0, {
-                  id: Math.random().toString(36).substr(2, 9),
-                  pitch: 'rest', octave: 4, accidental: '', duration: fillDur, tie: false,
-                });
-              }
-            }
-          }
-        }
-        anyFix = true;
-        break; // 재분할 필요 → 다음 pass에서 재검증
-      }
-    }
-    if (!anyFix) break; // 수정 없으면 종료
+      if (!anyFix) break; // 수정 없으면 종료
     } // end pass loop
   };
 
@@ -135,7 +159,7 @@ export function reviewAndFixScore(
   // ════════════════════════════════════════════════════════════════
   if (useGrandStaff && bass.length > 0) {
     const trebleTL = buildAttackTimeline(treble, keySignature);
-    const bassTL   = buildAttackTimeline(bass, keySignature);
+    const bassTL = buildAttackTimeline(bass, keySignature);
 
     // 동시 공격점 매칭 (offset 기준)
     const bassMap = new Map<number, { noteIdx: number; midi: number }>();
@@ -145,8 +169,10 @@ export function reviewAndFixScore(
 
     type SimultaneousPoint = {
       offset: number;
-      trebleIdx: number; trebleMidi: number;
-      bassIdx: number;   bassMidi: number;
+      trebleIdx: number;
+      trebleMidi: number;
+      bassIdx: number;
+      bassMidi: number;
     };
     const simultaneous: SimultaneousPoint[] = [];
     for (const t of trebleTL) {
@@ -154,8 +180,10 @@ export function reviewAndFixScore(
       if (b) {
         simultaneous.push({
           offset: t.offset,
-          trebleIdx: t.noteIdx, trebleMidi: t.midi,
-          bassIdx: b.noteIdx,   bassMidi: b.midi,
+          trebleIdx: t.noteIdx,
+          trebleMidi: t.midi,
+          bassIdx: b.noteIdx,
+          bassMidi: b.midi,
         });
       }
     }
@@ -173,14 +201,16 @@ export function reviewAndFixScore(
         if (currPitchIdx < 0) continue;
 
         // 인접 음계 음으로 이동 (한 스텝 위 또는 아래)
-        const stepUp   = (currPitchIdx + 1) % 7;
+        const stepUp = (currPitchIdx + 1) % 7;
         const stepDown = (currPitchIdx + 6) % 7;
         const candidatePitches = [PITCH_ORDER[stepUp], PITCH_ORDER[stepDown]];
 
         let fixed = false;
         for (const candPitch of candidatePitches) {
           const candNote: ScoreNote = {
-            ...bassNote, pitch: candPitch, accidental: '' as Accidental,
+            ...bassNote,
+            pitch: candPitch,
+            accidental: '' as Accidental,
             id: bassNote.id,
           };
           const candMidi = noteToMidiWithKey(candNote, keySignature);
@@ -242,8 +272,18 @@ export function reviewAndFixScore(
           // MIDI → 가장 가까운 음계 음 매핑
           const semitone = ((targetMidi % 12) + 12) % 12;
           const PITCH_SEMITONES_REV: Record<number, PitchName> = {
-            0: 'C', 1: 'C', 2: 'D', 3: 'D', 4: 'E', 5: 'F',
-            6: 'F', 7: 'G', 8: 'G', 9: 'A', 10: 'A', 11: 'B',
+            0: 'C',
+            1: 'C',
+            2: 'D',
+            3: 'D',
+            4: 'E',
+            5: 'F',
+            6: 'F',
+            7: 'G',
+            8: 'G',
+            9: 'A',
+            10: 'A',
+            11: 'B',
           };
           const candPitch = PITCH_SEMITONES_REV[semitone];
           if (!candPitch) continue;
@@ -251,7 +291,9 @@ export function reviewAndFixScore(
           if (candOctave < 2 || candOctave > 4) continue;
 
           const candNote: ScoreNote = {
-            ...bassNote, pitch: candPitch, octave: candOctave,
+            ...bassNote,
+            pitch: candPitch,
+            octave: candOctave,
             accidental: '' as Accidental,
           };
           const actualMidi = noteToMidiWithKey(candNote, keySignature);
@@ -293,8 +335,11 @@ export function reviewAndFixScore(
         for (const sp of scale) {
           if (sp === 'rest') continue;
           const spNote: ScoreNote = {
-            id: '', pitch: sp, octave: notes[i].octave,
-            accidental: '' as Accidental, duration: notes[i].duration,
+            id: '',
+            pitch: sp,
+            octave: notes[i].octave,
+            accidental: '' as Accidental,
+            duration: notes[i].duration,
           };
           const spMidi = noteToMidiWithKey(spNote, keySignature);
           const spSemitone = ((spMidi % 12) + 12) % 12;
@@ -331,13 +376,20 @@ export function reviewAndFixScore(
         // 이전 마디 마지막 비쉼표 음
         let prevNote: ScoreNote | null = null;
         for (let k = prevMeasure.length - 1; k >= 0; k--) {
-          if (prevMeasure[k].pitch !== 'rest') { prevNote = prevMeasure[k]; break; }
+          if (prevMeasure[k].pitch !== 'rest') {
+            prevNote = prevMeasure[k];
+            break;
+          }
         }
         // 현재 마디 첫 비쉼표 음
         let currNote: ScoreNote | null = null;
         let currNoteLocalIdx = -1;
         for (let k = 0; k < measureLen; k++) {
-          if (measures[m][k].pitch !== 'rest') { currNote = measures[m][k]; currNoteLocalIdx = k; break; }
+          if (measures[m][k].pitch !== 'rest') {
+            currNote = measures[m][k];
+            currNoteLocalIdx = k;
+            break;
+          }
         }
 
         if (prevNote && currNote) {
@@ -359,12 +411,19 @@ export function reviewAndFixScore(
               for (let oct = currNote.octave - 1; oct <= currNote.octave + 1; oct++) {
                 if (oct < 2 || oct > 5) continue;
                 const candNote: ScoreNote = {
-                  id: '', pitch: sp, octave: oct,
-                  accidental: '' as Accidental, duration: currNote.duration,
+                  id: '',
+                  pitch: sp,
+                  octave: oct,
+                  accidental: '' as Accidental,
+                  duration: currNote.duration,
                 };
                 const candMidi = noteToMidiWithKey(candNote, keySignature);
                 const d = Math.abs(candMidi - targetMidi);
-                if (d < bestDist && Math.abs(candMidi - prevMidi) <= 7 && Math.abs(candMidi - prevMidi) >= 1) {
+                if (
+                  d < bestDist &&
+                  Math.abs(candMidi - prevMidi) <= 7 &&
+                  Math.abs(candMidi - prevMidi) >= 1
+                ) {
                   bestDist = d;
                   bestPitch = sp;
                   bestOctave = oct;
@@ -423,7 +482,7 @@ export function reviewAndFixScore(
   // ════════════════════════════════════════════════════════════════
   if (useGrandStaff && bass.length > 0) {
     const trebleTL2 = buildAttackTimeline(treble, keySignature);
-    const bassTL2   = buildAttackTimeline(bass, keySignature);
+    const bassTL2 = buildAttackTimeline(bass, keySignature);
     const bassMap2 = new Map<number, number>();
     for (const b of bassTL2) bassMap2.set(b.offset, b.noteIdx);
 
@@ -458,9 +517,15 @@ export function reviewAndFixScore(
  *   (옥타브만 내리면 다음 음과 '옥타브+도'로 끊기는 현상 완화)
  */
 export function resolveBassClash(
-  note: ScoreNote, bnn: number, oct: number, durLabel: NoteDuration,
-  bassOff: number, scale: PitchName[], bassBase: number,
-  keySignature: string, trebleAttackMap: Map<number, number>,
+  note: ScoreNote,
+  bnn: number,
+  oct: number,
+  durLabel: NoteDuration,
+  bassOff: number,
+  scale: PitchName[],
+  bassBase: number,
+  keySignature: string,
+  trebleAttackMap: Map<number, number>,
   bTones: number[],
 ): ScoreNote {
   const clashMidi = trebleAttackMap.get(bassOff);
@@ -485,7 +550,10 @@ export function resolveBassClash(
       const cand = noteFromBnn(candBnn);
       if (!passesBassSpacing(cand, bassOff, trebleAttackMap, keySignature)) continue;
       const dist = Math.abs(noteToMidiWithKey(cand, keySignature) - bassMidi);
-      if (dist < bestDist) { bestDist = dist; best = cand; }
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = cand;
+      }
     }
     return best;
   };
@@ -520,7 +588,7 @@ export function resolveBassClash(
 
   // 피치클래스 반음 충돌 — G bass + G# treble처럼 옥타브를 넘어 동시에 울리는 반음 불협화 감지
   // (차이가 15 이상이라 위 간격 검사를 통과했지만 pitch class는 1 반음 차)
-  const pitchClassDiff = ((clashMidi - bassMidi) % 12 + 12) % 12;
+  const pitchClassDiff = (((clashMidi - bassMidi) % 12) + 12) % 12;
   if (pitchClassDiff === 1) {
     const closest = closestChordTone();
     if (closest) return closest;
@@ -561,26 +629,19 @@ export function smoothBassMelodicContinuity(
  * - 4마디 곡(measures<=4): 해소 없음
  * - 그 외: 4,8,12…(종지 직전 마디 미만) + 종지 바로 앞 마디(8곡→7, 12곡→11, 16곡→15)
  */
-function isSyncopationPhraseResolutionBar(totalMeasures: number, barIndex: number): boolean {
-  if (totalMeasures <= 4) return false;
-  const contentBars = totalMeasures - 1;
-  const oneBased = barIndex + 1;
-  if (oneBased === contentBars) return true;
-  return oneBased >= 4 && oneBased % 4 === 0 && oneBased < contentBars;
-}
-
-// getStrongBeatOffsets → imported from scoreUtils
-
 /**
  * 수직 협화음 검증 — treble과의 pitch-class 차이가 불협화(2도·4도·7도)이면
  * 가장 가까운 다른 화음톤으로 대체. 대체 불가 시 원본 반환.
  * (2성부 가이드라인 §1: 강박 협화음 우선성)
  */
 export function ensureConsonance(
-  nn: number, off: number,
+  nn: number,
+  off: number,
   trebleAttackMap: Map<number, number>,
-  scale: PitchName[], bassBase: number,
-  keySignature: string, bTones: number[],
+  scale: PitchName[],
+  bassBase: number,
+  keySignature: string,
+  bTones: number[],
 ): number {
   const tMidi = trebleAttackMap.get(off);
   if (tMidi === undefined) return nn;
@@ -588,10 +649,11 @@ export function ensureConsonance(
   const { pitch, octave } = noteNumToNote(n, scale, bassBase);
   const oct = Math.max(2, Math.min(3, octave));
   const bMidi = noteToMidiWithKey(makeNote(pitch, oct, '4'), keySignature);
-  const pc = ((tMidi - bMidi) % 12 + 12) % 12;
+  const pc = (((tMidi - bMidi) % 12) + 12) % 12;
   if (!DISSONANT_PC.has(pc)) return nn;
   // 불협화 → 다른 화음톤 중 협화음이면서 가장 가까운 것 선택
-  let best = nn, bestDist = Infinity;
+  let best = nn,
+    bestDist = Infinity;
   for (const t of bTones) {
     for (const base of [
       Math.floor(nn / 7) * 7 + t,
@@ -602,10 +664,13 @@ export function ensureConsonance(
       const { pitch: cp, octave: co } = noteNumToNote(base, scale, bassBase);
       const cOct = Math.max(2, Math.min(3, co));
       const cMidi = noteToMidiWithKey(makeNote(cp, cOct, '4'), keySignature);
-      const cPc = ((tMidi - cMidi) % 12 + 12) % 12;
+      const cPc = (((tMidi - cMidi) % 12) + 12) % 12;
       if (DISSONANT_PC.has(cPc)) continue;
       const d = Math.abs(base - nn);
-      if (d < bestDist) { bestDist = d; best = base; }
+      if (d < bestDist) {
+        bestDist = d;
+        best = base;
+      }
     }
   }
   return Math.max(-5, Math.min(4, best));
@@ -616,21 +681,27 @@ export function ensureConsonance(
  * 조정 불가(음역 밖, treble 충돌)이면 원본 반환.
  */
 export function fixParallelPerfect(
-  nn: number, note: ScoreNote, durLabel: NoteDuration, off: number,
+  nn: number,
+  note: ScoreNote,
+  durLabel: NoteDuration,
+  off: number,
   prevBMidi: number | undefined,
   trebleAttackMap: Map<number, number>,
-  scale: PitchName[], bassBase: number,
+  scale: PitchName[],
+  bassBase: number,
   keySignature: string,
 ): ScoreNote {
   if (prevBMidi === undefined) return note;
   const curTMidi = trebleAttackMap.get(off);
   if (curTMidi === undefined) return note;
   let prevTMidi: number | undefined;
-  for (const [o, m] of trebleAttackMap) { if (o < off) prevTMidi = m; }
+  for (const [o, m] of trebleAttackMap) {
+    if (o < off) prevTMidi = m;
+  }
   if (prevTMidi === undefined) return note;
   const curBMidi = noteToMidiWithKey(note, keySignature);
-  const prevInt = ((prevTMidi - prevBMidi) % 12 + 12) % 12;
-  const curInt  = ((curTMidi  - curBMidi)  % 12 + 12) % 12;
+  const prevInt = (((prevTMidi - prevBMidi) % 12) + 12) % 12;
+  const curInt = (((curTMidi - curBMidi) % 12) + 12) % 12;
   if (!((prevInt === 0 || prevInt === 7) && prevInt === curInt)) return note;
   // 병진행 완전음정 감지 — treble 반대 방향으로 1 scale step 이동
   const trebleDir = curTMidi > prevTMidi ? 1 : -1;
@@ -648,11 +719,15 @@ export function fixParallelPerfect(
  * 강박 음은 건드리지 않는다.
  */
 export function applyImperfectConsonanceRatio(
-  bassNotes: ScoreNote[], startIdx: number,
-  offsets: number[], durations: number[],
+  bassNotes: ScoreNote[],
+  startIdx: number,
+  offsets: number[],
+  durations: number[],
   trebleAttackMap: Map<number, number>,
-  scale: PitchName[], bassBase: number,
-  keySignature: string, bTones: number[],
+  scale: PitchName[],
+  bassBase: number,
+  keySignature: string,
+  bTones: number[],
   targetRatio: number,
   strongBeats: Set<number>,
 ): void {
@@ -660,13 +735,17 @@ export function applyImperfectConsonanceRatio(
   if (count === 0) return;
 
   // 현재 비율 계산
-  let totalVertical = 0, imperfectCount = 0;
+  let totalVertical = 0,
+    imperfectCount = 0;
   const pcs: number[] = [];
   for (let i = 0; i < count; i++) {
     const tMidi = trebleAttackMap.get(offsets[i]);
-    if (tMidi === undefined) { pcs.push(-1); continue; }
+    if (tMidi === undefined) {
+      pcs.push(-1);
+      continue;
+    }
     const bMidi = noteToMidiWithKey(bassNotes[startIdx + i], keySignature);
-    const pc = ((tMidi - bMidi) % 12 + 12) % 12;
+    const pc = (((tMidi - bMidi) % 12) + 12) % 12;
     pcs.push(pc);
     totalVertical++;
     if (IMPERFECT_CONSONANT_PC.has(pc)) imperfectCount++;
@@ -692,7 +771,6 @@ export function applyImperfectConsonanceRatio(
 
     // bTones 중 imperfect consonance가 되는 가장 가까운 후보 탐색
     const origNote = bassNotes[startIdx + idx];
-    const origBnn = -99; // 역산 불필요 — bTones에서 직접 탐색
     let bestNote: ScoreNote | undefined;
     let bestDist = Infinity;
     for (const t of bTones) {
@@ -702,14 +780,16 @@ export function applyImperfectConsonanceRatio(
         const cOct = Math.max(2, Math.min(3, co));
         const cand = makeNote(cp, cOct, origNote.duration);
         const cMidi = noteToMidiWithKey(cand, keySignature);
-        const cPc = ((tMidi - cMidi) % 12 + 12) % 12;
+        const cPc = (((tMidi - cMidi) % 12) + 12) % 12;
         if (!IMPERFECT_CONSONANT_PC.has(cPc)) continue;
         const origMidi = noteToMidiWithKey(origNote, keySignature);
         const d = Math.abs(cMidi - origMidi);
-        if (d < bestDist) { bestDist = d; bestNote = cand; }
+        if (d < bestDist) {
+          bestDist = d;
+          bestNote = cand;
+        }
       }
     }
     if (bestNote) bassNotes[startIdx + idx] = bestNote;
   }
 }
-

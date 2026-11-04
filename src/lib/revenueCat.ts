@@ -22,9 +22,7 @@ export const DEFAULT_MONTHLY_PRICE_STRING = '1,500원';
 
 /** RevenueCat SDK 초기화. 앱 시작 시 1회 호출. */
 export async function initRevenueCat(userId?: string): Promise<void> {
-  const apiKey = Platform.OS === 'ios'
-    ? REVENUECAT_API_KEY_IOS
-    : REVENUECAT_API_KEY_ANDROID;
+  const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
 
   if (__DEV__) {
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);
@@ -51,9 +49,7 @@ export async function invalidateCustomerInfoCache(): Promise<void> {
  * 환불/갱신 등 서버 측 변경이 SDK에 반영되면 자동 호출된다.
  * 반환값은 등록 해제 함수.
  */
-export function addCustomerInfoUpdateListener(
-  listener: CustomerInfoUpdateListener,
-): () => void {
+export function addCustomerInfoUpdateListener(listener: CustomerInfoUpdateListener): () => void {
   Purchases.addCustomerInfoUpdateListener(listener);
   return () => Purchases.removeCustomerInfoUpdateListener(listener);
 }
@@ -67,10 +63,8 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
   return offerings.current.availablePackages;
 }
 
-export function getMonthlyPackage(
-  packages: PurchasesPackage[],
-): PurchasesPackage | undefined {
-  return packages.find(p => p.packageType === 'MONTHLY') ?? packages[0];
+export function getMonthlyPackage(packages: PurchasesPackage[]): PurchasesPackage | undefined {
+  return packages.find((p) => p.packageType === 'MONTHLY') ?? packages[0];
 }
 
 export function getPackagePriceString(pkg?: PurchasesPackage): string {
@@ -83,9 +77,7 @@ export async function getMonthlyPriceString(): Promise<string> {
 }
 
 /** 패키지 구매 */
-export async function purchasePackage(
-  pkg: PurchasesPackage,
-): Promise<CustomerInfo> {
+export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return customerInfo;
 }

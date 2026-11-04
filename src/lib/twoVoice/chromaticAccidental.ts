@@ -17,15 +17,21 @@ import {
 // ────────────────────────────────────────────────────────────────
 
 type AccidentalType =
-  | 'SEC_DOM'    // 부속화음 (Secondary Dominant) — 이끔음
-  | 'MODAL_MIX'  // 동주조 차용 (Modal Mixture)
-  | 'CHR_PASS'   // 반음계 경과음 (Chromatic Passing)
-  | 'CHR_NEIGH'  // 반음계 보조음 (Chromatic Neighbor)
-  | 'STR_M6'     // 구조적 ♮6 (단조 전용)
-  | 'STR_b7';    // 구조적 b7 (단조 전용)
+  | 'SEC_DOM' // 부속화음 (Secondary Dominant) — 이끔음
+  | 'MODAL_MIX' // 동주조 차용 (Modal Mixture)
+  | 'CHR_PASS' // 반음계 경과음 (Chromatic Passing)
+  | 'CHR_NEIGH' // 반음계 보조음 (Chromatic Neighbor)
+  | 'STR_M6' // 구조적 ♮6 (단조 전용)
+  | 'STR_b7'; // 구조적 b7 (단조 전용)
 
 const PITCH_SEMI: Record<string, number> = {
-  C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11,
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
 };
 
 /** 장조 스케일 반음 오프셋 */
@@ -35,10 +41,36 @@ const HARM_MINOR_OFFSETS = [0, 2, 3, 5, 7, 8, 11];
 
 /** 조성 → 으뜸음 피치클래스 */
 const KEY_ROOT_PC: Record<string, number> = {
-  'C': 0, 'G': 7, 'D': 2, 'A': 9, 'E': 4, 'B': 11, 'F#': 6, 'C#': 1,
-  'F': 5, 'Bb': 10, 'Eb': 3, 'Ab': 8, 'Db': 1, 'Gb': 6, 'Cb': 11,
-  'Am': 9, 'Em': 4, 'Bm': 11, 'F#m': 6, 'C#m': 1, 'G#m': 8, 'D#m': 3, 'A#m': 10,
-  'Dm': 2, 'Gm': 7, 'Cm': 0, 'Fm': 5, 'Bbm': 10, 'Ebm': 3, 'Abm': 8,
+  C: 0,
+  G: 7,
+  D: 2,
+  A: 9,
+  E: 4,
+  B: 11,
+  'F#': 6,
+  'C#': 1,
+  F: 5,
+  Bb: 10,
+  Eb: 3,
+  Ab: 8,
+  Db: 1,
+  Gb: 6,
+  Cb: 11,
+  Am: 9,
+  Em: 4,
+  Bm: 11,
+  'F#m': 6,
+  'C#m': 1,
+  'G#m': 8,
+  'D#m': 3,
+  'A#m': 10,
+  Dm: 2,
+  Gm: 7,
+  Cm: 0,
+  Fm: 5,
+  Bbm: 10,
+  Ebm: 3,
+  Abm: 8,
 };
 
 /**
@@ -66,8 +98,8 @@ interface Candidate {
   accidental: Accidental;
   altMidi: number;
   direction: 'up' | 'down';
-  compatBass: number[];   // 어울리는 베이스 피치클래스 목록
-  priority: number;       // 1(최고) ~ 5(최저)
+  compatBass: number[]; // 어울리는 베이스 피치클래스 목록
+  priority: number; // 1(최고) ~ 5(최저)
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -81,7 +113,7 @@ function getRootPC(key: string): number {
 function getScalePCSet(key: string, mode: 'major' | 'harmonic_minor'): Set<number> {
   const r = getRootPC(key);
   const offs = mode === 'major' ? MAJOR_OFFSETS : HARM_MINOR_OFFSETS;
-  return new Set(offs.map(o => (r + o) % 12));
+  return new Set(offs.map((o) => (r + o) % 12));
 }
 
 /**
@@ -141,8 +173,8 @@ function isValidAlteration(
   // 변화 후 PC
   const altPC = acc === '#' ? (base + 1) % 12 : acc === 'b' ? (base + 11) % 12 : base % 12;
 
-  if (altPC === origPC) return false;     // 변화 없음
-  if (scalePCs.has(altPC)) return false;  // 여전히 스케일 음
+  if (altPC === origPC) return false; // 변화 없음
+  if (scalePCs.has(altPC)) return false; // 여전히 스케일 음
   return true;
 }
 
@@ -166,10 +198,10 @@ function failsHardConstraint(
   type: AccidentalType,
 ): boolean {
   if (bassMidi > 0) {
-    const iv = ((altMidi - bassMidi) % 12 + 12) % 12;
-    if (iv === 1 || iv === 11) return true;               // RULE_H1: m2 / M7
-    if (Math.abs(altMidi - bassMidi) === 13) return true;  // RULE_H2: m9
-    if (iv === 6 && type !== 'SEC_DOM') return true;       // 트라이톤 (비부속화음)
+    const iv = (((altMidi - bassMidi) % 12) + 12) % 12;
+    if (iv === 1 || iv === 11) return true; // RULE_H1: m2 / M7
+    if (Math.abs(altMidi - bassMidi) === 13) return true; // RULE_H2: m9
+    if (iv === 6 && type !== 'SEC_DOM') return true; // 트라이톤 (비부속화음)
   }
   // RULE_H3: 해결(반음 상행/하행) 없이 도약 금지
   if (nextMidi !== null && nextMidi > 0) {
@@ -179,9 +211,11 @@ function failsHardConstraint(
   if (prevMidi !== null && prevMidi > 0) {
     if (Math.abs(altMidi - prevMidi) === 6) return true;
   }
-  // RULE_H6: 이전 음과 단2도(1반음) 진입 금지 — 불협화 충돌
-  if (prevMidi !== null && prevMidi > 0) {
-    if (Math.abs(altMidi - prevMidi) === 1) return true;
+  // RULE_H6: 이전 음과 단2도(1반음) 진입은 반음계 경과/보조음(다음 음으로 2반음 이내 해결)일 때만 허용
+  // (도→도#→레, 미→레#→미 같은 반음계 진행은 청음 시험 임시표의 가장 흔한 형태)
+  if (prevMidi !== null && prevMidi > 0 && Math.abs(altMidi - prevMidi) === 1) {
+    const resolvesByStep = nextMidi !== null && nextMidi > 0 && Math.abs(altMidi - nextMidi) <= 2;
+    if (!resolvesByStep) return true;
   }
   // RULE_H7: 이전 음과 큰 도약(>7반음) 진입 금지
   if (prevMidi !== null && prevMidi > 0) {
@@ -214,9 +248,12 @@ function classifyCandidates(
 
   // ── SEC_DOM: 이끔음 (다음 음의 반음 아래) ──────────────────
   // 공식: 임시표음 = 해결 대상 - 1반음, 해결 방향 = 반음 상행
-  if (nextPC >= 0 && ((nextPC - altPC + 12) % 12) === 1 && scalePCs.has(nextPC)) {
+  if (nextPC >= 0 && (nextPC - altPC + 12) % 12 === 1 && scalePCs.has(nextPC)) {
     out.push({
-      type: 'SEC_DOM', accidental: acc, altMidi: altM, direction: 'up',
+      type: 'SEC_DOM',
+      accidental: acc,
+      altMidi: altM,
+      direction: 'up',
       // 적합 베이스: 도미넌트 근음(5도 아래), 해결 대상 자체, 장3도 아래
       compatBass: [(nextPC + 5) % 12, nextPC, (nextPC + 8) % 12],
       priority: 1,
@@ -225,12 +262,15 @@ function classifyCandidates(
 
   // ── SEC_DOM (V/IV): 장조 b7 하행 해결 — b7→6 (예: Bb→A in C major) ──
   // §3.1 SD_IV: altPC가 nextPC보다 1반음 위 + altPC == (root+10)%12
-  if (nextPC >= 0 && ((altPC - nextPC + 12) % 12) === 1 && scalePCs.has(nextPC)) {
+  if (nextPC >= 0 && (altPC - nextPC + 12) % 12 === 1 && scalePCs.has(nextPC)) {
     const b7ofKey = (r + 10) % 12;
     if (altPC === b7ofKey) {
       out.push({
-        type: 'SEC_DOM', accidental: acc, altMidi: altM, direction: 'down',
-        compatBass: [r, (r + 5) % 12, b7ofKey],  // I, IV, bVII
+        type: 'SEC_DOM',
+        accidental: acc,
+        altMidi: altM,
+        direction: 'down',
+        compatBass: [r, (r + 5) % 12, b7ofKey], // I, IV, bVII
         priority: 1,
       });
     }
@@ -243,7 +283,10 @@ function classifyCandidates(
     const lead = (r + 11) % 12;
     if (altPC === nat6 && nextPC === lead) {
       out.push({
-        type: 'STR_M6', accidental: acc, altMidi: altM, direction: 'up',
+        type: 'STR_M6',
+        accidental: acc,
+        altMidi: altM,
+        direction: 'up',
         compatBass: [(r + 5) % 12, (r + 2) % 12, nat6],
         priority: 2,
       });
@@ -258,7 +301,10 @@ function classifyCandidates(
     const fifth = (r + 7) % 12;
     if (altPC === b7 && (nextPC === b6 || nextPC === fifth)) {
       out.push({
-        type: 'STR_b7', accidental: acc, altMidi: altM, direction: 'down',
+        type: 'STR_b7',
+        accidental: acc,
+        altMidi: altM,
+        direction: 'down',
         compatBass: [(r + 5) % 12, b7, (r + 3) % 12],
         priority: 3,
       });
@@ -269,20 +315,24 @@ function classifyCandidates(
   if (mode === 'major') {
     // 장조 → 병행단조 차용: b3, b6, b7, b2(나폴리)
     const mixDefs: { pc: number; bass: number[]; prio: number }[] = [
-      { pc: (r + 3) % 12,  bass: [r, (r + 5) % 12, (r + 8) % 12], prio: 3 },             // b3
-      { pc: (r + 8) % 12,  bass: [(r + 5) % 12, (r + 8) % 12, (r + 2) % 12], prio: 2 },  // b6 ★★★★★
-      { pc: (r + 10) % 12, bass: [(r + 5) % 12, (r + 10) % 12, r], prio: 3 },             // b7
-      { pc: (r + 1) % 12,  bass: [(r + 1) % 12, (r + 5) % 12, (r + 8) % 12], prio: 5 },  // b2 (나폴리)
+      { pc: (r + 3) % 12, bass: [r, (r + 5) % 12, (r + 8) % 12], prio: 3 }, // b3
+      { pc: (r + 8) % 12, bass: [(r + 5) % 12, (r + 8) % 12, (r + 2) % 12], prio: 2 }, // b6 ★★★★★
+      { pc: (r + 10) % 12, bass: [(r + 5) % 12, (r + 10) % 12, r], prio: 3 }, // b7
+      { pc: (r + 1) % 12, bass: [(r + 1) % 12, (r + 5) % 12, (r + 8) % 12], prio: 5 }, // b2 (나폴리)
     ];
     for (const m of mixDefs) {
       if (altPC !== m.pc) continue;
       if (nextMidi === null || nextMidi <= 0) continue;
-      // 해결: 하행 1~3반음
+      // 해결: 하행 반음·온음 (3도 도약 해결은 시험 선율에서 쓰이지 않음)
       const diff = altM - nextMidi;
-      if (diff >= 1 && diff <= 3) {
+      if (diff >= 1 && diff <= 2) {
         out.push({
-          type: 'MODAL_MIX', accidental: acc, altMidi: altM, direction: 'down',
-          compatBass: m.bass, priority: m.prio,
+          type: 'MODAL_MIX',
+          accidental: acc,
+          altMidi: altM,
+          direction: 'down',
+          compatBass: m.bass,
+          priority: m.prio,
         });
       }
     }
@@ -291,8 +341,12 @@ function classifyCandidates(
     const nat3 = (r + 4) % 12;
     if (altPC === nat3 && !scalePCs.has(nat3)) {
       out.push({
-        type: 'MODAL_MIX', accidental: acc, altMidi: altM, direction: 'up',
-        compatBass: [r, (r + 7) % 12, nat3], priority: 2,
+        type: 'MODAL_MIX',
+        accidental: acc,
+        altMidi: altM,
+        direction: 'up',
+        compatBass: [r, (r + 7) % 12, nat3],
+        priority: 2,
       });
     }
 
@@ -304,9 +358,11 @@ function classifyCandidates(
       const fourth = (r + 5) % 12;
       if (nextPC === lead || nextPC === fifth || nextPC === fourth) {
         out.push({
-          type: 'MODAL_MIX', accidental: acc, altMidi: altM,
+          type: 'MODAL_MIX',
+          accidental: acc,
+          altMidi: altM,
           direction: nextMidi !== null && nextMidi > altM ? 'up' : 'down',
-          compatBass: [(r + 5) % 12, (r + 2) % 12, mmNat6],  // IV, ii, ♮6
+          compatBass: [(r + 5) % 12, (r + 2) % 12, mmNat6], // IV, ii, ♮6
           priority: 3,
         });
       }
@@ -320,8 +376,11 @@ function classifyCandidates(
       const fourth2 = (r + 5) % 12;
       if (nextPC === b6 || nextPC === fifth2 || nextPC === fourth2) {
         out.push({
-          type: 'MODAL_MIX', accidental: acc, altMidi: altM, direction: 'down',
-          compatBass: [(r + 5) % 12, mmB7, (r + 3) % 12],  // IV, bVII, bIII
+          type: 'MODAL_MIX',
+          accidental: acc,
+          altMidi: altM,
+          direction: 'down',
+          compatBass: [(r + 5) % 12, mmB7, (r + 3) % 12], // IV, bVII, bIII
           priority: 3,
         });
       }
@@ -337,9 +396,12 @@ function classifyCandidates(
       const expected = prevMidi + (span > 0 ? 1 : -1);
       if (altM === expected) {
         out.push({
-          type: 'CHR_PASS', accidental: acc, altMidi: altM,
+          type: 'CHR_PASS',
+          accidental: acc,
+          altMidi: altM,
           direction: span > 0 ? 'up' : 'down',
-          compatBass: [prevPC], priority: 4,
+          compatBass: [prevPC],
+          priority: 4,
         });
       }
     }
@@ -353,7 +415,9 @@ function classifyCandidates(
         const b7PC = (r + 10) % 12;
         if (altPC === nat6 || altPC === b7PC) {
           out.push({
-            type: 'CHR_PASS', accidental: acc, altMidi: altM,
+            type: 'CHR_PASS',
+            accidental: acc,
+            altMidi: altM,
             direction: span > 0 ? 'up' : 'down',
             compatBass: [prevPC, (r + 5) % 12],
             // ♮6 경과음 최우선 (AUG2_RULE_1), b7은 보조적 (AUG2_RULE_2)
@@ -365,7 +429,13 @@ function classifyCandidates(
   }
 
   // ── CHR_NEIGH: 반음계 보조음 (prev == next, ±1반음) ────────
-  if (prevMidi !== null && prevMidi > 0 && nextMidi !== null && nextMidi > 0 && prevMidi === nextMidi) {
+  if (
+    prevMidi !== null &&
+    prevMidi > 0 &&
+    nextMidi !== null &&
+    nextMidi > 0 &&
+    prevMidi === nextMidi
+  ) {
     const diff = altM - prevMidi;
     if (Math.abs(diff) === 1) {
       // 단조 특수: b6 상행 보조음(♮6) 또는 7(이끔음) 하행 보조음(b7)은 우선순위 높임
@@ -373,13 +443,16 @@ function classifyCandidates(
       if (mode === 'harmonic_minor') {
         const b6 = (r + 8) % 12;
         const leadPC = (r + 11) % 12;
-        if (prevPC === b6 && diff === 1) prio = 3;    // b6→♮6→b6
+        if (prevPC === b6 && diff === 1) prio = 3; // b6→♮6→b6
         if (prevPC === leadPC && diff === -1) prio = 3; // 7→b7→7
       }
       out.push({
-        type: 'CHR_NEIGH', accidental: acc, altMidi: altM,
+        type: 'CHR_NEIGH',
+        accidental: acc,
+        altMidi: altM,
         direction: diff > 0 ? 'up' : 'down',
-        compatBass: [prevPC], priority: prio,
+        compatBass: [prevPC],
+        priority: prio,
       });
     }
   }
@@ -425,7 +498,7 @@ function computeSoftScore(
     if (c.compatBass.includes(bassPC)) {
       s += 30; // 추천 베이스 일치
     } else {
-      const iv = ((c.altMidi - bassMidi) % 12 + 12) % 12;
+      const iv = (((c.altMidi - bassMidi) % 12) + 12) % 12;
       if (SAFE_INTERVALS.has(iv)) s += 10;
       else if (CAUTION_INTERVALS.has(iv)) {
         // §2.3: 장2도(2반음)는 경과음 맥락에서만 허용 — CHR_PASS 외 큰 감점
@@ -482,8 +555,7 @@ export function applyMelodyAccidentals(
 
   // ── 예산 계산 (최소 3 → 2마디 분포 보장) ──
   const budgetRange: [number, number] = [3, 5];
-  let budget = budgetRange[0] +
-    Math.floor(Math.random() * (budgetRange[1] - budgetRange[0] + 1));
+  let budget = budgetRange[0] + Math.floor(Math.random() * (budgetRange[1] - budgetRange[0] + 1));
 
   // ── 노트 위치 계산 (마디 인덱스 + 마디 내 16분음표 위치) ──
   const positions: { bar: number; pos: number }[] = [];
@@ -559,9 +631,14 @@ export function applyMelodyAccidentals(
       if (!isValidAlteration(note.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
 
       const candidates = classifyCandidates(
-        note.pitch, note.octave, acc,
-        prevMidi, nextMidi,
-        keySignature, mode, scalePCs,
+        note.pitch,
+        note.octave,
+        acc,
+        prevMidi,
+        nextMidi,
+        keySignature,
+        mode,
+        scalePCs,
       );
 
       for (const c of candidates) {
@@ -577,9 +654,7 @@ export function applyMelodyAccidentals(
 
         // 소프트 스코어링
         const resolved = nextMidi !== null && nextMidi > 0 && Math.abs(c.altMidi - nextMidi) <= 2;
-        const score = computeSoftScore(
-          c, bassMidi, isStrong, dur16, prevDur16, mAccCnt, resolved,
-        );
+        const score = computeSoftScore(c, bassMidi, isStrong, dur16, prevDur16, mAccCnt, resolved);
 
         if (score > bestScore) {
           bestScore = score;
@@ -602,7 +677,7 @@ export function applyMelodyAccidentals(
   if (coveredBars.size < MIN_ACC_BARS && budget > 0) {
     const RELAXED_THRESHOLD = Math.floor(SCORE_THRESHOLD * 0.3);
     // 아직 임시표가 없는 마디의 적격 음만 대상
-    const uncoveredEligible = eligible.filter(idx => {
+    const uncoveredEligible = eligible.filter((idx) => {
       const pp = positions[idx];
       if (!pp || coveredBars.has(pp.bar)) return false;
       if (notes[idx].accidental) return false;
@@ -638,8 +713,14 @@ export function applyMelodyAccidentals(
       for (const acc of ['#', 'b', 'n'] as Accidental[]) {
         if (!isValidAlteration(note.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
         const candidates = classifyCandidates(
-          note.pitch, note.octave, acc,
-          prevMidi, nextMidi, keySignature, mode, scalePCs,
+          note.pitch,
+          note.octave,
+          acc,
+          prevMidi,
+          nextMidi,
+          keySignature,
+          mode,
+          scalePCs,
         );
         for (const c of candidates) {
           if (!allowed.has(c.type)) continue;
@@ -649,7 +730,15 @@ export function applyMelodyAccidentals(
           }
           if (failsHardConstraint(c.altMidi, bassMidi, prevMidi, nextMidi, c.type)) continue;
           const resolved = nextMidi !== null && nextMidi > 0 && Math.abs(c.altMidi - nextMidi) <= 2;
-          const score = computeSoftScore(c, bassMidi, isStrong, dur16, prevDur16, mAccCnt, resolved);
+          const score = computeSoftScore(
+            c,
+            bassMidi,
+            isStrong,
+            dur16,
+            prevDur16,
+            mAccCnt,
+            resolved,
+          );
           if (score > bestScore2) {
             bestScore2 = score;
             bestCand2 = c;
@@ -735,14 +824,19 @@ export function ensureMinAccidentalBars(
       if (!isValidAlteration(n.pitch, acc, keySignature, mode, scale, scalePCs)) continue;
       const altMidi = getAlteredMidi(n.pitch, n.octave, acc);
       // cleanup-safe 조건: 삽입 후 cleanup에서 제거되지 않을 것
-      let safe = true;
-      if (prevMidi > 0) {
+      // + 해결 조건: #은 반음·온음 상행, b은 반음·온음 하행으로 다음 음에 해결해야 한다
+      //   (시→솔#→시 같은 3도 도약 해결은 시험 선율에서 쓰이지 않음)
+      let safe = nextMidi > 0;
+      if (safe && prevMidi > 0) {
+        // 강제 삽입은 순차(반음·온음) 진입만 — 반음계 경과/보조음 형태로 한정
         const ed = Math.abs(altMidi - prevMidi);
-        if (ed === 1 || ed === 6 || ed > 7) safe = false;
+        if (ed > 2) safe = false;
+        if (ed === 1 && Math.abs(altMidi - nextMidi) > 2) safe = false;
       }
-      if (safe && nextMidi > 0) {
-        const xd = Math.abs(altMidi - nextMidi);
-        if (xd > 3 || xd === 6) safe = false;
+      if (safe) {
+        const step = nextMidi - altMidi;
+        if (acc === '#' && !(step === 1 || step === 2)) safe = false;
+        if (acc === 'b' && !(step === -1 || step === -2)) safe = false;
       }
       if (!safe) continue;
       notes[i] = { ...notes[i], accidental: acc };

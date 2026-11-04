@@ -84,9 +84,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
             const withCurrent = tuplet && !valid.includes(tuplet) ? [...valid, tuplet] : valid;
             const options: [TupletType, string][] = [
               ['', '없음'],
-              ...withCurrent.map(
-                (t) => [t, TUPLET_LABELS[t] || `${t}연`] as [TupletType, string],
-              ),
+              ...withCurrent.map((t) => [t, TUPLET_LABELS[t] || `${t}연`] as [TupletType, string]),
             ];
             return options.map(([v, l]) => (
               <TouchableOpacity
@@ -104,10 +102,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
                 ]}
               >
                 <Text
-                  style={[
-                    styles.subMenuChipText,
-                    { color: tuplet === v ? '#ffffff' : '#1e293b' },
-                  ]}
+                  style={[styles.subMenuChipText, { color: tuplet === v ? '#ffffff' : '#1e293b' }]}
                 >
                   {l}
                 </Text>
@@ -191,18 +186,12 @@ const NotePalette: React.FC<NotePaletteProps> = ({
         <View style={styles.divider} />
 
         <TouchableOpacity
-          onPress={() =>
-            setMobileSubMenu(mobileSubMenu === 'accidental' ? null : 'accidental')
-          }
+          onPress={() => setMobileSubMenu(mobileSubMenu === 'accidental' ? null : 'accidental')}
           style={[
             styles.optionChip,
             {
               backgroundColor:
-                mobileSubMenu === 'accidental'
-                  ? '#ef4444'
-                  : accidental
-                    ? '#fef2f2'
-                    : '#f8fafc',
+                mobileSubMenu === 'accidental' ? '#ef4444' : accidental ? '#fef2f2' : '#f8fafc',
               borderWidth: mobileSubMenu === 'accidental' || accidental ? 0 : 1,
             },
           ]}
@@ -211,12 +200,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
             style={[
               styles.optionChipText,
               {
-                color:
-                  mobileSubMenu === 'accidental'
-                    ? '#fff'
-                    : accidental
-                      ? '#ef4444'
-                      : '#1e293b',
+                color: mobileSubMenu === 'accidental' ? '#fff' : accidental ? '#ef4444' : '#1e293b',
               },
             ]}
           >
@@ -230,13 +214,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
           </Text>
           <ChevronDown
             size={9}
-            color={
-              mobileSubMenu === 'accidental'
-                ? '#fff'
-                : accidental
-                  ? '#ef4444'
-                  : '#1e293b'
-            }
+            color={mobileSubMenu === 'accidental' ? '#fff' : accidental ? '#ef4444' : '#1e293b'}
           />
         </TouchableOpacity>
 
@@ -250,29 +228,18 @@ const NotePalette: React.FC<NotePaletteProps> = ({
             },
           ]}
         >
-          <Text
-            style={[
-              styles.optionChipText,
-              { color: tie ? '#fff' : '#1e293b' },
-            ]}
-          >
+          <Text style={[styles.optionChipText, { color: tie ? '#fff' : '#1e293b' }]}>
             Tie{tie ? '\u2713' : ''}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() =>
-            setMobileSubMenu(mobileSubMenu === 'tuplet' ? null : 'tuplet')
-          }
+          onPress={() => setMobileSubMenu(mobileSubMenu === 'tuplet' ? null : 'tuplet')}
           style={[
             styles.optionChip,
             {
               backgroundColor:
-                mobileSubMenu === 'tuplet'
-                  ? '#f59e0b'
-                  : tuplet
-                    ? '#FEF3C7'
-                    : '#f8fafc',
+                mobileSubMenu === 'tuplet' ? '#f59e0b' : tuplet ? '#FEF3C7' : '#f8fafc',
               borderWidth: mobileSubMenu === 'tuplet' || tuplet ? 0 : 1,
             },
           ]}
@@ -281,12 +248,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
             style={[
               styles.optionChipText,
               {
-                color:
-                  mobileSubMenu === 'tuplet'
-                    ? '#fff'
-                    : tuplet
-                      ? '#92400e'
-                      : '#1e293b',
+                color: mobileSubMenu === 'tuplet' ? '#fff' : tuplet ? '#92400e' : '#1e293b',
               },
             ]}
           >
@@ -294,13 +256,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
           </Text>
           <ChevronDown
             size={9}
-            color={
-              mobileSubMenu === 'tuplet'
-                ? '#fff'
-                : tuplet
-                  ? '#92400e'
-                  : '#1e293b'
-            }
+            color={mobileSubMenu === 'tuplet' ? '#fff' : tuplet ? '#92400e' : '#1e293b'}
           />
         </TouchableOpacity>
       </View>
@@ -319,12 +275,7 @@ const NotePalette: React.FC<NotePaletteProps> = ({
               },
             ]}
           >
-            <Text
-              style={[
-                styles.durBtnText,
-                { color: baseDur === d.value ? '#fff' : '#1e293b' },
-              ]}
-            >
+            <Text style={[styles.durBtnText, { color: baseDur === d.value ? '#fff' : '#1e293b' }]}>
               {d.label}
             </Text>
           </TouchableOpacity>
@@ -362,16 +313,11 @@ const NotePalette: React.FC<NotePaletteProps> = ({
               styles.pitchBtn,
               {
                 backgroundColor: PITCH_STYLES[p].bg,
-                borderColor:
-                  selectedNoteObj?.pitch === p
-                    ? '#fbbf24'
-                    : PITCH_STYLES[p].border,
+                borderColor: selectedNoteObj?.pitch === p ? '#fbbf24' : PITCH_STYLES[p].border,
               },
             ]}
           >
-            <Text style={[styles.pitchBtnText, { color: PITCH_STYLES[p].text }]}>
-              {p}
-            </Text>
+            <Text style={[styles.pitchBtnText, { color: PITCH_STYLES[p].text }]}>{p}</Text>
             <Text style={[styles.pitchBtnSubText, { color: PITCH_STYLES[p].text }]}>
               {PITCH_LABELS[p]}
             </Text>
@@ -379,14 +325,9 @@ const NotePalette: React.FC<NotePaletteProps> = ({
         ))}
         <TouchableOpacity
           onPress={() => onAddNote('rest' as PitchName)}
-          style={[
-            styles.pitchBtn,
-            { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
-          ]}
+          style={[styles.pitchBtn, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}
         >
-          <Text style={[styles.pitchBtnText, { color: '#94a3b8', fontSize: 11 }]}>
-            쉼표
-          </Text>
+          <Text style={[styles.pitchBtnText, { color: '#94a3b8', fontSize: 11 }]}>쉼표</Text>
         </TouchableOpacity>
       </View>
     </>

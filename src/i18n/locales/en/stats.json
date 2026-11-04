@@ -3,12 +3,17 @@
   "summary": {
     "streak": "Day Streak",
     "totalSessions": "Total Sessions",
-    "thisWeek": "This Week"
+    "thisWeek": "This Week",
+    "deltaUp": "+{{count}} vs last week",
+    "deltaDown": "−{{count}} vs last week",
+    "deltaSame": "Same as last week"
   },
   "section": {
     "dailyScore": "Daily Average Score",
     "dailyScoreMax": "out of 5 pts",
-    "examStats": "Mock Exam Stats"
+    "examStats": "Mock Exam Stats",
+    "byCategory": "Practice by category",
+    "activeDays": "{{count}} active days in the last 30"
   },
   "exam": {
     "attempts": "Attempts",
@@ -43,5 +48,10 @@
     "detailTitle": "Practice Record — {{month}}/{{day}}",
     "avgRating": "Avg {{rating}} pts",
     "noRecord": "No practice record for this day"
+  },
+  "category": {
+    "summary": "{{count}} sessions · avg {{rating}}",
+    "weak": "Weak spot",
+    "strong": "Strength"
   }
 }

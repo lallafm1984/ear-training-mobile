@@ -12,6 +12,9 @@ export interface AlertButton {
 export interface AlertConfig {
   title: string;
   message?: string;
+  messageAlign?: 'left' | 'center';
+  messageSpacing?: 'default' | 'relaxed';
+  showIcon?: boolean;
   type?: AlertType;
   buttons?: AlertButton[];
 }
@@ -23,7 +26,7 @@ interface AlertContextValue {
 const AlertContext = createContext<AlertContextValue | null>(null);
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
-  const [config,  setConfig]  = useState<AlertConfig | null>(null);
+  const [config, setConfig] = useState<AlertConfig | null>(null);
   const [visible, setVisible] = useState(false);
 
   const showAlert = useCallback((cfg: AlertConfig) => {

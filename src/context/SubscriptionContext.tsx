@@ -1,28 +1,40 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib';
 import { PlanTier, SubscriptionState, PlanLimits, PLAN_LIMITS } from '../types';
 import { useAuth } from './AuthContext';
 import {
-  initRevenueCat, getCustomerInfo,
-  loginRevenueCat, logoutRevenueCat, ENTITLEMENT_ID,
-  invalidateCustomerInfoCache, addCustomerInfoUpdateListener,
+  initRevenueCat,
+  getCustomerInfo,
+  loginRevenueCat,
+  logoutRevenueCat,
+  ENTITLEMENT_ID,
+  invalidateCustomerInfoCache,
+  addCustomerInfoUpdateListener,
 } from '../lib/revenueCat';
 import type { CustomerInfo } from 'react-native-purchases';
-
+import { logger } from '../lib/logger';
 
 // ─────────────────────────────────────────────────────────────
 // Context 타입
 // ─────────────────────────────────────────────────────────────
 
 export interface SubscriptionContextValue {
-  tier:              PlanTier;
-  limits:            PlanLimits;
-  isExpired:         boolean;
-  upgradePlan:       (newTier: PlanTier, durationDays?: number) => Promise<void>;
+  tier: PlanTier;
+  limits: PlanLimits;
+  isExpired: boolean;
+  upgradePlan: (newTier: PlanTier, durationDays?: number) => Promise<void>;
   refreshSubscription: () => Promise<void>;
   subscriptionState: SubscriptionState;
-  loading:           boolean;
+  loading: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -32,7 +44,7 @@ const SubscriptionContext = createContext<SubscriptionContextValue | null>(null)
 // ─────────────────────────────────────────────────────────────
 
 const DEFAULT_STATE: SubscriptionState = {
-  tier:      'free',
+  tier: 'free',
   expiresAt: null,
 };
 
@@ -53,20 +65,22 @@ function deriveSubscriptionFromRc(info: CustomerInfo): SubscriptionState {
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const [subState, setSubState] = useState<SubscriptionState>(DEFAULT_STATE);
-  const [loading,  setLoading]  = useState(true);
+  const [loading, setLoading] = useState(true);
   const [rcReady, setRcReady] = useState(false);
   const userIdRef = useRef<string | null>(null);
 
   // ── RevenueCat 초기화 ─────────────────────────────────────
   useEffect(() => {
-    initRevenueCat().then(() => setRcReady(true)).catch(() => setRcReady(true));
+    initRevenueCat()
+      .then(() => setRcReady(true))
+      .catch(() => setRcReady(true));
   }, []);
 
   // ── 구독 상태를 RC CustomerInfo + DB와 동기화 ─────────────
   // RC가 진실 공급원. DB는 캐시일 뿐이므로 차이가 있으면 DB를 RC에 맞춘다.
   const syncFromCustomerInfo = useCallback((info: CustomerInfo) => {
     const { tier, expiresAt } = deriveSubscriptionFromRc(info);
-    setSubState(prev => {
+    setSubState((prev) => {
       if (prev.tier === tier && prev.expiresAt === expiresAt) return prev;
       return { tier, expiresAt };
     });
@@ -104,10 +118,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         syncFromCustomerInfo(info);
       } catch {
         // RevenueCat 실패 시 DB 기반 폴백
-        let tier = (profile.tier as PlanTier) ?? 'free';
+        const storedTier = profile.tier as string;
+        let tier: PlanTier = storedTier === 'pro' || storedTier === 'premium' ? 'pro' : 'free';
         let expiresAt = profile.subscription_expires_at ?? null;
-
-        if (tier === 'premium' as any) tier = 'pro';
         if (expiresAt && new Date(expiresAt) < new Date()) {
           tier = 'free';
           expiresAt = null;
@@ -126,7 +139,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // 환불/갱신 등 서버 측 변경이 SDK에 반영되면 자동으로 상태/DB가 동기화된다.
   useEffect(() => {
     if (!rcReady) return;
-    const unsubscribe = addCustomerInfoUpdateListener(info => {
+    const unsubscribe = addCustomerInfoUpdateListener((info) => {
       syncFromCustomerInfo(info);
     });
     return unsubscribe;
@@ -152,17 +165,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [rcReady, syncFromCustomerInfo]);
 
   // ── Supabase에 구독 상태 저장 ────────────────────────────
-  const persistToSupabase = useCallback(async (next: SubscriptionState) => {
-    setSubState(next);
-    if (!user) return;
-    await supabase
-      .from('profiles')
-      .update({
-        tier:                    next.tier,
-        subscription_expires_at: next.expiresAt,
-      })
-      .eq('id', user.id);
-  }, [user]);
+  const persistToSupabase = useCallback(
+    async (next: SubscriptionState) => {
+      setSubState(next);
+      if (!user) return;
+      await supabase
+        .from('profiles')
+        .update({
+          tier: next.tier,
+          subscription_expires_at: next.expiresAt,
+        })
+        .eq('id', user.id);
+    },
+    [user],
+  );
 
   // ── RevenueCat에서 구독 상태 재동기화 ─────────────────────
   const refreshSubscription = useCallback(async () => {
@@ -170,10 +186,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // 환불 직후 등 캐시가 stale일 수 있으므로 무효화 후 최신 데이터를 받는다.
       await invalidateCustomerInfoCache().catch(() => {});
       const info = await getCustomerInfo();
-      if (__DEV__) {
-        console.log('[Subscription] entitlements:', JSON.stringify(info.entitlements, null, 2));
-        console.log('[Subscription] activeSubscriptions:', info.activeSubscriptions);
-      }
+      logger.debug('[Subscription] entitlements:', JSON.stringify(info.entitlements, null, 2));
+      logger.debug('[Subscription] activeSubscriptions:', info.activeSubscriptions);
       syncFromCustomerInfo(info);
     } catch {
       // 실패 시 무시
@@ -181,13 +195,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [syncFromCustomerInfo]);
 
   // ── 플랜 업그레이드 ──────────────────────────────────────
-  const upgradePlan = useCallback(async (newTier: PlanTier, durationDays = 30) => {
-    const expiresAt = newTier === 'free'
-      ? null
-      : new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+  const upgradePlan = useCallback(
+    async (newTier: PlanTier, durationDays = 30) => {
+      const expiresAt =
+        newTier === 'free'
+          ? null
+          : new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
-    await persistToSupabase({ tier: newTier, expiresAt });
-  }, [persistToSupabase]);
+      await persistToSupabase({ tier: newTier, expiresAt });
+    },
+    [persistToSupabase],
+  );
 
   // ── 파생값 ──────────────────────────────────────────────
   const isExpired = !!(subState.expiresAt && new Date(subState.expiresAt) < new Date());
@@ -195,15 +213,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const limits = PLAN_LIMITS[effectiveTier];
 
   const value: SubscriptionContextValue = {
-    tier: effectiveTier, limits, isExpired,
-    upgradePlan, refreshSubscription, subscriptionState: subState, loading,
+    tier: effectiveTier,
+    limits,
+    isExpired,
+    upgradePlan,
+    refreshSubscription,
+    subscriptionState: subState,
+    loading,
   };
 
-  return (
-    <SubscriptionContext.Provider value={value}>
-      {children}
-    </SubscriptionContext.Provider>
-  );
+  return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 }
 
 // ─────────────────────────────────────────────────────────────

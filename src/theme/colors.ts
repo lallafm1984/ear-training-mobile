@@ -4,7 +4,7 @@
 
 export const COLORS = {
   // Primary (Indigo)
-  primary50:  '#eef2ff',
+  primary50: '#eef2ff',
   primary100: '#e0e7ff',
   primary200: '#c7d2fe',
   primary300: '#a5b4fc',
@@ -14,7 +14,7 @@ export const COLORS = {
   primary700: '#4338ca',
 
   // Secondary (Amber)
-  amber50:  '#fffbeb',
+  amber50: '#fffbeb',
   amber100: '#fef3c7',
   amber200: '#fde68a',
   amber400: '#fbbf24',
@@ -24,7 +24,7 @@ export const COLORS = {
   amber800: '#92400e',
 
   // Neutral (Slate)
-  slate50:  '#f8fafc',
+  slate50: '#f8fafc',
   slate100: '#f1f5f9',
   slate200: '#e2e8f0',
   slate300: '#cbd5e1',
@@ -36,22 +36,22 @@ export const COLORS = {
   slate900: '#0f172a',
 
   // Semantic
-  success:  '#10b981',
-  error:    '#ef4444',
-  warning:  '#f59e0b',
+  success: '#10b981',
+  error: '#ef4444',
+  warning: '#f59e0b',
 
   // Background
-  bgPrimary:   '#f8fafc',
-  bgCard:      '#ffffff',
-  bgOverlay:   'rgba(0,0,0,0.45)',
+  bgPrimary: '#f8fafc',
+  bgCard: '#ffffff',
+  bgOverlay: 'rgba(0,0,0,0.45)',
 
   // Track colors
-  trackPartPractice: '#6366f1',  // indigo
-  trackComprehensive:'#f59e0b',  // amber
+  trackPartPractice: '#6366f1', // indigo
+  trackComprehensive: '#f59e0b', // amber
 
   // Plan tier
-  tierFree:    '#94a3b8',
-  tierPro:     '#6366f1',
+  tierFree: '#94a3b8',
+  tierPro: '#6366f1',
   tierPremium: '#f59e0b',
 
   white: '#ffffff',
@@ -64,12 +64,15 @@ export const COLORS = {
 
 export type TrackType = 'partPractice' | 'comprehensive';
 
-export const TRACK_COLORS: Record<TrackType, {
-  main: string;
-  bg: string;
-  bgActive: string;
-  text: string;
-}> = {
+export const TRACK_COLORS: Record<
+  TrackType,
+  {
+    main: string;
+    bg: string;
+    bgActive: string;
+    text: string;
+  }
+> = {
   partPractice: {
     main: COLORS.trackPartPractice,
     bg: '#eef2ff',
@@ -90,17 +93,22 @@ export const TRACK_COLORS: Record<TrackType, {
 
 import type { ContentCategory } from '../types/content';
 
-export const CATEGORY_COLORS: Record<ContentCategory, {
-  main: string;
-  bg: string;
-  text: string;
-}> = {
-  melody:   { main: '#6366f1', bg: '#eef2ff', text: '#4338ca' },
+export const CATEGORY_COLORS: Record<
+  ContentCategory,
+  {
+    main: string;
+    bg: string;
+    text: string;
+  }
+> = {
+  melody: { main: '#6366f1', bg: '#eef2ff', text: '#4338ca' },
   barMelody: { main: '#14b8a6', bg: '#f0fdfa', text: '#0f766e' },
-  rhythm:   { main: '#f59e0b', bg: '#fffbeb', text: '#b45309' },
+  rhythm: { main: '#f59e0b', bg: '#fffbeb', text: '#b45309' },
   interval: { main: '#10b981', bg: '#ecfdf5', text: '#065f46' },
-  chord:    { main: '#8b5cf6', bg: '#f5f3ff', text: '#5b21b6' },
+  chord: { main: '#8b5cf6', bg: '#f5f3ff', text: '#5b21b6' },
   progression: { main: '#0f766e', bg: '#ecfdf5', text: '#115e59' },
-  key:      { main: '#ef4444', bg: '#fef2f2', text: '#991b1b' },
+  key: { main: '#ef4444', bg: '#fef2f2', text: '#991b1b' },
   twoVoice: { main: '#0ea5e9', bg: '#f0f9ff', text: '#075985' },
+  scale: { main: '#ec4899', bg: '#fdf2f8', text: '#9d174d' },
+  rhythmTap: { main: '#f97316', bg: '#fff7ed', text: '#9a3412' },
 };

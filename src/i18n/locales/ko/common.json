@@ -39,5 +39,22 @@
     "daysAgo": "{{days}}일 전",
     "weeksAgo": "{{weeks}}주 전"
   },
-  "version": "MelodyGen v1.0.0"
+  "appControl": {
+    "currentBuild": "현재 빌드 {{build}}",
+    "requiredBuild": "필수 빌드 {{build}}",
+    "openingStore": "스토어 여는 중...",
+    "retryButton": "업데이트 확인",
+    "storeOpenError": "Google Play를 열지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
+    "announcementOpenError": "연결된 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요."
+  },
+  "errorBoundary": {
+    "title": "문제가 발생했습니다",
+    "message": "앱에서 예기치 않은 오류가 발생했습니다.\n아래 버튼을 눌러 다시 시도해 주세요.",
+    "retry": "다시 시도"
+  },
+  "version": "MelodyGen v1.0.0",
+  "versionFormat": "MelodyGen v{{version}} (빌드 {{build}})",
+  "badge": {
+    "new": "NEW"
+  }
 }

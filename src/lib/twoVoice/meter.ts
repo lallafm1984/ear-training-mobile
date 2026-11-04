@@ -17,7 +17,7 @@ export function barTotalEighths(timeSig: TimeSignature): number {
 
 /** Compound meters: 6/8, 9/8, 12/8 (♩. beat unit). */
 export function isCompoundMeter(timeSig: TimeSignature): boolean {
-  const [top, bot] = timeSig.split('/').map(s => parseInt(s, 10));
+  const [top, bot] = timeSig.split('/').map((s) => parseInt(s, 10));
   return bot === 8 && top % 3 === 0 && top >= 6;
 }
 

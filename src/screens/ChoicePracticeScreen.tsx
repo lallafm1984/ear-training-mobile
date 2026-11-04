@@ -13,48 +13,82 @@ import {
   X,
   RotateCcw,
   ChevronRight,
+  Lightbulb,
+  Eye,
+  EyeOff,
+  BookOpen,
+  Share2,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
-import { getContentConfig } from '../lib/contentConfig';
 import { generateChoiceQuestion, type ChoiceQuestion } from '../lib/questionGenerator';
 import AbcjsRenderer, { type AbcjsRendererHandle } from '../components/AbcjsRenderer';
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
 import { useSkillProfile } from '../hooks/useSkillProfile';
 import { useSessionContentLog } from '../context';
-import type { ContentCategory, ContentDifficulty, PracticeRecord } from '../types/content';
+import { useWrongNotes } from '../hooks/useWrongNotes';
+import { wrongNoteReviewStore } from '../lib/wrongNoteReviewStore';
+import { useMascotExp } from '../hooks/useMascotExp';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
+import type { PracticeRecord } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ChoicePractice'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
 
 type AnswerState = 'waiting' | 'correct' | 'wrong';
+/** 비교 청취 대상: 정답 소리 / 내가 고른 보기의 소리 */
+type CompareTarget = 'correct' | 'mine';
 
 export default function ChoicePracticeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProp>();
-  const { category, difficulty } = route.params;
+  const { category, difficulty, review = false } = route.params;
   const { addRecord } = usePracticeHistory();
   const { updateStreak, applyEvaluation } = useSkillProfile();
   const { trackContentRun } = useSessionContentLog();
+  const { addWrong, resolve: resolveWrongNote } = useWrongNotes();
+  const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
+  const [sessionWrong, setSessionWrong] = useState(0);
 
-  const { t } = useTranslation(['practice', 'content', 'common']);
-  const config = getContentConfig(category);
+  const layout = useResponsiveLayout();
+  const { t, i18n } = useTranslation(['practice', 'content', 'common', 'wrongNotes', 'share']);
   const colors = CATEGORY_COLORS[category];
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
 
   // 문제 상태
-  const [question, setQuestion] = useState<ChoiceQuestion>(() =>
-    generateChoiceQuestion(category, difficulty),
+  // 복습 모드면 오답노트 큐에서, 아니면 새로 생성
+  const nextQuestion = useCallback(
+    () =>
+      (review ? wrongNoteReviewStore.next() : null) ?? generateChoiceQuestion(category, difficulty),
+    [review, category, difficulty],
   );
+  const [question, setQuestion] = useState<ChoiceQuestion>(nextQuestion);
+  const reviewTotal = review ? wrongNoteReviewStore.total() : 0;
+  const reviewDone = review && wrongNoteReviewStore.remaining() === 0;
+
+  useEffect(() => {
+    return () => {
+      if (review) wrongNoteReviewStore.clear();
+    };
+  }, [review]);
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [showResult, setShowResult] = useState(false);
+
+  // 해설·비교 청취: 숨겨진 렌더러 하나로 정답 소리와 내 답 소리를 번갈아 재생한다.
+  const [playbackAbc, setPlaybackAbc] = useState(question.abcNotation);
+  const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
+  const [showScore, setShowScore] = useState(false);
+  const pendingPlayRef = useRef(false);
 
   useEffect(() => {
     trackContentRun({ contentType: category, difficulty, source: 'choice_practice' });
@@ -84,6 +118,42 @@ export default function ChoicePracticeScreen() {
     return () => clearTimeout(timer);
   }, [question.id]);
 
+  // 새 문제가 오면 비교 청취 상태를 초기화한다.
+  useEffect(() => {
+    setPlaybackAbc(question.abcNotation);
+    setCompareTarget(null);
+    setShowScore(false);
+  }, [question.id, question.abcNotation]);
+
+  // 비교 대상이 바뀌어 렌더러가 새 악보를 받은 뒤 재생한다.
+  useEffect(() => {
+    if (!pendingPlayRef.current) return;
+    pendingPlayRef.current = false;
+    const timer = setTimeout(() => {
+      abcjsRef.current?.togglePlay();
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [playbackAbc]);
+
+  const playCompare = useCallback(
+    (target: CompareTarget) => {
+      const abc =
+        target === 'mine' && selectedChoice
+          ? (question.choiceAbc[selectedChoice] ?? question.abcNotation)
+          : question.abcNotation;
+      setCompareTarget(target);
+      abcjsRef.current?.stopPlay();
+      if (abc === playbackAbc) {
+        // 같은 악보면 처음부터 다시 재생
+        setTimeout(() => abcjsRef.current?.togglePlay(), 120);
+        return;
+      }
+      pendingPlayRef.current = true;
+      setPlaybackAbc(abc);
+    },
+    [playbackAbc, question, selectedChoice],
+  );
+
   // 화면 벗어날 때 오디오 정지
   useFocusEffect(
     useCallback(() => {
@@ -109,6 +179,14 @@ export default function ChoicePracticeScreen() {
         total: prev.total + 1,
       }));
 
+      // 오답노트: 틀리면 저장(또는 횟수 증가), 복습에서 맞히면 해결
+      if (isCorrect) {
+        if (review) void resolveWrongNote(question.id);
+      } else {
+        setSessionWrong((n) => n + 1);
+        void addWrong(question, choice, 'practice');
+      }
+
       if (!isCorrect) {
         // 틀렸을 때 흔들기 애니메이션
         Animated.sequence([
@@ -119,7 +197,7 @@ export default function ChoicePracticeScreen() {
         ]).start();
       }
     },
-    [answerState, question.correctAnswer, shakeAnim],
+    [answerState, question, review, addWrong, resolveWrongNote, shakeAnim],
   );
 
   const handleNext = useCallback(() => {
@@ -132,7 +210,7 @@ export default function ChoicePracticeScreen() {
       duration: 150,
       useNativeDriver: true,
     }).start(() => {
-      setQuestion(generateChoiceQuestion(category, difficulty));
+      setQuestion(nextQuestion());
       setAnswerState('waiting');
       setSelectedChoice(null);
       Animated.timing(fadeAnim, {
@@ -141,7 +219,7 @@ export default function ChoicePracticeScreen() {
         useNativeDriver: true,
       }).start();
     });
-  }, [category, difficulty, fadeAnim]);
+  }, [nextQuestion, fadeAnim, stopAudio]);
 
   const handleFinish = useCallback(async () => {
     stopAudio();
@@ -212,6 +290,7 @@ export default function ChoicePracticeScreen() {
               style={[styles.resultBtn, { backgroundColor: colors.main }]}
               onPress={() => {
                 setStats({ correct: 0, total: 0 });
+                setSessionWrong(0);
                 setShowResult(false);
                 setAnswerState('waiting');
                 setSelectedChoice(null);
@@ -223,16 +302,56 @@ export default function ChoicePracticeScreen() {
               <Text style={styles.resultBtnText}>{t('practice:choice.retryPractice')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.resultBtn, { backgroundColor: COLORS.slate200 }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
-                {t('common:button.goBack')}
-              </Text>
-            </TouchableOpacity>
+            {sessionWrong > 0 && (
+              <TouchableOpacity
+                style={[styles.resultBtn, { backgroundColor: COLORS.primary50 }]}
+                onPress={() => navigation.navigate('WrongNotes', { category })}
+              >
+                <BookOpen size={18} color={COLORS.primary600} />
+                <Text style={[styles.resultBtnText, { color: COLORS.primary600 }]}>
+                  {t('wrongNotes:result.viewNotes', { count: sessionWrong })}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.resultRow}>
+              <TouchableOpacity
+                style={[styles.resultBtn, styles.resultHalf, { backgroundColor: COLORS.slate200 }]}
+                onPress={() =>
+                  setShareData({
+                    kind: 'practice',
+                    title: t('share:kind.practice'),
+                    subtitle: `${t('content:category.' + category + '.name')} · ${diffLabel}`,
+                    headline: `${pct}%`,
+                    headlineLabel: t('share:stat.accuracy'),
+                    stats: [
+                      { label: t('share:stat.correct'), value: `${stats.correct}/${stats.total}` },
+                      { label: t('share:stat.questions'), value: `${stats.total}` },
+                    ],
+                    accent: colors.main,
+                    date: new Date().toLocaleDateString(i18n.language),
+                    mascotLevel,
+                    happy: pct >= 60,
+                  })
+                }
+              >
+                <Share2 size={16} color={COLORS.slate700} />
+                <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
+                  {t('share:button')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.resultBtn, styles.resultHalf, { backgroundColor: COLORS.slate200 }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={[styles.resultBtnText, { color: COLORS.slate700 }]}>
+                  {t('common:button.goBack')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+        <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
       </SafeAreaView>
     );
   }
@@ -242,14 +361,33 @@ export default function ChoicePracticeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color={colors.main} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.main }]}>
-            {t('content:category.' + category + '.name')}
+            {review ? t('wrongNotes:review.title') : t('content:category.' + category + '.name')}
           </Text>
-          <Text style={styles.headerDesc}>{diffLabel}</Text>
+          <Text style={styles.headerDesc}>
+            {review
+              ? `${t('content:category.' + category + '.name')} · ${t(
+                  'wrongNotes:review.progress',
+                  {
+                    current: Math.min(
+                      stats.total + (answerState === 'waiting' ? 1 : 0),
+                      reviewTotal,
+                    ),
+                    total: reviewTotal,
+                  },
+                )}`
+              : diffLabel}
+          </Text>
         </View>
         <View style={styles.statsChip}>
           <Text style={styles.statsText}>
@@ -260,7 +398,7 @@ export default function ChoicePracticeScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.questionArea, { opacity: fadeAnim }]}>
@@ -281,6 +419,10 @@ export default function ChoicePracticeScreen() {
               ]}
               onPress={handlePlay}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPlaying ? t('practice:choice.playing') : t('practice:choice.tapToPlay')
+              }
             >
               {isPlaying ? <VolumeX size={28} color="#fff" /> : <Volume2 size={28} color="#fff" />}
             </TouchableOpacity>
@@ -292,7 +434,7 @@ export default function ChoicePracticeScreen() {
           <View style={styles.hiddenRenderer}>
             <AbcjsRenderer
               ref={abcjsRef}
-              abcString={question.abcNotation}
+              abcString={playbackAbc}
               hideNotes
               tempo={80}
               isPlaying={isPlaying}
@@ -349,22 +491,127 @@ export default function ChoicePracticeScreen() {
               </TouchableOpacity>
             ))}
           </Animated.View>
+
+          {/* 해설 + 비교 청취 */}
+          {answerState !== 'waiting' && (
+            <View style={[styles.explainCard, { borderColor: colors.main + '30' }]}>
+              <View style={styles.explainHeader}>
+                <Lightbulb size={16} color={colors.main} />
+                <Text style={[styles.explainTitle, { color: colors.main }]}>
+                  {t('practice:choice.explainTitle')}
+                </Text>
+              </View>
+              <Text style={styles.explainAnswer}>{question.correctAnswer}</Text>
+              <Text style={styles.explainText}>{question.explanation}</Text>
+              {answerState === 'wrong' && (
+                <Text style={styles.savedHint}>{t('wrongNotes:choice.saved')}</Text>
+              )}
+
+              <View style={styles.compareRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.compareBtn,
+                    compareTarget === 'correct' && isPlaying
+                      ? { backgroundColor: '#10b981', borderColor: '#10b981' }
+                      : { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+                  ]}
+                  onPress={() => playCompare('correct')}
+                  activeOpacity={0.7}
+                >
+                  <Volume2
+                    size={15}
+                    color={compareTarget === 'correct' && isPlaying ? '#fff' : '#047857'}
+                  />
+                  <Text
+                    style={[
+                      styles.compareBtnText,
+                      { color: compareTarget === 'correct' && isPlaying ? '#fff' : '#047857' },
+                    ]}
+                  >
+                    {t('practice:choice.listenCorrect')}
+                  </Text>
+                </TouchableOpacity>
+
+                {answerState === 'wrong' &&
+                  selectedChoice &&
+                  question.choiceAbc[selectedChoice] && (
+                    <TouchableOpacity
+                      style={[
+                        styles.compareBtn,
+                        compareTarget === 'mine' && isPlaying
+                          ? { backgroundColor: '#ef4444', borderColor: '#ef4444' }
+                          : { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+                      ]}
+                      onPress={() => playCompare('mine')}
+                      activeOpacity={0.7}
+                    >
+                      <Volume2
+                        size={15}
+                        color={compareTarget === 'mine' && isPlaying ? '#fff' : '#b91c1c'}
+                      />
+                      <Text
+                        style={[
+                          styles.compareBtnText,
+                          { color: compareTarget === 'mine' && isPlaying ? '#fff' : '#b91c1c' },
+                        ]}
+                      >
+                        {t('practice:choice.listenMine')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                <TouchableOpacity
+                  style={[styles.compareBtn, styles.scoreToggleBtn]}
+                  onPress={() => setShowScore((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  {showScore ? (
+                    <EyeOff size={15} color={COLORS.slate600} />
+                  ) : (
+                    <Eye size={15} color={COLORS.slate600} />
+                  )}
+                  <Text style={[styles.compareBtnText, { color: COLORS.slate600 }]}>
+                    {showScore ? t('practice:choice.hideScore') : t('practice:choice.showScore')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {showScore && (
+                <View style={styles.scoreReveal}>
+                  <Text style={styles.scoreRevealLabel}>
+                    {compareTarget === 'mine' && selectedChoice
+                      ? t('practice:choice.scoreMine', { choice: selectedChoice })
+                      : t('practice:choice.scoreCorrect', { choice: question.correctAnswer })}
+                  </Text>
+                  <AbcjsRenderer abcString={playbackAbc} tempo={80} />
+                </View>
+              )}
+            </View>
+          )}
         </Animated.View>
       </ScrollView>
 
       {/* 하단 버튼 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.contentStyle,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         {answerState !== 'waiting' ? (
           <View style={styles.bottomActions}>
-            <TouchableOpacity
-              style={[styles.bottomBtn, { backgroundColor: colors.main }]}
-              onPress={handleNext}
-            >
-              <Text style={styles.bottomBtnText}>{t('practice:choice.nextQuestion')}</Text>
-              <ChevronRight size={18} color="#fff" />
-            </TouchableOpacity>
+            {!reviewDone && (
+              <TouchableOpacity
+                style={[styles.bottomBtn, { backgroundColor: colors.main }]}
+                onPress={handleNext}
+              >
+                <Text style={styles.bottomBtnText}>{t('practice:choice.nextQuestion')}</Text>
+                <ChevronRight size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
 
-            {stats.total >= 5 && (
+            {(stats.total >= 5 || review) && (
               <TouchableOpacity
                 style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
                 onPress={handleFinish}
@@ -376,7 +623,7 @@ export default function ChoicePracticeScreen() {
             )}
           </View>
         ) : (
-          stats.total >= 5 && (
+          (stats.total >= 5 || (review && stats.total > 0)) && (
             <TouchableOpacity
               style={[styles.bottomBtn, { backgroundColor: COLORS.slate200 }]}
               onPress={handleFinish}
@@ -468,6 +715,73 @@ const styles = StyleSheet.create({
     height: 0,
     overflow: 'hidden',
     opacity: 0,
+  },
+  savedHint: { fontSize: 11, color: COLORS.slate400, fontWeight: '600', marginTop: 2 },
+  explainCard: {
+    marginTop: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    gap: 8,
+  },
+  explainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  explainTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  explainAnswer: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.slate800,
+  },
+  explainText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: COLORS.slate600,
+  },
+  compareRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  compareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  scoreToggleBtn: {
+    backgroundColor: '#f8fafc',
+    borderColor: COLORS.slate200,
+  },
+  compareBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  scoreReveal: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  scoreRevealLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate500,
+    paddingHorizontal: 10,
+    paddingTop: 8,
   },
   choicesContainer: {
     gap: 10,
@@ -594,4 +908,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
+  resultRow: { flexDirection: 'row', gap: 10 },
+  resultHalf: { flex: 1 },
 });

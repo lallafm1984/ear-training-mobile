@@ -15,7 +15,11 @@
     "title": "Mascot Gallery",
     "currentLevel": "Current Lv.{{level}}",
     "locked": "Locked",
-    "unlockAt": "Unlocks at Lv.{{level}}"
+    "unlockAt": "Unlocks at Lv.{{level}}",
+    "open": "View collection",
+    "unlocked": "Unlocked {{count}}/{{total}}",
+    "current": "Now",
+    "desc": "Earn EXP from daily goals and ear-opening lessons to grow your mascot."
   },
   "exp": {
     "format": "{{current}} / {{needed}} EXP"

@@ -39,5 +39,22 @@
     "daysAgo": "{{days}}d ago",
     "weeksAgo": "{{weeks}}w ago"
   },
-  "version": "MelodyGen v1.0.0"
+  "appControl": {
+    "currentBuild": "Current build {{build}}",
+    "requiredBuild": "Required build {{build}}",
+    "openingStore": "Opening store...",
+    "retryButton": "Check for update",
+    "storeOpenError": "Google Play could not be opened. Check your connection and try again.",
+    "announcementOpenError": "The linked page could not be opened. Please try again later."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "The app ran into an unexpected error.\nTap the button below to try again.",
+    "retry": "Try again"
+  },
+  "version": "MelodyGen v1.0.0",
+  "versionFormat": "MelodyGen v{{version}} (build {{build}})",
+  "badge": {
+    "new": "NEW"
+  }
 }

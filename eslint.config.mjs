@@ -22,6 +22,13 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['node_modules/', 'babel.config.js', 'jest.config.js', 'coverage/'],
+    ignores: [
+      'node_modules/',
+      'babel.config.js',
+      'jest.config.js',
+      'coverage/',
+      // abcjs 배포본을 문자열로 포함한 자동 생성 파일은 원본 규칙으로 검사하지 않는다.
+      'src/components/abcjsSource.ts',
+    ],
   },
 );

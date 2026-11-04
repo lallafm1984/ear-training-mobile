@@ -3,12 +3,17 @@
   "summary": {
     "streak": "連続学習日数",
     "totalSessions": "総練習回数",
-    "thisWeek": "今週"
+    "thisWeek": "今週",
+    "deltaUp": "先週より +{{count}}",
+    "deltaDown": "先週より −{{count}}",
+    "deltaSame": "先週と同じ"
   },
   "section": {
     "dailyScore": "日別平均点数",
     "dailyScoreMax": "満点5点",
-    "examStats": "模擬試験統計"
+    "examStats": "模擬試験統計",
+    "byCategory": "カテゴリー別の練習",
+    "activeDays": "最近30日のうち{{count}}日練習"
   },
   "exam": {
     "attempts": "受験回数",
@@ -43,5 +48,10 @@
     "detailTitle": "{{month}}月{{day}}日の練習記録",
     "avgRating": "平均 {{rating}}点",
     "noRecord": "この日の練習記録はありません"
+  },
+  "category": {
+    "summary": "{{count}}回 · 平均 {{rating}}点",
+    "weak": "弱点",
+    "strong": "強み"
   }
 }

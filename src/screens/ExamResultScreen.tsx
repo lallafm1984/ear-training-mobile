@@ -2,13 +2,17 @@
 // ExamResultScreen — 모의시험 결과 화면
 // ─────────────────────────────────────────────────────────────
 
-import React, { useEffect, useRef } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  RotateCcw, Home, Trophy, TrendingUp,
+  RotateCcw,
+  Home,
+  Trophy,
+  TrendingUp,
+  BookOpen,
+  ChevronRight,
+  Share2,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
@@ -18,8 +22,13 @@ import type { StackNavigationProp, StackScreenProps } from '@react-navigation/st
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { useAuth } from '../context';
+import { useMascotExp } from '../hooks/useMascotExp';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareCardData } from '../lib/shareCard';
+import { LOCAL_DATA_BASE_KEYS, MAX_EXAM_SESSIONS, localDataKey } from '../lib/localProfileStorage';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type RouteProp = StackScreenProps<MainStackParamList, 'ExamResult'>['route'];
 type NavProp = StackNavigationProp<MainStackParamList>;
@@ -27,9 +36,12 @@ type NavProp = StackNavigationProp<MainStackParamList>;
 export default function ExamResultScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['exam', 'content', 'common']);
+  const layout = useResponsiveLayout();
+  const { t, i18n } = useTranslation(['exam', 'content', 'common', 'wrongNotes', 'share']);
   const route = useRoute<RouteProp>();
-  const { user } = useAuth();
+  const { storageUserId } = useAuth();
+  const { level: mascotLevel } = useMascotExp();
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
   const savedRef = useRef(false);
   const {
     presetId,
@@ -39,11 +51,11 @@ export default function ExamResultScreen() {
     categoryScores: categoryScoresStr,
     elapsedSeconds,
     totalQuestions,
+    wrongChoiceCount = 0,
   } = route.params;
 
   const categoryScores: Record<string, { score: number; max: number; count: number }> =
     JSON.parse(categoryScoresStr);
-
 
   // AsyncStorage에 시험 결과 저장 (1회)
   useEffect(() => {
@@ -62,14 +74,22 @@ export default function ExamResultScreen() {
       completed_at: new Date().toISOString(),
     };
 
-    if (!user) return;
-    const examKey = `@melodygen_exam_sessions_${user.id}`;
-    AsyncStorage.getItem(examKey).then(raw => {
+    const examKey = localDataKey(LOCAL_DATA_BASE_KEYS.examSessions, storageUserId);
+    AsyncStorage.getItem(examKey).then((raw) => {
       const existing = raw ? JSON.parse(raw) : [];
-      const updated = [record, ...existing].slice(0, 50);
+      const updated = [record, ...existing].slice(0, MAX_EXAM_SESSIONS);
       AsyncStorage.setItem(examKey, JSON.stringify(updated));
     });
-  }, [user]);
+  }, [
+    categoryScores,
+    elapsedSeconds,
+    maxScore,
+    presetId,
+    title,
+    totalQuestions,
+    totalScore,
+    storageUserId,
+  ]);
 
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
@@ -84,11 +104,30 @@ export default function ExamResultScreen() {
 
   const grade = getGrade(percentage);
 
+  const openShare = () => {
+    setShareData({
+      kind: 'exam',
+      title: t('share:kind.exam'),
+      subtitle: title,
+      headline: `${percentage}${t('common:unit.score')}`,
+      headlineLabel: `${t('exam:result.totalScore')} · ${grade.label}`,
+      stats: [
+        { label: t('share:stat.grade'), value: grade.label },
+        { label: t('share:stat.questions'), value: `${totalQuestions}` },
+        { label: t('share:stat.accuracy'), value: `${percentage}%` },
+      ],
+      accent: grade.color,
+      date: new Date().toLocaleDateString(i18n.language),
+      mascotLevel,
+      happy: percentage >= 60,
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 결과 헤더 */}
@@ -101,7 +140,10 @@ export default function ExamResultScreen() {
         {/* 점수 원형 */}
         <View style={[styles.scoreCircle, { borderColor: grade.color }]}>
           <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={[styles.scorePercent, { color: grade.color }]}>{percentage}{t('common:unit.score')}</Text>
+          <Text style={[styles.scorePercent, { color: grade.color }]}>
+            {percentage}
+            {t('common:unit.score')}
+          </Text>
           <Text style={styles.scoreFraction}>{t('exam:result.totalScore')}</Text>
         </View>
 
@@ -110,7 +152,10 @@ export default function ExamResultScreen() {
         {/* 통계 요약 */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalQuestions}{t('exam:result.questions')}</Text>
+            <Text style={styles.statValue}>
+              {totalQuestions}
+              {t('exam:result.questions')}
+            </Text>
             <Text style={styles.statLabel}>{t('exam:result.totalQuestions')}</Text>
           </View>
           <View style={[styles.statItem, styles.statBorder]}>
@@ -133,7 +178,10 @@ export default function ExamResultScreen() {
                   <View style={[styles.catDot, { backgroundColor: colors.main }]} />
                   <View>
                     <Text style={styles.catName}>{t('content:category.' + cat + '.name')}</Text>
-                    <Text style={styles.catCount}>{data.count}{t('exam:result.questions')}</Text>
+                    <Text style={styles.catCount}>
+                      {data.count}
+                      {t('exam:result.questions')}
+                    </Text>
                   </View>
                 </View>
 
@@ -163,12 +211,11 @@ export default function ExamResultScreen() {
               <Text style={styles.tipTitle}>{t('exam:result.tipTitle')}</Text>
               <Text style={styles.tipText}>
                 {(() => {
-                  const weakest = Object.entries(categoryScores)
-                    .sort(([, a], [, b]) => {
-                      const diff = (a.score / a.max) - (b.score / b.max);
-                      if (diff !== 0) return diff;
-                      return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
-                    })[0];
+                  const weakest = Object.entries(categoryScores).sort(([, a], [, b]) => {
+                    const diff = a.score / a.max - b.score / b.max;
+                    if (diff !== 0) return diff;
+                    return b.count - a.count; // 동점이면 문항 수가 많은 것 우선
+                  })[0];
                   if (!weakest) return t('exam:result.tipDefault');
                   const catName = t('content:category.' + weakest[0] + '.name');
                   return t('exam:result.tipWeak', { category: catName });
@@ -177,10 +224,39 @@ export default function ExamResultScreen() {
             </View>
           </View>
         )}
+        {/* 오답노트 진입 */}
+        {wrongChoiceCount > 0 && (
+          <TouchableOpacity
+            style={styles.notesBtn}
+            onPress={() => navigation.navigate('WrongNotes', undefined)}
+            activeOpacity={0.8}
+          >
+            <BookOpen size={18} color={COLORS.primary600} />
+            <Text style={styles.notesBtnText}>
+              {t('wrongNotes:exam.viewNotes', { count: wrongChoiceCount })}
+            </Text>
+            <ChevronRight size={16} color={COLORS.primary400} />
+          </TouchableOpacity>
+        )}
+
+        {/* 결과 공유 */}
+        <TouchableOpacity style={styles.shareBtn} onPress={openShare} activeOpacity={0.8}>
+          <Share2 size={18} color={COLORS.slate600} />
+          <Text style={styles.shareBtnText}>{t('share:buttonLong')}</Text>
+          <ChevronRight size={16} color={COLORS.slate400} />
+        </TouchableOpacity>
       </ScrollView>
 
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
+
       {/* 하단 액션 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.contentStyle,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: COLORS.amber500 }]}
           onPress={() => navigation.replace('MockExamSetup')}
@@ -194,7 +270,9 @@ export default function ExamResultScreen() {
           onPress={() => navigation.navigate('Home')}
         >
           <Home size={18} color={COLORS.slate700} />
-          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>{t('exam:result.goHome')}</Text>
+          <Text style={[styles.actionBtnText, { color: COLORS.slate700 }]}>
+            {t('exam:result.goHome')}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -391,4 +469,30 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
+  notesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.primary50,
+    borderWidth: 1,
+    borderColor: COLORS.primary200,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  notesBtnText: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.primary700 },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignSelf: 'stretch',
+  },
+  shareBtnText: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.slate700 },
 });

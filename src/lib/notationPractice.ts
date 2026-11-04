@@ -2,16 +2,16 @@ import type { ContentCategory } from '../types/content';
 import type { ScoreNote } from './scoreUtils';
 
 export function isNotationCategory(category: ContentCategory): boolean {
-  return category === 'melody' ||
+  return (
+    category === 'melody' ||
     category === 'barMelody' ||
     category === 'rhythm' ||
-    category === 'twoVoice';
+    category === 'twoVoice'
+  );
 }
 
 export function isMelodyInputCategory(category: ContentCategory): boolean {
-  return category === 'melody' ||
-    category === 'barMelody' ||
-    category === 'twoVoice';
+  return category === 'melody' || category === 'barMelody' || category === 'twoVoice';
 }
 
 export function shouldUseFirstNoteHint(category: ContentCategory): boolean {

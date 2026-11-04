@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Crown, X, Sparkles, Music2, FileMusic,
-  Layers, ArrowUpDown, Key, Drum,
-} from 'lucide-react-native';
+import { Crown, X, Sparkles, Music } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlert, useSubscription, useAuth } from '../context';
-import { PlanTier, PLAN_COLOR, PLAN_NAME } from '../types';
 import {
   DEFAULT_MONTHLY_PRICE_STRING,
   getOfferings,
@@ -22,31 +16,62 @@ import {
   logoutRevenueCat,
 } from '../lib/revenueCat';
 import type { PurchasesPackage } from 'react-native-purchases';
+import { logger } from '../lib/logger';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { CONTENT_CATEGORIES } from '../lib/contentConfig';
+import { ICON_MAP } from '../components/CategoryCard';
 
 interface PaywallScreenProps {
   onClose: () => void;
 }
 
+interface PurchaseErrorLike {
+  userCancelled?: boolean;
+  message?: string;
+  underlyingErrorMessage?: unknown;
+  readableErrorCode?: string;
+  readable_error_code?: string;
+  code?: string | number;
+}
+
+const asPurchaseError = (error: unknown): PurchaseErrorLike =>
+  typeof error === 'object' && error !== null
+    ? (error as PurchaseErrorLike)
+    : { message: String(error) };
+
 // ─────────────────────────────────────────────────────────────
-// 청음 훈련 카테고리별 Free/Pro 비교
+// 청음 훈련 카테고리별 Free/Pro 비교 — contentConfig(freeMaxLevel·maxLevel)에서 생성
 // ─────────────────────────────────────────────────────────────
 
-interface CategoryCompare {
-  name: string;
+interface CompareRow {
+  key: string;
+  /** i18n 키 (content:category.<id>.name 또는 subscription 키) */
+  nameKey: string;
   icon: React.ReactNode;
-  color: string;
   free: string;
   pro: string;
 }
 
-const CATEGORY_COMPARE_KEYS = [
-  { nameKey: 'subscription:paywall.compareMelody', icon: <Music2 size={14} color="#6366f1" />, color: '#6366f1', free: 'Lv.1~3', pro: 'Lv.1~9' },
-  { nameKey: 'subscription:paywall.compareRhythm', icon: <Drum size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1~2', pro: 'Lv.1~6' },
-  { nameKey: 'subscription:paywall.compareInterval', icon: <ArrowUpDown size={14} color="#10b981" />, color: '#10b981', free: 'Lv.1~2', pro: 'Lv.1~4' },
-  { nameKey: 'subscription:paywall.compareHarmony', icon: <Layers size={14} color="#8b5cf6" />, color: '#8b5cf6', free: 'Lv.1', pro: 'Lv.1~4' },
-  { nameKey: 'subscription:paywall.compareKey', icon: <Key size={14} color="#ef4444" />, color: '#ef4444', free: 'Lv.1', pro: 'Lv.1~3' },
-  { nameKey: 'subscription:paywall.compareTwoPart', icon: <FileMusic size={14} color="#0ea5e9" />, color: '#0ea5e9', free: 'locked', pro: 'Lv.1~4' },
-  { nameKey: 'subscription:paywall.compareMockExam', icon: <Crown size={14} color="#f59e0b" />, color: '#f59e0b', free: 'Lv.1', pro: 'all' },
+const levelRange = (max: number) => (max <= 1 ? 'Lv.1' : `Lv.1~${max}`);
+
+const CATEGORY_COMPARE_ROWS: CompareRow[] = [
+  ...CONTENT_CATEGORIES.map((config): CompareRow => {
+    const Icon = ICON_MAP[config.icon] ?? Music;
+    return {
+      key: config.id,
+      nameKey: `content:category.${config.id}.name`,
+      icon: <Icon size={14} color={config.color} />,
+      free: config.freeMaxLevel === 0 ? 'locked' : levelRange(config.freeMaxLevel),
+      pro: levelRange(config.maxLevel),
+    };
+  }),
+  {
+    key: 'mockExam',
+    nameKey: 'subscription:paywall.compareMockExam',
+    icon: <Crown size={14} color="#f59e0b" />,
+    free: 'Lv.1',
+    pro: 'all',
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -54,19 +79,20 @@ const CATEGORY_COMPARE_KEYS = [
 // ─────────────────────────────────────────────────────────────
 
 export default function PaywallScreen({ onClose }: PaywallScreenProps) {
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['subscription', 'content', 'common']);
   const { tier: currentTier, loading, refreshSubscription } = useSubscription();
   const { showAlert } = useAlert();
-  const { user } = useAuth();
+  const { user, isGuest, exitGuestMode } = useAuth();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [, setLoadingPackages] = useState(true);
   const [priceString, setPriceString] = useState<string>(DEFAULT_MONTHLY_PRICE_STRING);
 
   useEffect(() => {
     getOfferings()
-      .then(pkgs => {
+      .then((pkgs) => {
         setPackages(pkgs);
         setPriceString(getPackagePriceString(getMonthlyPackage(pkgs)));
       })
@@ -74,9 +100,36 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       .finally(() => setLoadingPackages(false));
   }, []);
 
+  // 게스트는 결제·복원 전에 로그인해야 한다. 구독은 계정에 연결되기 때문이다.
+  const requireLogin = () => {
+    showAlert({
+      title: t('subscription:paywall.loginRequiredTitle'),
+      message: t('subscription:paywall.loginRequiredMessage'),
+      type: 'info',
+      buttons: [
+        { text: t('common:button.cancel'), style: 'cancel' },
+        {
+          text: t('subscription:paywall.loginButton'),
+          onPress: () => {
+            onClose();
+            void exitGuestMode();
+          },
+        },
+      ],
+    });
+  };
+
   const handleSubscribe = async () => {
+    if (isGuest) {
+      requireLogin();
+      return;
+    }
     if (currentTier === 'pro') {
-      showAlert({ title: t('subscription:paywall.alreadyProTitle'), message: t('subscription:paywall.alreadyProMessage'), type: 'info' });
+      showAlert({
+        title: t('subscription:paywall.alreadyProTitle'),
+        message: t('subscription:paywall.alreadyProMessage'),
+        type: 'info',
+      });
       return;
     }
 
@@ -93,9 +146,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     setPurchasing(true);
     try {
       const customerInfo = await purchasePackage(pkg);
-      if (__DEV__) {
-        console.log('[Paywall] purchasePackage result:', JSON.stringify(customerInfo.entitlements, null, 2));
-      }
+      logger.debug(
+        '[Paywall] purchasePackage result:',
+        JSON.stringify(customerInfo.entitlements, null, 2),
+      );
       await refreshSubscription();
       showAlert({
         title: t('subscription:paywall.subscribeSuccessTitle'),
@@ -103,19 +157,23 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         type: 'success',
         buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
       });
-    } catch (e: any) {
+    } catch (error) {
+      const e = asPurchaseError(error);
       if (e?.userCancelled) return;
 
       const msg = e?.message ?? '';
-      const underlyingMsg = typeof e?.underlyingErrorMessage === 'string'
-        ? e.underlyingErrorMessage
-        : JSON.stringify(e?.underlyingErrorMessage ?? '');
+      const underlyingMsg =
+        typeof e?.underlyingErrorMessage === 'string'
+          ? e.underlyingErrorMessage
+          : JSON.stringify(e?.underlyingErrorMessage ?? '');
       const readableCode = e?.readableErrorCode ?? e?.readable_error_code ?? '';
 
       // 이미 구독 중인 경우 자동 복원 시도
-      if (e?.code === 'PRODUCT_ALREADY_PURCHASED_ERROR' ||
-          msg.includes('already') ||
-          e?.code === '6') {
+      if (
+        e?.code === 'PRODUCT_ALREADY_PURCHASED_ERROR' ||
+        msg.includes('already') ||
+        e?.code === '6'
+      ) {
         try {
           await restorePurchases();
           await refreshSubscription();
@@ -154,7 +212,8 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             buttons: [{ text: t('common:button.confirm'), onPress: onClose }],
           });
           return;
-        } catch (retryErr: any) {
+        } catch (retryError) {
+          const retryErr = asPurchaseError(retryError);
           if (retryErr?.userCancelled) return;
           showAlert({
             title: t('subscription:paywall.subscriptionConflictTitle'),
@@ -176,6 +235,10 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   };
 
   const handleRestore = async () => {
+    if (isGuest) {
+      requireLogin();
+      return;
+    }
     setRestoring(true);
     try {
       const customerInfo = await restorePurchases();
@@ -211,7 +274,12 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.close')}
+        >
           <X size={18} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('subscription:paywall.title')}</Text>
@@ -219,7 +287,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, layout.contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 히어로 섹션 */}
@@ -228,9 +296,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             <Crown size={32} color="#6366f1" />
           </View>
           <Text style={styles.heroTitle}>{t('subscription:paywall.proBanner')}</Text>
-          <Text style={styles.heroSubtitle}>
-            {t('subscription:paywall.heroSubtitle')}
-          </Text>
+          <Text style={styles.heroSubtitle}>{t('subscription:paywall.heroSubtitle')}</Text>
           {isPro_ && (
             <View style={styles.proBanner}>
               <Sparkles size={14} color="#6366f1" />
@@ -244,23 +310,27 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
           <Text style={styles.sectionTitle}>{t('subscription:paywall.compareTitle')}</Text>
           <View style={styles.categoryCard}>
             <View style={styles.categoryHeader}>
-              <Text style={[styles.categoryHeaderCell, { flex: 1.5 }]}>{t('subscription:paywall.compareCategory')}</Text>
+              <Text style={[styles.categoryHeaderCell, { flex: 1.5 }]}>
+                {t('subscription:paywall.compareCategory')}
+              </Text>
               <Text style={[styles.categoryHeaderCell, { color: '#94a3b8' }]}>Free</Text>
               <Text style={[styles.categoryHeaderCell, { color: '#6366f1' }]}>Pro</Text>
             </View>
-            {CATEGORY_COMPARE_KEYS.map((cat, i) => (
+            {CATEGORY_COMPARE_ROWS.map((cat, i) => (
               <View
-                key={i}
+                key={cat.key}
                 style={[styles.categoryRow, i % 2 === 0 && { backgroundColor: '#fafaff' }]}
               >
                 <View style={[styles.categoryNameCell, { flex: 1.5 }]}>
                   {cat.icon}
                   <Text style={styles.categoryName}>{t(cat.nameKey)}</Text>
                 </View>
-                <Text style={[
-                  styles.categoryValue,
-                  cat.free === 'locked' && { color: '#ef4444', fontSize: 11 },
-                ]}>
+                <Text
+                  style={[
+                    styles.categoryValue,
+                    cat.free === 'locked' && { color: '#ef4444', fontSize: 11 },
+                  ]}
+                >
                   {cat.free === 'locked' ? t('subscription:paywall.locked') : cat.free}
                 </Text>
                 <Text style={[styles.categoryValue, { color: '#6366f1', fontWeight: '700' }]}>
@@ -282,7 +352,9 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
             >
               <Crown size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>
-                {purchasing ? t('subscription:paywall.processing') : t('subscription:paywall.subscribe', { price: priceString })}
+                {purchasing
+                  ? t('subscription:paywall.processing')
+                  : t('subscription:paywall.subscribe', { price: priceString })}
               </Text>
             </TouchableOpacity>
             <Text style={styles.ctaNote}>{t('subscription:paywall.ctaNote')}</Text>
@@ -304,9 +376,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         )}
 
         {/* 면책 조항 */}
-        <Text style={styles.disclaimer}>
-          {t('subscription:paywall.disclaimer')}
-        </Text>
+        <Text style={styles.disclaimer}>{t('subscription:paywall.disclaimer')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

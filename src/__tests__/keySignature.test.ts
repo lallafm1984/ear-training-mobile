@@ -2,7 +2,6 @@ import {
   getScaleDegrees,
   getKeySigAlteration,
   getKeySignatureAccidentalCount,
-  KEY_SIG_MAP,
 } from '../lib/scoreUtils/keySignature';
 
 describe('getScaleDegrees', () => {

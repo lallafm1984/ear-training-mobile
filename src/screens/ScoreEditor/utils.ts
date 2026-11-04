@@ -8,12 +8,22 @@ const STORAGE_KEY = 'melodygen_scores';
 export function fillWithRests(sixteenths: number): NoteDuration[] {
   if (sixteenths <= 0) return [];
   const OPTIONS: [NoteDuration, number][] = [
-    ['1', 16], ['2.', 12], ['2', 8], ['4.', 6], ['4', 4], ['8.', 3], ['8', 2], ['16', 1],
+    ['1', 16],
+    ['2.', 12],
+    ['2', 8],
+    ['4.', 6],
+    ['4', 4],
+    ['8.', 3],
+    ['8', 2],
+    ['16', 1],
   ];
   const result: NoteDuration[] = [];
   let rem = sixteenths;
   for (const [dur, s] of OPTIONS) {
-    while (rem >= s) { result.push(dur); rem -= s; }
+    while (rem >= s) {
+      result.push(dur);
+      rem -= s;
+    }
   }
   return result;
 }

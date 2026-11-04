@@ -1,4 +1,4 @@
-import { computeStats } from '../lib/computeStats';
+import { computeInsights, computeStats } from '../lib/computeStats';
 import type { PracticeRecord } from '../types/content';
 
 function makeRecord(
@@ -60,10 +60,10 @@ describe('computeStats', () => {
 
   it('주간/월간 카운트: 오래된 기록 제외', () => {
     const records = [
-      makeRecord('melody', 3, 0),   // 오늘 → 주간O 월간O
-      makeRecord('melody', 3, 5),   // 5일 전 → 주간O 월간O
-      makeRecord('melody', 3, 10),  // 10일 전 → 주간X 월간O
-      makeRecord('melody', 3, 40),  // 40일 전 → 주간X 월간X
+      makeRecord('melody', 3, 0), // 오늘 → 주간O 월간O
+      makeRecord('melody', 3, 5), // 5일 전 → 주간O 월간O
+      makeRecord('melody', 3, 10), // 10일 전 → 주간X 월간O
+      makeRecord('melody', 3, 40), // 40일 전 → 주간X 월간X
     ];
     const stats = computeStats(records);
     expect(stats.weeklyCount).toBe(2);
@@ -71,9 +71,7 @@ describe('computeStats', () => {
   });
 
   it('recentRecords: 최대 20개', () => {
-    const records = Array.from({ length: 30 }, (_, i) =>
-      makeRecord('melody', 3, i),
-    );
+    const records = Array.from({ length: 30 }, (_, i) => makeRecord('melody', 3, i));
     const stats = computeStats(records);
     expect(stats.recentRecords).toHaveLength(20);
   });
@@ -98,5 +96,78 @@ describe('computeStats', () => {
     expect(stats.totalByCategory.progression).toBe(0);
     expect(stats.avgRatingByCategory.progression).toBe(0);
     expect(stats.totalByCategory.twoVoice).toBe(0);
+  });
+});
+
+describe('computeInsights', () => {
+  const withDiff = (
+    contentType: PracticeRecord['contentType'],
+    difficulty: PracticeRecord['difficulty'],
+    selfRating: number,
+    daysAgo: number,
+  ): PracticeRecord => ({ ...makeRecord(contentType, selfRating, daysAgo), difficulty });
+
+  it('빈 기록: 카테고리 없음, 약점/강점 없음, 증감 0', () => {
+    const ins = computeInsights([]);
+    expect(ins.byCategory).toEqual([]);
+    expect(ins.weakest).toBeNull();
+    expect(ins.strongest).toBeNull();
+    expect(ins.weeklyDelta).toBe(0);
+    expect(ins.activeDays30).toBe(0);
+  });
+
+  it('카테고리별 횟수·평균·최다 난이도·연습 난이도 수를 집계하고 횟수 내림차순으로 정렬한다', () => {
+    const ins = computeInsights([
+      withDiff('interval', 'interval_1', 4, 1),
+      withDiff('interval', 'interval_2', 5, 2),
+      withDiff('interval', 'interval_2', 3, 3),
+      withDiff('melody', 'beginner_1', 2, 1),
+    ]);
+    expect(ins.byCategory.map((c) => c.category)).toEqual(['interval', 'melody']);
+    const iv = ins.byCategory[0];
+    expect(iv.count).toBe(3);
+    expect(iv.avgRating).toBe(4);
+    expect(iv.topDifficulty).toBe('interval_2');
+    expect(iv.levelsPracticed).toBe(2);
+    expect(iv.lastPracticedAt).not.toBeNull();
+  });
+
+  it('약점·강점은 3회 이상 연습한 카테고리에서만 고르고 3.5 기준으로 나눈다', () => {
+    const recs = [
+      ...[1, 2, 2].map((r, i) => withDiff('rhythm', 'rhythm_1', r, i)),
+      ...[5, 4, 5].map((r, i) => withDiff('chord', 'chord_2', r, i)),
+      withDiff('key', 'key_1', 1, 0), // 1회 — 판단 제외
+    ];
+    const ins = computeInsights(recs);
+    expect(ins.weakest).toBe('rhythm');
+    expect(ins.strongest).toBe('chord');
+  });
+
+  it('모두 잘하면 약점은 없고, 모두 못하면 강점은 없다', () => {
+    const good = computeInsights([4, 5, 5].map((r, i) => withDiff('scale', 'scale_1', r, i)));
+    expect(good.weakest).toBeNull();
+    expect(good.strongest).toBe('scale');
+    const bad = computeInsights([1, 2, 1].map((r, i) => withDiff('scale', 'scale_1', r, i)));
+    expect(bad.weakest).toBe('scale');
+    expect(bad.strongest).toBeNull();
+  });
+
+  it('주간 증감은 최근 7일 − 그 전 7일, 활동일은 최근 30일의 서로 다른 날짜 수', () => {
+    const recs = [
+      makeRecord('melody', 3, 0),
+      makeRecord('melody', 3, 0),
+      makeRecord('melody', 3, 2),
+      makeRecord('melody', 3, 9),
+      makeRecord('melody', 3, 40), // 30일 밖
+    ];
+    const ins = computeInsights(recs);
+    expect(ins.weeklyDelta).toBe(3 - 1);
+    expect(ins.lastWeekCount).toBe(1);
+    expect(ins.activeDays30).toBe(3);
+  });
+
+  it('알 수 없는 난이도 id(구버전 기록)도 그대로 집계한다', () => {
+    const ins = computeInsights([withDiff('interval', 'legacy_x' as never, 3, 0)]);
+    expect(ins.byCategory[0].topDifficulty).toBe('legacy_x');
   });
 });

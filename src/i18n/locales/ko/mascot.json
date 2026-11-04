@@ -15,7 +15,11 @@
     "title": "마스코트 갤러리",
     "currentLevel": "현재 Lv.{{level}}",
     "locked": "잠금",
-    "unlockAt": "Lv.{{level}}에 해금"
+    "unlockAt": "Lv.{{level}}에 해금",
+    "open": "컬렉션 보기",
+    "unlocked": "해금 {{count}}/{{total}}",
+    "current": "현재",
+    "desc": "매일 목표와 귀 열기 레슨으로 EXP를 모으면 마스코트가 자라요."
   },
   "exp": {
     "format": "{{current}} / {{needed}} EXP"

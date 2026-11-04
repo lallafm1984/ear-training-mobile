@@ -4,12 +4,22 @@
 
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Dimensions,
-  FlatList, Animated,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
+  FlatList,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Music, Headphones, Target, BarChart3, ChevronRight,
+  Music,
+  Headphones,
+  Target,
+  BarChart3,
+  ChevronRight,
+  type LucideProps,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -17,17 +27,16 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme/colors';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import type { MainStackParamList } from '../navigation/MainStack';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ONBOARDING_KEY = '@melodygen_onboarding_done';
 
 interface SlideData {
   id: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<LucideProps>;
   color: string;
   bgColor: string;
   title: string;
@@ -70,6 +79,8 @@ const SLIDES: SlideData[] = [
 ];
 
 export default function OnboardingScreen() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const layout = useResponsiveLayout();
   const { t } = useTranslation(['auth', 'common']);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
@@ -81,7 +92,9 @@ export default function OnboardingScreen() {
     if (currentIndex < SLIDES.length - 1) {
       try {
         flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-      } catch { /* layout not ready */ }
+      } catch {
+        /* layout not ready */
+      }
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -105,8 +118,10 @@ export default function OnboardingScreen() {
         <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
           <IconComp size={48} color={item.color} />
         </View>
-        <Text style={styles.slideTitle}>{t(item.title)}</Text>
-        <Text style={styles.slideDesc}>{t(item.description)}</Text>
+        <View style={[styles.slideText, layout.narrowStyle]}>
+          <Text style={styles.slideTitle}>{t(item.title)}</Text>
+          <Text style={styles.slideDesc}>{t(item.description)}</Text>
+        </View>
       </View>
     );
   };
@@ -125,16 +140,15 @@ export default function OnboardingScreen() {
         ref={flatListRef}
         data={SLIDES}
         renderItem={renderSlide}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={32}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false },
-        )}
-        onMomentumScrollEnd={e => {
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: false,
+        })}
+        onMomentumScrollEnd={(e) => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
           setCurrentIndex(idx);
         }}
@@ -176,7 +190,13 @@ export default function OnboardingScreen() {
       </View>
 
       {/* 하단 버튼 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          layout.narrowStyle,
+          { paddingBottom: Math.max(insets.bottom, 24) },
+        ]}
+      >
         {isLast ? (
           <TouchableOpacity
             style={[styles.startBtn, { backgroundColor: COLORS.primary500 }]}
@@ -240,6 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
+  slideText: { alignItems: 'center', gap: 20 },
   slideTitle: {
     fontSize: 24,
     fontWeight: '900',

@@ -1,0 +1,51 @@
+{
+  "title": "리듬 탭",
+  "round": "리듬 {{n}}",
+  "listen": {
+    "title": "리듬을 들어 보세요",
+    "desc": "메트로놈 한 마디 뒤에 리듬이 나와요. 몇 번이든 다시 들을 수 있어요.",
+    "play": "듣기",
+    "playing": "재생 중...",
+    "start": "따라 치기",
+    "bars": "{{count}}마디 · ♩= {{tempo}}"
+  },
+  "tap": {
+    "countIn": "준비",
+    "go": "지금 탭하세요!",
+    "pad": "여기를 탭",
+    "hint": "메트로놈 한 마디 뒤, 들은 리듬을 똑같이 탭하세요.",
+    "cancel": "그만두기",
+    "wait": "신호를 기다리세요",
+    "activeHint": "들은 리듬을 이어서 탭하세요.",
+    "done": "입력 끝",
+    "finishing": "결과를 확인하고 있어요."
+  },
+  "result": {
+    "title": "결과",
+    "score": "{{score}}점",
+    "matched": "{{matched}}/{{expected}} 맞춤",
+    "extra": "추가 탭 {{count}}",
+    "perfect": "정확",
+    "early": "빠름",
+    "late": "늦음",
+    "miss": "놓침",
+    "msgGreat": "완벽에 가까워요!",
+    "msgGood": "좋아요, 박을 잘 따라갔어요.",
+    "msgKeep": "쉼표와 긴 음을 기다리는 연습을 해 보세요.",
+    "listenAnswer": "정답 듣기",
+    "retry": "같은 리듬 다시",
+    "next": "다음 리듬",
+    "finish": "연습 종료",
+    "timeline": "타이밍"
+  },
+  "summary": {
+    "title": "연습 완료!",
+    "avg": "평균 {{score}}점",
+    "rounds": "{{count}}개 리듬",
+    "retry": "다시 연습",
+    "back": "돌아가기"
+  },
+  "error": {
+    "audio": "소리를 재생하지 못했어요. 다시 시도해 주세요."
+  }
+}

@@ -15,6 +15,7 @@ import {
 } from './src/context';
 import { LoginScreen } from './src/screens';
 import MainStack from './src/navigation/MainStack';
+import AppControlGate from './src/components/AppControlGate';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
 // ─────────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 // ─────────────────────────────────────────────────────────────
 
 function AppNavigator() {
-  const { session, loading, profileLoading } = useAuth();
+  const { session, loading, profileLoading, isGuest } = useAuth();
   const { t } = useTranslation('common');
 
   // 초기 세션 복원 중 또는 프로필 로딩 중
@@ -43,12 +44,12 @@ function AppNavigator() {
     );
   }
 
-  // 미로그인 → 로그인 화면
-  if (!session) {
+  // 미로그인 + 게스트 아님 → 로그인 화면
+  if (!session && !isGuest) {
     return <LoginScreen />;
   }
 
-  // 로그인 완료 → 홈 대시보드 (네비게이션 스택)
+  // 로그인 완료 또는 게스트 → 홈 대시보드 (네비게이션 스택)
   return (
     <SessionContentLogProvider>
       <SubscriptionProvider>
@@ -74,13 +75,15 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar style="dark" backgroundColor="#f8fafc" />
-        <NavigationContainer>
-          <AlertProvider>
-            <AuthProvider>
-              <AppNavigator />
-            </AuthProvider>
-          </AlertProvider>
-        </NavigationContainer>
+        <AppControlGate>
+          <NavigationContainer>
+            <AlertProvider>
+              <AuthProvider>
+                <AppNavigator />
+              </AuthProvider>
+            </AlertProvider>
+          </NavigationContainer>
+        </AppControlGate>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

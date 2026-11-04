@@ -1,10 +1,17 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, Pressable,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 interface BottomSheetProps {
   open: boolean;
@@ -15,6 +22,8 @@ interface BottomSheetProps {
 
 export default function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  const layout = useResponsiveLayout();
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={open}
@@ -25,16 +34,30 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
     >
       <View style={styles.sheetOverlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-        <View style={[styles.sheetContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View
+          style={[
+            styles.sheetContent,
+            layout.sheetStyle,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.sheetCloseBtn}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.sheetCloseBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('button.close')}
+            >
               <X size={16} color="#94a3b8" />
             </TouchableOpacity>
           </View>
           <ScrollView
-            contentContainerStyle={[styles.sheetInner, { paddingBottom: Math.max(insets.bottom, 24) }]}
+            contentContainerStyle={[
+              styles.sheetInner,
+              { paddingBottom: Math.max(insets.bottom, 24) },
+            ]}
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
           >
@@ -59,17 +82,29 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   sheetHandle: {
-    width: 40, height: 4, backgroundColor: '#e2e8f0',
-    borderRadius: 2, alignSelf: 'center', marginTop: 8, marginBottom: 4,
+    width: 40,
+    height: 4,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 4,
   },
   sheetHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   sheetTitle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
   sheetCloseBtn: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#f8fafc',
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sheetInner: { paddingHorizontal: 16, paddingBottom: 24 },
 });

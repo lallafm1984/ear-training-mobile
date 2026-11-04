@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import type {
-  PlaybackMode, APExamSettings, KoreanExamSettings, EchoSettings, CustomPlaySettings,
+  PlaybackMode,
+  APExamSettings,
+  KoreanExamSettings,
+  EchoSettings,
+  CustomPlaySettings,
 } from '../../types';
 import {
-  DEFAULT_AP_SETTINGS, DEFAULT_KOREAN_SETTINGS,
-  DEFAULT_ECHO_SETTINGS, DEFAULT_CUSTOM_SETTINGS,
+  DEFAULT_AP_SETTINGS,
+  DEFAULT_KOREAN_SETTINGS,
+  DEFAULT_ECHO_SETTINGS,
+  DEFAULT_CUSTOM_SETTINGS,
   DEFAULT_PRACTICE_WAIT_SECONDS,
 } from '../../types';
 
@@ -21,26 +27,45 @@ export function usePlaybackConfig() {
   const [showMeasureHighlight, setShowMeasureHighlight] = useState(true);
   const [hideNotes, setHideNotes] = useState(false);
   const [apExamSettings, setApExamSettings] = useState<APExamSettings>({ ...DEFAULT_AP_SETTINGS });
-  const [koreanExamSettings, setKoreanExamSettings] = useState<KoreanExamSettings>({ ...DEFAULT_KOREAN_SETTINGS });
+  const [koreanExamSettings, setKoreanExamSettings] = useState<KoreanExamSettings>({
+    ...DEFAULT_KOREAN_SETTINGS,
+  });
   const [echoSettings, setEchoSettings] = useState<EchoSettings>({ ...DEFAULT_ECHO_SETTINGS });
-  const [customPlaySettings, setCustomPlaySettings] = useState<CustomPlaySettings>({ ...DEFAULT_CUSTOM_SETTINGS });
+  const [customPlaySettings, setCustomPlaySettings] = useState<CustomPlaySettings>({
+    ...DEFAULT_CUSTOM_SETTINGS,
+  });
 
   return {
-    isPlaying, setIsPlaying,
-    playbackMode, setPlaybackMode,
-    prependBasePitch, setPrependBasePitch,
-    prependMetronome, setPrependMetronome,
-    scaleTempo, setScaleTempo,
-    metronomeFreq, setMetronomeFreq,
-    examMode, setExamMode,
-    examWaitSeconds, setExamWaitSeconds,
-    showNoteCursor, setShowNoteCursor,
-    showMeasureHighlight, setShowMeasureHighlight,
-    hideNotes, setHideNotes,
-    apExamSettings, setApExamSettings,
-    koreanExamSettings, setKoreanExamSettings,
-    echoSettings, setEchoSettings,
-    customPlaySettings, setCustomPlaySettings,
+    isPlaying,
+    setIsPlaying,
+    playbackMode,
+    setPlaybackMode,
+    prependBasePitch,
+    setPrependBasePitch,
+    prependMetronome,
+    setPrependMetronome,
+    scaleTempo,
+    setScaleTempo,
+    metronomeFreq,
+    setMetronomeFreq,
+    examMode,
+    setExamMode,
+    examWaitSeconds,
+    setExamWaitSeconds,
+    showNoteCursor,
+    setShowNoteCursor,
+    showMeasureHighlight,
+    setShowMeasureHighlight,
+    hideNotes,
+    setHideNotes,
+    apExamSettings,
+    setApExamSettings,
+    koreanExamSettings,
+    setKoreanExamSettings,
+    echoSettings,
+    setEchoSettings,
+    customPlaySettings,
+    setCustomPlaySettings,
   };
 }
 

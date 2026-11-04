@@ -6,7 +6,13 @@
     "progress": "{{done}} / {{total}} 完了",
     "streak": "連続 {{days}}日達成",
     "sectionTitle": "目標リスト",
-    "tip": "各カテゴリを1回以上練習すると目標が完了します。\n毎日継続して達成すると連続達成日数が増えます！"
+    "tip": "各カテゴリを1回以上練習すると目標が完了します。\n毎日継続して達成すると連続達成日数が増えます！",
+    "reminderNudge": {
+      "title": "明日も忘れないようにリマインダーを設定しますか？",
+      "desc": "毎日20:00に1回だけお知らせします。時刻はプロフィールで変更できます。",
+      "enable": "通知をオン",
+      "later": "あとで"
+    }
   },
   "selfEval": {
     "title": "練習はいかがでしたか？",
@@ -22,7 +28,8 @@
     "selectDifficulty": "難易度選択",
     "startPractice": "練習開始",
     "locked": "ロック",
-    "pro": "Pro"
+    "pro": "Pro",
+    "recommended": "おすすめ"
   },
   "choice": {
     "question": "問題 {{current}}/{{total}}",
@@ -41,8 +48,22 @@
     "chordPrompt": "和音を聴いて種類を答えてください。",
     "progressionPrompt": "聞こえる和声進行を選んでください。",
     "cadencePrompt": "最後のカデンツの種類を選んでください。",
-    "keyModePrompt": "メロディーを聴いて長調/短調を答えてください。",
-    "keyPrompt": "メロディーを聴いて調性を答えてください。"
+    "keyModePrompt": "最初に基準音ラ(A)、続いてメロディーが流れます。長調/短調を答えてください。",
+    "keyPrompt": "最初に基準音ラ(A)、続いてメロディーが流れます。調性を答えてください。",
+    "scalePrompt": "音階を聴いて種類を当ててください。",
+    "explainTitle": "解説",
+    "listenCorrect": "正解を聴く",
+    "listenMine": "自分の答えを聴く",
+    "showScore": "楽譜を見る",
+    "hideScore": "楽譜を隠す",
+    "scoreCorrect": "正解 · {{choice}}",
+    "scoreMine": "自分の答え · {{choice}}",
+    "intervalHarmonicPrompt": "同時に鳴る2つの音を聴いて音程を答えてください。",
+    "intervalCompoundPrompt": "オクターブを超える2つの音を聴いて複合音程を答えてください。",
+    "scaleBothPrompt": "上行と下行を聴いて音階の種類を答えてください。",
+    "cadenceDetailPrompt": "最後のカデンツの種類を細かく選んでください。最後のソプラノの音とバスを聴いてみましょう。",
+    "progressionFigurePrompt": "バス(転回形)と七の和音に注意して、聞こえる進行を選んでください。",
+    "romanPrompt": "最初に主和音が鳴ります。続いて鳴る和音のローマ数字を選んでください。"
   },
   "notation": {
     "listenAndWrite": "聴いて記譜してください",
@@ -56,6 +77,7 @@
     "dotQuarter": "付点4分",
     "dotEighth": "付点8分",
     "triplet": "三連符",
+    "duplet": "二連符",
     "restWhole": "全休符",
     "restHalf": "二分休符",
     "restQuarter": "四分休符",

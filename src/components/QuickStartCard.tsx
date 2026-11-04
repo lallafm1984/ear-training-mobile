@@ -17,12 +17,7 @@ interface QuickStartCardProps {
   onPress: () => void;
 }
 
-function QuickStartCard({
-  category,
-  difficulty,
-  streakDays,
-  onPress,
-}: QuickStartCardProps) {
+function QuickStartCard({ category, difficulty, streakDays, onPress }: QuickStartCardProps) {
   const { t } = useTranslation(['home', 'common', 'content']);
   const diffLabel = t('content:difficulty.' + category + '.' + difficulty);
   const catColor = CATEGORY_COLORS[category].main;
@@ -32,14 +27,16 @@ function QuickStartCard({
       {/* 스트릭 배너 */}
       {streakDays > 0 && (
         <View style={styles.streakBanner}>
-          <Text style={styles.streakText}>
-            {t('home:quickStart.streak', { days: streakDays })}
-          </Text>
+          <Text style={styles.streakText}>{t('home:quickStart.streak', { days: streakDays })}</Text>
         </View>
       )}
 
       {/* 빠른 시작 */}
-      <TouchableOpacity style={[styles.card, { backgroundColor: catColor }]} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: catColor }]}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
         <View style={styles.left}>
           <View style={styles.iconCircle}>
             <Zap size={20} color={COLORS.white} fill={COLORS.white} />

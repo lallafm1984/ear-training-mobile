@@ -1,0 +1,60 @@
+{
+  "title": "間違いノート",
+  "unresolvedChip": "未解決 {{count}}",
+  "filters": {
+    "all": "すべて",
+    "unresolved": "未解決",
+    "resolved": "解決済み",
+    "onlyCategory": "{{name}}のみ"
+  },
+  "weakness": {
+    "title": "弱点 TOP 3",
+    "desc": "直近30日の間違いと低い自己評価から選びました",
+    "stats": "未解決 {{unresolved}} · 間違い {{wrong}}回 · 難しかった練習 {{low}}回",
+    "review": "間違いを復習",
+    "practice": "集中練習",
+    "empty": "まだ弱点は見えません。練習が貯まるとここに表示されます。"
+  },
+  "reviewAll": "未解決 {{count}}問を復習",
+  "reviewAllHint": "最近の間違いから最大{{max}}問",
+  "empty": {
+    "title": "まだ間違いはありません",
+    "desc": "選択式の練習や模擬試験で間違えた問題がここに集まります。音をもう一度聞いて解き直せます。"
+  },
+  "item": {
+    "correct": "正解",
+    "mine": "自分の答え",
+    "wrongCount": "{{count}}回間違い",
+    "resolved": "解決",
+    "listen": "聞く",
+    "playing": "再生中",
+    "delete": "削除",
+    "source": {
+      "practice": "練習",
+      "exam": "模擬試験"
+    }
+  },
+  "clearResolved": "解決済みを消す",
+  "clearResolvedConfirm": {
+    "title": "解決済みの誤答を消しますか？",
+    "message": "解決済み{{count}}件が一覧から消えます。元に戻せません。"
+  },
+  "review": {
+    "title": "間違い復習",
+    "progress": "{{current}} / {{total}}"
+  },
+  "choice": {
+    "saved": "間違いノートに保存しました。復習で正解すると解決になります。"
+  },
+  "result": {
+    "viewNotes": "間違いノートを見る（{{count}}）"
+  },
+  "exam": {
+    "viewNotes": "間違えた{{count}}問を間違いノートで聞き直す"
+  },
+  "stats": {
+    "card": "間違いノート",
+    "cardDesc": "未解決 {{count}}問 · 弱点を見る",
+    "cardEmpty": "間違えた問題を集めて聞き直す"
+  }
+}

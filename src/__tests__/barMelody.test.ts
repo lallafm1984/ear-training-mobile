@@ -1,6 +1,6 @@
 import { generatePracticeScore } from '../lib/practiceScoreGenerator';
 import { getSixteenthsPerBar, sumScoreNotesSixteenths, uid } from '../lib/scoreUtils';
-import type { ContentCategory } from '../types/content';
+import type { BarMelodyDifficulty, ContentCategory } from '../types/content';
 import type { ScoreNote } from '../lib/scoreUtils';
 import {
   shouldUseFirstNoteHint,
@@ -52,48 +52,57 @@ function chromaticMidi(note: ScoreNote): number {
     A: 9,
     B: 11,
   };
-  const accidentalOffset = note.accidental === '#'
-    ? 1
-    : note.accidental === 'b'
-      ? -1
-      : 0;
+  const accidentalOffset = note.accidental === '#' ? 1 : note.accidental === 'b' ? -1 : 0;
   return (note.octave + 1) * 12 + semitoneByPitch[note.pitch] + accidentalOffset;
 }
 
+function abcBody(abc: string): string {
+  return abc.split('K:C\n')[1] ?? abc;
+}
+
 describe('barMelody practice score generation', () => {
-  it.each(BAR_MELODY_DIFFICULTIES)('generates a fixed C-major quarter-note bar for %s', (difficulty, maxStep) => {
-    const score = generatePracticeScore(BAR_MELODY, difficulty as any, {
-      timeSignature: '3/4',
-      keySignature: 'G',
-      tempo: 80,
-    });
+  it.each(BAR_MELODY_DIFFICULTIES)(
+    'generates a fixed C-major quarter-note bar for %s',
+    (difficulty, maxStep) => {
+      const score = generatePracticeScore(BAR_MELODY, difficulty as BarMelodyDifficulty, {
+        timeSignature: '3/4',
+        keySignature: 'G',
+        tempo: 80,
+      });
 
-    expect(score.timeSignature).toBe('4/4');
-    expect(score.keySignature).toBe('C');
-    expect(score.useGrandStaff).toBe(false);
-    expect(score.bassNotes).toHaveLength(0);
-    expect(score.barsPerStaff).toBe(1);
-    expect(score.trebleNotes).toHaveLength(4);
-    expect(score.trebleNotes.every(note => note.duration === '4')).toBe(true);
-    expect(score.trebleNotes.every(note => note.accidental === '')).toBe(true);
-    expect(totalSixteenths(score.trebleNotes)).toBe(getSixteenthsPerBar('4/4'));
+      expect(score.timeSignature).toBe('4/4');
+      expect(score.keySignature).toBe('C');
+      expect(score.useGrandStaff).toBe(false);
+      expect(score.bassNotes).toHaveLength(0);
+      expect(score.barsPerStaff).toBe(1);
+      expect(score.trebleNotes).toHaveLength(4);
+      expect(score.trebleNotes.every((note) => note.duration === '4')).toBe(true);
+      expect(score.trebleNotes.every((note) => note.accidental === '')).toBe(true);
+      expect(totalSixteenths(score.trebleNotes)).toBe(getSixteenthsPerBar('4/4'));
 
-    const degrees = score.trebleNotes.map(cMajorDegree);
-    expect(degrees.every(degree => degree >= 0 && degree <= 7)).toBe(true);
-    for (let i = 1; i < degrees.length; i += 1) {
-      const step = Math.abs(degrees[i] - degrees[i - 1]);
-      expect(step).toBeGreaterThanOrEqual(1);
-      expect(step).toBeLessThanOrEqual(maxStep);
-    }
-  });
+      const degrees = score.trebleNotes.map(cMajorDegree);
+      expect(degrees.every((degree) => degree >= 0 && degree <= 7)).toBe(true);
+      for (let i = 1; i < degrees.length; i += 1) {
+        const step = Math.abs(degrees[i] - degrees[i - 1]);
+        expect(step).toBeGreaterThanOrEqual(1);
+        expect(step).toBeLessThanOrEqual(maxStep);
+      }
+    },
+  );
 
   it('generates level 5 with exactly one chromatic neighbor tone', () => {
     for (let i = 0; i < 80; i += 1) {
-      const score = generatePracticeScore(BAR_MELODY, 'bar_5' as any);
-      const accidentalCount = score.trebleNotes.filter(note => note.accidental !== '').length;
+      const score = generatePracticeScore(BAR_MELODY, 'bar_5');
+      const accidentalCount = score.trebleNotes.filter((note) => note.accidental !== '').length;
       const midis = score.trebleNotes.map(chromaticMidi);
+      const abc = buildBarMelodyDisplayAbc(score.trebleNotes);
 
       expect(accidentalCount).toBe(1);
+      expect(
+        score.trebleNotes.every((note) => note.accidental === '' || note.accidental === '#'),
+      ).toBe(true);
+      expect(abcBody(abc)).not.toContain('_');
+      expect(abcBody(abc)).not.toContain('=');
       for (let j = 1; j < midis.length; j += 1) {
         const step = Math.abs(midis[j] - midis[j - 1]);
         expect(step).toBeGreaterThanOrEqual(1);
@@ -106,13 +115,19 @@ describe('barMelody practice score generation', () => {
     const accidentalCounts = new Set<number>();
 
     for (let i = 0; i < 100; i += 1) {
-      const score = generatePracticeScore(BAR_MELODY, 'bar_6' as any);
-      const accidentalCount = score.trebleNotes.filter(note => note.accidental !== '').length;
+      const score = generatePracticeScore(BAR_MELODY, 'bar_6');
+      const accidentalCount = score.trebleNotes.filter((note) => note.accidental !== '').length;
       const midis = score.trebleNotes.map(chromaticMidi);
+      const abc = buildBarMelodyDisplayAbc(score.trebleNotes);
       accidentalCounts.add(accidentalCount);
 
       expect(accidentalCount).toBeGreaterThanOrEqual(1);
       expect(accidentalCount).toBeLessThanOrEqual(2);
+      expect(
+        score.trebleNotes.every((note) => note.accidental === '' || note.accidental === '#'),
+      ).toBe(true);
+      expect(abcBody(abc)).not.toContain('_');
+      expect(abcBody(abc)).not.toContain('=');
       for (let j = 1; j < midis.length; j += 1) {
         const step = Math.abs(midis[j] - midis[j - 1]);
         expect(step).toBeGreaterThanOrEqual(1);
@@ -127,7 +142,7 @@ describe('barMelody practice score generation', () => {
     const intervalSteps = new Set<number>();
 
     for (let i = 0; i < 80; i += 1) {
-      const score = generatePracticeScore(BAR_MELODY, 'bar_1' as any);
+      const score = generatePracticeScore(BAR_MELODY, 'bar_1');
       const degrees = score.trebleNotes.map(cMajorDegree);
 
       for (let j = 1; j < degrees.length; j += 1) {
@@ -136,7 +151,7 @@ describe('barMelody practice score generation', () => {
     }
 
     expect(intervalSteps.has(2)).toBe(true);
-    expect([...intervalSteps].every(step => step === 1 || step === 2)).toBe(true);
+    expect([...intervalSteps].every((step) => step === 1 || step === 2)).toBe(true);
   });
 });
 
@@ -171,6 +186,19 @@ describe('barMelody notation practice behavior', () => {
     expect(abc).toContain('C4 z4 ^C4 z4 |]');
   });
 
+  it('preserves sharp spelling for descending keyboard answers', () => {
+    const abc = buildBarMelodyDisplayAbc([
+      makeBarMelodyKeyboardNote('A', 4, '#'),
+      makeBarMelodyKeyboardNote('G', 4, '#'),
+      makeBarMelodyKeyboardNote('F', 4, '#'),
+      makeBarMelodyKeyboardNote('C', 4, '#'),
+    ]);
+
+    expect(abc).toContain('^A4 ^G4 ^F4 ^C4 |]');
+    expect(abcBody(abc)).not.toContain('_');
+    expect(abcBody(abc)).not.toContain('=');
+  });
+
   it('fills bar melody answers from the keyboard in slot order and undoes the last slot', () => {
     const first = makeBarMelodyKeyboardNote('C', 4);
     const second = makeBarMelodyKeyboardNote('E', 4);
@@ -197,7 +225,7 @@ describe('barMelody notation practice behavior', () => {
     const next = appendBarMelodyInput(full, makeBarMelodyKeyboardNote('G', 4));
 
     expect(next).toHaveLength(4);
-    expect(next.map(note => note?.pitch)).toEqual(['C', 'D', 'E', 'F']);
+    expect(next.map((note) => note?.pitch)).toEqual(['C', 'D', 'E', 'F']);
   });
 
   it('is a notation category without a first-note hint', () => {

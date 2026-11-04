@@ -1,10 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions,
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { AlertConfig } from '../context/AlertContext';
+
+import { modalCardWidth } from '../lib/layout';
 
 const { width: W } = Dimensions.get('window');
 
@@ -15,15 +23,15 @@ interface Props {
 }
 
 const TYPE_CONFIG = {
-  success: { Icon: CheckCircle,    color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-  error:   { Icon: XCircle,        color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-  warning: { Icon: AlertTriangle,  color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  info:    { Icon: Info,           color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+  success: { Icon: CheckCircle, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  error: { Icon: XCircle, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  warning: { Icon: AlertTriangle, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  info: { Icon: Info, color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
 };
 
 export default function AppAlert({ visible, config, onClose }: Props) {
   const { t } = useTranslation('common');
-  const scaleAnim   = useRef(new Animated.Value(0.88)).current;
+  const scaleAnim = useRef(new Animated.Value(0.88)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -45,7 +53,7 @@ export default function AppAlert({ visible, config, onClose }: Props) {
       scaleAnim.setValue(0.88);
       opacityAnim.setValue(0);
     }
-  }, [visible]);
+  }, [visible, scaleAnim, opacityAnim]);
 
   if (!config) return null;
 
@@ -53,13 +61,13 @@ export default function AppAlert({ visible, config, onClose }: Props) {
   const { Icon, color, bg, border } = TYPE_CONFIG[type];
   const buttons = config.buttons ?? [{ text: t('common:button.confirm') }];
 
-  const handlePress = (btn: typeof buttons[number]) => {
+  const handlePress = (btn: (typeof buttons)[number]) => {
     onClose();
     if (btn.onPress) setTimeout(btn.onPress, 60);
   };
 
   const handleBackdropPress = () => {
-    const cancelBtn = buttons.find(b => b.style === 'cancel');
+    const cancelBtn = buttons.find((b) => b.style === 'cancel');
     if (cancelBtn) handlePress(cancelBtn);
     else onClose();
   };
@@ -81,49 +89,63 @@ export default function AppAlert({ visible, config, onClose }: Props) {
 
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
           {/* 아이콘 */}
-          <View style={[styles.iconWrap, { backgroundColor: bg, borderColor: border }]}>
-            <Icon size={26} color={color} />
-          </View>
+          {config.showIcon !== false && (
+            <View style={[styles.iconWrap, { backgroundColor: bg, borderColor: border }]}>
+              <Icon size={26} color={color} />
+            </View>
+          )}
 
           {/* 제목 */}
-          <Text style={[styles.title, !config.message && { marginBottom: 22 }]}>
+          <Text
+            style={[
+              styles.title,
+              !config.message && { marginBottom: 22 },
+              !!config.message && config.messageSpacing === 'relaxed' && styles.titleRelaxed,
+            ]}
+          >
             {config.title}
           </Text>
 
           {/* 메시지 */}
           {!!config.message && (
-            <Text style={styles.message}>{config.message}</Text>
+            <Text style={[styles.message, config.messageAlign === 'left' && styles.messageLeft]}>
+              {config.message}
+            </Text>
           )}
 
           {/* 버튼 */}
-          <View style={[
-            styles.btnRow,
-            buttons.length === 1 && styles.btnRowSingle,
-            buttons.length >= 3 && styles.btnRowVertical,
-          ]}>
+          <View
+            style={[
+              styles.btnRow,
+              buttons.length === 1 && styles.btnRowSingle,
+              buttons.length >= 3 && styles.btnRowVertical,
+            ]}
+          >
             {buttons.map((btn, i) => {
               const isDestructive = btn.style === 'destructive';
-              const isCancel      = btn.style === 'cancel';
-              const isPrimary     = !isDestructive && !isCancel;
+              const isCancel = btn.style === 'cancel';
+              const isPrimary = !isDestructive && !isCancel;
               return (
                 <TouchableOpacity
                   key={i}
                   style={[
                     styles.btn,
                     buttons.length >= 3 && styles.btnFull,
-                    isPrimary    && styles.btnPrimary,
+                    isPrimary && styles.btnPrimary,
                     isDestructive && styles.btnDestructive,
-                    isCancel     && styles.btnCancel,
+                    isCancel && styles.btnCancel,
                   ]}
                   onPress={() => handlePress(btn)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[
-                    styles.btnText,
-                    isPrimary    && styles.btnTextPrimary,
-                    isDestructive && styles.btnTextDestructive,
-                    isCancel     && styles.btnTextCancel,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.btnText,
+                      isPrimary && styles.btnTextPrimary,
+                      isDestructive && styles.btnTextDestructive,
+                      isCancel && styles.btnTextCancel,
+                    ]}
+                  >
                     {btn.text}
                   </Text>
                 </TouchableOpacity>
@@ -145,7 +167,7 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   card: {
-    width: W - 56,
+    width: modalCardWidth(W, 56),
     backgroundColor: '#ffffff',
     borderRadius: 24,
     paddingHorizontal: 22,
@@ -175,6 +197,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -0.2,
   },
+  titleRelaxed: {
+    marginBottom: 20,
+  },
   message: {
     fontSize: 13,
     color: '#64748b',
@@ -182,6 +207,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 22,
     paddingHorizontal: 4,
+  },
+  messageLeft: {
+    alignSelf: 'stretch',
+    textAlign: 'left',
   },
   btnRow: {
     flexDirection: 'row',

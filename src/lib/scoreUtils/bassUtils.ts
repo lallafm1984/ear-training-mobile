@@ -14,8 +14,13 @@ export function getBassBaseOctave(scale: PitchName[]): number {
 }
 
 export const CHORD_TONES: Record<number, number[]> = {
-  0: [0, 2, 4], 1: [1, 3, 5], 2: [2, 4, 6],
-  3: [3, 5, 0], 4: [4, 6, 1], 5: [5, 0, 2], 6: [6, 1, 3],
+  0: [0, 2, 4],
+  1: [1, 3, 5],
+  2: [2, 4, 6],
+  3: [3, 5, 0],
+  4: [4, 6, 1],
+  5: [5, 0, 2],
+  6: [6, 1, 3],
 };
 
 /** 불협화 pitch-class 간격: m2, M2, P4, tritone, m7, M7 */
@@ -28,7 +33,10 @@ export const IMPERFECT_CONSONANT_PC = new Set([3, 4, 8, 9]);
 export const MIN_TREBLE_BASS_SEMITONES = 15;
 
 /** 한 마디 트레블: 음 시작 offset(16분) → MIDI (조표 반영, 성부 동일 건반 회피용) */
-export function buildTrebleAttackMidiMap(barSlice: ScoreNote[], keySignature: string): Map<number, number> {
+export function buildTrebleAttackMidiMap(
+  barSlice: ScoreNote[],
+  keySignature: string,
+): Map<number, number> {
   const map = new Map<number, number>();
   let off = 0;
   let i = 0;
@@ -89,7 +97,8 @@ export function chordToneBnnCandidates(n: number, bTones: number[]): number[] {
 
 /** 가장 가까운 화음 구성음으로 snap */
 export function snapToChordTone(nn: number, bTones: number[]): number {
-  let best = nn, bestDist = Infinity;
+  let best = nn,
+    bestDist = Infinity;
   for (const t of bTones) {
     for (const base of [
       Math.floor(nn / 7) * 7 + t,
@@ -98,7 +107,10 @@ export function snapToChordTone(nn: number, bTones: number[]): number {
     ]) {
       if (base < -5 || base > 4) continue;
       const d = Math.abs(base - nn);
-      if (d < bestDist) { bestDist = d; best = base; }
+      if (d < bestDist) {
+        bestDist = d;
+        best = base;
+      }
     }
   }
   return Math.max(-5, Math.min(4, best));

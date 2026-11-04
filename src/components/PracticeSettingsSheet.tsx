@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import BottomSheet from './BottomSheet';
 import { COLORS } from '../theme/colors';
+import { isCompoundMeter } from '../lib/scoreUtils/duration';
 import type { PracticeSettings } from '../navigation/MainStack';
 import type { PlanTier } from '../types';
 
@@ -43,17 +42,69 @@ const TEMPOS: { bpm: number; label: string }[] = [
 ];
 
 const KEY_DISPLAY: Record<string, string> = {
-  C: 'C', G: 'G', D: 'D', A: 'A', E: 'E', B: 'B', 'F#': 'F#', 'C#': 'C#',
-  F: 'F', Bb: 'B♭', Eb: 'E♭', Ab: 'A♭', Db: 'D♭', Gb: 'G♭', Cb: 'C♭',
-  Am: 'Am', Em: 'Em', Bm: 'Bm', 'F#m': 'F#m', 'C#m': 'C#m', 'G#m': 'G#m', 'D#m': 'D#m', 'A#m': 'A#m',
-  Dm: 'Dm', Gm: 'Gm', Cm: 'Cm', Fm: 'Fm', Bbm: 'B♭m', Ebm: 'E♭m', Abm: 'A♭m',
+  C: 'C',
+  G: 'G',
+  D: 'D',
+  A: 'A',
+  E: 'E',
+  B: 'B',
+  'F#': 'F#',
+  'C#': 'C#',
+  F: 'F',
+  Bb: 'B♭',
+  Eb: 'E♭',
+  Ab: 'A♭',
+  Db: 'D♭',
+  Gb: 'G♭',
+  Cb: 'C♭',
+  Am: 'Am',
+  Em: 'Em',
+  Bm: 'Bm',
+  'F#m': 'F#m',
+  'C#m': 'C#m',
+  'G#m': 'G#m',
+  'D#m': 'D#m',
+  'A#m': 'A#m',
+  Dm: 'Dm',
+  Gm: 'Gm',
+  Cm: 'Cm',
+  Fm: 'Fm',
+  Bbm: 'B♭m',
+  Ebm: 'E♭m',
+  Abm: 'A♭m',
 };
 
 const KEY_ACC_COUNT: Record<string, string> = {
-  C: '0', G: '1#', D: '2#', A: '3#', E: '4#', B: '5#', 'F#': '6#', 'C#': '7#',
-  F: '1♭', Bb: '2♭', Eb: '3♭', Ab: '4♭', Db: '5♭', Gb: '6♭', Cb: '7♭',
-  Am: '0', Em: '1#', Bm: '2#', 'F#m': '3#', 'C#m': '4#', 'G#m': '5#', 'D#m': '6#', 'A#m': '7#',
-  Dm: '1♭', Gm: '2♭', Cm: '3♭', Fm: '4♭', Bbm: '5♭', Ebm: '6♭', Abm: '7♭',
+  C: '0',
+  G: '1#',
+  D: '2#',
+  A: '3#',
+  E: '4#',
+  B: '5#',
+  'F#': '6#',
+  'C#': '7#',
+  F: '1♭',
+  Bb: '2♭',
+  Eb: '3♭',
+  Ab: '4♭',
+  Db: '5♭',
+  Gb: '6♭',
+  Cb: '7♭',
+  Am: '0',
+  Em: '1#',
+  Bm: '2#',
+  'F#m': '3#',
+  'C#m': '4#',
+  'G#m': '5#',
+  'D#m': '6#',
+  'A#m': '7#',
+  Dm: '1♭',
+  Gm: '2♭',
+  Cm: '3♭',
+  Fm: '4♭',
+  Bbm: '5♭',
+  Ebm: '6♭',
+  Abm: '7♭',
 };
 
 // Free 사용자 허용 범위
@@ -75,12 +126,19 @@ interface PracticeSettingsSheetProps {
 }
 
 export default function PracticeSettingsSheet({
-  open, onClose, settings, onChangeSettings, accentColor, accentBg, tier, onUpgrade, category,
+  open,
+  onClose,
+  settings,
+  onChangeSettings,
+  accentColor,
+  tier,
+  onUpgrade,
+  category,
 }: PracticeSettingsSheetProps) {
   const { t } = useTranslation(['editor', 'common']);
   const isFree = tier === 'free';
   const [keyMode, setKeyMode] = useState<'major' | 'minor'>(
-    settings.keySignature.includes('m') ? 'minor' : 'major'
+    settings.keySignature.includes('m') ? 'minor' : 'major',
   );
 
   const update = (patch: Partial<PracticeSettings>) => {
@@ -103,24 +161,33 @@ export default function PracticeSettingsSheet({
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>{t('editor:settings.timeSignature')}</Text>
         <View style={styles.chipRow}>
-          {TIME_SIGNATURES.map(t => {
+          {TIME_SIGNATURES.map((t) => {
             const active = settings.timeSignature === t;
             const isDef = isDefault('time', t);
             const locked = isFree && !FREE_TIME_SIGS.includes(t);
             return (
               <TouchableOpacity
                 key={t}
-                onPress={() => locked ? onUpgrade() : update({ timeSignature: t })}
+                onPress={() => (locked ? onUpgrade() : update({ timeSignature: t }))}
                 style={[
                   styles.timeChip,
                   active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
+                  locked && {
+                    backgroundColor: '#dde3ed',
+                    borderColor: '#94a3b8',
+                    borderStyle: 'dashed',
+                    opacity: 1,
+                  },
                 ]}
               >
-                {locked && <Lock size={8} color="#64748b" style={{ position: 'absolute', top: 3, right: 3 }} />}
-                <Text style={[styles.timeChipText, active && { color: '#fff' }]}>
-                  {t}
-                </Text>
+                {locked && (
+                  <Lock
+                    size={8}
+                    color="#64748b"
+                    style={{ position: 'absolute', top: 3, right: 3 }}
+                  />
+                )}
+                <Text style={[styles.timeChipText, active && { color: '#fff' }]}>{t}</Text>
                 {isDef && !active && !locked && (
                   <View style={[styles.defaultDot, { backgroundColor: accentColor + '40' }]} />
                 )}
@@ -128,6 +195,10 @@ export default function PracticeSettingsSheet({
             );
           })}
         </View>
+        {(category === 'melody' || category === 'rhythm') &&
+          isCompoundMeter(settings.timeSignature) && (
+            <Text style={styles.hintText}>{t('editor:settings.compoundTupletHint')}</Text>
+          )}
       </View>
 
       {/* ── 리듬 음이름 (리듬 전용) ── */}
@@ -165,82 +236,110 @@ export default function PracticeSettingsSheet({
       {category !== 'rhythm' && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('editor:settings.keySignature')}</Text>
-        {/* 장조/단조 탭 */}
-        <View style={styles.keyModeTabRow}>
-          <TouchableOpacity
-            onPress={() => setKeyMode('major')}
-            style={[styles.keyModeTab, keyMode === 'major' && { backgroundColor: accentColor }]}
-          >
-            <Text style={[styles.keyModeTabText, keyMode === 'major' && { color: '#fff' }]}>
-              {t('editor:settings.major')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setKeyMode('minor')}
-            style={[styles.keyModeTab, keyMode === 'minor' && { backgroundColor: accentColor }]}
-          >
-            <Text style={[styles.keyModeTabText, keyMode === 'minor' && { color: '#fff' }]}>
-              {t('editor:settings.minor')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          {/* 장조/단조 탭 */}
+          <View style={styles.keyModeTabRow}>
+            <TouchableOpacity
+              onPress={() => setKeyMode('major')}
+              style={[styles.keyModeTab, keyMode === 'major' && { backgroundColor: accentColor }]}
+            >
+              <Text style={[styles.keyModeTabText, keyMode === 'major' && { color: '#fff' }]}>
+                {t('editor:settings.major')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setKeyMode('minor')}
+              style={[styles.keyModeTab, keyMode === 'minor' && { backgroundColor: accentColor }]}
+            >
+              <Text style={[styles.keyModeTabText, keyMode === 'minor' && { color: '#fff' }]}>
+                {t('editor:settings.minor')}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* 올림표 계열 */}
-        <Text style={styles.keyGroupLabel}>
-          {sharpKeys[0] === 'C' || sharpKeys[0] === 'Am' ? t('editor:settings.sharps') : t('editor:settings.sharpsOnly')}
-        </Text>
-        <View style={styles.keyGrid}>
-          {sharpKeys.map(k => {
-            const active = settings.keySignature === k;
-            const acc = KEY_ACC_COUNT[k] ?? '';
-            const locked = isFree && !FREE_KEY_SIGS.includes(k);
-            return (
-              <TouchableOpacity
-                key={k}
-                onPress={() => locked ? onUpgrade() : update({ keySignature: k })}
-                style={[
-                  styles.keyChip,
-                  active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
-                ]}
-              >
-                {locked && <Lock size={7} color="#64748b" style={{ position: 'absolute', top: 2, right: 2 }} />}
-                <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
-                  {KEY_DISPLAY[k] ?? k}
-                </Text>
-                {acc !== '0' ? (
-                  <Text style={[styles.keyChipSub, active && { color: 'rgba(255,255,255,0.6)' }]}>{acc}</Text>
-                ) : null}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+          {/* 올림표 계열 */}
+          <Text style={styles.keyGroupLabel}>
+            {sharpKeys[0] === 'C' || sharpKeys[0] === 'Am'
+              ? t('editor:settings.sharps')
+              : t('editor:settings.sharpsOnly')}
+          </Text>
+          <View style={styles.keyGrid}>
+            {sharpKeys.map((k) => {
+              const active = settings.keySignature === k;
+              const acc = KEY_ACC_COUNT[k] ?? '';
+              const locked = isFree && !FREE_KEY_SIGS.includes(k);
+              return (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => (locked ? onUpgrade() : update({ keySignature: k }))}
+                  style={[
+                    styles.keyChip,
+                    active && { backgroundColor: accentColor, borderColor: accentColor },
+                    locked && {
+                      backgroundColor: '#dde3ed',
+                      borderColor: '#94a3b8',
+                      borderStyle: 'dashed',
+                      opacity: 1,
+                    },
+                  ]}
+                >
+                  {locked && (
+                    <Lock
+                      size={7}
+                      color="#64748b"
+                      style={{ position: 'absolute', top: 2, right: 2 }}
+                    />
+                  )}
+                  <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
+                    {KEY_DISPLAY[k] ?? k}
+                  </Text>
+                  {acc !== '0' ? (
+                    <Text style={[styles.keyChipSub, active && { color: 'rgba(255,255,255,0.6)' }]}>
+                      {acc}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        {/* 내림표 계열 */}
-        <Text style={[styles.keyGroupLabel, { marginTop: 5 }]}>{t('editor:settings.flats')}</Text>
-        <View style={styles.keyGrid}>
-          {flatKeys.map(k => {
-            const active = settings.keySignature === k;
-            const acc = KEY_ACC_COUNT[k] ?? '';
-            const locked = isFree && !FREE_KEY_SIGS.includes(k);
-            return (
-              <TouchableOpacity
-                key={k}
-                onPress={() => locked ? onUpgrade() : update({ keySignature: k })}
-                style={[
-                  styles.keyChip,
-                  active && { backgroundColor: accentColor, borderColor: accentColor },
-                  locked && { backgroundColor: '#dde3ed', borderColor: '#94a3b8', borderStyle: 'dashed', opacity: 1 },
-                ]}
-              >
-                {locked && <Lock size={7} color="#64748b" style={{ position: 'absolute', top: 2, right: 2 }} />}
-                <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
-                  {KEY_DISPLAY[k] ?? k}
-                </Text>
-                <Text style={[styles.keyChipSub, active && { color: 'rgba(255,255,255,0.6)' }]}>{acc}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {/* 내림표 계열 */}
+          <Text style={[styles.keyGroupLabel, { marginTop: 5 }]}>{t('editor:settings.flats')}</Text>
+          <View style={styles.keyGrid}>
+            {flatKeys.map((k) => {
+              const active = settings.keySignature === k;
+              const acc = KEY_ACC_COUNT[k] ?? '';
+              const locked = isFree && !FREE_KEY_SIGS.includes(k);
+              return (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => (locked ? onUpgrade() : update({ keySignature: k }))}
+                  style={[
+                    styles.keyChip,
+                    active && { backgroundColor: accentColor, borderColor: accentColor },
+                    locked && {
+                      backgroundColor: '#dde3ed',
+                      borderColor: '#94a3b8',
+                      borderStyle: 'dashed',
+                      opacity: 1,
+                    },
+                  ]}
+                >
+                  {locked && (
+                    <Lock
+                      size={7}
+                      color="#64748b"
+                      style={{ position: 'absolute', top: 2, right: 2 }}
+                    />
+                  )}
+                  <Text style={[styles.keyChipMain, active && { color: '#fff' }]}>
+                    {KEY_DISPLAY[k] ?? k}
+                  </Text>
+                  <Text style={[styles.keyChipSub, active && { color: 'rgba(255,255,255,0.6)' }]}>
+                    {acc}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       )}
@@ -261,9 +360,7 @@ export default function PracticeSettingsSheet({
                   active && { backgroundColor: accentColor, borderColor: accentColor },
                 ]}
               >
-                <Text style={[styles.tempoText, active && { color: '#fff' }]}>
-                  {bpm}
-                </Text>
+                <Text style={[styles.tempoText, active && { color: '#fff' }]}>{bpm}</Text>
                 {isDef && !active && (
                   <View style={[styles.defaultDot, { backgroundColor: accentColor + '40' }]} />
                 )}
@@ -291,6 +388,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.slate700,
     marginBottom: 6,
+  },
+  hintText: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 16,
+    color: COLORS.slate500,
   },
 
   // 박자 칩

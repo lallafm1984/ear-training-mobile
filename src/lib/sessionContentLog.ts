@@ -1,6 +1,10 @@
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
-export type ContentRunSource = 'choice_practice' | 'notation_practice' | 'mock_exam';
+export type ContentRunSource =
+  | 'choice_practice'
+  | 'notation_practice'
+  | 'mock_exam'
+  | 'tap_practice';
 
 export interface ContentRunInput {
   contentType: ContentCategory;

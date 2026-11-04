@@ -8,7 +8,7 @@
   "paywall": {
     "title": "요금제",
     "proBanner": "MelodyGen Pro",
-    "heroSubtitle": "6가지 청음 훈련의\n모든 난이도를 잠금 해제하세요",
+    "heroSubtitle": "10가지 청음 훈련의\n모든 난이도를 잠금 해제하세요",
     "currentPro": "현재 Pro 플랜 이용 중",
     "compareTitle": "청음 훈련 난이도 비교",
     "compareCategory": "카테고리",
@@ -59,7 +59,10 @@
     "restoreErrorTitle": "복원 오류",
     "restoreErrorMessage": "구독 복원 중 오류가 발생했습니다. 다시 시도해주세요.",
     "restoreError": "복원 오류",
-    "restoreErrorMsg": "구독 복원 중 오류가 발생했습니다. 다시 시도해주세요."
+    "restoreErrorMsg": "구독 복원 중 오류가 발생했습니다. 다시 시도해주세요.",
+    "loginRequiredTitle": "로그인이 필요합니다",
+    "loginRequiredMessage": "Pro 구독과 구독 복원은 로그인한 계정에 연결됩니다.\n로그인하면 지금까지의 연습 기록도 그대로 옮겨집니다.",
+    "loginButton": "로그인하러 가기"
   },
   "upgrade": {
     "tierBadge": "Pro 이상",
@@ -73,7 +76,11 @@
     "examModeBenefits": ["시험 모드 재생", "구간 대기 시간 설정", "실제 시험 환경 구성"],
     "difficultyTitle": "중급·고급 난이도",
     "difficultyDesc": "초급 이상의 난이도는 Pro에서 사용 가능합니다.",
-    "difficultyBenefits": ["중급: 8분음표·임시표·3연음", "고급: 16분음표·아르페지오", "모든 난이도 선택"],
+    "difficultyBenefits": [
+      "중급: 8분음표·임시표·3연음",
+      "고급: 16분음표·아르페지오",
+      "모든 난이도 선택"
+    ],
     "measuresTitle": "8마디 이상 생성",
     "measuresDesc": "4마디 초과 악보 생성은 Pro에서 사용 가능합니다.",
     "measuresBenefits": ["8·12·16마디 악보 생성", "긴 청음 문제 출제", "다양한 구성 연습"],
@@ -82,21 +89,45 @@
     "editNotesBenefits": ["음표 음정·길이 수정", "개별 음표 삭제", "세밀한 악보 편집"],
     "downloadAudioTitle": "음원 다운로드",
     "downloadAudioDesc": "청음 음원(MP3) 다운로드는 Pro 플랜 전용 기능입니다.",
-    "downloadAudioBenefits": ["MP3 음원 무제한 다운로드", "음원·악보 이미지 무제한 저장", "음표 편집 기능 포함"],
+    "downloadAudioBenefits": [
+      "MP3 음원 무제한 다운로드",
+      "음원·악보 이미지 무제한 저장",
+      "음표 편집 기능 포함"
+    ],
     "downloadImageTitle": "악보 이미지 저장",
     "downloadImageDesc": "악보 이미지(PNG) 저장은 Pro 플랜 전용 기능입니다.",
-    "downloadImageBenefits": ["PNG 이미지 무제한 갤러리 저장", "MP3 음원 무제한 다운로드", "음표 편집 기능 포함"],
+    "downloadImageBenefits": [
+      "PNG 이미지 무제한 갤러리 저장",
+      "MP3 음원 무제한 다운로드",
+      "음표 편집 기능 포함"
+    ],
     "saveScoresTitle": "악보 저장 한도 초과",
     "saveScoresDesc": "현재 플랜의 악보 저장 한도를 초과했습니다.\nFree: 5개 · Pro: 20개",
-    "saveScoresBenefits": ["Pro: 최대 20개 악보 저장", "저장된 악보 언제든 불러오기", "모든 기능 잠금 해제"],
+    "saveScoresBenefits": [
+      "Pro: 최대 20개 악보 저장",
+      "저장된 악보 언제든 불러오기",
+      "모든 기능 잠금 해제"
+    ],
     "keySignatureTitle": "다양한 조성",
     "keySignatureDesc": "Free 플랜에서는 다장조(C)만 사용할 수 있습니다.\nPro에서 모든 장조·단조를 이용해보세요.",
-    "keySignatureBenefits": ["24개 장조·단조 모두 사용", "5도권 전체 조성 연습", "실전 시험 대비 필수"],
+    "keySignatureBenefits": [
+      "24개 장조·단조 모두 사용",
+      "5도권 전체 조성 연습",
+      "실전 시험 대비 필수"
+    ],
     "timeSignatureTitle": "다양한 박자",
     "timeSignatureDesc": "Free 플랜에서는 4/4박자만 사용할 수 있습니다.\nPro에서 모든 박자를 이용해보세요.",
-    "timeSignatureBenefits": ["3/4, 6/8, 12/8 등 전체 박자", "복합 박자 연습", "다양한 리듬 패턴 훈련"],
+    "timeSignatureBenefits": [
+      "3/4, 6/8, 12/8 등 전체 박자",
+      "복합 박자 연습",
+      "다양한 리듬 패턴 훈련"
+    ],
     "downloadLimitTitle": "다운로드 한도 초과",
     "downloadLimitDesc": "이번 달 다운로드 횟수를 모두 사용했습니다.\nPro 플랜에서 무제한으로 다운로드하세요.",
-    "downloadLimitBenefits": ["MP3 음원 무제한 다운로드", "악보 이미지 무제한 저장", "모든 기능 잠금 해제"]
+    "downloadLimitBenefits": [
+      "MP3 음원 무제한 다운로드",
+      "악보 이미지 무제한 저장",
+      "모든 기능 잠금 해제"
+    ]
   }
 }

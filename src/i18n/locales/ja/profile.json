@@ -4,7 +4,8 @@
     "account": "アカウント",
     "legal": "規約およびポリシー",
     "language": "言語",
-    "other": "その他"
+    "other": "その他",
+    "notifications": "通知"
   },
   "menu": {
     "planManage": "プラン管理",
@@ -43,6 +44,30 @@
     "title": "言語 / Language",
     "ko": "한국어",
     "en": "English",
-    "ja": "日本語"
+    "ja": "日本語",
+    "choose": "使用する言語を選んでから「適用」を押してください。",
+    "apply": "適用",
+    "error": "言語を変更できませんでした。もう一度お試しください。"
+  },
+  "guest": {
+    "title": "ゲスト",
+    "subtitle": "ログインすると、練習記録と実力プロフィールがアカウントに安全に保存されます。",
+    "loginButton": "Googleでログイン",
+    "loginMenu": "ログイン",
+    "loginMenuValue": "記録の保存・サブスク"
+  },
+  "reminder": {
+    "title": "毎日の練習リマインダー",
+    "desc": "決めた時刻に1日1回、練習をお知らせします。通知はこの端末だけで鳴ります。",
+    "time": "通知時刻",
+    "presets": "クイック選択",
+    "hour": "時",
+    "minute": "分",
+    "notificationTitle": "今日の聴音練習の時間です 🎧",
+    "notificationBody": "5分だけでも耳は覚えます。今日の目標を進めましょう。",
+    "channelName": "毎日の練習リマインダー",
+    "permissionTitle": "通知の許可が必要です",
+    "permissionMessage": "端末の設定でMelodyGenの通知を許可すると、毎日の練習時刻にお知らせできます。",
+    "scheduleFailed": "リマインダーを予約できませんでした。しばらくしてからもう一度お試しください。"
   }
 }

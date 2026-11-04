@@ -96,9 +96,10 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
   const { t } = useTranslation('editor');
   return (
     <BottomSheet open={open} onClose={onClose} title={t('playback.title')}>
-
       {/* ── 공통 설정값 (모든 모드에 적용) ── */}
-      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>{t('playback.commonSettings')}</Text>
+      <Text style={[styles.playOptLabel, { marginBottom: 10 }]}>
+        {t('playback.commonSettings')}
+      </Text>
       <View style={styles.commonSettingsRow}>
         <View style={styles.commonSettingsCard}>
           <Text style={styles.commonSettingsLabel}>{t('playback.scaleBpm')}</Text>
@@ -106,7 +107,10 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
             style={styles.commonSettingsInput}
             keyboardType="number-pad"
             value={String(scaleTempo || '')}
-            onChangeText={v => { const n = parseInt(v); if (!isNaN(n)) setScaleTempo(n); }}
+            onChangeText={(v) => {
+              const n = parseInt(v);
+              if (!isNaN(n)) setScaleTempo(n);
+            }}
           />
         </View>
         <View style={styles.commonSettingsCard}>
@@ -115,18 +119,31 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
             style={styles.commonSettingsInput}
             keyboardType="number-pad"
             value={String(metronomeFreq || '')}
-            onChangeText={v => { const n = parseInt(v); if (!isNaN(n)) setMetronomeFreq(n); }}
+            onChangeText={(v) => {
+              const n = parseInt(v);
+              if (!isNaN(n)) setMetronomeFreq(n);
+            }}
           />
         </View>
       </View>
 
       {/* 재생 시 표시 옵션 */}
       <View style={styles.commonSettingsRow}>
-        <View style={[styles.commonSettingsCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+        <View
+          style={[
+            styles.commonSettingsCard,
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+          ]}
+        >
           <Text style={styles.commonSettingsLabel}>{t('playback.showNoteCursor')}</Text>
           <Switch value={showNoteCursor} onValueChange={setShowNoteCursor} />
         </View>
-        <View style={[styles.commonSettingsCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+        <View
+          style={[
+            styles.commonSettingsCard,
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+          ]}
+        >
           <Text style={styles.commonSettingsLabel}>{t('playback.showMeasureHighlight')}</Text>
           <Switch value={showMeasureHighlight} onValueChange={setShowMeasureHighlight} />
         </View>
@@ -141,12 +158,23 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
         return (
           <View style={styles.modeAccordion}>
             <TouchableOpacity
-              onPress={() => { setPlaybackMode(null); setExamMode(false); }}
-              style={[styles.modeCard, isActive && styles.modeCardActive, isActive && styles.modeCardExpanded]}
+              onPress={() => {
+                setPlaybackMode(null);
+                setExamMode(false);
+              }}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActive,
+                isActive && styles.modeCardExpanded,
+              ]}
               activeOpacity={0.75}
             >
-              <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive]}>{t('playback.normalPlay')}</Text>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive]}>{t('playback.normalPlayDesc')}</Text>
+              <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive]}>
+                {t('playback.normalPlay')}
+              </Text>
+              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive]}>
+                {t('playback.normalPlayDesc')}
+              </Text>
             </TouchableOpacity>
 
             {/* 일반 재생 설정: 스케일·카운트인 ON/OFF */}
@@ -174,20 +202,42 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           <View style={styles.modeAccordion}>
             <TouchableOpacity
               onPress={() => {
-                if (locked) { onClose(); openUpgrade('exam_mode'); return; }
-                setPlaybackMode('practice'); setExamMode(true);
+                if (locked) {
+                  onClose();
+                  openUpgrade('exam_mode');
+                  return;
+                }
+                setPlaybackMode('practice');
+                setExamMode(true);
               }}
-              style={[styles.modeCard, isActive && styles.modeCardActive, isActive && styles.modeCardExpanded, locked && styles.modeCardLocked]}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActive,
+                isActive && styles.modeCardExpanded,
+                locked && styles.modeCardLocked,
+              ]}
               activeOpacity={0.75}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {locked && <Lock size={12} color="#94a3b8" />}
-                <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive, locked && { color: '#94a3b8' }]}>
+                <Text
+                  style={[
+                    styles.modeCardTitle,
+                    isActive && styles.modeCardTitleActive,
+                    locked && { color: '#94a3b8' },
+                  ]}
+                >
                   {PLAYBACK_MODE_LABELS.practice}
                 </Text>
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
+              <Text
+                style={[
+                  styles.modeCardDesc,
+                  isActive && styles.modeCardDescActive,
+                  locked && { color: '#cbd5e1' },
+                ]}
+              >
                 {t('playback.practiceDesc')}
               </Text>
             </TouchableOpacity>
@@ -199,9 +249,15 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
                     {t('playback.practiceSeq1')}
-                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}{t('playback.seconds')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {examWaitSeconds}
+                      {t('playback.seconds')}
+                    </Text>
                     {t('playback.practiceSeq2')}
-                    <Text style={styles.modeSeqHighlight}>{examWaitSeconds}{t('playback.seconds')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {examWaitSeconds}
+                      {t('playback.seconds')}
+                    </Text>
                     {t('playback.practiceSeq3')}
                   </Text>
                 </View>
@@ -212,7 +268,10 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
                     value={String(examWaitSeconds || '')}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setExamWaitSeconds(n); }}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0) setExamWaitSeconds(n);
+                    }}
                   />
                 </View>
               </View>
@@ -229,21 +288,46 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           <View style={styles.modeAccordion}>
             <TouchableOpacity
               onPress={() => {
-                if (locked) { onClose(); openUpgrade('exam_mode'); return; }
-                setPlaybackMode('ap_exam'); setExamMode(true);
+                if (locked) {
+                  onClose();
+                  openUpgrade('exam_mode');
+                  return;
+                }
+                setPlaybackMode('ap_exam');
+                setExamMode(true);
               }}
-              style={[styles.modeCard, isActive && styles.modeCardActiveAP, isActive && styles.modeCardExpanded, locked && styles.modeCardLocked]}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActiveAP,
+                isActive && styles.modeCardExpanded,
+                locked && styles.modeCardLocked,
+              ]}
               activeOpacity={0.75}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {locked && <Lock size={12} color="#94a3b8" />}
-                <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive, locked && { color: '#94a3b8' }]}>
+                <Text
+                  style={[
+                    styles.modeCardTitle,
+                    isActive && styles.modeCardTitleActive,
+                    locked && { color: '#94a3b8' },
+                  ]}
+                >
                   {PLAYBACK_MODE_LABELS.ap_exam}
                 </Text>
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                {t('playback.apDesc', { firstRest: apExamSettings.firstRestSeconds, rest: apExamSettings.restSeconds })}
+              <Text
+                style={[
+                  styles.modeCardDesc,
+                  isActive && styles.modeCardDescActive,
+                  locked && { color: '#cbd5e1' },
+                ]}
+              >
+                {t('playback.apDesc', {
+                  firstRest: apExamSettings.firstRestSeconds,
+                  rest: apExamSettings.restSeconds,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -252,11 +336,20 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
                     {t('playback.apSeq1')}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.firstRestSeconds}{t('playback.secondsRest')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {apExamSettings.firstRestSeconds}
+                      {t('playback.secondsRest')}
+                    </Text>
                     {t('playback.apSeq2')}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {apExamSettings.restSeconds}
+                      {t('playback.secondsRest')}
+                    </Text>
                     {t('playback.apSeq2')}
-                    <Text style={styles.modeSeqHighlight}>{apExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {apExamSettings.restSeconds}
+                      {t('playback.secondsRest')}
+                    </Text>
                     {t('playback.apSeq3')}
                   </Text>
                 </View>
@@ -266,7 +359,11 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
                     value={String(apExamSettings.firstRestSeconds)}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setApExamSettings(s => ({ ...s, firstRestSeconds: n })); }}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0)
+                        setApExamSettings((s) => ({ ...s, firstRestSeconds: n }));
+                    }}
                   />
                 </View>
                 <View style={styles.modeOptRow}>
@@ -275,7 +372,10 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
                     value={String(apExamSettings.restSeconds)}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setApExamSettings(s => ({ ...s, restSeconds: n })); }}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0) setApExamSettings((s) => ({ ...s, restSeconds: n }));
+                    }}
                   />
                 </View>
               </View>
@@ -292,21 +392,46 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           <View style={styles.modeAccordion}>
             <TouchableOpacity
               onPress={() => {
-                if (locked) { onClose(); openUpgrade('exam_mode'); return; }
-                setPlaybackMode('korean_exam'); setExamMode(true);
+                if (locked) {
+                  onClose();
+                  openUpgrade('exam_mode');
+                  return;
+                }
+                setPlaybackMode('korean_exam');
+                setExamMode(true);
               }}
-              style={[styles.modeCard, isActive && styles.modeCardActiveKR, isActive && styles.modeCardExpanded, locked && styles.modeCardLocked]}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActiveKR,
+                isActive && styles.modeCardExpanded,
+                locked && styles.modeCardLocked,
+              ]}
               activeOpacity={0.75}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {locked && <Lock size={12} color="#94a3b8" />}
-                <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive, locked && { color: '#94a3b8' }]}>
+                <Text
+                  style={[
+                    styles.modeCardTitle,
+                    isActive && styles.modeCardTitleActive,
+                    locked && { color: '#94a3b8' },
+                  ]}
+                >
                   {PLAYBACK_MODE_LABELS.korean_exam}
                 </Text>
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                {t('playback.koreanDesc', { plays: koreanExamSettings.totalPlays, rest: koreanExamSettings.restSeconds })}
+              <Text
+                style={[
+                  styles.modeCardDesc,
+                  isActive && styles.modeCardDescActive,
+                  locked && { color: '#cbd5e1' },
+                ]}
+              >
+                {t('playback.koreanDesc', {
+                  plays: koreanExamSettings.totalPlays,
+                  rest: koreanExamSettings.restSeconds,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -315,29 +440,46 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
                     {t('playback.koreanSeq1')}
-                    {Array.from({ length: koreanExamSettings.totalPlays }, (_, i) => (
+                    {Array.from({ length: koreanExamSettings.totalPlays }, (_, i) =>
                       i < koreanExamSettings.totalPlays - 1 ? (
                         <Text key={i}>
-                          {t('playback.fullPlay')}{' → '}
-                          <Text style={styles.modeSeqHighlight}>{koreanExamSettings.restSeconds}{t('playback.secondsRest')}</Text>
+                          {t('playback.fullPlay')}
+                          {' → '}
+                          <Text style={styles.modeSeqHighlight}>
+                            {koreanExamSettings.restSeconds}
+                            {t('playback.secondsRest')}
+                          </Text>
                           {' → '}
                         </Text>
                       ) : (
                         <Text key={i}>{t('playback.fullPlay')}</Text>
-                      )
-                    ))}
+                      ),
+                    )}
                   </Text>
                 </View>
                 <View style={styles.modeOptRow}>
                   <Text style={styles.modeOptLabel}>{t('playback.playCount')}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {[3, 4, 5].map(n => (
+                    {[3, 4, 5].map((n) => (
                       <TouchableOpacity
                         key={n}
-                        onPress={() => setKoreanExamSettings(s => ({ ...s, totalPlays: n }))}
-                        style={[styles.modeCountChip, koreanExamSettings.totalPlays === n && { backgroundColor: '#d97706', borderColor: '#d97706' }]}
+                        onPress={() => setKoreanExamSettings((s) => ({ ...s, totalPlays: n }))}
+                        style={[
+                          styles.modeCountChip,
+                          koreanExamSettings.totalPlays === n && {
+                            backgroundColor: '#d97706',
+                            borderColor: '#d97706',
+                          },
+                        ]}
                       >
-                        <Text style={[styles.modeCountChipText, koreanExamSettings.totalPlays === n && { color: '#fff' }]}>{t('playback.timesCount', { n })}</Text>
+                        <Text
+                          style={[
+                            styles.modeCountChipText,
+                            koreanExamSettings.totalPlays === n && { color: '#fff' },
+                          ]}
+                        >
+                          {t('playback.timesCount', { n })}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -348,7 +490,11 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
                     value={String(koreanExamSettings.restSeconds)}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setKoreanExamSettings(s => ({ ...s, restSeconds: n })); }}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0)
+                        setKoreanExamSettings((s) => ({ ...s, restSeconds: n }));
+                    }}
                   />
                 </View>
               </View>
@@ -365,21 +511,46 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           <View style={styles.modeAccordion}>
             <TouchableOpacity
               onPress={() => {
-                if (locked) { onClose(); openUpgrade('exam_mode'); return; }
-                setPlaybackMode('echo'); setExamMode(true);
+                if (locked) {
+                  onClose();
+                  openUpgrade('exam_mode');
+                  return;
+                }
+                setPlaybackMode('echo');
+                setExamMode(true);
               }}
-              style={[styles.modeCard, isActive && styles.modeCardActiveEcho, isActive && styles.modeCardExpanded, locked && styles.modeCardLocked]}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActiveEcho,
+                isActive && styles.modeCardExpanded,
+                locked && styles.modeCardLocked,
+              ]}
               activeOpacity={0.75}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {locked && <Lock size={12} color="#94a3b8" />}
-                <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive, locked && { color: '#94a3b8' }]}>
+                <Text
+                  style={[
+                    styles.modeCardTitle,
+                    isActive && styles.modeCardTitleActive,
+                    locked && { color: '#94a3b8' },
+                  ]}
+                >
                   {PLAYBACK_MODE_LABELS.echo}
                 </Text>
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
-                {t('playback.echoDesc', { measures: echoSettings.phraseMeasures, seconds: echoSettings.responseSeconds })}
+              <Text
+                style={[
+                  styles.modeCardDesc,
+                  isActive && styles.modeCardDescActive,
+                  locked && { color: '#cbd5e1' },
+                ]}
+              >
+                {t('playback.echoDesc', {
+                  measures: echoSettings.phraseMeasures,
+                  seconds: echoSettings.responseSeconds,
+                })}
               </Text>
             </TouchableOpacity>
 
@@ -388,22 +559,40 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
                     {t('playback.echoSeq1')}
-                    <Text style={styles.modeSeqHighlight}>{t('playback.measuresCount', { n: echoSettings.phraseMeasures })}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {t('playback.measuresCount', { n: echoSettings.phraseMeasures })}
+                    </Text>
                     {t('playback.echoSeq2')}
-                    <Text style={styles.modeSeqHighlight}>{echoSettings.responseSeconds}{t('playback.seconds')}</Text>
+                    <Text style={styles.modeSeqHighlight}>
+                      {echoSettings.responseSeconds}
+                      {t('playback.seconds')}
+                    </Text>
                     {t('playback.echoSeq3')}
                   </Text>
                 </View>
                 <View style={styles.modeOptRow}>
                   <Text style={styles.modeOptLabel}>{t('playback.sectionSize')}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {[1, 2, 4].map(n => (
+                    {[1, 2, 4].map((n) => (
                       <TouchableOpacity
                         key={n}
-                        onPress={() => setEchoSettings(s => ({ ...s, phraseMeasures: n }))}
-                        style={[styles.modeCountChip, echoSettings.phraseMeasures === n && { backgroundColor: '#16a34a', borderColor: '#16a34a' }]}
+                        onPress={() => setEchoSettings((s) => ({ ...s, phraseMeasures: n }))}
+                        style={[
+                          styles.modeCountChip,
+                          echoSettings.phraseMeasures === n && {
+                            backgroundColor: '#16a34a',
+                            borderColor: '#16a34a',
+                          },
+                        ]}
                       >
-                        <Text style={[styles.modeCountChipText, echoSettings.phraseMeasures === n && { color: '#fff' }]}>{t('playback.measuresCount', { n })}</Text>
+                        <Text
+                          style={[
+                            styles.modeCountChipText,
+                            echoSettings.phraseMeasures === n && { color: '#fff' },
+                          ]}
+                        >
+                          {t('playback.measuresCount', { n })}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -414,7 +603,11 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     style={styles.modeOptInput}
                     keyboardType="number-pad"
                     value={String(echoSettings.responseSeconds)}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setEchoSettings(s => ({ ...s, responseSeconds: n })); }}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0)
+                        setEchoSettings((s) => ({ ...s, responseSeconds: n }));
+                    }}
                   />
                 </View>
               </View>
@@ -427,8 +620,15 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
       {(() => {
         const isActive = playbackMode === 'custom';
         const locked = !limits.canUseExamMode;
-        const { prependScale, prependTonicChord, prependCountIn,
-          totalPlays, useSegments, segmentMeasures, segmentRepeats, restSeconds } = customPlaySettings;
+        const {
+          prependScale,
+          prependTonicChord,
+          totalPlays,
+          useSegments,
+          segmentMeasures,
+          segmentRepeats,
+          restSeconds,
+        } = customPlaySettings;
 
         // 순서 텍스트 앞부분 (스케일·으뜸화음·카운트인)
         const prefixParts: string[] = [];
@@ -436,9 +636,10 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
         if (prependTonicChord) prefixParts.push(t('playback.tonicChord'));
 
         // 본 재생 순서 텍스트
-        let bodyText = '';
+        let bodyText: string;
         if (useSegments) {
-          bodyText = `${t('playback.fullPlay')} → ${restSeconds}${t('playback.secondsRest')} → ` +
+          bodyText =
+            `${t('playback.fullPlay')} → ${restSeconds}${t('playback.secondsRest')} → ` +
             `${t('playback.measuresCount', { n: segmentMeasures })}×${t('playback.timesCount', { n: segmentRepeats })} → ` +
             `${restSeconds}${t('playback.secondsRest')} (${t('playback.allSections')}) → ${t('playback.fullPlay')}`;
         } else {
@@ -454,27 +655,48 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
           <View style={[styles.modeAccordion, { marginBottom: 0 }]}>
             <TouchableOpacity
               onPress={() => {
-                if (locked) { onClose(); openUpgrade('exam_mode'); return; }
-                setPlaybackMode('custom'); setExamMode(true);
+                if (locked) {
+                  onClose();
+                  openUpgrade('exam_mode');
+                  return;
+                }
+                setPlaybackMode('custom');
+                setExamMode(true);
               }}
-              style={[styles.modeCard, isActive && styles.modeCardActiveCustom, isActive && styles.modeCardExpanded, locked && styles.modeCardLocked]}
+              style={[
+                styles.modeCard,
+                isActive && styles.modeCardActiveCustom,
+                isActive && styles.modeCardExpanded,
+                locked && styles.modeCardLocked,
+              ]}
               activeOpacity={0.75}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {locked && <Lock size={12} color="#94a3b8" />}
-                <Text style={[styles.modeCardTitle, isActive && styles.modeCardTitleActive, locked && { color: '#94a3b8' }]}>
+                <Text
+                  style={[
+                    styles.modeCardTitle,
+                    isActive && styles.modeCardTitleActive,
+                    locked && { color: '#94a3b8' },
+                  ]}
+                >
                   {PLAYBACK_MODE_LABELS.custom}
                 </Text>
                 {locked && <Text style={styles.lockedFeatureText}>PRO</Text>}
               </View>
-              <Text style={[styles.modeCardDesc, isActive && styles.modeCardDescActive, locked && { color: '#cbd5e1' }]}>
+              <Text
+                style={[
+                  styles.modeCardDesc,
+                  isActive && styles.modeCardDescActive,
+                  locked && { color: '#cbd5e1' },
+                ]}
+              >
                 {t('playback.customDesc')}
               </Text>
             </TouchableOpacity>
 
             {isActive && !locked && (
               <View style={[styles.modeSettingsBox, { borderColor: '#e9d5ff' }]}>
-
                 {/* ── 순서 텍스트 ── */}
                 <View style={styles.modeSeqBox}>
                   <Text style={styles.modeSeqText}>
@@ -486,9 +708,13 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                     )}
                     {/* 본 재생 부분: 'N초 휴식' 토큰만 굵게 */}
                     {bodyText.split(/(\d+[^\d→]+)/).map((seg, i) =>
-                      /^\d+/.test(seg) && seg.includes(t('playback.secondsRest').trim())
-                        ? <Text key={i} style={styles.modeSeqHighlight}>{seg}</Text>
-                        : <Text key={i}>{seg}</Text>
+                      /^\d+/.test(seg) && seg.includes(t('playback.secondsRest').trim()) ? (
+                        <Text key={i} style={styles.modeSeqHighlight}>
+                          {seg}
+                        </Text>
+                      ) : (
+                        <Text key={i}>{seg}</Text>
+                      ),
                     )}
                   </Text>
                 </View>
@@ -496,50 +722,95 @@ const PlaybackSheet: React.FC<PlaybackSheetProps> = ({
                 {/* ── 준비 옵션 ── */}
                 <View style={[styles.modeOptRow, { marginBottom: 6 }]}>
                   <Text style={styles.modeOptLabel}>{t('playback.prependScale')}</Text>
-                  <Switch value={prependScale} onValueChange={v => setCustomPlaySettings(s => ({ ...s, prependScale: v }))} trackColor={{ true: '#9333ea' }} />
+                  <Switch
+                    value={prependScale}
+                    onValueChange={(v) => setCustomPlaySettings((s) => ({ ...s, prependScale: v }))}
+                    trackColor={{ true: '#9333ea' }}
+                  />
                 </View>
                 <View style={[styles.modeOptRow, { marginBottom: 14 }]}>
                   <Text style={styles.modeOptLabel}>{t('playback.prependTonicChord')}</Text>
-                  <Switch value={prependTonicChord} onValueChange={v => setCustomPlaySettings(s => ({ ...s, prependTonicChord: v }))} trackColor={{ true: '#9333ea' }} />
+                  <Switch
+                    value={prependTonicChord}
+                    onValueChange={(v) =>
+                      setCustomPlaySettings((s) => ({ ...s, prependTonicChord: v }))
+                    }
+                    trackColor={{ true: '#9333ea' }}
+                  />
                 </View>
 
                 {/* ── 구간 분할 ── */}
                 <View style={[styles.modeOptRow, { marginBottom: 10 }]}>
                   <Text style={styles.modeOptLabel}>{t('playback.splitSection')}</Text>
-                  <Switch value={useSegments} onValueChange={v => setCustomPlaySettings(s => ({ ...s, useSegments: v }))} trackColor={{ true: '#9333ea' }} />
+                  <Switch
+                    value={useSegments}
+                    onValueChange={(v) => setCustomPlaySettings((s) => ({ ...s, useSegments: v }))}
+                    trackColor={{ true: '#9333ea' }}
+                  />
                 </View>
                 {!useSegments && (
                   <View style={styles.modeOptRow}>
                     <Text style={styles.modeOptLabel}>{t('playback.playCount')}</Text>
-                    <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(totalPlays)}
-                      onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, totalPlays: n })); }} />
+                    <TextInput
+                      style={styles.modeOptInput}
+                      keyboardType="number-pad"
+                      value={String(totalPlays)}
+                      onChangeText={(v) => {
+                        const n = parseInt(v);
+                        if (!isNaN(n) && n > 0)
+                          setCustomPlaySettings((s) => ({ ...s, totalPlays: n }));
+                      }}
+                    />
                   </View>
                 )}
                 {useSegments && (
                   <>
                     <View style={styles.modeOptRow}>
                       <Text style={styles.modeOptLabel}>{t('playback.sectionSize')}</Text>
-                      <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(segmentMeasures)}
-                        onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, segmentMeasures: n })); }} />
+                      <TextInput
+                        style={styles.modeOptInput}
+                        keyboardType="number-pad"
+                        value={String(segmentMeasures)}
+                        onChangeText={(v) => {
+                          const n = parseInt(v);
+                          if (!isNaN(n) && n > 0)
+                            setCustomPlaySettings((s) => ({ ...s, segmentMeasures: n }));
+                        }}
+                      />
                     </View>
                     <View style={styles.modeOptRow}>
                       <Text style={styles.modeOptLabel}>{t('playback.sectionRepeat')}</Text>
-                      <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(segmentRepeats)}
-                        onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, segmentRepeats: n })); }} />
+                      <TextInput
+                        style={styles.modeOptInput}
+                        keyboardType="number-pad"
+                        value={String(segmentRepeats)}
+                        onChangeText={(v) => {
+                          const n = parseInt(v);
+                          if (!isNaN(n) && n > 0)
+                            setCustomPlaySettings((s) => ({ ...s, segmentRepeats: n }));
+                        }}
+                      />
                     </View>
                   </>
                 )}
                 <View style={styles.modeOptRow}>
                   <Text style={styles.modeOptLabel}>{t('playback.restTime')}</Text>
-                  <TextInput style={styles.modeOptInput} keyboardType="number-pad" value={String(restSeconds)}
-                    onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n > 0) setCustomPlaySettings(s => ({ ...s, restSeconds: n })); }} />
+                  <TextInput
+                    style={styles.modeOptInput}
+                    keyboardType="number-pad"
+                    value={String(restSeconds)}
+                    onChangeText={(v) => {
+                      const n = parseInt(v);
+                      if (!isNaN(n) && n > 0)
+                        setCustomPlaySettings((s) => ({ ...s, restSeconds: n }));
+                    }}
+                  />
                 </View>
               </View>
             )}
           </View>
         );
       })()}
-
     </BottomSheet>
   );
 };

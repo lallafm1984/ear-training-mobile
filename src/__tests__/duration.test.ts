@@ -6,9 +6,10 @@ import {
   getBeamGroupSixteenths,
   getTupletNoteDuration,
 } from '../lib/scoreUtils/duration';
+import type { NoteDuration } from '../lib/scoreUtils';
 
 describe('durationToSixteenths', () => {
-  const cases: [string, number][] = [
+  const cases: [NoteDuration, number][] = [
     ['1', 16],
     ['1.', 24],
     ['2', 8],
@@ -21,7 +22,7 @@ describe('durationToSixteenths', () => {
   ];
 
   it.each(cases)('duration "%s" → %d 16분음표', (dur, expected) => {
-    expect(durationToSixteenths(dur as any)).toBe(expected);
+    expect(durationToSixteenths(dur)).toBe(expected);
   });
 });
 

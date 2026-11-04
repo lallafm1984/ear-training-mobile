@@ -7,8 +7,8 @@ import type { ScoreNote, NoteDuration } from './scoreUtils';
 
 /** @deprecated 기존 호환용. 새 로직은 TimelineEvent 사용 */
 export interface NormalizedNote {
-  pitch: string;           // "C4", "F#4", "rest"
-  totalDuration: number;   // 16th note units
+  pitch: string; // "C4", "F#4", "rest"
+  totalDuration: number; // 16th note units
   sourceIndices: number[]; // original ScoreNote indices
 }
 
@@ -22,8 +22,8 @@ export interface NoteGrade {
 
 export interface GradingResult {
   grades: NoteGrade[];
-  accuracy: number;       // 0.0 ~ 1.0
-  selfRating: number;     // 1 ~ 5
+  accuracy: number; // 0.0 ~ 1.0
+  selfRating: number; // 1 ~ 5
   correctCount: number;
   wrongCount: number;
   missingCount: number;
@@ -35,10 +35,10 @@ export interface GradingResult {
 // ──────────────────────────────────────────────
 
 export interface TimelineEvent {
-  startPos: number;       // 48분음표 단위 시작 위치
-  duration: number;       // 48분음표 단위 길이
-  pitch: string;          // "C4", "F#4", "rest"
-  isTriplet: boolean;     // 셋잇단 여부
+  startPos: number; // 48분음표 단위 시작 위치
+  duration: number; // 48분음표 단위 길이
+  pitch: string; // "C4", "F#4", "rest"
+  isTriplet: boolean; // 셋잇단 여부
   sourceIndices: number[];
 }
 
@@ -59,16 +59,26 @@ function pitchString(note: ScoreNote): string {
  */
 export function durationTo48ths(dur: NoteDuration): number {
   switch (dur) {
-    case '1':  return 48;
-    case '1.': return 72;
-    case '2':  return 24;
-    case '2.': return 36;
-    case '4':  return 12;
-    case '4.': return 18;
-    case '8':  return 6;
-    case '8.': return 9;
-    case '16': return 3;
-    default:   return 12;
+    case '1':
+      return 48;
+    case '1.':
+      return 72;
+    case '2':
+      return 24;
+    case '2.':
+      return 36;
+    case '4':
+      return 12;
+    case '4.':
+      return 18;
+    case '8':
+      return 6;
+    case '8.':
+      return 9;
+    case '16':
+      return 3;
+    default:
+      return 12;
   }
 }
 
@@ -86,11 +96,7 @@ export function normalizeNotes(notes: ScoreNote[]): NormalizedNote[] {
 
     const prevNote = i > 0 ? notes[i - 1] : null;
     const isTied = note.tie || (prevNote != null && prevNote.tie === true);
-    if (
-      isTied &&
-      result.length > 0 &&
-      result[result.length - 1].pitch === pitch
-    ) {
+    if (isTied && result.length > 0 && result[result.length - 1].pitch === pitch) {
       const prev = result[result.length - 1];
       prev.totalDuration += dur;
       prev.sourceIndices.push(i);
@@ -173,10 +179,7 @@ export function buildTimeline(notes: ScoreNote[]): TimelineEvent[] {
 // gradeNotes — 박자 위치 기반 채점 (정답 / 오답)
 // ──────────────────────────────────────────────
 
-export function gradeNotes(
-  answerNotes: ScoreNote[],
-  userNotes: ScoreNote[],
-): GradingResult {
+export function gradeNotes(answerNotes: ScoreNote[], userNotes: ScoreNote[]): GradingResult {
   const answerTimeline = buildTimeline(answerNotes);
   const userTimeline = buildTimeline(userNotes);
 
@@ -208,8 +211,7 @@ export function gradeNotes(
     const durMatch = ae.duration === ue.duration;
     const tripletMatch = ae.isTriplet === ue.isTriplet;
 
-    const grade: NoteGradeType =
-      (pitchMatch && durMatch && tripletMatch) ? 'correct' : 'wrong';
+    const grade: NoteGradeType = pitchMatch && durMatch && tripletMatch ? 'correct' : 'wrong';
 
     grades.push({
       grade,
@@ -236,7 +238,7 @@ export function gradeNotes(
     const g = grades[i];
     if (g.grade !== 'wrong') continue;
 
-    const ae = answerTimeline.find(a => a.sourceIndices[0] === g.answerSourceIndices[0]);
+    const ae = answerTimeline.find((a) => a.sourceIndices[0] === g.answerSourceIndices[0]);
     if (!ae) continue;
     const ue = userByPos.get(ae.startPos);
     if (!ue || ue.duration >= ae.duration) continue;
@@ -245,7 +247,9 @@ export function gradeNotes(
 
     for (let j = 0; j < grades.length; j++) {
       if (j === i || grades[j].grade !== 'extra' || absorbed.has(j)) continue;
-      const extraUe = userTimeline.find(u => u.sourceIndices[0] === grades[j].userSourceIndices[0]);
+      const extraUe = userTimeline.find(
+        (u) => u.sourceIndices[0] === grades[j].userSourceIndices[0],
+      );
       if (extraUe && extraUe.startPos > ae.startPos && extraUe.startPos < spanEnd) {
         g.userSourceIndices.push(...grades[j].userSourceIndices);
         absorbed.add(j);
@@ -256,10 +260,10 @@ export function gradeNotes(
   // 흡수된 extra 제거
   const finalGrades = grades.filter((_, i) => !absorbed.has(i));
 
-  const correctCount = finalGrades.filter(g => g.grade === 'correct').length;
-  const wrongCount = finalGrades.filter(g => g.grade === 'wrong').length;
-  const missingCount = finalGrades.filter(g => g.grade === 'missing').length;
-  const extraCount = finalGrades.filter(g => g.grade === 'extra').length;
+  const correctCount = finalGrades.filter((g) => g.grade === 'correct').length;
+  const wrongCount = finalGrades.filter((g) => g.grade === 'wrong').length;
+  const missingCount = finalGrades.filter((g) => g.grade === 'missing').length;
+  const extraCount = finalGrades.filter((g) => g.grade === 'extra').length;
 
   const total = answerTimeline.length;
   const accuracy = total === 0 ? 0 : correctCount / total;

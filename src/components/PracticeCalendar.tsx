@@ -30,7 +30,7 @@ export default function PracticeCalendar({ records }: Props) {
   // 날짜별 기록 그룹핑
   const recordsByDate = useMemo(() => {
     const map: Record<string, PracticeRecord[]> = {};
-    records.forEach(r => {
+    records.forEach((r) => {
       const key = toDateKey(new Date(r.practicedAt));
       if (!map[key]) map[key] = [];
       map[key].push(r);
@@ -71,18 +71,16 @@ export default function PracticeCalendar({ records }: Props) {
     const recs = recordsByDate[dateKey];
     if (!recs) return [];
     const cats = new Set<ContentCategory>();
-    recs.forEach(r => cats.add(r.contentType));
+    recs.forEach((r) => cats.add(r.contentType));
     return Array.from(cats).slice(0, 4);
   };
 
-  // 선택된 날짜의 기록
-  const selectedRecords = selectedDate ? (recordsByDate[selectedDate] || []) : [];
-
   // 선택된 날짜의 카테고리별 요약
   const selectedSummary = useMemo(() => {
+    const selectedRecords = selectedDate ? recordsByDate[selectedDate] || [] : [];
     if (!selectedRecords.length) return [];
     const map: Record<string, { count: number; sum: number }> = {};
-    selectedRecords.forEach(r => {
+    selectedRecords.forEach((r) => {
       if (!map[r.contentType]) map[r.contentType] = { count: 0, sum: 0 };
       map[r.contentType].count++;
       map[r.contentType].sum += r.selfRating;
@@ -92,7 +90,7 @@ export default function PracticeCalendar({ records }: Props) {
       count,
       avgRating: Math.round((sum / count) * 10) / 10,
     }));
-  }, [selectedRecords]);
+  }, [recordsByDate, selectedDate]);
 
   return (
     <View style={styles.container}>
@@ -111,11 +109,15 @@ export default function PracticeCalendar({ records }: Props) {
       <View style={styles.weekRow}>
         {WEEKDAY_KEYS.map((key, i) => (
           <View key={key} style={styles.weekCell}>
-            <Text style={[
-              styles.weekText,
-              i === 0 && { color: '#ef4444' },
-              i === 6 && { color: '#3b82f6' },
-            ]}>{t('stats:calendar.' + key)}</Text>
+            <Text
+              style={[
+                styles.weekText,
+                i === 0 && { color: '#ef4444' },
+                i === 6 && { color: '#3b82f6' },
+              ]}
+            >
+              {t('stats:calendar.' + key)}
+            </Text>
           </View>
         ))}
       </View>
@@ -145,24 +147,32 @@ export default function PracticeCalendar({ records }: Props) {
                 onPress={() => handleDayPress(day)}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.dayText,
-                  di === 0 && { color: '#ef4444' },
-                  di === 6 && { color: '#3b82f6' },
-                  hasPractice && !isSelected && { fontWeight: '800' },
-                  isSelected && { color: '#fff', fontWeight: '800' },
-                ]}>
+                <Text
+                  style={[
+                    styles.dayText,
+                    di === 0 && { color: '#ef4444' },
+                    di === 6 && { color: '#3b82f6' },
+                    hasPractice && !isSelected && { fontWeight: '800' },
+                    isSelected && { color: '#fff', fontWeight: '800' },
+                  ]}
+                >
                   {day}
                 </Text>
                 {dots.length > 0 && !isSelected && (
                   <View style={styles.dotsRow}>
-                    {dots.map(cat => (
-                      <View key={cat} style={[styles.catDot, { backgroundColor: CATEGORY_COLORS[cat].main }]} />
+                    {dots.map((cat) => (
+                      <View
+                        key={cat}
+                        style={[styles.catDot, { backgroundColor: CATEGORY_COLORS[cat].main }]}
+                      />
                     ))}
                   </View>
                 )}
                 {isSelected && hasPractice && (
-                  <Text style={styles.selectedCount}>{dayRecs!.length}{t('common:unit.count')}</Text>
+                  <Text style={styles.selectedCount}>
+                    {dayRecs!.length}
+                    {t('common:unit.count')}
+                  </Text>
                 )}
               </TouchableOpacity>
             );
@@ -174,7 +184,10 @@ export default function PracticeCalendar({ records }: Props) {
       {selectedDate && selectedSummary.length > 0 && (
         <View style={styles.detail}>
           <Text style={styles.detailTitle}>
-            {t('stats:calendar.detailTitle', { month: parseInt(selectedDate.split('-')[1]), day: parseInt(selectedDate.split('-')[2]) })}
+            {t('stats:calendar.detailTitle', {
+              month: parseInt(selectedDate.split('-')[1]),
+              day: parseInt(selectedDate.split('-')[2]),
+            })}
           </Text>
           {selectedSummary.map(({ category, count, avgRating }) => {
             const colors = CATEGORY_COLORS[category];
@@ -182,10 +195,15 @@ export default function PracticeCalendar({ records }: Props) {
               <View key={category} style={styles.detailRow}>
                 <View style={styles.detailLeft}>
                   <View style={[styles.detailDot, { backgroundColor: colors.main }]} />
-                  <Text style={styles.detailName}>{t('content:category.' + category + '.name')}</Text>
+                  <Text style={styles.detailName}>
+                    {t('content:category.' + category + '.name')}
+                  </Text>
                 </View>
                 <View style={styles.detailRight}>
-                  <Text style={styles.detailCount}>{count}{t('common:unit.count')}</Text>
+                  <Text style={styles.detailCount}>
+                    {count}
+                    {t('common:unit.count')}
+                  </Text>
                   <Text style={[styles.detailRating, { color: colors.main }]}>
                     {t('stats:calendar.avgRating', { rating: avgRating })}
                   </Text>

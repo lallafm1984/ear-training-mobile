@@ -7,8 +7,8 @@ import {
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
 describe('CONTENT_CATEGORIES', () => {
-  it('8개 카테고리가 존재한다', () => {
-    expect(CONTENT_CATEGORIES).toHaveLength(8);
+  it('10개 카테고리가 존재한다', () => {
+    expect(CONTENT_CATEGORIES).toHaveLength(10);
   });
 
   it('각 카테고리가 필수 속성을 가진다', () => {
@@ -25,7 +25,7 @@ describe('CONTENT_CATEGORIES', () => {
   });
 
   it('카테고리 ID 목록이 올바르다', () => {
-    const ids = CONTENT_CATEGORIES.map(c => c.id);
+    const ids = CONTENT_CATEGORIES.map((c) => c.id);
     expect(ids).toEqual([
       'barMelody',
       'melody',
@@ -35,6 +35,8 @@ describe('CONTENT_CATEGORIES', () => {
       'progression',
       'key',
       'twoVoice',
+      'scale',
+      'rhythmTap',
     ]);
   });
 });
@@ -49,6 +51,8 @@ describe('getContentConfig', () => {
     ['progression', '화성 진행'],
     ['key', '조성 판별'],
     ['twoVoice', '2성부 받아쓰기'],
+    ['scale', '음계·선법 듣기'],
+    ['rhythmTap', '리듬 탭'],
   ];
 
   it.each(cases)('%s 카테고리의 이름이 올바르다', (id, expectedName) => {
@@ -72,21 +76,49 @@ describe('getDifficultyList', () => {
     expect(list[0]).toBe('rhythm_1');
   });
 
-  it('interval 카테고리는 4개 난이도를 가진다', () => {
-    expect(getDifficultyList('interval')).toHaveLength(4);
+  it('interval 카테고리는 6개 난이도를 가진다 (5 화성 음정, 6 복합음정)', () => {
+    const list = getDifficultyList('interval');
+    expect(list).toHaveLength(6);
+    expect(list.slice(4)).toEqual(['interval_5', 'interval_6']);
   });
 
-  it('chord 카테고리는 3개 난이도를 가진다', () => {
-    expect(getDifficultyList('chord')).toHaveLength(3);
+  it('scale 카테고리는 5개 난이도를 가진다 (5 상행·하행)', () => {
+    const list = getDifficultyList('scale');
+    expect(list).toHaveLength(5);
+    expect(list[4]).toBe('scale_5');
+  });
+
+  it('rhythmTap 카테고리는 6개 난이도를 가진다 (5 3/4박자, 6 6/8박자)', () => {
+    const list = getDifficultyList('rhythmTap');
+    expect(list).toHaveLength(6);
+    expect(list.slice(4)).toEqual(['tap_5', 'tap_6']);
+  });
+
+  it('maxLevel은 난이도 목록 길이와 같다', () => {
+    for (const cat of CONTENT_CATEGORIES) {
+      expect(cat.maxLevel).toBe(getDifficultyList(cat.id).length);
+    }
+  });
+
+  it('chord 카테고리는 4개 난이도를 가진다', () => {
+    expect(getDifficultyList('chord')).toHaveLength(4);
   });
 
   it('key 카테고리는 3개 난이도를 가진다', () => {
     expect(getDifficultyList('key')).toHaveLength(3);
   });
 
-  it('progression 카테고리는 4개 난이도를 가진다', () => {
+  it('progression 카테고리는 7개 난이도를 가진다 (5 종지 세분화·6 기능 진행·7 로마숫자)', () => {
     const list = getDifficultyList('progression');
-    expect(list).toEqual(['progression_1', 'progression_2', 'progression_3', 'progression_4']);
+    expect(list).toEqual([
+      'progression_1',
+      'progression_2',
+      'progression_3',
+      'progression_4',
+      'progression_5',
+      'progression_6',
+      'progression_7',
+    ]);
   });
 
   it('twoVoice 카테고리는 4개 난이도를 가진다', () => {

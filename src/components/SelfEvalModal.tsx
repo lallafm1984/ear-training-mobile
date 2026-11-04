@@ -3,9 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React from 'react';
-import {
-  Modal, View, Text, TouchableOpacity, StyleSheet, Pressable,
-} from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { SmilePlus, Meh, Frown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -45,8 +43,12 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <SmilePlus size={28} color="#10b981" />
-              <Text style={[styles.btnLabel, { color: '#065f46' }]}>{t('practice:selfEval.easy')}</Text>
-              <Text style={[styles.btnHint, { color: '#6ee7b7' }]}>{t('practice:selfEval.easyHint')}</Text>
+              <Text style={[styles.btnLabel, { color: '#065f46' }]}>
+                {t('practice:selfEval.easy')}
+              </Text>
+              <Text style={[styles.btnHint, { color: '#6ee7b7' }]}>
+                {t('practice:selfEval.easyHint')}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -55,8 +57,12 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <Meh size={28} color="#3b82f6" />
-              <Text style={[styles.btnLabel, { color: '#1e3a5f' }]}>{t('practice:selfEval.normal')}</Text>
-              <Text style={[styles.btnHint, { color: '#93c5fd' }]}>{t('practice:selfEval.normalHint')}</Text>
+              <Text style={[styles.btnLabel, { color: '#1e3a5f' }]}>
+                {t('practice:selfEval.normal')}
+              </Text>
+              <Text style={[styles.btnHint, { color: '#93c5fd' }]}>
+                {t('practice:selfEval.normalHint')}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -65,8 +71,12 @@ export default function SelfEvalModal({ visible, trackName, level, onRate, onSki
               activeOpacity={0.7}
             >
               <Frown size={28} color="#ef4444" />
-              <Text style={[styles.btnLabel, { color: '#7f1d1d' }]}>{t('practice:selfEval.hard')}</Text>
-              <Text style={[styles.btnHint, { color: '#fca5a5' }]}>{t('practice:selfEval.hardHint')}</Text>
+              <Text style={[styles.btnLabel, { color: '#7f1d1d' }]}>
+                {t('practice:selfEval.hard')}
+              </Text>
+              <Text style={[styles.btnHint, { color: '#fca5a5' }]}>
+                {t('practice:selfEval.hardHint')}
+              </Text>
             </TouchableOpacity>
           </View>
 

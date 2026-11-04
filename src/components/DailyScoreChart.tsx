@@ -3,15 +3,24 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import Svg, { Line, Circle, Polyline, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
+import { CONTENT_MAX_WIDTH } from '../lib/layout';
 import type { PracticeRecord, ContentCategory } from '../types/content';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_H_PAD = 32;
-const CHART_WIDTH = SCREEN_WIDTH - 40 - CHART_H_PAD * 2; // 화면 - 컨테이너패딩 - 차트패딩
+// 초기값: 화면 - 컨테이너패딩 - 차트패딩 (태블릿은 onLayout으로 실제 폭에 맞춘다)
+const DEFAULT_CHART_WIDTH = Math.min(SCREEN_WIDTH, CONTENT_MAX_WIDTH) - 40 - CHART_H_PAD * 2;
 const CHART_TOP_PAD = 10; // Y축 최상단 텍스트 잘림 방지
 
 const CATEGORIES: ContentCategory[] = [
@@ -23,6 +32,8 @@ const CATEGORIES: ContentCategory[] = [
   'progression',
   'key',
   'twoVoice',
+  'scale',
+  'rhythmTap',
 ];
 
 interface Props {
@@ -41,6 +52,12 @@ export default function DailyScoreChart({ records }: Props) {
     { label: t('stats:chart.period30'), days: 30 },
   ];
   const [periodIndex, setPeriodIndex] = useState(0);
+  const [chartWidth, setChartWidth] = useState(DEFAULT_CHART_WIDTH);
+  const onChartLayout = (e: LayoutChangeEvent) => {
+    const w = Math.round(e.nativeEvent.layout.width - CHART_H_PAD * 2);
+    if (w > 100 && w !== chartWidth) setChartWidth(w);
+  };
+  const CHART_WIDTH = chartWidth;
   const [activeCategories, setActiveCategories] = useState<Set<ContentCategory>>(
     new Set(['melody', 'interval', 'chord']),
   );
@@ -63,7 +80,7 @@ export default function DailyScoreChart({ records }: Props) {
 
     // 날짜+카테고리별 그룹핑
     const grouped: Record<string, Record<string, { sum: number; count: number }>> = {};
-    records.forEach(r => {
+    records.forEach((r) => {
       const key = toDateKey(new Date(r.practicedAt));
       if (!grouped[key]) grouped[key] = {};
       if (!grouped[key][r.contentType]) grouped[key][r.contentType] = { sum: 0, count: 0 };
@@ -72,8 +89,8 @@ export default function DailyScoreChart({ records }: Props) {
     });
 
     const catData = {} as Record<ContentCategory, (number | null)[]>;
-    CATEGORIES.forEach(cat => {
-      catData[cat] = keys.map(key => {
+    CATEGORIES.forEach((cat) => {
+      catData[cat] = keys.map((key) => {
         const g = grouped[key]?.[cat];
         return g ? Math.round((g.sum / g.count) * 10) / 10 : null;
       });
@@ -115,10 +132,10 @@ export default function DailyScoreChart({ records }: Props) {
       </View>
 
       {/* SVG 차트 */}
-      <View style={{ marginVertical: 12, alignItems: 'center' }}>
+      <View style={{ marginVertical: 12, alignItems: 'center' }} onLayout={onChartLayout}>
         <Svg width={CHART_WIDTH + CHART_H_PAD * 2} height={chartHeight + CHART_TOP_PAD + 28}>
           {/* Y축 그리드 + 레이블 */}
-          {[0, 1, 2, 3, 4, 5].map(v => {
+          {[0, 1, 2, 3, 4, 5].map((v) => {
             const y = CHART_TOP_PAD + chartHeight - (v / yMax) * chartHeight;
             return (
               <React.Fragment key={v}>
@@ -144,7 +161,7 @@ export default function DailyScoreChart({ records }: Props) {
           })}
 
           {/* 카테고리별 라인 */}
-          {CATEGORIES.filter(cat => activeCategories.has(cat)).map(cat => {
+          {CATEGORIES.filter((cat) => activeCategories.has(cat)).map((cat) => {
             const points = data[cat];
             const color = CATEGORY_COLORS[cat].main;
 
@@ -162,17 +179,11 @@ export default function DailyScoreChart({ records }: Props) {
 
             if (segments.length === 1) {
               return (
-                <Circle
-                  key={cat}
-                  cx={segments[0].x}
-                  cy={segments[0].y}
-                  r={3.5}
-                  fill={color}
-                />
+                <Circle key={cat} cx={segments[0].x} cy={segments[0].y} r={3.5} fill={color} />
               );
             }
 
-            const pointsStr = segments.map(p => `${p.x},${p.y}`).join(' ');
+            const pointsStr = segments.map((p) => `${p.x},${p.y}`).join(' ');
             return (
               <React.Fragment key={cat}>
                 <Polyline
@@ -211,7 +222,7 @@ export default function DailyScoreChart({ records }: Props) {
 
       {/* 범례 (토글) */}
       <View style={styles.legend}>
-        {CATEGORIES.map(cat => {
+        {CATEGORIES.map((cat) => {
           const active = activeCategories.has(cat);
           return (
             <TouchableOpacity

@@ -2,13 +2,22 @@
 // ABC notation generation & beat boundary splitting
 // ────────────────────────────────────────────────────────────────
 
-import type { NoteDuration, TupletType, ScoreNote, ScoreState } from './types';
+import type { TupletType, ScoreNote, ScoreState } from './types';
 import {
-  durationToSixteenths, getSixteenthsPerBar, SIXTEENTHS_TO_DURATION, SIXTEENTHS_TO_DUR,
-  sixteenthsToDuration, getTupletNoteDuration, getTupletActualSixteenths,
-  getBeamGroupSixteenths, isCompoundMeter, getBeamBreakPoints,
-  findExactDuration, sumScoreNotesSixteenths,
-  computeBarLengthsFromTotal, barGlobalStarts, getBarIndexAndLocal,
+  durationToSixteenths,
+  getSixteenthsPerBar,
+  SIXTEENTHS_TO_DUR,
+  sixteenthsToDuration,
+  getTupletNoteDuration,
+  getTupletActualSixteenths,
+  getBeamGroupSixteenths,
+  isCompoundMeter,
+  getBeamBreakPoints,
+  findExactDuration,
+  sumScoreNotesSixteenths,
+  computeBarLengthsFromTotal,
+  barGlobalStarts,
+  getBarIndexAndLocal,
 } from './duration';
 import { resolveAbcAccidental } from './keySignature';
 import { applyEnharmonicSpelling } from './midi';
@@ -77,7 +86,8 @@ export function splitAtBeatBoundaries(
       const p = parseInt(note.tuplet, 10);
       tupletRemaining = p;
       tupletSpanSixteenths = getTupletActualSixteenths(
-        note.tuplet, note.tupletSpan || note.duration,
+        note.tuplet,
+        note.tupletSpan || note.duration,
       );
     }
 
@@ -114,9 +124,7 @@ export function splitAtBeatBoundaries(
       // 필수 경계 (모든 음표 공통)
       // 마디 전체를 채우는 음표(locStart=0, locEnd=barLen)는 면제 (3/4 점2분 등)
       if (!(locStart === 0 && locEnd === barLen)) {
-        const mandInBar = mandatoryAll.filter(
-          (b) => b < barLen && b > locStart && b < locEnd,
-        );
+        const mandInBar = mandatoryAll.filter((b) => b < barLen && b > locStart && b < locEnd);
         for (const b of mandInBar) {
           splitGlobals.add(barGStart + b);
         }
@@ -125,9 +133,7 @@ export function splitAtBeatBoundaries(
       // 박 사이 시작: 모든 박 경계에서 분할 (§1 당김음 규칙 + §1.2 점음표)
       // 박 중간에서 시작해 다음 박으로 넘어가는 음은 붙임줄로 분할
       if (locStart % _beatSize !== 0) {
-        const offBeatBounds = allBeatBounds.filter(
-          (b) => b < barLen && b > locStart && b < locEnd,
-        );
+        const offBeatBounds = allBeatBounds.filter((b) => b < barLen && b > locStart && b < locEnd);
         for (const b of offBeatBounds) {
           splitGlobals.add(barGStart + b);
         }
@@ -400,7 +406,10 @@ function mergeAdjacentTiedNotes(
 
     if (note.tuplet && tupletRemaining === 0) {
       tupletRemaining = parseInt(note.tuplet, 10);
-      tupletSpanSixteenths = getTupletActualSixteenths(note.tuplet, note.tupletSpan || note.duration);
+      tupletSpanSixteenths = getTupletActualSixteenths(
+        note.tuplet,
+        note.tupletSpan || note.duration,
+      );
     }
     if (tupletRemaining > 0) {
       result.push(note);
@@ -429,7 +438,8 @@ function mergeAdjacentTiedNotes(
           next.pitch !== note.pitch ||
           next.octave !== note.octave ||
           next.accidental !== note.accidental
-        ) break;
+        )
+          break;
 
         const nextDur = durationToSixteenths(next.duration);
         const totalDur = accDur + nextDur;
@@ -439,9 +449,9 @@ function mergeAdjacentTiedNotes(
 
         const mergeEnd = localPos + totalDur;
         if (mergeEnd > barLen) break;
-        if (mandatoryBounds.some(mb => localPos < mb && mergeEnd > mb)) break;
+        if (mandatoryBounds.some((mb) => localPos < mb && mergeEnd > mb)) break;
         // 엇박 시작: 다음 박 경계를 넘으면 싱코페이션 → 병합 중단
-        if (offBeat && allBeatBoundsInBar.some(bb => localPos < bb && mergeEnd > bb)) break;
+        if (offBeat && allBeatBoundsInBar.some((bb) => localPos < bb && mergeEnd > bb)) break;
 
         accDur = totalDur;
         lastTie = next.tie ?? false;
@@ -573,7 +583,11 @@ function generateNotesAbc(
   const mergedAdjacentNotes = mergeAdjacentTiedNotes(splitNotes, timeSignature, pickupSixteenths);
 
   // 2단계: 마지막 마디 붙임줄 음표 합산 (박 분할 조각 → 원본 음가 복원)
-  const mergedNotes = mergeTiedNotesInLastMeasure(mergedAdjacentNotes, timeSignature, pickupSixteenths);
+  const mergedNotes = mergeTiedNotesInLastMeasure(
+    mergedAdjacentNotes,
+    timeSignature,
+    pickupSixteenths,
+  );
 
   // 3단계: 끊어진 붙임줄 정리 — tie 뒤에 쉼표·다른 음이 오면 tie 제거
   const processedNotes = mergedNotes.map((note, idx) => {
@@ -625,14 +639,29 @@ function generateNotesAbc(
       const isDotted = (spanDur as string).includes('.');
       let q: number;
       switch (note.tuplet) {
-        case '2': q = 3; break;
-        case '3': q = 2; break;
-        case '4': q = 6; break;
-        case '5': q = isDotted ? 6 : 4; break;
-        case '6': q = 4; break;
-        case '7': q = isDotted ? 6 : 4; break;
-        case '8': q = 6; break;
-        default:  q = 2;
+        case '2':
+          q = 3;
+          break;
+        case '3':
+          q = 2;
+          break;
+        case '4':
+          q = 6;
+          break;
+        case '5':
+          q = isDotted ? 6 : 4;
+          break;
+        case '6':
+          q = 4;
+          break;
+        case '7':
+          q = isDotted ? 6 : 4;
+          break;
+        case '8':
+          q = 6;
+          break;
+        default:
+          q = 2;
       }
       // 잇단음표는 인접 음표와 beam 분리 (표준 조판 규칙)
       if (measureAbcBuffer.length > 0 && !measureAbcBuffer.endsWith(' ')) {
@@ -640,10 +669,11 @@ function generateNotesAbc(
       }
       measureAbcBuffer += `(${p}:${q}:${p}`;
       tupletRemaining = p;
-      currentTupletNoteDur = note.tupletNoteDur ||
-        getTupletNoteDuration(note.tuplet, note.tupletSpan || note.duration);
+      currentTupletNoteDur =
+        note.tupletNoteDur || getTupletNoteDuration(note.tuplet, note.tupletSpan || note.duration);
       currentTupletSpanSixteenths = getTupletActualSixteenths(
-        note.tuplet, note.tupletSpan || note.duration,
+        note.tuplet,
+        note.tupletSpan || note.duration,
       );
     }
 
@@ -671,8 +701,11 @@ function generateNotesAbc(
     let accPrefix = '';
     if (note.pitch !== 'rest') {
       accPrefix = resolveAbcAccidental(
-        note.pitch, note.octave, note.accidental,
-        keySignature, measureAccState,
+        note.pitch,
+        note.octave,
+        note.accidental,
+        keySignature,
+        measureAccState,
       );
     }
 
@@ -714,7 +747,7 @@ function generateNotesAbc(
 
       // beam 그룹 경계 판별 (향상된 로직)
       const isBeamable = dur16ths <= 3; // 8분음표 이하만 beam 가능
-      const isAtBeamBreak = beamBreaks.some(bp => currentBarSixteenths === bp);
+      const isAtBeamBreak = beamBreaks.some((bp) => currentBarSixteenths === bp);
       const isAtBeatBoundary = currentBarSixteenths % beamGroupSize === 0;
       const atBarEnd = currentBarSixteenths >= currentBarCap();
 
@@ -773,7 +806,11 @@ export function getMeasureCount(state: ScoreState): number {
  * 3. Voice별 ABC 생성 (임시표, 박 가시성, beam 그룹 모두 적용)
  */
 /** 못갖춘마디 보상: 약동 상쇄(total가 한 마디의 정수배)일 때 마지막 마디가 (bar - pickup)가 되도록 쉼표 추가 */
-function applyPickupFill(notes: ScoreNote[], timeSignature: string, pickupSixteenths: number): ScoreNote[] {
+function applyPickupFill(
+  notes: ScoreNote[],
+  timeSignature: string,
+  pickupSixteenths: number,
+): ScoreNote[] {
   if (pickupSixteenths <= 0 || notes.length === 0) return notes;
   const B = getSixteenthsPerBar(timeSignature);
   const P = pickupSixteenths;
@@ -788,7 +825,10 @@ function applyPickupFill(notes: ScoreNote[], timeSignature: string, pickupSixtee
     const diff = needLast - lastLen;
     const fillDur = findExactDuration(diff);
     if (fillDur) {
-      return [...notes, { pitch: 'rest', octave: 4, accidental: '', duration: fillDur, id: '__pickup_fill__' }];
+      return [
+        ...notes,
+        { pitch: 'rest', octave: 4, accidental: '', duration: fillDur, id: '__pickup_fill__' },
+      ];
     }
   }
   return notes;
@@ -808,9 +848,7 @@ function padWithFullRests(abcBody: string, targetMeasures: number): string {
   if (current >= targetMeasures) return abcBody;
   const diff = targetMeasures - current;
   // '|]' 앞에 부족한 마디만큼 전마디 쉼표 삽입
-  const withoutEnd = abcBody.endsWith('|]')
-    ? abcBody.slice(0, -2)
-    : abcBody;
+  const withoutEnd = abcBody.endsWith('|]') ? abcBody.slice(0, -2) : abcBody;
   const padding = Array(diff).fill('Z').join(' | ');
   return withoutEnd + '| ' + padding + ' |]';
 }
@@ -830,8 +868,6 @@ export function generateAbc(state: ScoreState): string {
     pickupSixteenths,
     state.disableTies ?? false,
   );
-  const measureCount = countMeasures(trebleBody);
-
   const directives: string[] = [];
   if (useGrandStaff) directives.push('%%staves {V1 V2}');
 
@@ -840,9 +876,7 @@ export function generateAbc(state: ScoreState): string {
     `T: ${state.title || ''}`,
     `M: ${state.timeSignature}`,
     `L: 1/16`,
-    isCompoundMeter(state.timeSignature)
-      ? `Q: 1/8=${state.tempo * 2}`
-      : `Q: 1/4=${state.tempo}`,
+    isCompoundMeter(state.timeSignature) ? `Q: 1/8=${state.tempo * 2}` : `Q: 1/4=${state.tempo}`,
     ...directives,
     `K: ${state.keySignature}`,
   ].join('\n');
@@ -878,7 +912,10 @@ export function generateAbc(state: ScoreState): string {
       cleanBody = cleanBody.slice(0, -2) + '|';
       endsWithEndBar = true;
     }
-    const arr = cleanBody.split('|').map(m => m.trim()).filter(m => m.length > 0);
+    const arr = cleanBody
+      .split('|')
+      .map((m) => m.trim())
+      .filter((m) => m.length > 0);
     return { arr, endsWithEndBar };
   };
 
@@ -928,12 +965,18 @@ export function generateAbc(state: ScoreState): string {
 
     if (useGrandStaff) {
       finalAbc += '\nV:V1 clef=treble\n';
-      finalAbc += tArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && tData.endsWithEndBar) ? ' |]' : ' |');
+      finalAbc +=
+        tArr.slice(mIdx, mIdx + take).join(' | ') +
+        (mIdx + take === numM && tData.endsWithEndBar ? ' |]' : ' |');
       finalAbc += '\nV:V2 clef=bass\n';
-      finalAbc += bArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && bData.endsWithEndBar) ? ' |]' : ' |');
+      finalAbc +=
+        bArr.slice(mIdx, mIdx + take).join(' | ') +
+        (mIdx + take === numM && bData.endsWithEndBar ? ' |]' : ' |');
     } else {
       finalAbc += '\n';
-      finalAbc += tArr.slice(mIdx, mIdx + take).join(' | ') + ((mIdx + take === numM && tData.endsWithEndBar) ? ' |]' : ' |');
+      finalAbc +=
+        tArr.slice(mIdx, mIdx + take).join(' | ') +
+        (mIdx + take === numM && tData.endsWithEndBar ? ' |]' : ' |');
     }
 
     mIdx += take;

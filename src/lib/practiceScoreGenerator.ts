@@ -5,7 +5,7 @@
 
 import { generateScore } from './scoreGenerator';
 import type { Difficulty, BassDifficulty } from './scoreGenerator';
-import type { ScoreNote } from './scoreUtils/types';
+import type { PitchName, ScoreNote } from './scoreUtils/types';
 import { generateRhythmDictation } from './rhythmEngine';
 import { buildGeneratorOptions } from './trackConfig';
 import { generateBarMelodyNotes } from './barMelody';
@@ -30,24 +30,32 @@ export interface PracticeScoreSettings {
 
 export function melodyDifficultyToLevel(difficulty: ContentDifficulty): number {
   const map: Record<string, number> = {
-    beginner_1: 1, beginner_2: 2, beginner_3: 3,
-    intermediate_1: 4, intermediate_2: 5, intermediate_3: 6,
-    advanced_1: 7, advanced_2: 8, advanced_3: 9,
+    beginner_1: 1,
+    beginner_2: 2,
+    beginner_3: 3,
+    intermediate_1: 4,
+    intermediate_2: 5,
+    intermediate_3: 6,
+    advanced_1: 7,
+    advanced_2: 8,
+    advanced_3: 9,
   };
   return map[difficulty] ?? 1;
 }
 
 export function rhythmDifficultyToLevel(difficulty: ContentDifficulty): number {
   const map: Record<string, number> = {
-    rhythm_1: 1, rhythm_2: 2, rhythm_3: 4,
-    rhythm_4: 6, rhythm_5: 8, rhythm_6: 8,
+    rhythm_1: 1,
+    rhythm_2: 2,
+    rhythm_3: 4,
+    rhythm_4: 6,
+    rhythm_5: 8,
+    rhythm_6: 8,
   };
   return map[difficulty] ?? 1;
 }
 
-function generateBarMelodyPracticeScore(
-  difficulty: ContentDifficulty,
-): PracticeScore {
+function generateBarMelodyPracticeScore(difficulty: ContentDifficulty): PracticeScore {
   return {
     trebleNotes: generateBarMelodyNotes(difficulty),
     bassNotes: [],
@@ -97,7 +105,10 @@ export function generatePracticeScore(
     const levelMatch = difficulty.match(/\d+/);
     const level = levelMatch ? parseInt(levelMatch[0], 10) : 1;
     const timeSig = settings?.timeSignature ?? '4/4';
-    const rhythmPitch = settings?.rhythmPitch ?? 'B';
+    const requestedPitch = settings?.rhythmPitch ?? 'B';
+    const rhythmPitch: PitchName = ['C', 'D', 'E', 'F', 'G', 'A', 'B'].includes(requestedPitch)
+      ? (requestedPitch as PitchName)
+      : 'B';
 
     const rhythmNotes = generateRhythmDictation(level, 4, timeSig, rhythmPitch);
 
@@ -114,11 +125,16 @@ export function generatePracticeScore(
 
   // twoVoice
   const diffMap: Record<string, Difficulty> = {
-    bass_1: 'beginner_3', bass_2: 'intermediate_1',
-    bass_3: 'intermediate_3', bass_4: 'advanced_1',
+    bass_1: 'beginner_3',
+    bass_2: 'intermediate_1',
+    bass_3: 'intermediate_3',
+    bass_4: 'advanced_1',
   };
   const bassDiffMap: Record<string, BassDifficulty> = {
-    bass_1: 'bass_1', bass_2: 'bass_2', bass_3: 'bass_3', bass_4: 'bass_4',
+    bass_1: 'bass_1',
+    bass_2: 'bass_2',
+    bass_3: 'bass_3',
+    bass_4: 'bass_4',
   };
   const keySignature = settings?.keySignature ?? 'C';
   const timeSignature = settings?.timeSignature ?? '4/4';

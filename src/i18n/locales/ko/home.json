@@ -33,5 +33,10 @@
     "progress": "{{done}}/{{total}}",
     "complete": "완료!",
     "goToGoal": "목표 보기"
+  },
+  "guestBanner": {
+    "title": "로그인 없이 연습 중",
+    "desc": "기록은 이 기기에만 저장돼요. 로그인하면 계정으로 옮겨져요.",
+    "button": "로그인"
   }
 }

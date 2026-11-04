@@ -40,12 +40,9 @@ function GradingResultView({
   // 사용자 음표별 색상 빌드 (userSourceIndices 기반)
   const userNoteColors = useMemo(() => {
     const result: (string | null)[] = [];
-    gradingResult.grades.forEach(g => {
-      const color =
-        g.grade === 'correct' ? 'correct' :
-        g.grade === 'missing' ? null :
-        'wrong'; // wrong / extra
-      g.userSourceIndices.forEach(idx => {
+    gradingResult.grades.forEach((g) => {
+      const color = g.grade === 'correct' ? 'correct' : g.grade === 'missing' ? null : 'wrong'; // wrong / extra
+      g.userSourceIndices.forEach((idx) => {
         result[idx] = color;
       });
     });
@@ -57,9 +54,7 @@ function GradingResultView({
     <View style={styles.container}>
       {/* ── Score section ── */}
       <View style={styles.scoreSection}>
-        <Text style={[styles.percentageText, { color: accentColor }]}>
-          {percentage}%
-        </Text>
+        <Text style={[styles.percentageText, { color: accentColor }]}>{percentage}%</Text>
         <View style={styles.countsRow}>
           <View style={styles.countItem}>
             <Text style={[styles.countNumber, { color: '#22dd44' }]}>
@@ -68,9 +63,7 @@ function GradingResultView({
             <Text style={styles.countLabel}>{t('practice:choice.correct')}</Text>
           </View>
           <View style={styles.countItem}>
-            <Text style={[styles.countNumber, { color: '#e74c3c' }]}>
-              {wrongTotal}
-            </Text>
+            <Text style={[styles.countNumber, { color: '#e74c3c' }]}>{wrongTotal}</Text>
             <Text style={styles.countLabel}>{t('practice:choice.incorrect')}</Text>
           </View>
         </View>
@@ -114,7 +107,6 @@ function GradingResultView({
           />
         </View>
       </View>
-
     </View>
   );
 }
@@ -190,7 +182,6 @@ const styles = StyleSheet.create({
   cardBody: {
     padding: 8,
   },
-
 });
 
 export default GradingResultView;

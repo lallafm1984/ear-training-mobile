@@ -1,0 +1,55 @@
+{
+  "home": {
+    "title": "3-minute level test",
+    "desc": "Find your starting level",
+    "done": "{{overall}} · retake"
+  },
+  "intro": {
+    "title": "3-minute level test",
+    "subtitle": "{{count}} questions find your starting level for intervals, chords, keys and rhythm.",
+    "minutes": "About {{minutes}} min",
+    "bullet1": "Listen and pick the matching option.",
+    "bullet2": "Right answers get a bit harder, wrong ones a bit easier.",
+    "bullet3": "Results stay on this device and you can retake it any time.",
+    "start": "Start"
+  },
+  "question": {
+    "progress": "{{current}} / {{total}}",
+    "area": "{{name}} · level {{level}}",
+    "listen": "Listen",
+    "playing": "Playing...",
+    "replay": "Play again",
+    "hint": "Pick the option that matches what you heard",
+    "quitTitle": "Leave the test?",
+    "quitMessage": "Your answers so far won't be saved.",
+    "quitConfirm": "Leave",
+    "quitCancel": "Keep going"
+  },
+  "result": {
+    "title": "Level test result",
+    "score": "{{correct}} / {{total}} correct",
+    "overall": {
+      "beginner": "Starter",
+      "elementary": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "overallDesc": {
+      "beginner": "Sounds are still unfamiliar. The Ear Opener course starts from the smallest units and makes a quick difference.",
+      "elementary": "You hear the basics. Build accuracy at levels 1–2 of each area.",
+      "intermediate": "Nice! Start at the recommended levels and you'll improve fast.",
+      "advanced": "Excellent! Sharpen your exam sense with the higher levels and mock exams."
+    },
+    "areaTitle": "Recommended start by area",
+    "level": "Lv {{level}}",
+    "noLevel": "Basics",
+    "start": "Start at {{label}}",
+    "practice": "Practice",
+    "courseTitle": "Start with the 7-Day Ear Opener",
+    "courseDesc": "Five questions a day on direction, length, distance and brightness make interval listening much easier.",
+    "goCourse": "See the course",
+    "retry": "Retake test",
+    "home": "Home",
+    "takenAt": "Taken {{date}}"
+  }
+}

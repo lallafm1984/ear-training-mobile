@@ -1,0 +1,55 @@
+{
+  "home": {
+    "title": "3分レベルテスト",
+    "desc": "自分の開始レベルを知る",
+    "done": "{{overall}} · 再測定"
+  },
+  "intro": {
+    "title": "3分レベルテスト",
+    "subtitle": "{{count}}問で音程・和声・調性・リズムの開始レベルを見つけます。",
+    "minutes": "約{{minutes}}分",
+    "bullet1": "音を聞いて選択肢を選ぶだけです。",
+    "bullet2": "正解すると少し難しく、間違えると少し易しくなります。",
+    "bullet3": "結果はこの端末に保存され、いつでもやり直せます。",
+    "start": "はじめる"
+  },
+  "question": {
+    "progress": "{{current}} / {{total}}",
+    "area": "{{name}} · レベル{{level}}",
+    "listen": "音を聞く",
+    "playing": "再生中...",
+    "replay": "もう一度聞く",
+    "hint": "聞いた音に合う選択肢を選んでください",
+    "quitTitle": "テストをやめますか？",
+    "quitMessage": "ここまでの回答は保存されません。",
+    "quitConfirm": "やめる",
+    "quitCancel": "続ける"
+  },
+  "result": {
+    "title": "レベルテスト結果",
+    "score": "正解 {{correct}} / {{total}}",
+    "overall": {
+      "beginner": "入門",
+      "elementary": "初級",
+      "intermediate": "中級",
+      "advanced": "上級"
+    },
+    "overallDesc": {
+      "beginner": "まだ音に慣れていません。耳ひらきコースで一番小さな単位から聞くとすぐ変わります。",
+      "elementary": "基本の音は聞こえています。各分野のレベル1〜2で正確さを上げましょう。",
+      "intermediate": "いいですね！おすすめのレベルから始めると早く上達します。",
+      "advanced": "すばらしい！高いレベルと模擬試験で実戦感覚を磨きましょう。"
+    },
+    "areaTitle": "分野別の開始おすすめ",
+    "level": "Lv {{level}}",
+    "noLevel": "基礎",
+    "start": "{{label}}から",
+    "practice": "練習",
+    "courseTitle": "耳ひらき7日コースから始めましょう",
+    "courseDesc": "1日5問で方向・長さ・距離・明るさを先に身につけると音程が聞きやすくなります。",
+    "goCourse": "コースを見る",
+    "retry": "もう一度テスト",
+    "home": "ホームへ",
+    "takenAt": "{{date}} 測定"
+  }
+}

@@ -2,14 +2,10 @@
 // DailyGoalScreen — 오늘의 일일 목표 목록
 // ─────────────────────────────────────────────────────────────
 
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ArrowLeft, CheckCircle, Circle, Flame, Trophy, Play,
-} from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Circle, Flame, Play, Bell } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,61 +14,77 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, CATEGORY_COLORS } from '../theme/colors';
 
 import { usePracticeHistory } from '../hooks/usePracticeHistory';
+import { DAILY_GOAL_CATEGORIES, DAILY_GOAL_COUNT, computeGoalStreak } from '../lib/dailyGoal';
 import { useMascotExp } from '../hooks/useMascotExp';
-import { useAuth } from '../context';
+import { useAuth, useAlert } from '../context';
+import { LOCAL_DATA_BASE_KEYS, localDataKey } from '../lib/localProfileStorage';
+import { useReminderSettings } from '../hooks/useReminderSettings';
+import { REMINDER_NUDGE_DISMISSED_KEY } from '../lib/reminder';
 import MascotCharacter from '../components/MascotCharacter';
+import { getMascotStageIndex } from '../lib/mascotConfig';
 import type { ContentCategory } from '../types/content';
 import type { MainStackParamList } from '../navigation/MainStack';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
 type NavProp = StackNavigationProp<MainStackParamList>;
-
-const GOAL_CATEGORIES: ContentCategory[] = ['melody', 'rhythm', 'interval', 'chord', 'key'];
-const DAILY_GOAL_COUNT = GOAL_CATEGORIES.length;
 
 interface GoalItem {
   category: ContentCategory;
   completed: boolean;
 }
 
-/** 연속 목표 달성일 계산 (5개 카테고리 모두 연습한 날) */
-function computeGoalStreak(
-  records: { practicedAt: string; contentType: string }[],
-): number {
-  const byDate: Record<string, Set<string>> = {};
-  records.forEach(r => {
-    const d = new Date(r.practicedAt).toDateString();
-    if (!byDate[d]) byDate[d] = new Set();
-    byDate[d].add(r.contentType);
-  });
-
-  let streak = 0;
-  const today = new Date();
-
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today.getTime() - i * 86400000).toDateString();
-    const cats = byDate[d];
-    const done = cats ? GOAL_CATEGORIES.every(c => cats.has(c)) : false;
-    if (done) {
-      streak++;
-    } else {
-      if (i === 0) continue; // 오늘은 아직 진행 중이므로 스킵
-      break;
-    }
-  }
-
-  return streak;
-}
-
 export default function DailyGoalScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
-  const { t } = useTranslation(['practice', 'content', 'mascot', 'common']);
-  const { records, stats, reload } = usePracticeHistory();
-  const { user } = useAuth();
-  const { level, progress, totalExp, addExp } = useMascotExp();
+  const layout = useResponsiveLayout();
+  const { t } = useTranslation(['practice', 'content', 'mascot', 'common', 'profile']);
+  const { records, reload } = usePracticeHistory();
+  const { storageUserId } = useAuth();
+  const { showAlert } = useAlert();
+
+  // 목표를 모두 채운 날, 리마인더가 꺼져 있으면 한 번만 켜기를 권한다.
+  const {
+    settings: reminder,
+    loaded: reminderLoaded,
+    setEnabled: setReminder,
+  } = useReminderSettings();
+  const [nudgeDismissed, setNudgeDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(REMINDER_NUDGE_DISMISSED_KEY)
+      .then((v) => setNudgeDismissed(v === '1'))
+      .catch(() => setNudgeDismissed(true));
+  }, []);
+  const dismissNudge = useCallback(() => {
+    setNudgeDismissed(true);
+    AsyncStorage.setItem(REMINDER_NUDGE_DISMISSED_KEY, '1').catch(() => {});
+  }, []);
+  const enableReminderFromNudge = useCallback(async () => {
+    const outcome = await setReminder(true);
+    if (outcome === 'saved') {
+      dismissNudge();
+      return;
+    }
+    if (outcome === 'permission_denied') {
+      showAlert({
+        title: t('profile:reminder.permissionTitle'),
+        message: t('profile:reminder.permissionMessage'),
+        type: 'warning',
+        buttons: [
+          { text: t('common:button.later'), style: 'cancel' },
+          {
+            text: t('common:button.goToSettings'),
+            onPress: () => {
+              Linking.openSettings().catch(() => {});
+            },
+          },
+        ],
+      });
+    }
+  }, [setReminder, dismissNudge, showAlert, t]);
+  const { level, progress, addExp } = useMascotExp();
   const [rewardedCount, setRewardedCount] = useState<number | null>(null);
 
-  const EXP_REWARD_KEY = user ? `@melodygen_daily_exp_rewarded_${user.id}` : null;
+  const EXP_REWARD_KEY = localDataKey(LOCAL_DATA_BASE_KEYS.dailyExpRewarded, storageUserId);
 
   // 오늘 이미 보상한 목표 수 로드
   useEffect(() => {
@@ -106,7 +118,7 @@ export default function DailyGoalScreen() {
   const todayCategories = useMemo(() => {
     const todayStr = new Date().toDateString();
     const cats = new Set<ContentCategory>();
-    records.forEach(r => {
+    records.forEach((r) => {
       if (new Date(r.practicedAt).toDateString() === todayStr) {
         cats.add(r.contentType);
       }
@@ -114,25 +126,22 @@ export default function DailyGoalScreen() {
     return cats;
   }, [records]);
 
-  // 일일 목표 목록 생성 (고정 5개 카테고리)
+  // 일일 목표 목록 생성 (고정 7개 카테고리)
   const goals: GoalItem[] = useMemo(() => {
-    return GOAL_CATEGORIES.map(cat => ({
+    return DAILY_GOAL_CATEGORIES.map((cat) => ({
       category: cat,
       completed: todayCategories.has(cat),
     }));
   }, [todayCategories]);
 
-  const completedCount = goals.filter(g => g.completed).length;
+  const completedCount = goals.filter((g) => g.completed).length;
   const allDone = completedCount >= DAILY_GOAL_COUNT;
   const progressPct = Math.round((completedCount / DAILY_GOAL_COUNT) * 100);
 
   // 연속 달성일
-  const goalStreak = useMemo(
-    () => computeGoalStreak(records),
-    [records],
-  );
+  const goalStreak = useMemo(() => computeGoalStreak(records), [records]);
 
-  // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (최대 30)
+  // EXP 지급: 새로 완료된 목표마다 5 EXP, 전부 완료 시 +5 EXP 보너스 (하루 최대 40)
   // rewardedCount를 AsyncStorage에 저장하여 화면 재진입 시 중복 지급 방지
   useEffect(() => {
     if (!EXP_REWARD_KEY) return;
@@ -148,10 +157,13 @@ export default function DailyGoalScreen() {
 
     const newCount = completedCount;
     setRewardedCount(newCount);
-    AsyncStorage.setItem(EXP_REWARD_KEY, JSON.stringify({
-      date: new Date().toDateString(),
-      count: newCount,
-    })).catch(() => {});
+    AsyncStorage.setItem(
+      EXP_REWARD_KEY,
+      JSON.stringify({
+        date: new Date().toDateString(),
+        count: newCount,
+      }),
+    ).catch(() => {});
   }, [completedCount, rewardedCount, addExp, EXP_REWARD_KEY]);
 
   const handleGoalPress = (category: ContentCategory) => {
@@ -162,7 +174,13 @@ export default function DailyGoalScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:button.goBack')}
+        >
           <ArrowLeft size={24} color="#ea580c" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('practice:dailyGoal.title')}</Text>
@@ -170,19 +188,28 @@ export default function DailyGoalScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[
+          styles.content,
+          layout.contentStyle,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 상단 진행 카드 */}
         <View style={[styles.progressCard, allDone && styles.progressCardDone]}>
-          <View style={styles.mascotRow}>
+          <TouchableOpacity
+            style={styles.mascotRow}
+            onPress={() => navigation.navigate('MascotGallery')}
+            activeOpacity={0.8}
+          >
             <MascotCharacter size={64} level={level} happy={allDone} />
             <View style={styles.mascotInfo}>
               <Text style={[styles.progressTitle, allDone && { color: '#065f46' }]}>
                 {allDone ? t('practice:dailyGoal.complete') : t('practice:dailyGoal.keepGoing')}
               </Text>
               <Text style={styles.levelText}>
-                Lv.{level} {t('mascot:stage.' + Math.min(9, Math.floor((level - 1) / 10)))}
+                Lv.{level} {t('mascot:stage.' + getMascotStageIndex(level))} ·{' '}
+                <Text style={styles.galleryLink}>{t('mascot:gallery.open')}</Text>
               </Text>
               <View style={styles.expBarBg}>
                 <View style={[styles.expBarFill, { width: `${progress.progress * 100}%` }]} />
@@ -191,7 +218,7 @@ export default function DailyGoalScreen() {
                 {t('mascot:exp.format', { current: progress.current, needed: progress.needed })}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <Text style={styles.progressCount}>
             {t('practice:dailyGoal.progress', { done: completedCount, total: DAILY_GOAL_COUNT })}
@@ -214,10 +241,40 @@ export default function DailyGoalScreen() {
           {goalStreak > 0 && (
             <View style={styles.streakBadge}>
               <Flame size={14} color="#f59e0b" />
-              <Text style={styles.streakText}>{t('practice:dailyGoal.streak', { days: goalStreak })}</Text>
+              <Text style={styles.streakText}>
+                {t('practice:dailyGoal.streak', { days: goalStreak })}
+              </Text>
             </View>
           )}
         </View>
+
+        {/* 리마인더 권유 (전부 달성 + 알림 꺼짐 + 아직 닫지 않음) */}
+        {allDone && reminderLoaded && !reminder.enabled && nudgeDismissed === false && (
+          <View style={styles.nudgeCard}>
+            <View style={styles.nudgeIcon}>
+              <Bell size={18} color="#4f46e5" />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.nudgeTitle}>{t('practice:dailyGoal.reminderNudge.title')}</Text>
+              <Text style={styles.nudgeDesc}>{t('practice:dailyGoal.reminderNudge.desc')}</Text>
+              <View style={styles.nudgeActions}>
+                <TouchableOpacity
+                  style={styles.nudgePrimary}
+                  onPress={() => void enableReminderFromNudge()}
+                >
+                  <Text style={styles.nudgePrimaryText}>
+                    {t('practice:dailyGoal.reminderNudge.enable')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nudgeGhost} onPress={dismissNudge}>
+                  <Text style={styles.nudgeGhostText}>
+                    {t('practice:dailyGoal.reminderNudge.later')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* 목표 목록 */}
         <Text style={styles.sectionTitle}>{t('practice:dailyGoal.sectionTitle')}</Text>
@@ -228,10 +285,7 @@ export default function DailyGoalScreen() {
             return (
               <TouchableOpacity
                 key={`${goal.category}-${idx}`}
-                style={[
-                  styles.goalItem,
-                  goal.completed && styles.goalItemDone,
-                ]}
+                style={[styles.goalItem, goal.completed && styles.goalItemDone]}
                 onPress={() => !goal.completed && handleGoalPress(goal.category)}
                 activeOpacity={goal.completed ? 1 : 0.7}
               >
@@ -242,13 +296,20 @@ export default function DailyGoalScreen() {
                     <Circle size={24} color={COLORS.slate300} />
                   )}
                   <View style={styles.goalInfo}>
-                    <Text style={[
-                      styles.goalName,
-                      goal.completed && { color: COLORS.slate400, textDecorationLine: 'line-through' },
-                    ]}>
+                    <Text
+                      style={[
+                        styles.goalName,
+                        goal.completed && {
+                          color: COLORS.slate400,
+                          textDecorationLine: 'line-through',
+                        },
+                      ]}
+                    >
                       {t('content:category.' + goal.category + '.name')}
                     </Text>
-                    <Text style={styles.goalDesc}>{t('content:category.' + goal.category + '.description')}</Text>
+                    <Text style={styles.goalDesc}>
+                      {t('content:category.' + goal.category + '.description')}
+                    </Text>
                   </View>
                 </View>
 
@@ -264,9 +325,7 @@ export default function DailyGoalScreen() {
 
         {/* 안내 */}
         <View style={styles.tipCard}>
-          <Text style={styles.tipText}>
-            {t('practice:dailyGoal.tip')}
-          </Text>
+          <Text style={styles.tipText}>{t('practice:dailyGoal.tip')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -321,6 +380,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  galleryLink: { color: COLORS.primary500, fontWeight: '800' },
   levelText: {
     fontSize: 12,
     fontWeight: '700',
@@ -441,4 +501,36 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+
+  // 리마인더 권유
+  nudgeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderRadius: 16,
+    padding: 14,
+  },
+  nudgeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeTitle: { fontSize: 14, fontWeight: '800', color: '#312e81' },
+  nudgeDesc: { fontSize: 12, lineHeight: 17, color: COLORS.slate600 },
+  nudgeActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  nudgePrimary: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  nudgePrimaryText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  nudgeGhost: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  nudgeGhostText: { color: COLORS.slate500, fontSize: 12, fontWeight: '700' },
 });

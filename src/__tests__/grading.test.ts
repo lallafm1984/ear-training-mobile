@@ -214,20 +214,17 @@ describe('buildTimeline', () => {
     const notes = [makeNote('C', 4, '4'), makeNote('D', 4, '4'), makeNote('E', 4, '2')];
     const tl = buildTimeline(notes);
     expect(tl).toHaveLength(3);
-    expect(tl[0].startPos).toBe(0);    // quarter = 12 forty-eighths
+    expect(tl[0].startPos).toBe(0); // quarter = 12 forty-eighths
     expect(tl[1].startPos).toBe(12);
     expect(tl[2].startPos).toBe(24);
-    expect(tl[2].duration).toBe(24);   // half = 24
+    expect(tl[2].duration).toBe(24); // half = 24
   });
 
   it('붙임줄 음표가 하나의 이벤트로 병합된다', () => {
-    const notes = [
-      makeNote('C', 4, '4.'),
-      makeNote('C', 4, '8', '', true),
-    ];
+    const notes = [makeNote('C', 4, '4.'), makeNote('C', 4, '8', '', true)];
     const tl = buildTimeline(notes);
     expect(tl).toHaveLength(1);
-    expect(tl[0].duration).toBe(24);   // 18 + 6 = half
+    expect(tl[0].duration).toBe(24); // 18 + 6 = half
     expect(tl[0].sourceIndices).toEqual([0, 1]);
   });
 
@@ -244,7 +241,16 @@ describe('buildTimeline', () => {
 
   it('셋잇단 음표의 isTriplet이 true이다', () => {
     const notes: ScoreNote[] = [
-      { pitch: 'C', octave: 4, accidental: '', duration: '8', tuplet: '3', tupletSpan: '4', tupletNoteDur: 4, id: uid() },
+      {
+        pitch: 'C',
+        octave: 4,
+        accidental: '',
+        duration: '8',
+        tuplet: '3',
+        tupletSpan: '4',
+        tupletNoteDur: 4,
+        id: uid(),
+      },
       { pitch: 'D', octave: 4, accidental: '', duration: '8', id: uid() },
       { pitch: 'E', octave: 4, accidental: '', duration: '8', id: uid() },
     ];
@@ -265,23 +271,28 @@ describe('buildTimeline', () => {
 describe('gradeNotes (박자 위치 기반)', () => {
   it('앞 마디 음표 수가 달라도 뒷 마디 정답에 영향 없음', () => {
     const answer = [
-      makeNote('C', 4, '2'), makeNote('D', 4, '2'),
-      makeNote('E', 4, '4'), makeNote('F', 4, '4'), makeNote('G', 4, '2'),
+      makeNote('C', 4, '2'),
+      makeNote('D', 4, '2'),
+      makeNote('E', 4, '4'),
+      makeNote('F', 4, '4'),
+      makeNote('G', 4, '2'),
     ];
     const user = [
-      makeNote('A', 4, '4'), makeNote('B', 4, '4'), makeNote('A', 4, '4'), makeNote('B', 4, '4'),
-      makeNote('E', 4, '4'), makeNote('F', 4, '4'), makeNote('G', 4, '2'),
+      makeNote('A', 4, '4'),
+      makeNote('B', 4, '4'),
+      makeNote('A', 4, '4'),
+      makeNote('B', 4, '4'),
+      makeNote('E', 4, '4'),
+      makeNote('F', 4, '4'),
+      makeNote('G', 4, '2'),
     ];
     const result = gradeNotes(answer, user);
-    const correctGrades = result.grades.filter(g => g.grade === 'correct');
+    const correctGrades = result.grades.filter((g) => g.grade === 'correct');
     expect(correctGrades.length).toBe(3);
   });
 
   it('점4분+8분 타이 vs 2분 → correct', () => {
-    const answer = [
-      makeNote('C', 4, '4.'),
-      makeNote('C', 4, '8', '', true),
-    ];
+    const answer = [makeNote('C', 4, '4.'), makeNote('C', 4, '8', '', true)];
     const user = [makeNote('C', 4, '2')];
     const result = gradeNotes(answer, user);
     expect(result.grades[0].grade).toBe('correct');
@@ -290,25 +301,47 @@ describe('gradeNotes (박자 위치 기반)', () => {
 
   it('셋잇단 vs 일반 8분음표 → wrong (셋잇단 불일치)', () => {
     const answer: ScoreNote[] = [
-      { pitch: 'C', octave: 4, accidental: '', duration: '8', tuplet: '3', tupletSpan: '4', tupletNoteDur: 4, id: uid() },
+      {
+        pitch: 'C',
+        octave: 4,
+        accidental: '',
+        duration: '8',
+        tuplet: '3',
+        tupletSpan: '4',
+        tupletNoteDur: 4,
+        id: uid(),
+      },
       { pitch: 'D', octave: 4, accidental: '', duration: '8', id: uid() },
       { pitch: 'E', octave: 4, accidental: '', duration: '8', id: uid() },
     ];
     const user = [makeNote('C', 4, '8'), makeNote('D', 4, '8')];
     const result = gradeNotes(answer, user);
-    const wrongOrMissing = result.grades.filter(g => g.grade === 'wrong' || g.grade === 'missing' || g.grade === 'extra');
+    const wrongOrMissing = result.grades.filter(
+      (g) => g.grade === 'wrong' || g.grade === 'missing' || g.grade === 'extra',
+    );
     expect(wrongOrMissing.length).toBeGreaterThan(0);
-    expect(result.grades.every(g => g.grade !== 'correct')).toBe(true);
+    expect(result.grades.every((g) => g.grade !== 'correct')).toBe(true);
   });
 
   it('셋잇단 vs 셋잇단 동일 → correct', () => {
     const makeTriplet = (p: ScoreNote['pitch'], o: number, isFirst: boolean): ScoreNote => ({
-      pitch: p, octave: o, accidental: '', duration: '8',
+      pitch: p,
+      octave: o,
+      accidental: '',
+      duration: '8',
       ...(isFirst ? { tuplet: '3' as const, tupletSpan: '4' as const, tupletNoteDur: 4 } : {}),
       id: uid(),
     });
-    const answer = [makeTriplet('C', 4, true), makeTriplet('D', 4, false), makeTriplet('E', 4, false)];
-    const user = [makeTriplet('C', 4, true), makeTriplet('D', 4, false), makeTriplet('E', 4, false)];
+    const answer = [
+      makeTriplet('C', 4, true),
+      makeTriplet('D', 4, false),
+      makeTriplet('E', 4, false),
+    ];
+    const user = [
+      makeTriplet('C', 4, true),
+      makeTriplet('D', 4, false),
+      makeTriplet('E', 4, false),
+    ];
     const result = gradeNotes(answer, user);
     expect(result.correctCount).toBe(3);
     expect(result.accuracy).toBe(1.0);
@@ -321,22 +354,14 @@ describe('gradeNotes (박자 위치 기반)', () => {
       makeNote('D', 4, '8', '', true),
       makeNote('E', 4, '8'),
     ];
-    const user = [
-      makeNote('C', 4, '8'),
-      makeNote('D', 4, '4'),
-      makeNote('E', 4, '8'),
-    ];
+    const user = [makeNote('C', 4, '8'), makeNote('D', 4, '4'), makeNote('E', 4, '8')];
     const result = gradeNotes(answer, user);
     expect(result.correctCount).toBe(3);
     expect(result.accuracy).toBe(1.0);
   });
 
   it('[8분,4분,8분] vs [8분,8분](붙임줄)[8분,8분] → correct (역방향)', () => {
-    const answer = [
-      makeNote('C', 4, '8'),
-      makeNote('D', 4, '4'),
-      makeNote('E', 4, '8'),
-    ];
+    const answer = [makeNote('C', 4, '8'), makeNote('D', 4, '4'), makeNote('E', 4, '8')];
     const user = [
       makeNote('C', 4, '8'),
       makeNote('D', 4, '8'),
@@ -363,19 +388,13 @@ describe('gradeNotes (박자 위치 기반)', () => {
     ];
     const result = gradeNotes(answer, user);
     expect(result.correctCount).toBe(2); // C, E
-    expect(result.wrongCount).toBe(1);   // D (split)
-    expect(result.extraCount).toBe(0);   // absorbed
+    expect(result.wrongCount).toBe(1); // D (split)
+    expect(result.extraCount).toBe(0); // absorbed
   });
 
   it('서로 다른 박 8분(tie)8분 → 같은 pitch 8분+8분(no tie) → wrong', () => {
-    const answer = [
-      makeNote('D', 4, '8'),
-      makeNote('D', 4, '8', '', true),
-    ];
-    const user = [
-      makeNote('D', 4, '8'),
-      makeNote('D', 4, '8'),
-    ];
+    const answer = [makeNote('D', 4, '8'), makeNote('D', 4, '8', '', true)];
+    const user = [makeNote('D', 4, '8'), makeNote('D', 4, '8')];
     const result = gradeNotes(answer, user);
     expect(result.wrongCount).toBe(1);
     expect(result.correctCount).toBe(0);
@@ -385,10 +404,12 @@ describe('gradeNotes (박자 위치 기반)', () => {
   it('쉼표 위치에 음표 → wrong', () => {
     const answer = [makeNote('C', 4, '2'), makeNote('rest', 0, '2')];
     const user = [
-      makeNote('D', 4, '4'), makeNote('E', 4, '4'),
-      makeNote('F', 4, '4'), makeNote('G', 4, '4'),
+      makeNote('D', 4, '4'),
+      makeNote('E', 4, '4'),
+      makeNote('F', 4, '4'),
+      makeNote('G', 4, '4'),
     ];
     const result = gradeNotes(answer, user);
-    expect(result.grades.filter(g => g.grade === 'correct').length).toBe(0);
+    expect(result.grades.filter((g) => g.grade === 'correct').length).toBe(0);
   });
 });

@@ -23,6 +23,11 @@ import koEditor from './locales/ko/editor.json';
 import koContent from './locales/ko/content.json';
 import koMascot from './locales/ko/mascot.json';
 import koLegal from './locales/ko/legal.json';
+import koBeginner from './locales/ko/beginner.json';
+import koLevelTest from './locales/ko/levelTest.json';
+import koWrongNotes from './locales/ko/wrongNotes.json';
+import koShare from './locales/ko/share.json';
+import koRhythmTap from './locales/ko/rhythmTap.json';
 
 // ── en ──
 import enCommon from './locales/en/common.json';
@@ -37,6 +42,11 @@ import enEditor from './locales/en/editor.json';
 import enContent from './locales/en/content.json';
 import enMascot from './locales/en/mascot.json';
 import enLegal from './locales/en/legal.json';
+import enBeginner from './locales/en/beginner.json';
+import enLevelTest from './locales/en/levelTest.json';
+import enWrongNotes from './locales/en/wrongNotes.json';
+import enShare from './locales/en/share.json';
+import enRhythmTap from './locales/en/rhythmTap.json';
 
 // ── ja ──
 import jaCommon from './locales/ja/common.json';
@@ -51,6 +61,11 @@ import jaEditor from './locales/ja/editor.json';
 import jaContent from './locales/ja/content.json';
 import jaMascot from './locales/ja/mascot.json';
 import jaLegal from './locales/ja/legal.json';
+import jaBeginner from './locales/ja/beginner.json';
+import jaLevelTest from './locales/ja/levelTest.json';
+import jaWrongNotes from './locales/ja/wrongNotes.json';
+import jaShare from './locales/ja/share.json';
+import jaRhythmTap from './locales/ja/rhythmTap.json';
 
 const languageDetector = {
   type: 'languageDetector' as const,
@@ -89,23 +104,83 @@ i18n
     fallbackLng: DEFAULT_LANGUAGE,
     supportedLngs: [...SUPPORTED_LANGUAGES],
     load: 'languageOnly',
-    ns: ['common', 'home', 'auth', 'profile', 'practice', 'exam', 'subscription', 'stats', 'editor', 'content', 'mascot', 'legal'],
+    ns: [
+      'common',
+      'home',
+      'auth',
+      'profile',
+      'practice',
+      'exam',
+      'subscription',
+      'stats',
+      'editor',
+      'content',
+      'mascot',
+      'legal',
+      'beginner',
+      'levelTest',
+      'wrongNotes',
+      'share',
+      'rhythmTap',
+    ],
     defaultNS: 'common',
     resources: {
       ko: {
-        common: koCommon, home: koHome, auth: koAuth, profile: koProfile,
-        practice: koPractice, exam: koExam, subscription: koSubscription,
-        stats: koStats, editor: koEditor, content: koContent, mascot: koMascot, legal: koLegal,
+        common: koCommon,
+        home: koHome,
+        auth: koAuth,
+        profile: koProfile,
+        practice: koPractice,
+        exam: koExam,
+        subscription: koSubscription,
+        stats: koStats,
+        editor: koEditor,
+        content: koContent,
+        mascot: koMascot,
+        legal: koLegal,
+        beginner: koBeginner,
+        levelTest: koLevelTest,
+        wrongNotes: koWrongNotes,
+        share: koShare,
+        rhythmTap: koRhythmTap,
       },
       en: {
-        common: enCommon, home: enHome, auth: enAuth, profile: enProfile,
-        practice: enPractice, exam: enExam, subscription: enSubscription,
-        stats: enStats, editor: enEditor, content: enContent, mascot: enMascot, legal: enLegal,
+        common: enCommon,
+        home: enHome,
+        auth: enAuth,
+        profile: enProfile,
+        practice: enPractice,
+        exam: enExam,
+        subscription: enSubscription,
+        stats: enStats,
+        editor: enEditor,
+        content: enContent,
+        mascot: enMascot,
+        legal: enLegal,
+        beginner: enBeginner,
+        levelTest: enLevelTest,
+        wrongNotes: enWrongNotes,
+        share: enShare,
+        rhythmTap: enRhythmTap,
       },
       ja: {
-        common: jaCommon, home: jaHome, auth: jaAuth, profile: jaProfile,
-        practice: jaPractice, exam: jaExam, subscription: jaSubscription,
-        stats: jaStats, editor: jaEditor, content: jaContent, mascot: jaMascot, legal: jaLegal,
+        common: jaCommon,
+        home: jaHome,
+        auth: jaAuth,
+        profile: jaProfile,
+        practice: jaPractice,
+        exam: jaExam,
+        subscription: jaSubscription,
+        stats: jaStats,
+        editor: jaEditor,
+        content: jaContent,
+        mascot: jaMascot,
+        legal: jaLegal,
+        beginner: jaBeginner,
+        levelTest: jaLevelTest,
+        wrongNotes: jaWrongNotes,
+        share: jaShare,
+        rhythmTap: jaRhythmTap,
       },
     },
     interpolation: {

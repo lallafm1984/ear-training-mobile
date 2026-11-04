@@ -7,7 +7,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from '../components/SplashScreen';
 
 import HomeScreen from '../screens/HomeScreen';
-import ScoreEditorScreen from '../screens/ScoreEditor';
 import CategoryPracticeScreen from '../screens/CategoryPracticeScreen';
 import ChoicePracticeScreen from '../screens/ChoicePracticeScreen';
 import NotationPracticeScreen from '../screens/NotationPracticeScreen';
@@ -20,6 +19,11 @@ import MascotGalleryScreen from '../screens/MascotGalleryScreen';
 import OnboardingScreen, { hasCompletedOnboarding } from '../screens/OnboardingScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import BeginnerCourseScreen from '../screens/BeginnerCourseScreen';
+import BeginnerLessonScreen from '../screens/BeginnerLessonScreen';
+import LevelTestScreen from '../screens/LevelTestScreen';
+import WrongNotesScreen from '../screens/WrongNotesScreen';
+import RhythmTapScreen from '../screens/RhythmTapScreen';
 
 import type { ContentCategory, ContentDifficulty } from '../types/content';
 
@@ -27,7 +31,7 @@ export interface PracticeSettings {
   timeSignature: string;
   keySignature: string;
   tempo: number;
-  rhythmPitch?: string;   // 리듬 받아쓰기 음이름 (기본 'B' = 시)
+  rhythmPitch?: string; // 리듬 받아쓰기 음이름 (기본 'B' = 시)
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -37,15 +41,28 @@ export interface PracticeSettings {
 export type MainStackParamList = {
   Onboarding: undefined;
   Home: undefined;
-  CategoryPractice: { category: ContentCategory };
-  ChoicePractice: { category: ContentCategory; difficulty: ContentDifficulty };
-  NotationPractice: { category: ContentCategory; difficulty: ContentDifficulty; practiceSettings?: PracticeSettings; examMode?: boolean };
-  ScoreEditor: {
-    category?: ContentCategory;
-    difficulty?: ContentDifficulty;
-    practiceMode?: 'partPractice' | 'comprehensive';
-    level?: number;
-  } | undefined;
+  CategoryPractice: { category: ContentCategory; initialDifficulty?: ContentDifficulty };
+  ChoicePractice: {
+    category: ContentCategory;
+    difficulty: ContentDifficulty;
+    /** 오답노트 복습 모드 — 문제는 wrongNoteReviewStore 에서 꺼낸다 */
+    review?: boolean;
+  };
+  NotationPractice: {
+    category: ContentCategory;
+    difficulty: ContentDifficulty;
+    practiceSettings?: PracticeSettings;
+    examMode?: boolean;
+  };
+  /** 악보 에디터(레거시). 화면 코드는 유지하되 MainStack에 등록하지 않아 진입 불가(숨김) */
+  ScoreEditor:
+    | {
+        category?: ContentCategory;
+        difficulty?: ContentDifficulty;
+        practiceMode?: 'partPractice' | 'comprehensive';
+        level?: number;
+      }
+    | undefined;
   MockExamSetup: undefined;
   MockExam: { presetId: string };
   ExamResult: {
@@ -56,12 +73,19 @@ export type MainStackParamList = {
     categoryScores: string;
     elapsedSeconds: number;
     totalQuestions: number;
+    /** 객관식 오답 수 (오답노트 진입 버튼용) */
+    wrongChoiceCount?: number;
   };
   Stats: undefined;
   DailyGoal: undefined;
   MascotGallery: undefined;
   Paywall: undefined;
   Profile: undefined;
+  BeginnerCourse: undefined;
+  BeginnerLesson: { lessonId: string };
+  LevelTest: undefined;
+  WrongNotes: { category?: ContentCategory } | undefined;
+  RhythmTap: { difficulty: ContentDifficulty };
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -70,7 +94,7 @@ export default function MainStack() {
   const [initialRoute, setInitialRoute] = useState<keyof MainStackParamList | null>(null);
 
   useEffect(() => {
-    hasCompletedOnboarding().then(done => {
+    hasCompletedOnboarding().then((done) => {
       setInitialRoute(done ? 'Home' : 'Onboarding');
     });
   }, []);
@@ -79,34 +103,27 @@ export default function MainStack() {
   if (!initialRoute) return <SplashScreen />;
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{ headerShown: false }}
-    >
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="CategoryPractice" component={CategoryPracticeScreen} />
       <Stack.Screen name="ChoicePractice" component={ChoicePracticeScreen} />
       <Stack.Screen name="NotationPractice" component={NotationPracticeScreen} />
-      <Stack.Screen name="ScoreEditor" component={ScoreEditorScreen} />
       <Stack.Screen name="MockExamSetup" component={MockExamSetupScreen} />
       <Stack.Screen name="MockExam" component={MockExamScreen} />
       <Stack.Screen name="ExamResult" component={ExamResultScreen} />
       <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen name="DailyGoal" component={DailyGoalScreen} />
       <Stack.Screen name="MascotGallery" component={MascotGalleryScreen} />
-      <Stack.Screen
-        name="Paywall"
-        options={{ presentation: 'modal' }}
-      >
-        {({ navigation }) => (
-          <PaywallScreen onClose={() => navigation.goBack()} />
-        )}
+      <Stack.Screen name="BeginnerCourse" component={BeginnerCourseScreen} />
+      <Stack.Screen name="BeginnerLesson" component={BeginnerLessonScreen} />
+      <Stack.Screen name="LevelTest" component={LevelTestScreen} />
+      <Stack.Screen name="WrongNotes" component={WrongNotesScreen} />
+      <Stack.Screen name="RhythmTap" component={RhythmTapScreen} />
+      <Stack.Screen name="Paywall" options={{ presentation: 'modal' }}>
+        {({ navigation }) => <PaywallScreen onClose={() => navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen
-        name="Profile"
-        options={{ presentation: 'modal' }}
-      >
+      <Stack.Screen name="Profile" options={{ presentation: 'modal' }}>
         {({ navigation }) => (
           <ProfileScreen
             onClose={() => navigation.goBack()}

@@ -11,8 +11,11 @@ export function uid(): string {
 }
 
 export function makeNote(
-  pitch: PitchName, octave: number, dur: NoteDuration,
-  accidental: Accidental = '', tie = false,
+  pitch: PitchName,
+  octave: number,
+  dur: NoteDuration,
+  accidental: Accidental = '',
+  tie = false,
 ): ScoreNote {
   return { id: uid(), pitch, octave, accidental, duration: dur, tie };
 }
@@ -22,7 +25,9 @@ export function makeRest(dur: NoteDuration): ScoreNote {
 }
 
 export function noteNumToNote(
-  noteNum: number, scale: PitchName[], baseOctave: number,
+  noteNum: number,
+  scale: PitchName[],
+  baseOctave: number,
 ): { pitch: PitchName; octave: number } {
   const deg = ((noteNum % 7) + 7) % 7;
   const octOff = Math.floor(noteNum / 7);
@@ -35,7 +40,10 @@ export function noteNumToNote(
 
 /** nn 역산: pitch+octave → nn (noteNumToNote의 역함수) */
 export function scaleNoteToNn(
-  pitch: PitchName, octave: number, scale: PitchName[], baseOctave: number,
+  pitch: PitchName,
+  octave: number,
+  scale: PitchName[],
+  baseOctave: number,
 ): number {
   const rootIdx = PITCH_ORDER.indexOf(scale[0]);
   const pitchIdx = PITCH_ORDER.indexOf(pitch);
