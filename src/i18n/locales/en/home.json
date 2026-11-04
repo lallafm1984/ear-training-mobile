@@ -23,10 +23,6 @@
     "stats": "Stats",
     "statsDesc": "Learning progress"
   },
-  "promotion": {
-    "title": "Limited-Time Student Support Promotion",
-    "message": "Through September 30, MelodyGen is offering free access to support students preparing for college applications, music auditions, and new learning goals.\n\nDuring this period, MelodyGen Pro is available free of charge to all users.\n\nFor existing subscribers, the next billing date will be extended by one month.\n\nWe hope each day of ear training builds your confidence. We are cheering for your next step."
-  },
   "quickStart": {
     "streak": "{{days}}-day streak!",
     "label": "Quick Start",

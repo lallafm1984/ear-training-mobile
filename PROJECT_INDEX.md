@@ -27,7 +27,6 @@ src/
 │   ├── dailyGoal.ts              # 일일 목표 7종 판정 (오늘 달성 수·연속 달성일, 순수 함수) — Home·DailyGoal 공통
 │   ├── mascotConfig.ts           # 마스코트 진화 시스템 (레벨/EXP/비주얼)
 │   ├── oauthCallback.ts          # OAuth 딥링크 query/hash 파싱 + Supabase 세션 생성
-│   ├── promotionConfig.ts        # 서버 시간 기반 Pro 캠페인 RPC/공지 키
 │   ├── appControl.ts             # 원격 버전 정책/공지 RPC 파싱·빌드 판정·노출 키
 │   ├── secureStoreAdapter.ts     # Supabase 세션 SecureStore 청크 저장/레거시 호환
 │   ├── logger.ts                 # 개발 빌드 전용 중앙 로그 경계
@@ -179,7 +178,6 @@ scripts/
 | `dailyGoal.ts`              | HomeScreen(마스코트·일일 목표 카드), DailyGoalScreen(목표 목록·연속 달성일) — 전체 기록 기준으로 같은 값                                                                                        |
 | `mascotConfig.ts`           | MascotGalleryScreen, DailyGoalScreen(스테이지 인덱스)                                                                                                                                             |
 | `oauthCallback.ts`          | AuthContext (Google OAuth 딥링크/콜드 스타트 세션 생성)                                                                                                                                           |
-| `promotionConfig.ts`        | SubscriptionContext (서버 시간 프로모션 권한 판정)                                                                                                                                                |
 | `appControl.ts`             | AppControlGate (최신 빌드 강제/공지 RPC 검증 및 로컬 노출 상태)                                                                                                                                   |
 | `secureStoreAdapter.ts`     | Supabase 인증 세션의 청크 암호화 저장 및 기존 단일 키 마이그레이션                                                                                                                                |
 | `logger.ts`                 | ErrorBoundary, 인증·구독·결제의 개발 빌드 전용 진단 로그                                                                                                                                          |
@@ -217,6 +215,7 @@ scripts/
 | `20260822183000_set_admissions_announcement_daily.sql`     | 무료 이용 공지를 빌드 60+ 하루 1회로 전환·종료일 동기화                                   |
 | `20261103120000_enable_profiles_rls.sql`                   | `profiles` RLS 활성화·anon 회수·본인 행 정책 (Advisor rls_disabled_in_public 대응)        |
 | `20261103120100_protect_profiles_subscription_columns.sql` | 클라이언트 JWT의 `tier`·`subscription_expires_at` 변경 무시 트리거 (webhook 배포 후 적용) |
+| `20261104100000_end_admissions_promotion.sql`              | 수험생 무료 프로모션·공지 행 비활성화 확정(2.0부터 클라이언트 판정 제거)                  |
 
 ---
 
@@ -372,12 +371,11 @@ Login → Onboarding → Home
 | `dailyGoal.test.ts`              | 일일 목표 카테고리, 오늘 달성 수(기록 20개 초과 포함), 연속 달성일(오늘 진행 중·중간 공백·6/7 미달성) |
 | `shareCard.test.ts`              | 공유 텍스트 구성, 지표 정규화, 캡처 파일명                                                            |
 | `oauthCallback.test.ts`          | OAuth query/hash 파싱, PKCE·implicit 세션 생성 및 오류 처리                                           |
-| `promotionConfig.test.ts`        | 서버 시간 RPC 판정 및 fail-closed 동작                                                                |
 | `appControl.test.ts`             | 최신/최소 빌드 차단, RPC 검증, 공지 링크·노출 키                                                      |
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (463개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (460개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 

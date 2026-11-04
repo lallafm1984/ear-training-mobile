@@ -21,7 +21,6 @@ import {
   addCustomerInfoUpdateListener,
 } from '../lib/revenueCat';
 import type { CustomerInfo } from 'react-native-purchases';
-import { fetchAdmissionsPromotionActive } from '../lib/promotionConfig';
 import { logger } from '../lib/logger';
 
 // ─────────────────────────────────────────────────────────────
@@ -32,7 +31,6 @@ export interface SubscriptionContextValue {
   tier: PlanTier;
   limits: PlanLimits;
   isExpired: boolean;
-  promotionActive: boolean;
   upgradePlan: (newTier: PlanTier, durationDays?: number) => Promise<void>;
   refreshSubscription: () => Promise<void>;
   subscriptionState: SubscriptionState;
@@ -69,51 +67,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subState, setSubState] = useState<SubscriptionState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
   const [rcReady, setRcReady] = useState(false);
-  const [promotionActive, setPromotionActive] = useState(false);
-  const [promotionLoading, setPromotionLoading] = useState(true);
   const userIdRef = useRef<string | null>(null);
-  const promotionUserIdRef = useRef<string | null>(user?.id ?? null);
-  promotionUserIdRef.current = user?.id ?? null;
-
-  // 기기 시간이 아닌 Supabase/PostgreSQL 서버 시간으로 캠페인 상태를 판정한다.
-  const refreshPromotionState = useCallback(async () => {
-    const requestedUserId = promotionUserIdRef.current;
-    if (!requestedUserId) {
-      setPromotionActive(false);
-      return;
-    }
-
-    try {
-      const active = await fetchAdmissionsPromotionActive((fn, args) => supabase.rpc(fn, args));
-      if (promotionUserIdRef.current === requestedUserId) setPromotionActive(active);
-    } catch {
-      // 서버 판정에 실패하면 로컬 시계를 신뢰하지 않고 권한을 열지 않는다.
-      if (promotionUserIdRef.current === requestedUserId) setPromotionActive(false);
-    }
-  }, []);
-
-  // 캠페인 시작/종료 경계를 앱 재실행 없이 반영한다.
-  useEffect(() => {
-    let cancelled = false;
-
-    setPromotionLoading(true);
-    void refreshPromotionState().finally(() => {
-      if (!cancelled) setPromotionLoading(false);
-    });
-    const interval = setInterval(() => void refreshPromotionState(), 60 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [user?.id, refreshPromotionState]);
-
-  // 장시간 백그라운드에 있던 경우 복귀 즉시 서버 상태를 다시 확인한다.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshPromotionState();
-    });
-    return () => sub.remove();
-  }, [refreshPromotionState]);
 
   // ── RevenueCat 초기화 ─────────────────────────────────────
   useEffect(() => {
@@ -254,26 +208,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   );
 
   // ── 파생값 ──────────────────────────────────────────────
-  const paidSubscriptionExpired = !!(
-    subState.expiresAt && new Date(subState.expiresAt) < new Date()
-  );
-  const effectiveTier: PlanTier = promotionActive
-    ? 'pro'
-    : paidSubscriptionExpired
-      ? 'free'
-      : subState.tier;
-  const isExpired = promotionActive ? false : paidSubscriptionExpired;
+  const isExpired = !!(subState.expiresAt && new Date(subState.expiresAt) < new Date());
+  const effectiveTier: PlanTier = isExpired ? 'free' : subState.tier;
   const limits = PLAN_LIMITS[effectiveTier];
 
   const value: SubscriptionContextValue = {
     tier: effectiveTier,
     limits,
     isExpired,
-    promotionActive,
     upgradePlan,
     refreshSubscription,
     subscriptionState: subState,
-    loading: loading || promotionLoading,
+    loading,
   };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

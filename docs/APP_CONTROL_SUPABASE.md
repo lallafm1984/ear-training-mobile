@@ -88,6 +88,8 @@ Supabase Dashboard → Table Editor → `app_announcements`에서 `remote_notice
 
 ### 2026 수험생 무료 이용 공지
 
+> **종료됨(2026-11-04 기준).** 무료 이용 기간은 2026-09-30 에 끝났고, 2.0(Android 빌드 63)부터 클라이언트는 `is_promotion_active` 를 호출하지 않는다(`promotionConfig.ts` 와 `SubscriptionContext` 의 프로모션 판정 제거). `app_promotions`·`app_announcements` 의 `admissions_support_2026` 행은 빌드 62 이하 구버전 호환을 위해 남기되 `20261104100000_end_admissions_promotion.sql` 로 `enabled = false` 로 고정한다. 새 프로모션이 필요하면 2.0 클라이언트에는 별도 구현이 필요하다.
+
 - 운영 행: `admissions_support_2026`
 - 무료 이용 종료: 2026년 9월 30일 23:59:59(KST), DB의 배타적 종료값은 `2026-10-01 00:00:00+09`
 - 공지 대상: Android 빌드 60 이상
