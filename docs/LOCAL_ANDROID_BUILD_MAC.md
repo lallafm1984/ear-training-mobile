@@ -1,5 +1,33 @@
 # Mac 로컬 Android 릴리스 빌드
 
+## 릴리스 R8 최적화 (2026-11-04)
+
+`app.json`의 로컬 config plugin `plugins/withAndroidReleaseOptimization.js`가 prebuild마다 아래 설정을 적용한다. 생성된 `android/`만 수동 수정하지 않는다.
+
+- `android.enableMinifyInReleaseBuilds=true`: R8 코드 축소·난독화.
+- `android.enableShrinkResourcesInReleaseBuilds=true`: 사용하지 않는 Android 리소스 제거.
+- `android.enableR8.fullMode=true`: full mode 유지.
+- 기본 ProGuard 파일은 `proguard-android-optimize.txt` 사용. 기존 `proguard-android.txt`의 최적화 비활성 설정을 피한다.
+- 기존 React Native/라이브러리 keep 규칙은 보존한다. 문제를 숨기기 위해 전체 앱의 난독화·축소·최적화를 끄지 않는다.
+- 현재 결제 SDK의 `purchases-store-amazon:9.29.0`이 전역 `-dontoptimize`를 포함한다. AGP의 `optimization.keepRules.ignoreFrom`으로 이 버전의 consumer 파일만 제외하고, 나머지 Amazon 보호 규칙 3개는 `plugins/release-compatibility.pro`에 그대로 보존한다. 결제 코드·의존성을 제거하지 않는다. [라이브러리 이슈](https://github.com/RevenueCat/purchases-android/issues/3496), [AGP 8.11 API](https://developer.android.com/reference/tools/gradle-api/8.11/com/android/build/api/dsl/KeepRules#ignoreFrom(kotlin.Array)).
+- Expo SDK 54의 Kotlin Record 변환기·생성기는 reflection을 사용한다. 실제 최적화 release 실행에서 SecureStore 옵션 변환 오류를 확인해 `expo.modules.kotlin.records.**`·`expo.modules.kotlin.allocators.**`만 보호한다. Expo 전체나 앱 전체 최적화를 끄지 않는다.
+
+Google Play의 DEX 최적화 경고는 Java/Kotlin DEX 지표다. Hermes JavaScript 번들 압축 여부와 구분한다. 최적화 후 **실제 release 빌드**를 실행해 WebView·로컬 저장소·알림·공유·구독 초기화를 점검한다.
+
+산출물 검사:
+
+```bash
+unzip -p build/melodygen-android-vN.aab BUNDLE-METADATA/com.android.tools/r8.json
+unzip -l build/melodygen-android-vN.aab 'BUNDLE-METADATA/*'
+```
+
+R8 보고서와 난독화 매핑은 빌드별로 보관한다. Play Console의 기존 출시 62 경고는 새 AAB 업로드 후 재평가를 확인해야 하며, 로컬 빌드 성공만으로 콘솔 경고 해소를 확정하지 않는다.
+
+Gradle 빌드 스크립트는 AAB 안의 `r8.json`에서 난독화·축소·최적화가 모두 활성 상태인지 검사한다. 하나라도 꺼져 있거나 보고서가 없으면 빌드를 완료로 보고하지 않는다. 통과한 보고서와 매핑은 AAB 옆의 `-r8.json`·`-mapping.txt` 파일로 보관한다.
+
+- [Google Play DEX code optimization](https://developer.android.com/google/play/vitals/code-optimization)
+- [R8 앱 최적화 설정](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization)
+
 이 문서는 MelodyGen Android 릴리스 AAB를 Mac 로컬에서 생성하고, Google Play App Signing 상태에 맞춰 관리하는 절차입니다.
 
 ## 현재 설정된 파일

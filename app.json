@@ -24,7 +24,7 @@
         "backgroundColor": "#EEF1FB"
       },
       "package": "com.melodygen.app",
-      "versionCode": 67,
+      "versionCode": 71,
       "permissions": ["com.android.vending.BILLING"],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
@@ -35,6 +35,7 @@
     },
     "scheme": "melodygen",
     "plugins": [
+      "./plugins/withAndroidReleaseOptimization",
       "expo-secure-store",
       "expo-web-browser",
       "expo-localization",

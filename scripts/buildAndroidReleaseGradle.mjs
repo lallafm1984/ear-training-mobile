@@ -188,6 +188,31 @@ function extractSha256(text) {
   return match ? match[1].replace(/:/g, '').toLowerCase() : null;
 }
 
+export function validateR8Report(r8) {
+  if (
+    !r8.options?.isObfuscationEnabled ||
+    !r8.options?.isShrinkingEnabled ||
+    !r8.options?.isOptimizationsEnabled
+  ) {
+    throw new Error('R8 난독화·축소·최적화 중 비활성 설정이 있습니다. consumer keep 규칙을 확인하세요.');
+  }
+  const scores = {};
+  for (const [label, field] of [
+    ['난독화', 'noObfuscationPercentage'],
+    ['최적화', 'noOptimizationPercentage'],
+    ['축소', 'noShrinkingPercentage'],
+  ]) {
+    const excluded = r8.stats?.[field];
+    if (!Number.isFinite(excluded) || excluded < 0 || excluded > 100) {
+      throw new Error(`R8 ${label} 비율을 확인할 수 없습니다.`);
+    }
+    const score = 100 - excluded;
+    if (score < 25) throw new Error(`R8 ${label} 비율 ${score.toFixed(2)}%가 25% 기준 미만입니다.`);
+    scores[label] = score;
+  }
+  return scores;
+}
+
 function verifyArtifact(artifactPath, signing, publicEnv) {
   const report = [];
 
@@ -245,6 +270,22 @@ function verifyArtifact(artifactPath, signing, publicEnv) {
   }
 
   const stats = fs.statSync(artifactPath);
+  if (artifactPath.endsWith('.aab')) {
+    const r8Result = capture('unzip', [
+      '-p',
+      artifactPath,
+      'BUNDLE-METADATA/com.android.tools/r8.json',
+    ]);
+    if (!r8Result.ok) throw new Error('AAB에 R8 최적화 보고서가 없습니다. 릴리스 설정을 확인하세요.');
+    const r8 = JSON.parse(r8Result.stdout);
+    const scores = validateR8Report(r8);
+    const r8Path = artifactPath.replace(/\.aab$/, '-r8.json');
+    fs.writeFileSync(r8Path, r8Result.stdout);
+    report.push(`- R8 난독화·축소·최적화 활성화 확인: ${r8Path}`);
+    for (const [label, score] of Object.entries(scores)) {
+      report.push(`- R8 ${label} 비율: ${score.toFixed(2)}%`);
+    }
+  }
   report.push(`- 크기: ${(stats.size / (1024 * 1024)).toFixed(1)} MB`);
   report.push(`- 파일 SHA-256: ${sha256File(artifactPath)}`);
   return report;
@@ -336,6 +377,12 @@ export async function main(argv = process.argv.slice(2)) {
 
   console.log('[5/5] 산출물 검증');
   const report = verifyArtifact(outputPath, signing, publicEnv);
+  if (!options.apk) {
+    const mappingPath = path.join(androidDir, 'app/build/outputs/mapping/release/mapping.txt');
+    const savedMappingPath = outputPath.replace(/\.aab$/, '-mapping.txt');
+    fs.copyFileSync(mappingPath, savedMappingPath);
+    report.push(`- 난독화 매핑 보관: ${savedMappingPath}`);
+  }
   const minutes = ((Date.now() - startedAt) / 60000).toFixed(1);
 
   console.log('');
