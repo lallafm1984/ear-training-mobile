@@ -350,6 +350,151 @@ function generateBassLevel1(
 }
 
 // ────────────────────────────────────────────────────────────────
+// L2·L3 마디 리듬 변형
+// 예전에는 매 마디 2분음표 둘(복합박자: 점4분 둘)로 고정되어 2성부 받아쓰기의 베이스가 늘 같은
+// 리듬이었다(QA 측정 2026-11: bass_2 4/4 리듬 동일률 52~57%, 6/8 100%). 기본형을 가장 자주 쓰고
+// 나머지는 변형으로 섞는다. 단위는 L:1/8, 각 패턴의 합은 MEASURE_TOTAL[timeSig].
+// 복합박자는 점4분(3) 박 경계를 지킨다.
+// ────────────────────────────────────────────────────────────────
+interface WeightedBarRhythm {
+  durations: number[];
+  weight: number;
+}
+type RhythmVariantLevel = 2 | 3;
+
+const BAR_RHYTHM_VARIANTS: Record<
+  TimeSignature,
+  Record<RhythmVariantLevel, WeightedBarRhythm[]>
+> = {
+  '2/4': {
+    2: [
+      { durations: [2, 2], weight: 60 },
+      { durations: [4], weight: 40 },
+    ],
+    3: [
+      { durations: [2, 2], weight: 50 },
+      { durations: [4], weight: 20 },
+      { durations: [2, 1, 1], weight: 30 },
+    ],
+  },
+  '3/4': {
+    2: [
+      { durations: [2, 2, 2], weight: 50 },
+      { durations: [4, 2], weight: 25 },
+      { durations: [6], weight: 25 },
+    ],
+    3: [
+      { durations: [2, 2, 2], weight: 40 },
+      { durations: [4, 2], weight: 30 },
+      { durations: [2, 4], weight: 15 },
+      { durations: [6], weight: 15 },
+    ],
+  },
+  '4/4': {
+    2: [
+      { durations: [4, 4], weight: 55 },
+      { durations: [8], weight: 15 },
+      { durations: [4, 2, 2], weight: 15 },
+      { durations: [2, 2, 4], weight: 15 },
+    ],
+    3: [
+      { durations: [4, 4], weight: 40 },
+      { durations: [4, 2, 2], weight: 25 },
+      { durations: [2, 2, 4], weight: 20 },
+      { durations: [8], weight: 15 },
+    ],
+  },
+  '2/2': {
+    2: [
+      { durations: [4, 4], weight: 55 },
+      { durations: [8], weight: 15 },
+      { durations: [4, 2, 2], weight: 15 },
+      { durations: [2, 2, 4], weight: 15 },
+    ],
+    3: [
+      { durations: [4, 4], weight: 40 },
+      { durations: [4, 2, 2], weight: 25 },
+      { durations: [2, 2, 4], weight: 20 },
+      { durations: [8], weight: 15 },
+    ],
+  },
+  '6/8': {
+    2: [
+      { durations: [3, 3], weight: 55 },
+      { durations: [6], weight: 20 },
+      { durations: [3, 2, 1], weight: 25 },
+    ],
+    3: [
+      { durations: [3, 3], weight: 40 },
+      { durations: [3, 2, 1], weight: 25 },
+      { durations: [2, 1, 3], weight: 20 },
+      { durations: [6], weight: 15 },
+    ],
+  },
+  '9/8': {
+    2: [
+      { durations: [3, 3, 3], weight: 60 },
+      { durations: [6, 3], weight: 20 },
+      { durations: [3, 6], weight: 20 },
+    ],
+    3: [
+      { durations: [3, 3, 3], weight: 45 },
+      { durations: [6, 3], weight: 20 },
+      { durations: [3, 6], weight: 15 },
+      { durations: [3, 3, 2, 1], weight: 20 },
+    ],
+  },
+  '12/8': {
+    2: [
+      { durations: [3, 3, 3, 3], weight: 60 },
+      { durations: [6, 6], weight: 20 },
+      { durations: [6, 3, 3], weight: 20 },
+    ],
+    3: [
+      { durations: [3, 3, 3, 3], weight: 45 },
+      { durations: [6, 6], weight: 20 },
+      { durations: [6, 3, 3], weight: 15 },
+      { durations: [3, 3, 3, 2, 1], weight: 20 },
+    ],
+  },
+};
+
+/** 마디별 리듬(L:1/8 단위 배열)을 가중 무작위로 고른다. 마지막(종지) 마디는 호출 쪽에서 버린다. */
+function pickBarRhythms(
+  timeSig: TimeSignature,
+  level: RhythmVariantLevel,
+  measures: number,
+): number[][] {
+  const variants = BAR_RHYTHM_VARIANTS[timeSig][level];
+  const totalWeight = variants.reduce((sum, v) => sum + v.weight, 0);
+  const out: number[][] = [];
+  for (let m = 0; m < measures; m++) {
+    let r = Math.random() * totalWeight;
+    let chosen = variants[0];
+    for (const v of variants) {
+      r -= v.weight;
+      if (r < 0) {
+        chosen = v;
+        break;
+      }
+    }
+    out.push([...chosen.durations]);
+  }
+  return out;
+}
+
+/** 마디별 첫 음 인덱스(누적) + 총 음 수 */
+function indexBarRhythms(barRhythms: number[][]): { barStartIndex: number[]; totalNotes: number } {
+  const barStartIndex: number[] = [];
+  let acc = 0;
+  for (const r of barRhythms) {
+    barStartIndex.push(acc);
+    acc += r.length;
+  }
+  return { barStartIndex, totalNotes: acc };
+}
+
+// ────────────────────────────────────────────────────────────────
 // Level 2: Stepwise motion only
 // ────────────────────────────────────────────────────────────────
 
@@ -360,11 +505,9 @@ function generateBassLevel2(
   ctx: BassGenContext,
 ): BassNote[] {
   const { timeSig, measures, mode } = opts;
-  const durationInfo = BASS_DURATION_MAP[timeSig];
-  const noteDuration = durationInfo.level2;
-  const notesPerBar = durationInfo.notesPerBar.level2;
   const measureTotal = MEASURE_TOTAL[timeSig];
-  const totalNotes = measures * notesPerBar;
+  const barRhythms = pickBarRhythms(timeSig, 2, measures);
+  const { barStartIndex, totalNotes } = indexBarRhythms(barRhythms);
 
   const notes: BassNote[] = [];
   let currentNN = 0;
@@ -387,7 +530,7 @@ function generateBassLevel2(
   const useInitialLeap = Math.random() < 0.5;
 
   // ── 반종지 목표 (8마디 이상: 4마디 프레이즈 경계에서 V) ──
-  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => b * notesPerBar);
+  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => barStartIndex[b] ?? 0);
 
   // 가장 가까운 으뜸음 찾기
   function nearestTonic(from: number): number {
@@ -407,9 +550,11 @@ function generateBassLevel2(
   }
 
   for (let m = 0; m < measures; m++) {
-    for (let n = 0; n < notesPerBar; n++) {
-      const beatPos = n * noteDuration;
-      const noteIndex = m * notesPerBar + n;
+    const rhythm = barRhythms[m];
+    let beatPos = 0;
+    for (let n = 0; n < rhythm.length; n++) {
+      const noteDuration = rhythm[n];
+      const noteIndex = barStartIndex[m] + n;
       const isFirst = noteIndex === 0;
       const isLast = noteIndex === totalNotes - 1;
       const notesRemaining = totalNotes - noteIndex - 1;
@@ -507,10 +652,9 @@ function generateBassLevel2(
 
       // 마지막 음: 남은 박자 채우기
       if (isLast) {
-        const usedDuration = n * noteDuration;
         notes.push({
           noteNum: currentNN,
-          duration: measureTotal - usedDuration,
+          duration: measureTotal - beatPos,
           measure: m,
           beatPosition: beatPos,
         });
@@ -518,6 +662,7 @@ function generateBassLevel2(
       }
 
       notes.push({ noteNum: currentNN, duration: noteDuration, measure: m, beatPosition: beatPos });
+      beatPos += noteDuration;
     }
   }
 
@@ -538,11 +683,9 @@ function generateBassLevel3(
   ctx: BassGenContext,
 ): BassNote[] {
   const { timeSig, measures, mode } = opts;
-  const durationInfo = BASS_DURATION_MAP[timeSig];
-  const noteDuration = durationInfo.level2;
-  const notesPerBar = durationInfo.notesPerBar.level3;
   const measureTotal = MEASURE_TOTAL[timeSig];
-  const totalNotes = measures * notesPerBar;
+  const barRhythms = pickBarRhythms(timeSig, 3, measures);
+  const { barStartIndex, totalNotes } = indexBarRhythms(barRhythms);
   const notes: BassNote[] = [];
 
   // ── 초기 음 선택: 범위 중심 근처의 으뜸음 옥타브 ──
@@ -559,7 +702,7 @@ function generateBassLevel3(
   // ── 4마디당 일반 도약(3도/4도) 1회 위치 + 5도 도약 최대 1회 위치 결정 ──
   const leapPositions = new Set<number>();
   const fifthLeapPositions = new Set<number>();
-  const groupSize = 4 * notesPerBar;
+  const groupSize = Math.max(2, Math.round((4 * totalNotes) / measures));
 
   for (let g = 0; g * groupSize < totalNotes; g++) {
     const groupStart = g * groupSize;
@@ -622,12 +765,14 @@ function generateBassLevel3(
   }
 
   // ── 반종지 목표 (8마디 이상: 4마디 프레이즈 경계에서 V) ──
-  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => b * notesPerBar);
+  const halfCadenceNotes = getHalfCadenceBars(measures).map((b) => barStartIndex[b] ?? 0);
 
   for (let m = 0; m < measures; m++) {
-    for (let n = 0; n < notesPerBar; n++) {
-      const beatPos = n * noteDuration;
-      const noteIndex = m * notesPerBar + n;
+    const rhythm = barRhythms[m];
+    let beatPos = 0;
+    for (let n = 0; n < rhythm.length; n++) {
+      const noteDuration = rhythm[n];
+      const noteIndex = barStartIndex[m] + n;
       const isFirstNote = noteIndex === 0;
       const isLastNote = noteIndex === totalNotes - 1;
       if (isFirstNote) {
@@ -794,10 +939,9 @@ function generateBassLevel3(
       }
 
       if (isLastNote) {
-        const usedDuration = n * noteDuration;
         notes.push({
           noteNum: currentNN,
-          duration: measureTotal - usedDuration,
+          duration: measureTotal - beatPos,
           measure: m,
           beatPosition: beatPos,
         });
@@ -805,6 +949,7 @@ function generateBassLevel3(
       }
 
       notes.push({ noteNum: currentNN, duration: noteDuration, measure: m, beatPosition: beatPos });
+      beatPos += noteDuration;
     }
   }
 

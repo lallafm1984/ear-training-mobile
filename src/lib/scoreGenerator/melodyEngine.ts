@@ -776,6 +776,8 @@ export function generateCadenceMeasure(
   prevTrebleMidi?: number,
   /** 종지 직전 베이스 실음 MIDI (옥타브 선택용, 2성부) */
   prevBassMidi?: number,
+  /** 박자 — 복합박자(6/8·9/8·12/8)는 점음표 음가로 종지한다 */
+  timeSignature?: string,
 ): { treble: ScoreNote[]; bass: ScoreNote[] } {
   const tonicPitch = scale[0];
   const bassDeg = noteNumToNote(0, scale, bassBase);
@@ -802,8 +804,13 @@ export function generateCadenceMeasure(
   const usePatternB = canUsePatternB && Math.random() < 0.5;
 
   // 종지 음가 선택: 음표+쉼표 모두 SIXTEENTHS_TO_DUR에 매핑 가능해야 함
+  // 복합박자: 박이 점4분이므로 '2분+4분쉼표'(박 경계 침범) 대신 점2분(한 마디) 또는 점4분+점4분쉼표
+  const compoundMeter = !!timeSignature && /^(6|9|12)\/8$/.test(timeSignature);
   let noteSixteenths: number;
-  if (usePatternB) {
+  if (compoundMeter) {
+    const compoundOptions = [12, 6].filter((c) => c <= sixteenthsPerBar);
+    noteSixteenths = compoundOptions[Math.floor(Math.random() * compoundOptions.length)] ?? 6;
+  } else if (usePatternB) {
     noteSixteenths = 12;
   } else {
     // 8 이하에서 나머지도 매핑 가능한 최대값 선택

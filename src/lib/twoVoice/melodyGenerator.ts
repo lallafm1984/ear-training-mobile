@@ -1026,6 +1026,29 @@ export function generateMelody(opts: MelodyGeneratorOptions): ScoreNote[] {
       }
       // syncopation/tie: 후처리에서 mustForce로 보장하므로 fillRhythm 부스트 불필요
     }
+    // 복합박자: 박(점4분)이 기본 단위다. 단순박자용 풀(2분·4분 위주)을 그대로 쓰면 박 경계 때문에
+    // '4분+8분' 셀만 남아 매번 같은 리듬이 나온다(QA 측정: 1단계 6/8 리듬 동일률 100%).
+    // 점4분(6)·8분(2)을 보장하고 저레벨은 점2분(12, 한 마디)도 허용, 점음표 확률 하한 0.6.
+    if (compoundMeter) {
+      if (!effectivePool.includes(6)) effectivePool = [...effectivePool, 6, 6];
+      if (!effectivePool.includes(2)) effectivePool = [...effectivePool, 2];
+      if (melodyLevel <= 3 && sixteenthsPerBar >= 12 && !effectivePool.includes(12)) {
+        effectivePool = [...effectivePool, 12];
+      }
+      effectiveDottedProb = Math.max(effectiveDottedProb, 0.6);
+    } else if (sixteenthsPerBar === 12 && melodyLevel <= 2 && !effectivePool.includes(12)) {
+      // 3/4 저레벨: 풀이 2분·4분뿐이라 마디 리듬이 3가지로 고정된다 → 점2분(한 마디)도 허용
+      effectivePool = [...effectivePool, 12];
+      effectiveDottedProb = Math.max(effectiveDottedProb, 0.35);
+    } else if (
+      !compoundMeter &&
+      sixteenthsPerBar <= 12 &&
+      melodyLevel === 3 &&
+      !effectivePool.includes(2)
+    ) {
+      // 3/4·2/4 3단계(점4분): 짧은 마디에서 '점4분+8분+4분' 셀만 반복된다(동일률 42~52%) → 8분(2단계 요소) 허용
+      effectivePool = [...effectivePool, 2];
+    }
     // 복합박자 둘잇단: 박머리 점4분 셀이 있어야 하므로 풀·점음표 확률 보정
     if (compoundMeter && charType === 'triplet' && !mustSuppress) {
       if (!effectivePool.includes(6)) effectivePool = [...effectivePool, 6, 6];

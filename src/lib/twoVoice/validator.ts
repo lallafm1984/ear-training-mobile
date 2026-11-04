@@ -10,7 +10,7 @@
 // ────────────────────────────────────────────────────────────────
 
 import type { BassNote, TwoVoiceBassOptions, ValidationResult, Violation } from './types';
-import { MEASURE_TOTAL, BASS_RANGE, BASS_DURATION_MAP } from './scales';
+import { MEASURE_TOTAL, BASS_RANGE } from './scales';
 
 // ────────────────────────────────────────────────────────────────
 // Internal helpers
@@ -276,8 +276,7 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
     // L3: 5th (scale step 4) allowed, max 1 per 4 bars
     let sameDirectionLeaps = 0;
     let prevDirection = 0;
-    const notesPerBar = BASS_DURATION_MAP[opts.timeSig].notesPerBar.level3;
-    const blockSize = 4 * notesPerBar;
+    // 4마디 블록은 마디 번호 기준 (마디별 음 수가 달라질 수 있음)
 
     // Count 5th leaps per 4-bar block
     const fifthLeapsByBlock = new Map<number, number>();
@@ -311,8 +310,7 @@ export function validateBass(opts: TwoVoiceBassOptions, bass: BassNote[]): Valid
 
       // Track 5th leaps per 4-bar block
       if (interval === 4) {
-        const noteIndex = i;
-        const blockIdx = Math.floor(noteIndex / blockSize);
+        const blockIdx = Math.floor(bass[i].measure / 4);
         fifthLeapsByBlock.set(blockIdx, (fifthLeapsByBlock.get(blockIdx) || 0) + 1);
       }
 

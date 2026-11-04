@@ -174,6 +174,7 @@ export function generateScore(opts: GeneratorOptions): GeneratedScore {
     keySignature,
     lastPitchedMidi(trebleNotes),
     useGrandStaff ? lastPitchedMidi(bassNotes) : undefined,
+    timeSignature,
   );
   trebleNotes.push(...cadence.treble);
   bassNotes.push(...cadence.bass);
