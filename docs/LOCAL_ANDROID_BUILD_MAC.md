@@ -11,6 +11,7 @@
 - 키스토어 검증: `scripts/verifyAndroidReleaseKeystore.mjs`
 - 로컬 환경 점검: `scripts/checkMacAndroidBuildEnv.mjs`
 - 로컬 릴리스 빌드: `scripts/buildAndroidReleaseLocal.mjs`
+- EAS 없는 Gradle 릴리스 빌드: `scripts/buildAndroidReleaseGradle.mjs`
 
 `credentials/android/melodygen-release.jks`는 `/Users/lim/Downloads/melodygen-release.jks`에서 복사했습니다. 이 파일은 Git에 커밋되지 않습니다.
 
@@ -105,5 +106,43 @@ npm run android:build:local
 ```
 
 `npm run android:build:local`은 빌드 직전에 `app.json`의 `expo.android.versionCode`를 1 증가시키고, AAB를 기본적으로 `build/` 폴더에 생성합니다.
+
+## EAS 로그인 없이 빌드 (prebuild + Gradle)
+
+EAS 계정에 로그인할 수 없거나 로그인이 만료됐을 때는 EAS 없이 Expo prebuild와 Gradle로 같은 upload key 서명의 AAB를 만들 수 있습니다. 2026-08 릴리스(1.1.x)와 2026-11-04 2.0.0(versionCode 63) AAB가 이 방식으로 만들어졌습니다. 2.0.0 빌드는 같은 순서를 수동으로 실행했고, 그 절차를 아래 스크립트로 고정했습니다.
+
+2.0.0 빌드 기록: 한글 경로(`~/Desktop/프로젝트/...`)에서는 JS 번들 단계(`createBundleReleaseJsAndAssets`)가 "Unable to resolve module .../index.ts"로 실패해 워크트리를 `/Users/lim/melodygen-build/ear-training-mobile-2.0`으로 옮긴 뒤 성공했습니다(Gradle 4분 42초). 산출물 `build/melodygen-android-v63.aab`(약 72MB)의 서명 인증서 지문은 아래 upload 인증서와 일치했고, `jarsigner -verify`는 "jar verified."였습니다.
+
+```bash
+npm install
+npm run android:env:check
+npm run android:keystore:check
+npm run android:build:gradle
+```
+
+`npm run android:build:gradle`은 다음을 순서대로 수행합니다.
+
+1. `.env.local`의 `MELODYGEN_ANDROID_*` 서명 정보를 읽고(비밀값은 파일에 쓰지 않고 환경 변수로만 Gradle에 전달) `ANDROID_HOME`을 확인합니다.
+2. `eas.json`의 `build.production.env`에 있는 `EXPO_PUBLIC_*` 값을 환경 변수로 넣습니다. EAS 빌드에서는 EAS가 넣어 주지만 Gradle 직접 빌드에서는 이 단계가 없으면 Supabase 로그인이 동작하지 않는 번들이 만들어집니다.
+3. `app.json`의 `expo.android.versionCode`를 1 증가시킵니다(`--no-bump`로 생략).
+4. `npx expo prebuild --platform android --no-install`로 `android/`를 생성하고, `android/app/build.gradle`의 release 서명을 upload key로 바꿉니다.
+5. `./gradlew :app:bundleRelease`(`--apk`면 `:app:assembleRelease`)를 실행하고 산출물을 `build/melodygen-android-v<versionCode>.aab`로 복사합니다.
+6. 산출물 서명 인증서 SHA-256을 키스토어와 비교하고, `jarsigner -verify`, JS 번들의 Supabase 호스트 포함 여부, 파일 SHA-256을 출력합니다.
+
+옵션:
+
+| 옵션             | 동작                                                   |
+| ---------------- | ------------------------------------------------------ |
+| `--no-bump`      | versionCode를 올리지 않고 같은 버전으로 다시 빌드      |
+| `--apk`          | AAB 대신 실기기 설치용 APK 생성                        |
+| `--clean`        | 기존 `android/` 폴더를 지우고 prebuild부터 다시        |
+| `--keep-android` | 기존 `android/`를 재사용하고 prebuild 생략             |
+
+주의:
+
+- `android/`와 `build/`는 `.gitignore` 대상입니다. 빌드 뒤 커밋할 변경은 `app.json`의 versionCode 한 줄만이어야 합니다.
+- 프로젝트 경로에 한글 등 ASCII 이외 문자가 있으면 CMake/NDK/Hermes 단계가 실패할 수 있습니다(2026-08 릴리스는 이 문제로 영문 임시 경로에서 빌드). 스크립트가 경고를 출력하면, 실패 시 `git worktree add /Users/lim/melodygen-build/ear-training-mobile <브랜치>`처럼 영문 경로에 워크트리를 만들고 `.env.local`과 `credentials/`를 복사해 다시 실행합니다.
+- 서명 비밀번호가 `.env.local`에만 있어야 하는 원칙은 그대로입니다. 스크립트는 비밀값을 출력하지 않습니다.
+- 업로드 키 인증서 SHA-256은 `f8364c66ad87f18c0a5febe4f00527f657f895cb4072b2f3c9951c196b7415a8`입니다(2026-08-31 릴리스 기록). 스크립트 출력의 "산출물 서명 인증서 SHA-256"이 이 값과 같아야 Play Console이 AAB를 받아 줍니다.
 
 Mac에는 Windows의 `D:\Projects\YulProject_1\ear-training-mobile\build` 경로가 없으므로, Windows PC로 넘길 때는 `build/*.aab`를 해당 Windows 폴더에 복사합니다.

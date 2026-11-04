@@ -67,7 +67,8 @@ scripts/
 ├── checkMacAndroidBuildEnv.mjs         # Mac Android 빌드 필수 도구 점검
 ├── createAndroidLocalCredentials.mjs   # EAS credentials.json 생성
 ├── verifyAndroidReleaseKeystore.mjs    # JKS alias/비밀번호 검증
-└── buildAndroidReleaseLocal.mjs        # versionCode 증가 + EAS local AAB 빌드
+├── buildAndroidReleaseLocal.mjs        # versionCode 증가 + EAS local AAB 빌드
+└── buildAndroidReleaseGradle.mjs       # EAS 없이 prebuild + Gradle bundleRelease AAB 빌드
 ```
 
 ---
@@ -335,6 +336,7 @@ Login → Onboarding → Home
 | EAS credentials 생성              | `scripts/createAndroidLocalCredentials.mjs` | `.env.local` 기반 `credentials.json` 생성                |
 | 키스토어 검증                     | `scripts/verifyAndroidReleaseKeystore.mjs`  | `keytool`로 JKS/alias 검증                               |
 | Android 로컬 릴리스 빌드          | `scripts/buildAndroidReleaseLocal.mjs`      | `versionCode` 증가 후 `eas build --local` AAB 생성       |
+| EAS 없는 Gradle 릴리스 빌드       | `scripts/buildAndroidReleaseGradle.mjs`     | versionCode 증가 → prebuild → `:app:bundleRelease` → 서명 검증 |
 | 앱 버전/공지 운영 문서            | `docs/APP_CONTROL_SUPABASE.md`              | Supabase 원격 정책 필드·안전한 배포 순서·장애 동작       |
 
 ---

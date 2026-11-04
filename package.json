@@ -9,6 +9,7 @@
     "android:credentials": "node scripts/createAndroidLocalCredentials.mjs",
     "android:keystore:check": "node scripts/verifyAndroidReleaseKeystore.mjs",
     "android:build:local": "node scripts/buildAndroidReleaseLocal.mjs",
+    "android:build:gradle": "node scripts/buildAndroidReleaseGradle.mjs",
     "ios": "expo run:ios",
     "test": "jest",
     "test:abc": "npx tsx scripts/generateTestAbc.ts",
