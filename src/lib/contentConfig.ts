@@ -166,6 +166,7 @@ export const CHORD_DIFF_LABELS: Record<string, string> = {
   chord_2: '1단계 · 장/단/증/감3화음',
   chord_3: '2단계 · + 장7·단7·속7화음',
   chord_4: '3단계 · + 감7·반감7화음',
+  chord_5: '4단계 · + 3화음 전위(제1·제2전위)',
 };
 
 export const PROGRESSION_DIFF_LABELS: Record<string, string> = {

@@ -71,7 +71,7 @@ export type RhythmDifficulty =
 export type IntervalDifficulty = 'interval_1' | 'interval_2' | 'interval_3' | 'interval_4';
 
 /** 화성 듣기 난이도 (3단계) */
-export type ChordDifficulty = 'chord_2' | 'chord_3' | 'chord_4';
+export type ChordDifficulty = 'chord_2' | 'chord_3' | 'chord_4' | 'chord_5';
 
 /** 화성 진행 난이도 (4단계) */
 export type ProgressionDifficulty =

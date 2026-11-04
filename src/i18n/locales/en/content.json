@@ -78,7 +78,8 @@
     "chord": {
       "chord_2": "Level 1 · Maj/Min/Aug/Dim triads",
       "chord_3": "Level 2 · + Maj7·Min7·Dom7 chords",
-      "chord_4": "Level 3 · + Dim7·Half-dim7 chords"
+      "chord_4": "Level 3 · + Dim7·Half-dim7 chords",
+      "chord_5": "Level 4 · + Triad inversions (1st·2nd)"
     },
     "progression": {
       "progression_1": "Level 1 · Basic progressions",
@@ -151,7 +152,9 @@
     "dim7": "Diminished 7th (dim7)",
     "halfdim7": "Half-diminished 7th (m7♭5)",
     "maj_inv1": "Major 1st Inversion",
-    "min_inv1": "Minor 1st Inversion"
+    "min_inv1": "Minor 1st Inversion",
+    "maj_inv2": "Major 2nd Inversion",
+    "min_inv2": "Minor 2nd Inversion"
   },
   "progression": {
     "I-V-I": "I-V-I",
@@ -244,7 +247,9 @@
       "dim7": "A diminished 7th chord stacks three minor 3rds. All four notes are equally spaced, so it sounds very unstable.",
       "halfdim7": "A half-diminished 7th adds a minor 7th to a diminished triad. A little softer than a dim7, and common in jazz.",
       "maj_inv1": "A major triad in first inversion has the 3rd on the bottom: a minor 3rd below and a perfect 4th above.",
-      "min_inv1": "A minor triad in first inversion has the 3rd on the bottom: a major 3rd below and a perfect 4th above."
+      "min_inv1": "A minor triad in first inversion has the 3rd on the bottom: a major 3rd below and a perfect 4th above.",
+      "maj_inv2": "A major triad in second inversion has the 5th on the bottom: a perfect 4th below and a major 3rd above. Figured bass calls it a 6/4 chord; it sounds unstable and usually moves on.",
+      "min_inv2": "A minor triad in second inversion has the 5th on the bottom: a perfect 4th below and a minor 3rd above. It sounds hollower and less stable than first inversion."
     },
     "keyMajor": "{{name}}: a major key with a bright 3rd. It shares its key signature with {{relative}}, so listen for the note the melody rests and ends on (the tonic).",
     "keyMinor": "{{name}}: a minor key with a dark 3rd. It shares its key signature with {{relative}}, so listen for the final note (the tonic) and the raised leading tone.",

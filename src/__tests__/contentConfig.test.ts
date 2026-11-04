@@ -80,8 +80,8 @@ describe('getDifficultyList', () => {
     expect(getDifficultyList('interval')).toHaveLength(4);
   });
 
-  it('chord 카테고리는 3개 난이도를 가진다', () => {
-    expect(getDifficultyList('chord')).toHaveLength(3);
+  it('chord 카테고리는 4개 난이도를 가진다', () => {
+    expect(getDifficultyList('chord')).toHaveLength(4);
   });
 
   it('key 카테고리는 3개 난이도를 가진다', () => {

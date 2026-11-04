@@ -297,6 +297,8 @@ const CHORD_TEMPLATES: Record<string, ChordTemplate> = {
   halfdim7: { name: '반감7화음 (m7♭5)', intervals: [0, 3, 6, 10] },
   maj_inv1: { name: '장3화음 제1전위', intervals: [0, 3, 8] },
   min_inv1: { name: '단3화음 제1전위', intervals: [0, 4, 9] },
+  maj_inv2: { name: '장3화음 제2전위', intervals: [0, 5, 9] },
+  min_inv2: { name: '단3화음 제2전위', intervals: [0, 5, 8] },
 };
 
 /** 유사 화음 맵 — 오답 우선 배치 */
@@ -310,8 +312,10 @@ const SIMILAR_CHORDS: Record<string, string[]> = {
   dom7: ['maj7', 'min7'],
   dim7: ['halfdim7', 'dim'],
   halfdim7: ['min7', 'dim7'],
-  maj_inv1: ['min_inv1', 'major'],
-  min_inv1: ['maj_inv1', 'minor'],
+  maj_inv1: ['min_inv1', 'maj_inv2', 'major'],
+  min_inv1: ['maj_inv1', 'min_inv2', 'minor'],
+  maj_inv2: ['min_inv2', 'maj_inv1', 'major'],
+  min_inv2: ['maj_inv2', 'min_inv1', 'minor'],
 };
 
 /** 누적 풀 */
@@ -319,6 +323,22 @@ const CHORD_POOLS: Record<ChordDifficulty, string[]> = {
   chord_2: ['major', 'minor', 'aug', 'dim'],
   chord_3: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dom7'],
   chord_4: ['major', 'minor', 'aug', 'dim', 'maj7', 'min7', 'dom7', 'dim7', 'halfdim7'],
+  // 4단계: 3화음 전위 (제1전위 6, 제2전위 6/4) — 교재 13·21장
+  chord_5: [
+    'major',
+    'minor',
+    'aug',
+    'dim',
+    'maj7',
+    'min7',
+    'dom7',
+    'dim7',
+    'halfdim7',
+    'maj_inv1',
+    'min_inv1',
+    'maj_inv2',
+    'min_inv2',
+  ],
 };
 
 /** 제시 방식 */
@@ -328,6 +348,7 @@ const CHORD_PRESENTATIONS: Record<ChordDifficulty, ChordPresentation[]> = {
   chord_2: ['block'],
   chord_3: ['block'],
   chord_4: ['block'],
+  chord_5: ['block'],
 };
 
 /** 배치 */
@@ -337,6 +358,7 @@ const CHORD_VOICINGS: Record<ChordDifficulty, ChordVoicing[]> = {
   chord_2: ['close'],
   chord_3: ['close', 'open'],
   chord_4: ['close', 'open'],
+  chord_5: ['close'], // 전위는 베이스 음이 들리도록 밀집 배치만
 };
 
 /** 개방 배치: 3도음(인덱스 1)을 옥타브 위로 */
@@ -393,6 +415,7 @@ const CHORD_ROOT_RANGES: Record<ChordDifficulty, { min: number; max: number }> =
   chord_2: { min: 12, max: 23 }, // C4~B4
   chord_3: { min: 9, max: 21 }, // A3~A4
   chord_4: { min: 9, max: 21 }, // A3~A4
+  chord_5: { min: 9, max: 21 }, // A3~A4
 };
 
 /** 직전 출제 화음 기록 (연속 중복 방지) */

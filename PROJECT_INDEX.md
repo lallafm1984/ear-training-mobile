@@ -374,7 +374,7 @@ Login → Onboarding → Home
 | `secureStoreAdapter.test.ts`     | SecureStore UTF-8 청크, 레거시 세션, 교체·손상·삭제 처리                                              |
 | `notationPracticeScreen.test.ts` | 실제 화면·입력 훅·생성기로 선율/2성부 재생성 루프, 답안 유지·다음 문제, 모의시험, 생성 예약 취소 검증 |
 
-실행: `npm test` (426개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
+실행: `npm test` (430개 테스트). 화면 회귀 테스트는 React 19.1과 동일 버전의 `react-test-renderer` 및 Jest의 JSX 변환을 사용한다.
 
 ## 기능별 파일 매핑
 
@@ -385,6 +385,7 @@ Login → Onboarding → Home
 | 기보형 문제의 클라이언트 동적 생성                                 | `src/lib/practiceScoreGenerator.ts`                                                                                                                                                                                                                                               |
 | 복합박자(6/8·9/8) 잇단음표 = 둘잇단(2:3) 생성·입력·표기            | `src/lib/rhythmEngine.ts`(makeDuplets·findTupletTargetIdx), `src/lib/twoVoice/melodyGenerator.ts`(tupletSpan16·generateDupletNotes), `src/hooks/useNoteInput.ts`(makeTupletGroup·tupletCount), `src/components/DurationToolbar.tsx`(tupletCount), `src/screens/NotationPracticeScreen.tsx`('duplet' 입력), `src/components/PracticeSettingsSheet.tsx`(안내 문구) |
 | 화성진행·종지 재생 4성부 성부 배치 (큰보표 V1 S·A / V2 T·B)          | `src/lib/progressionVoicing.ts`, `src/lib/questionGenerator.ts`(renderProgressionAbc·spellChordVoice), `src/__tests__/progressionVoicing.test.ts`, `src/__tests__/contentQaRules.test.ts`(큰보표 파서) |
+| 화음 듣기 4단계 — 3화음 전위(제1·제2전위)                          | `src/lib/questionGenerator.ts`(CHORD_TEMPLATES maj_inv2·min_inv2, CHORD_POOLS chord_5), `src/lib/contentConfig.ts`(CHORD_DIFF_LABELS), `src/types/content.ts`(ChordDifficulty), `src/i18n/locales/*/content.json`(chord·explain.chord·difficulty.chord) |
 | 선율/2성부 화면 깜박임 및 연습 흐름 회귀 검증                      | `src/__tests__/notationPracticeScreen.test.ts`                                                                                                                                                                                                                                    |
 | 귀 열기 7일 코스 커리큘럼·미니 문제 생성·진행 상태                 | `src/lib/beginnerCourse/{config,questions,progress}.ts`                                                                                                                                                                                                                           |
 | 3분 레벨 테스트 진행·결과·추천 난이도 연동                         | `src/lib/levelTest/{config,engine,questions}.ts`, `src/screens/LevelTestScreen.tsx`, `src/hooks/useLevelTestResult.ts`, `src/screens/CategoryPracticeScreen.tsx`(추천 배지·initialDifficulty)                                                                                     |

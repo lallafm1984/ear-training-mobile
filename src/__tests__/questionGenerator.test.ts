@@ -38,7 +38,7 @@ describe('generateChoiceQuestion', () => {
   });
 
   describe('chord', () => {
-    const difficulties = ['chord_2', 'chord_3', 'chord_4'] as const;
+    const difficulties = ['chord_2', 'chord_3', 'chord_4', 'chord_5'] as const;
 
     difficulties.forEach((diff) => {
       it(`${diff}: 4개 보기 + 정답 포함 + ABC notation 존재`, () => {
@@ -197,5 +197,59 @@ describe('해설과 비교 청취', () => {
     const keyLine = (abc: string) => abc.split('\n').find((l) => l.startsWith('K:'));
     const keys = new Set(q.choices.map((c) => keyLine(q.choiceAbc[c])));
     expect(keys.size).toBe(q.choices.length);
+  });
+});
+
+// ── 화음 4단계: 3화음 전위 ─────────────────────────────────────
+describe('chord_5 — 3화음 전위(제1·제2전위)', () => {
+  const PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  /** K:C 블록 화음 ABC → 베이스 기준 반음 간격 (오름차순) */
+  function intervalsFromBass(abc: string): number[] {
+    const body = abc.split('\n').filter((l) => !/^[A-Z]:/.test(l))[0];
+    const midis: number[] = [];
+    const re = /(\^*|_*)([A-Ga-g])([,']*)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(body))) {
+      const letter = m[2].toUpperCase();
+      let oct = m[2] === letter ? 4 : 5;
+      for (const c of m[3]) oct += c === ',' ? -1 : 1;
+      const alt = m[1].startsWith('^') ? m[1].length : m[1].startsWith('_') ? -m[1].length : 0;
+      midis.push(12 * (oct + 1) + PC[letter] + alt);
+    }
+    midis.sort((a, b) => a - b);
+    return midis.map((x) => x - midis[0]);
+  }
+  const EXPECTED: Record<string, number[]> = {
+    '장3화음 제1전위': [0, 3, 8],
+    '단3화음 제1전위': [0, 4, 9],
+    '장3화음 제2전위': [0, 5, 9],
+    '단3화음 제2전위': [0, 5, 8],
+  };
+
+  it('전위 화음이 출제되고, 베이스 기준 간격이 전위형과 일치하며 보기·해설이 번역된다', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 80; i++) {
+      const q = generateChoiceQuestion('chord', 'chord_5');
+      expect(q.explanation).not.toMatch(/^content:/);
+      for (const choice of q.choices) {
+        expect(choice).not.toMatch(/^content:/);
+        if (EXPECTED[choice])
+          expect(intervalsFromBass(q.choiceAbc[choice])).toEqual(EXPECTED[choice]);
+      }
+      if (EXPECTED[q.correctAnswer]) {
+        seen.add(q.correctAnswer);
+        expect(intervalsFromBass(q.abcNotation)).toEqual(EXPECTED[q.correctAnswer]);
+      }
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('chord_4 이하에서는 전위 화음이 정답으로 나오지 않는다', () => {
+    for (const d of ['chord_2', 'chord_3', 'chord_4'] as const) {
+      for (let i = 0; i < 30; i++) {
+        const q = generateChoiceQuestion('chord', d);
+        expect(EXPECTED[q.correctAnswer]).toBeUndefined();
+      }
+    }
   });
 });
